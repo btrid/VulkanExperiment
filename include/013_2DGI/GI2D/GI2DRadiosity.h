@@ -35,6 +35,8 @@ struct GI2DRadiosity
 		Shader_DirectLightingVS,
 		Shader_DirectLightingFS,
 
+		Shader_MakeGlobalLine,
+
 		Shader_PixelBasedRaytracing,
 		Shader_PixelBasedRaytracing2,
 
@@ -118,8 +120,10 @@ struct GI2DRadiosity
 			b_edge = m_context->m_storage_memory.allocateMemory<uint64_t>({ size / 64,{} });
 			b_albedo = m_context->m_storage_memory.allocateMemory<f16vec4>({ size,{} });
 			b_vpl_count = m_context->m_storage_memory.allocateMemory<uint32_t>({ size,{} });
-			b_vpl_index = m_context->m_storage_memory.allocateMemory<uint16_t>({ size*64,{} });
-			b_vpl_duplicate = m_context->m_storage_memory.allocateMemory<uint32_t>({ size * (Emissive_Num/32),{} });
+			b_vpl_index = m_context->m_storage_memory.allocateMemory<uint16_t>({ size * 64,{} });
+			b_vpl_duplicate = m_context->m_storage_memory.allocateMemory<uint32_t>({ size * (Emissive_Num / 32),{} });
+			b_global_line_index = m_context->m_storage_memory.allocateMemory<uvec2>((m_gi2d_context->m_desc.Resolution.x * 2 + m_gi2d_context->m_desc.Resolution.y * 2)* Dir_Num);
+			b_global_line_data = m_context->m_storage_memory.allocateMemory<u16vec2>(size * Dir_Num);
 			v_emissive = m_context->m_vertex_memory.allocateMemory<Emissive>(Emissive_Num);
 			u_circle_mesh_count = m_context->m_uniform_memory.allocateMemory<uint32_t>(Mesh_Num);
 			u_circle_mesh_vertex = m_context->m_uniform_memory.allocateMemory<i16vec2>(Mesh_Num*Mesh_Vertex_Size);
@@ -305,7 +309,9 @@ struct GI2DRadiosity
 				vk::DescriptorSetLayoutBinding(11, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(12, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(13, vk::DescriptorType::eStorageBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(14, vk::DescriptorType::eCombinedImageSampler, Frame_Num, stage),
+				vk::DescriptorSetLayoutBinding(14, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(15, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(16, vk::DescriptorType::eCombinedImageSampler, Frame_Num, stage),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
@@ -340,6 +346,8 @@ struct GI2DRadiosity
 				v_emissive.getInfo(),
 				v_emissive_draw_command.getInfo(),
 				v_emissive_draw_count.getInfo(),
+				b_global_line_index.getInfo(),
+				b_global_line_data.getInfo(),
 			};
 
 			vk::WriteDescriptorSet write[] =
@@ -370,7 +378,7 @@ struct GI2DRadiosity
 					.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
 					.setDescriptorCount(1)
 					.setPImageInfo(&image_info[i])
-					.setDstBinding(14)
+					.setDstBinding(16)
 					.setDstArrayElement(i)
 					.setDstSet(m_descriptor_set.get());
 			}
@@ -396,6 +404,8 @@ struct GI2DRadiosity
 				"Radiosity_MakeDirectLight.comp.spv",
 				"Radiosity_DirectLighting.vert.spv",
 				"Radiosity_DirectLighting.frag.spv",
+
+				"LBR_MakeGlobalLine.comp.spv",
 
 				"Radiosity_PixelBasedRaytracing.comp.spv",
 				"Radiosity_PixelBasedRaytracing2.comp.spv",
@@ -1051,8 +1061,8 @@ struct GI2DRadiosity
 				for (int i = 0; i < s_data.size(); i++)
 				{
 					auto color_index = std::rand() % 3;
-					color_index = 3;
-					s_data[i] = Emissive{ i16vec2(std::rand() % 950 + 40, std::rand() % 950 + 40), u8vec4(), glm::packHalf4x16(colors[color_index] * 100.f), glm::packHalf2x16(vec2(0.f, 1.f)) };
+//					color_index = 3;
+					s_data[i] = Emissive{ i16vec2(std::rand() % 950 + 40, std::rand() % 950 + 40), u8vec4(), glm::packHalf4x16(colors[color_index]*10.f), glm::packHalf2x16(vec2(0.f, 1.f)) };
 				}
 			});
 
@@ -1070,9 +1080,9 @@ struct GI2DRadiosity
 //			if (m_context->m_window->getInput().m_keyboard.isOn('D')) { light_dir = glm::mod(light_dir + 0.05f, 1.f); }
 //			if (m_context->m_window->getInput().m_keyboard.isOn('F')) { light_angle = glm::mod(light_angle + 0.05f, 1.f); }
 
-			s_data[0].pos = i16vec2(light_pos);
-			s_data[0].color = glm::packHalf4x16(vec4(light_power+0.3f));
-			s_data[0].angle = glm::packHalf2x16(vec2(light_dir, light_angle));
+//			s_data[0].pos = i16vec2(light_pos);
+	//		s_data[0].color = glm::packHalf4x16(vec4(light_power+0.3f));
+	//		s_data[0].angle = glm::packHalf2x16(vec2(light_dir, light_angle));
 		}
 		// emissiveÉfÅ[É^çÏê¨
 		_label.insert("GI2DRadiosity::executeMakeDirectLight");
@@ -1113,6 +1123,52 @@ struct GI2DRadiosity
 				cmd.dispatch(1, 1, 1);
 			}
 
+		}
+		
+		// virtualpointlightê∂ê¨
+		{
+			// clear vpl
+			{
+				vk::BufferMemoryBarrier to_clear[] =
+				{
+					b_vpl_count.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+					b_vpl_count.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, { array_length(to_clear), to_clear }, {});
+
+				cmd.fillBuffer(b_vpl_count.getInfo().buffer, b_vpl_count.getInfo().offset, b_vpl_count.getInfo().range, 0);
+				cmd.fillBuffer(b_vpl_duplicate.getInfo().buffer, b_vpl_duplicate.getInfo().offset, b_vpl_duplicate.getInfo().range, 0);
+
+				vk::BufferMemoryBarrier to_write[] =
+				{
+					b_vpl_count.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderWrite),
+					b_vpl_count.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderWrite),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_length(to_write), to_write }, {});
+			}
+			vk::RenderPassBeginInfo begin_render_Info;
+			begin_render_Info.setRenderPass(m_make_vpl_renderpass.get());
+			begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), m_render_target->m_resolution));
+			begin_render_Info.setFramebuffer(m_make_vpl_framebuffer.get());
+			cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_LBR_MakeVPL].get());
+			vk::DescriptorSet descs[] = {
+				m_gi2d_context->getDescriptorSet(),
+				m_descriptor_set.get(),
+			};
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_DirectLighting].get(), 0, array_length(descs), descs, 0, nullptr);
+			vk::Buffer vertex_buffers[] =
+			{
+				v_emissive.getInfo().buffer,
+			};
+			vk::DeviceSize offsets[] = { v_emissive.getInfo().offset };
+
+			cmd.bindVertexBuffers(0, array_length(vertex_buffers), vertex_buffers, offsets);
+
+			cmd.drawIndirect(v_emissive_draw_command.getInfo().buffer, v_emissive_draw_command.getInfo().offset, Emissive_Num, sizeof(vk::DrawIndirectCommand));
+			//		cmd.drawIndirectCount(v_emissive_draw_command.getInfo().buffer, v_emissive_draw_command.getInfo().offset, v_emissive_draw_count.getInfo().buffer, v_emissive_draw_count.getInfo().offset, Emissive_Num, sizeof(vk::DrawIndirectCommand));
+			cmd.endRenderPass();
 		}
 		// render_targetÇ…èëÇ≠
 		{
@@ -1244,6 +1300,8 @@ struct GI2DRadiosity
 	btr::BufferMemoryEx<uint32_t> b_vpl_count;
 	btr::BufferMemoryEx<uint16_t> b_vpl_index;
 	btr::BufferMemoryEx<uint32_t> b_vpl_duplicate;
+	btr::BufferMemoryEx<uvec2> b_global_line_index;
+	btr::BufferMemoryEx<u16vec2> b_global_line_data;
 	btr::BufferMemoryEx<Emissive> v_emissive;
 	btr::BufferMemoryEx<uint32_t> u_circle_mesh_count;
 	btr::BufferMemoryEx<i16vec2> u_circle_mesh_vertex;

@@ -422,6 +422,57 @@ void dda()
 	dist += 1.;
 }
 
+#include <glm/gtx/rotate_vector.hpp>
+void dda_test()
+{
+	std::array<int, 32*32> data{};
+	ivec3 reso = ivec3(32);
+	for (int z = 0; z<32; z++)
+	{
+		auto ray = glm::rotateZ(glm::vec3(0.f, 1.f, 0.f), glm::radians(180.f) / 32.f*(z + 0.5f));
+		ivec2 delta = abs(ray*vec3(reso)).xy();
+		ivec3 _dir = ivec3(glm::sign(ray));
+
+		int axis = delta.x >= delta.y ? 0 : 1;
+		ivec2 dir[2];
+		dir[0] = _dir.xz();
+		dir[1] = _dir.zy();
+
+		for (int y = 0; y < reso.y; y++)
+		{
+			for (int x = 0; x < reso.x; x++)
+			{
+				int	D = 2 * delta[1-axis] - delta[axis];
+				ivec2 pos;
+				pos.x=_dir.x>=0?0:reso.x-1;
+				pos.y=_dir.y>=0?0:reso.y-1;
+				for (; true;)
+				{
+					if (D > 0)
+					{
+						pos += dir[1 - axis];
+						D = D - 2 * delta[axis];
+					}
+					else
+					{
+						pos += dir[axis];
+						D = D + 2 * delta[1 - axis];
+					}
+
+//					printf("pos=[%3d,%3d]\n", pos.x, pos.y);
+					data[y*reso.x + x]++;
+					if (any(glm::lessThan(pos, ivec2(0))) || any(glm::greaterThanEqual(pos, reso.xy())))
+					{
+						break;
+					}
+				}
+			}
+		}
+	}
+	printf("");
+
+}
+
 /* primitive Bresenham's-like algorithm */
 void makeCircle(int Ox, int Oy, int R) 
 {
@@ -671,6 +722,7 @@ struct Player
 
 int main()
 {
+	dda_test();
 
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();

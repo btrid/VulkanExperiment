@@ -65,9 +65,11 @@ layout(set=USE_GI2D_Radiosity, binding=8, std430) restrict buffer VPLCountBuffer
 	uint b_vpl_count[];
 };
 layout(set=USE_GI2D_Radiosity, binding=9, std430) restrict buffer VPLIndexBuffer {
+//	uint16_t b_vpl_light_index[];
 	uint16_t b_vpl_index[];
 };
 layout(set=USE_GI2D_Radiosity, binding=10, std430) restrict buffer VPLDuplicateBuffer {
+//	uint b_vpl_light_duplicate[];
 	uint b_vpl_duplicate[];
 };
 
@@ -88,7 +90,13 @@ layout(set=USE_GI2D_Radiosity, binding=12, std430) restrict buffer EmissiveDrawC
 layout(set=USE_GI2D_Radiosity, binding=13, std430) restrict buffer EmissiveDrawCountBuffer {
 	uint v_emissive_draw_count;
 };
-layout(set=USE_GI2D_Radiosity, binding=14) uniform sampler2D s_radiosity[Frame_Num];
+layout(set=USE_GI2D_Radiosity, binding=14, std430) restrict buffer GlobalLineIndexBuffer {
+	uvec2 b_global_line_index[];
+};
+layout(set=USE_GI2D_Radiosity, binding=15, std430) restrict buffer GlobalLineDataBuffer {
+	u16vec2 b_global_line_data[];
+};
+layout(set=USE_GI2D_Radiosity, binding=16) uniform sampler2D s_radiosity[Frame_Num];
 
 
 #endif
