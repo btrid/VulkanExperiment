@@ -8,5 +8,5 @@ SET option=--target-env vulkan1.1 -V
 SET exe=glslangValidator.exe
 SET output=-o ../../binary/
 
-%exe% %include% %option% %output%/GI2DPath_MakeReachMap.comp.spv GI2DPath_MakeReachMap.comp
-%exe% %include% %option% %output%/GI2DPath_MakeReachMap_Precompute.comp.spv GI2DPath_MakeReachMap_Precompute.comp
+%exe% %include% %option% %output%/GI2DPath_MakeReachMap.comp.spv GI2DPath_MakeReachMap_fast.comp
+%exe% %include% %option% %output%/GI2DPath_MakeReachMap_Precompute.comp.spv GI2DPath_MakeReachMap_fast_Precompute.comp
