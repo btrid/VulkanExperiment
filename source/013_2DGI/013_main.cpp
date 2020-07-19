@@ -124,10 +124,6 @@ int pathFinding()
 
 	auto appmodel_context = std::make_shared<AppModelContext>(context);
 
-	cModel model;
-	model.load(context, "..\\..\\resource\\tiny.x");
-	std::shared_ptr<AppModel> player_model = std::make_shared<AppModel>(context, appmodel_context, model.getResource(), 128);
-
 	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
 	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchain());
 
@@ -145,10 +141,6 @@ int pathFinding()
 	Crowd_CalcWorldMatrix crowd_calc_world_matrix(crowd_context, appmodel_context);
 	Crowd_Debug crowd_debug(crowd_context);
 
-	AppModelAnimationStage animater(context, appmodel_context);
-	GI2DModelRender renderer(context, appmodel_context, gi2d_context);
-	auto anime_cmd = animater.createCmd(player_model);
-	auto render_cmd = renderer.createCmd(player_model);
 
 	gi2d_debug.executeUpdateMap(cmd, pf.m_field),
 	app.setup();
@@ -187,17 +179,6 @@ int pathFinding()
  					crowd_debug.execute(cmd);
   					crowd_procedure.executeUpdateUnit(cmd);
   					crowd_procedure.executeMakeLinkList(cmd);
- 					crowd_calc_world_matrix.execute(cmd, player_model);
-
- 					std::vector<vk::CommandBuffer> anime_cmds{ anime_cmd.get() };
- 					animater.dispatchCmd(cmd, anime_cmds);
- 					std::vector<vk::CommandBuffer> render_cmds{ render_cmd.get() };
- 					renderer.dispatchCmd(cmd, render_cmds);
-				}
-
-				if (0)
-				{
-//					gi2d_path_context->
 				}
 
 				if (0)
