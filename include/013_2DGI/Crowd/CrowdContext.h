@@ -24,7 +24,7 @@ struct CrowdContext
 //		int m_frame;
 //		int m_hierarchy;
 //		uint m_skip;
-		int _p2;
+		float m_deltatime;
 	};
 
 	struct CrowdData
@@ -50,24 +50,6 @@ struct CrowdContext
 		int32_t crowd_type;
 		int32_t unit_type;
 		float _p;
-	};
-	struct CrowdRay
-	{
-		vec2 origin;
-		float angle;
-		uint march;
-	};
-	struct CrowdSegment
-	{
-		uint ray_index;
-		uint begin;
-		uint march;
-		uint radiance;
-	};
-
-	struct PathNode
-	{
-		uint value;
 	};
 
 	CrowdContext(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
@@ -229,6 +211,23 @@ struct CrowdContext
 
 	void execute(vk::CommandBuffer cmd)
 	{
+		{
+			vk::BufferMemoryBarrier to_write[] = {
+				u_crowd_scene.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, 0, {}, array_length(to_write), to_write, 0, {});
+		}
+		m_crowd_scene.m_deltatime = sGlobal::Order().getDeltaTime();
+		cmd.updateBuffer<CrowdScene>(u_crowd_scene.getInfo().buffer, u_crowd_scene.getInfo().offset, m_crowd_scene);
+		{
+
+			vk::BufferMemoryBarrier to_read[] = 
+			{
+				u_crowd_scene.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, 0, {}, array_length(to_read), to_read, 0, {});
+
+		}
 	}
 
 	std::shared_ptr<btr::Context> m_context;

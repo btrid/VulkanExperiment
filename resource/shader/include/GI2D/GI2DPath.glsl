@@ -21,6 +21,23 @@ struct PathData
 	uint data;
 };
 
+const ivec2 g_neighbor[8] = 
+{
+	ivec2(-1,-1), 
+	ivec2( 0,-1),
+	ivec2( 1,-1),
+	ivec2( 1, 0),
+	ivec2( 1, 1),
+	ivec2( 0, 1),
+	ivec2(-1, 1),
+	ivec2(-1, 0),
+};
+
+
+uint PathData_dirtype(in PathData d)
+{
+	return d.data&0x07;
+}
 #define NodeSize (1024 * 16)
 layout(std430, set=USE_GI2D_Path, binding=0) restrict buffer PathConnectBuffer {
 	uint b_connect;
@@ -38,9 +55,14 @@ layout(std430, set=USE_GI2D_Path, binding=3) restrict buffer PathCostBuffer {
 layout(std430, set=USE_GI2D_Path, binding=4) restrict buffer PathNodeBuffer {
 	PathNode b_node[];
 };
-layout(std430, set=USE_GI2D_Path, binding=5) buffer NeighborTableBuffer {
+layout(std430, set=USE_GI2D_Path, binding=5) buffer NeighborTableBuffer 
+{
 	// 壁ならbitが立つ
 	uint8_t b_neighbor_table[2048];
+};
+layout(std430, set=USE_GI2D_Path, binding=6) buffer PathBuffer 
+{
+	uint8_t b_parent[];
 };
 #endif
 

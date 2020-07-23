@@ -30,19 +30,6 @@ uvec4 neighor_check_list[] =
 	uvec4(2,6,4,4), // straight_wall
 };
 
-
-const ivec2 g_neighbor[8] = 
-{
-	ivec2(-1,-1), 
-	ivec2( 0,-1),
-	ivec2( 1,-1),
-	ivec2( 1, 0),
-	ivec2( 1, 1),
-	ivec2( 0, 1),
-	ivec2(-1, 1),
-	ivec2(-1, 0),
-};
-
 struct OpenNode
 {
 	i16vec2 pos;
@@ -67,7 +54,6 @@ void explore(in OpenNode parent)
 		{
 			return;
 		}
-//		b_parent[index] = uint8_t((dir_type+4)%8);
 	}
 
 	// 新しい探索のチェック

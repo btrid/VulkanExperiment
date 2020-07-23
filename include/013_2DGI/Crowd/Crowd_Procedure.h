@@ -32,10 +32,11 @@ struct Crowd_Procedure
 
 		Pipeline_Num,
 	};
-	Crowd_Procedure(const std::shared_ptr<CrowdContext>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
+	Crowd_Procedure(const std::shared_ptr<CrowdContext>& context, const std::shared_ptr<GI2DContext>& gi2d_context, const std::shared_ptr<GI2DPathContext>& path_context)
 	{
 		m_context = context;
 		m_gi2d_context = gi2d_context;
+		m_path_context = path_context;
 
 		auto cmd = context->m_context->m_cmd_pool->allocCmdTempolary(0);
 
@@ -64,6 +65,7 @@ struct Crowd_Procedure
 				vk::DescriptorSetLayout layouts[] = {
 					context->getDescriptorSetLayout(),
 					gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
+					gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Path),
 					RenderTarget::s_descriptor_set_layout.get(),
 				};
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
@@ -136,6 +138,7 @@ struct Crowd_Procedure
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_UnitUpdate].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 0, { m_context->getDescriptorSet() }, {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 1, { m_gi2d_context->getDescriptorSet() }, {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 2, { m_path_context->getDescriptorSet() }, {});
 			cmd.dispatch(1, 1, 1);
 		}
 
@@ -156,6 +159,7 @@ struct Crowd_Procedure
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeLinkList].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 0, { m_context->getDescriptorSet() }, {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 1, { m_gi2d_context->getDescriptorSet() }, {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 2, { m_path_context->getDescriptorSet() }, {});
 			cmd.dispatch(1, 1, 1);
 		}
 
@@ -178,7 +182,8 @@ struct Crowd_Procedure
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Render].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 0, { m_context->getDescriptorSet() }, {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 1, { m_gi2d_context->getDescriptorSet() }, {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 2, { render_target->m_descriptor.get() }, {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 2, { m_path_context->getDescriptorSet() }, {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 3, { render_target->m_descriptor.get() }, {});
 			cmd.dispatch(1, 1, 1);
 		}
 
@@ -195,6 +200,7 @@ struct Crowd_Procedure
 
 	std::shared_ptr<CrowdContext> m_context;
 	std::shared_ptr<GI2DContext> m_gi2d_context;
+	std::shared_ptr<GI2DPathContext> m_path_context;
 
 	std::array<vk::UniquePipeline, Pipeline_Num> m_pipeline;
 	std::array<vk::UniquePipelineLayout, PipelineLayout_Num> m_pipeline_layout;

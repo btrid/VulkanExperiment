@@ -137,7 +137,7 @@ int pathFinding()
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
-	Crowd_Procedure crowd_procedure(crowd_context, gi2d_context);
+	Crowd_Procedure crowd_procedure(crowd_context, gi2d_context, gi2d_path_context);
 //	Crowd_CalcWorldMatrix crowd_calc_world_matrix(crowd_context, appmodel_context);
 	Crowd_Debug crowd_debug(crowd_context);
 
@@ -173,19 +173,20 @@ int pathFinding()
 				crowd_context->execute(cmd);
 				gi2d_debug.executeMakeFragment(cmd);
 				gi2d_make_hierarchy.executeMakeFragmentMap(cmd);
+				gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
 
 //				if (0)
 				{
- 					crowd_debug.execute(cmd);
- // 					crowd_procedure.executeUpdateUnit(cmd);
+					gi2d_make_hierarchy.executeMakeReachMap(cmd, gi2d_path_context);
+					
+//					crowd_debug.execute(cmd);
+ 					crowd_procedure.executeUpdateUnit(cmd);
 //  					crowd_procedure.executeMakeLinkList(cmd);
 					crowd_procedure.executeRendering(cmd, app.m_window->getFrontBuffer());
 				}
 
-				if (0)
+//				if (0)
 				{
-					gi2d_make_hierarchy.executeMakeReachMap(cmd, gi2d_path_context);
-					gi2d_debug.executeDrawReachMap(cmd, gi2d_path_context, app.m_window->getFrontBuffer());
 					
 				}
 
