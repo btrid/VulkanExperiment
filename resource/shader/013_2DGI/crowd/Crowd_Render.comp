@@ -14,9 +14,24 @@ layout (local_size_x = 64) in;
 
 void main()
 {
-    vec2 p = b_unit_pos[gl_GlobalInvocationID.x].xy;
-	imageStore(i_render_target, ivec2(p.xy), ivec4(1));
-	imageStore(i_render_target, ivec2(p.xy)+ivec2(1,0), ivec4(1));
-	imageStore(i_render_target, ivec2(p.xy)+ivec2(0,1), ivec4(1));
-	imageStore(i_render_target, ivec2(p.xy)+ivec2(1,1), ivec4(1));
+    vec2 pos = b_unit_pos[gl_GlobalInvocationID.x].xy;
+    float rot = b_unit_rot[gl_GlobalInvocationID.x].x;
+//    rot-=3.14;
+    for(int y=-5; y<=5;y++)
+    for(int x=-5; x<=5;x++)
+    {
+        vec4 color = vec4(1.);
+        if(x!=0&&y!=0)
+        {
+            float r = atan(float(y), float(x)+0.01)+3.14;
+//         	r = (mod(r+pi, tpi))-pi;
+
+            if(abs(rot-r)<=(6.28/16.))
+            {
+                color = vec4(1., 0., 0., 1.);
+            }
+        }
+    	imageStore(i_render_target, ivec2(pos.xy)+ivec2(x,y), color);
+
+    }
 }

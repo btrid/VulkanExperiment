@@ -94,7 +94,8 @@ vec2 rotate(in float angle)
 {
 	float c = cos(angle);
 	float s = sin(angle);
-	return vec2(-s, c);
+//	return vec2(-s, c); 昔バグってた
+	return vec2(c, s); // angle = atan(y,x)にする
 }
 
 #endif //GI2D_
