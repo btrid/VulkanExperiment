@@ -1,0 +1,20 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_Crowd2D 0
+#include "GI2D/Crowd.glsl"
+#define USE_GI2D 1
+#include "GI2D/GI2D.glsl"
+#define USE_RenderTarget 2
+#include "applib/System.glsl"
+
+layout (local_size_x = 64) in;
+
+void main()
+{
+    vec2 p = b_unit_pos[gl_GlobalInvocationID.x].xy;
+	imageStore(i_render_target, ivec2(p.xy), ivec4(1));
+	imageStore(i_render_target, ivec2(p.xy)+ivec2(1,0), ivec4(1));
+	imageStore(i_render_target, ivec2(p.xy)+ivec2(0,1), ivec4(1));
+	imageStore(i_render_target, ivec2(p.xy)+ivec2(1,1), ivec4(1));
+}

@@ -36,14 +36,18 @@ struct UnitData
 	float m_rot;
 	float m_rot_prev;
 
-	float m_move;
-	int crowd_type;
-	int unit_type;
-	int link_next;
+//	float m_move;
+//	int link_next;
 };
 
+struct Info
+{
+	int crowd_type;
+	int unit_type;
+};
 struct CrowdScene
 {
+	float m_deltatime;
 	int m_frame;
 	int m_hierarchy;
 	uint m_skip;
@@ -64,15 +68,25 @@ layout(set=USE_Crowd2D, binding=2, std140) uniform UnitInfoUniform {
 layout(set=USE_Crowd2D, binding=3, std430) restrict buffer CrowdBuffer {
 	CrowdData b_crowd[];
 };
-layout(set=USE_Crowd2D, binding=4, std430) restrict buffer UnitBuffer {
-	UnitData b_unit[];
-};
-layout(set=USE_Crowd2D, binding=5, std430) restrict buffer UnitCounter {
+layout(set=USE_Crowd2D, binding=4, std430) restrict buffer UnitCounter {
 	ivec4 b_unit_counter;
 };
-layout(set=USE_Crowd2D, binding=6, std430) restrict buffer UnitLinkList {
+layout(set=USE_Crowd2D, binding=5, std430) restrict buffer UnitLinkList {
 	int b_unit_link_head[];
 };
+layout(set=USE_Crowd2D, binding=20, std430) restrict buffer UnitPosBuffer 
+{
+	vec4 b_unit_pos[];
+};
+layout(set=USE_Crowd2D, binding=21, std430) restrict buffer UnitRotBuffer 
+{
+	vec2 b_unit_rot[];
+};
+layout(set=USE_Crowd2D, binding=23, std430) restrict buffer UnitInfoBuffer 
+{
+	Info b_unit_info[];
+};
+
 const int g_crowd_density_cell_size = 64;
 #endif
 

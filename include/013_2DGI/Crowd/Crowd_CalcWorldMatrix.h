@@ -19,7 +19,6 @@ struct Crowd_CalcWorldMatrix
 		{
 			vk::DescriptorSetLayout layouts[] = {
 				crowd_context->getDescriptorSetLayout(),
-				sSystem::Order().getSystemDescriptorLayout(),
 				appmodel_context->getLayout(AppModelContext::DescriptorLayout_Update),
 			};
 
@@ -50,7 +49,8 @@ struct Crowd_CalcWorldMatrix
 	void execute(vk::CommandBuffer cmd, const std::shared_ptr<AppModel>& model)
 	{
 		vk::BufferMemoryBarrier to_write[] = {
-			m_crowd_context->b_unit.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
+			m_crowd_context->b_unit_pos.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
+			m_crowd_context->b_unit_rot.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
 			model->b_world.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
@@ -59,7 +59,6 @@ struct Crowd_CalcWorldMatrix
 		vk::DescriptorSet descriptors[] =
 		{
 			m_crowd_context->getDescriptorSet(),
-			sSystem::Order().getSystemDescriptorSet(),
 			model->getDescriptorSet(AppModel::DescriptorSet_Update),
 		};
 		

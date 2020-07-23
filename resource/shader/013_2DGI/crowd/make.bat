@@ -9,6 +9,7 @@ SET exe=glslangValidator.exe
 SET output=../../binary/
 
 %exe% %include% %option% -o %output%/Crowd_UnitUpdate.comp.spv Crowd_UnitUpdate.comp
-%exe% %include% %option% -o %output%/Crowd_MakeDensityMap.comp.spv Crowd_MakeDensityMap.comp
-%exe% %include% %option% -o %output%/Crowd_DrawDensityMap.comp.spv Crowd_DrawDensityMap.comp
-%exe% %include% %option% -o %output%/Crowd_MakeLinkList.comp.spv Crowd_MakeLinkList.comp
+rem %exe% %include% %option% -o %output%/Crowd_MakeDensityMap.comp.spv Crowd_MakeDensityMap.comp
+rem %exe% %include% %option% -o %output%/Crowd_DrawDensityMap.comp.spv Crowd_DrawDensityMap.comp
+rem %exe% %include% %option% -o %output%/Crowd_MakeLinkList.comp.spv Crowd_MakeLinkList.comp
+%exe% %include% %option% -o %output%/Crowd_Render.comp.spv Crowd_Render.comp

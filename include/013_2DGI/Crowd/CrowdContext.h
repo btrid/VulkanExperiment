@@ -8,8 +8,6 @@
 struct CrowdContext
 {
 	enum {
-		Frame = 1,
-		Rot_Num = 32,
 	};
 
 	struct CrowdInfo
@@ -19,19 +17,13 @@ struct CrowdContext
 		uint32_t crowd_data_max;
 		uint32_t unit_data_max;
 
-		uint ray_num_max;
-		uint ray_frame_max;
-		uint frame_max;
-		uint ray_angle_num;
-
-
 	};
 
 	struct CrowdScene
 	{
-		int m_frame;
-		int m_hierarchy;
-		uint m_skip;
+//		int m_frame;
+//		int m_hierarchy;
+//		uint m_skip;
 		int _p2;
 	};
 
@@ -83,21 +75,14 @@ struct CrowdContext
 		m_context = context;
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
-		auto Ray_Frame_Num = gi2d_context->m_desc.Resolution.x * Rot_Num; // ŽÀÛ‚Í‚à‚¤­‚µ­‚È‚¢
-		auto Ray_All_Num = Ray_Frame_Num * Frame;
-		auto Segment_Num = Ray_Frame_Num * 64; // ‚Æ‚è‚ ‚¦‚¸‚Ì’l
 		{
 			m_crowd_info.crowd_info_max = 1;
 			m_crowd_info.unit_info_max = 16;
 			m_crowd_info.crowd_data_max = 16;
 			m_crowd_info.unit_data_max = 128;
 
-			m_crowd_info.frame_max = Frame;
-			m_crowd_info.ray_num_max = Ray_All_Num;
-			m_crowd_info.ray_frame_max = Ray_Frame_Num;
-			m_crowd_info.ray_angle_num = Rot_Num;
-			m_crowd_scene.m_frame = 0;
-			m_crowd_scene.m_skip = 0;
+//			m_crowd_scene.m_frame = 0;
+//			m_crowd_scene.m_skip = 0;
 		}
 		{
 			{
@@ -109,12 +94,9 @@ struct CrowdContext
 					vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(7, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(8, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(9, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(10, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(11, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(20, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(21, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(22, vk::DescriptorType::eStorageBuffer, 1, stage),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -139,14 +121,11 @@ struct CrowdContext
 			u_crowd_scene = m_context->m_uniform_memory.allocateMemory<CrowdScene>({ 1, {} });
 			u_unit_info = m_context->m_uniform_memory.allocateMemory<UnitInfo>({ m_crowd_info.unit_info_max, {} });
 			b_crowd = m_context->m_storage_memory.allocateMemory<CrowdData>({ m_crowd_info.crowd_data_max, {} });
-			b_unit = m_context->m_storage_memory.allocateMemory<UnitData>({ m_crowd_info.unit_data_max*2, {} });
+			b_unit_pos = m_context->m_storage_memory.allocateMemory<vec4>({ m_crowd_info.unit_data_max, {} });
+			b_unit_rot = m_context->m_storage_memory.allocateMemory<vec2>({ m_crowd_info.unit_data_max, {} });
 			b_unit_counter = m_context->m_storage_memory.allocateMemory<uvec4>({ 1, {} });
 			b_unit_link_head = m_context->m_storage_memory.allocateMemory<int32_t>({ gi2d_context->m_desc.Resolution.x*gi2d_context->m_desc.Resolution.y, {} });
-			b_ray_counter = m_context->m_storage_memory.allocateMemory<ivec4>({ Frame,{} });
-			b_segment_counter = m_context->m_storage_memory.allocateMemory<ivec4>({ 1,{} });
-			b_ray = m_context->m_storage_memory.allocateMemory<CrowdRay>({ m_crowd_info.ray_num_max,{} });
-			b_segment = m_context->m_storage_memory.allocateMemory<CrowdSegment>({ Segment_Num,{} });
-			b_node = m_context->m_storage_memory.allocateMemory<PathNode>({ gi2d_context->m_desc.Resolution.x*gi2d_context->m_desc.Resolution.y,{} });
+	
 
 			vk::DescriptorBufferInfo uniforms[] = {
 				u_crowd_info.getInfo(),
@@ -155,14 +134,12 @@ struct CrowdContext
 			};
 			vk::DescriptorBufferInfo storages[] = {
 				b_crowd.getInfo(),
-				b_unit.getInfo(),
 				b_unit_counter.getInfo(),
 				b_unit_link_head.getInfo(),
-				b_ray.getInfo(),
-				b_ray_counter.getInfo(),
-				b_segment.getInfo(),
-				b_segment_counter.getInfo(),
-				b_node.getInfo(),
+			};
+			vk::DescriptorBufferInfo storages_data[] = {
+				b_unit_pos.getInfo(),
+				b_unit_rot.getInfo(),
 			};
 			vk::WriteDescriptorSet write[] = {
 				vk::WriteDescriptorSet()
@@ -176,6 +153,12 @@ struct CrowdContext
 				.setDescriptorCount(array_length(storages))
 				.setPBufferInfo(storages)
 				.setDstBinding(3)
+				.setDstSet(m_descriptor_set.get()),
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(array_length(storages_data))
+				.setPBufferInfo(storages_data)
+				.setDstBinding(20)
 				.setDstSet(m_descriptor_set.get()),
 			};
 			context->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
@@ -198,23 +181,17 @@ struct CrowdContext
 
 			{
 				auto staging = m_context->m_staging_memory.allocateMemory<UnitData>({ m_crowd_info.unit_data_max * 2, btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT });
-				for (int32_t i = 0; i < m_crowd_info.unit_data_max*2; i++)
+				std::vector<vec4> pos(m_crowd_info.unit_data_max);
+				std::vector<vec2> rot(m_crowd_info.unit_data_max);
+				for (int32_t i = 0; i < m_crowd_info.unit_data_max; i++)
 				{
-					staging.getMappedPtr(i)->m_pos = abs(glm::ballRand(300.f).xy()) + vec2(100.f);
-					staging.getMappedPtr(i)->m_move = 50.f;
-					staging.getMappedPtr(i)->m_rot = (std::rand() % 314) * 0.01f;
-					staging.getMappedPtr(i)->m_rot_prev = 0.f;
-					staging.getMappedPtr(i)->unit_type = 0;
-//					staging.getMappedPtr(i)->crowd_type = std::rand() % 2;
-					staging.getMappedPtr(i)->crowd_type = 0;
-					staging.getMappedPtr(i)->m_pos += float(staging.getMappedPtr(i)->crowd_type) * vec2(600.f);
+					auto p = abs(glm::ballRand(300.f).xy()) + vec2(100.f);
+					pos[i] = vec4(p, p);
+					rot[i] = vec2((std::rand() % 314) * 0.01f);
 				}
 
-				vk::BufferCopy copy;
-				copy.setSrcOffset(staging.getInfo().offset);
-				copy.setDstOffset(b_unit.getInfo().offset);
-				copy.setSize(staging.getInfo().range);
-				cmd.copyBuffer(staging.getInfo().buffer, b_unit.getInfo().buffer, copy);
+				cmd.updateBuffer<vec4>(b_unit_pos.getInfo().buffer, b_unit_pos.getInfo().offset, pos);
+				cmd.updateBuffer<vec2>(b_unit_rot.getInfo().buffer, b_unit_rot.getInfo().offset, rot);
 
 			}
 
@@ -242,7 +219,8 @@ struct CrowdContext
 			vk::BufferMemoryBarrier to_read[] = {
 				u_crowd_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 				u_unit_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-				b_unit.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+				b_unit_pos.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+				b_unit_rot.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 				b_unit_link_head.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, 0, {}, array_length(to_read), to_read, 0, {});
@@ -251,9 +229,6 @@ struct CrowdContext
 
 	void execute(vk::CommandBuffer cmd)
 	{
-		m_crowd_scene.m_frame = (m_crowd_scene.m_frame+1)% Frame;
-		cmd.updateBuffer<CrowdScene>(u_crowd_scene.getInfo().buffer, u_crowd_scene.getInfo().offset, m_crowd_scene);
-
 	}
 
 	std::shared_ptr<btr::Context> m_context;
@@ -264,15 +239,10 @@ struct CrowdContext
 	btr::BufferMemoryEx<CrowdScene> u_crowd_scene;
 	btr::BufferMemoryEx<UnitInfo> u_unit_info;
 	btr::BufferMemoryEx<CrowdData> b_crowd;
-	btr::BufferMemoryEx<UnitData> b_unit;
+	btr::BufferMemoryEx<vec4> b_unit_pos;
+	btr::BufferMemoryEx<vec2> b_unit_rot;
 	btr::BufferMemoryEx<uvec4> b_unit_counter;
 	btr::BufferMemoryEx<int32_t> b_unit_link_head;
-
-	btr::BufferMemoryEx<CrowdRay> b_ray;
-	btr::BufferMemoryEx<ivec4> b_ray_counter;
-	btr::BufferMemoryEx<CrowdSegment> b_segment;
-	btr::BufferMemoryEx<ivec4> b_segment_counter;
-	btr::BufferMemoryEx<PathNode> b_node;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
