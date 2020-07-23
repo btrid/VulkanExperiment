@@ -61,7 +61,7 @@ struct CrowdContext
 			m_crowd_info.crowd_info_max = 1;
 			m_crowd_info.unit_info_max = 16;
 			m_crowd_info.crowd_data_max = 16;
-			m_crowd_info.unit_data_max = 128;
+			m_crowd_info.unit_data_max = 64;
 
 			m_crowd_scene.m_deltatime= 0.f;
 //			m_crowd_scene.m_skip = 0;
@@ -168,9 +168,9 @@ struct CrowdContext
 				for (int32_t i = 0; i < m_crowd_info.unit_data_max; i++)
 				{
 					auto p = abs(glm::ballRand(800.f).xy()) + vec2(200.f);
-					pos[i] = vec4(p, p);
-					rot[i] = vec2((std::rand() % 628) * 0.01f);
-//					rot[i] = vec2(0.f);
+					float r = (std::rand() % 628) * 0.01f;
+					pos[i] = vec4(p, r, 0.f);
+					rot[i] = vec2(r);
 				}
 
 				cmd.updateBuffer<vec4>(b_unit_pos.getInfo().buffer, b_unit_pos.getInfo().offset, pos);

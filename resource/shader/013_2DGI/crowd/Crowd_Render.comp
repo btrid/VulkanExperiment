@@ -12,21 +12,22 @@
 
 layout (local_size_x = 64) in;
 
+float remap(float original_value, float original_min, float original_max, float new_min, float new_max){ return (original_value - original_min) / (original_max - original_min) * (new_max - new_min) + new_min; }
+
 void main()
 {
-    vec2 pos = b_unit_pos[gl_GlobalInvocationID.x].xy;
-    float rot = b_unit_rot[gl_GlobalInvocationID.x].x;
-//    rot-=3.14;
+    vec4 pos = b_unit_pos[gl_GlobalInvocationID.x];
+    pos.z = remap(pos.z, 0., 6.283, -3.1415, 3.1415);
+
     for(int y=-5; y<=5;y++)
     for(int x=-5; x<=5;x++)
     {
         vec4 color = vec4(1.);
         if(x!=0&&y!=0)
         {
-            float r = atan(float(y), float(x)+0.01)+3.14;
-//         	r = (mod(r+pi, tpi))-pi;
+            float r = atan(float(y), float(x)+0.01);
 
-            if(abs(rot-r)<=(6.28/16.))
+            if(abs(pos.z-r)<=(6.28/16.))
             {
                 color = vec4(1., 0., 0., 1.);
             }
