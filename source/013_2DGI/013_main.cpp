@@ -122,7 +122,7 @@ int pathFinding()
 
 	auto context = app.m_context;
 
-	auto appmodel_context = std::make_shared<AppModelContext>(context);
+//	auto appmodel_context = std::make_shared<AppModelContext>(context);
 
 	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
 	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchain());

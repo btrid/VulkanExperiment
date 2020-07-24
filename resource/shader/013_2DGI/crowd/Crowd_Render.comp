@@ -19,8 +19,8 @@ void main()
     vec4 pos = b_unit_pos[gl_GlobalInvocationID.x];
     pos.z = remap(pos.z, 0., 6.283, -3.1415, 3.1415);
 
-    for(int y=-5; y<=5;y++)
-    for(int x=-5; x<=5;x++)
+    for(int y=-3; y<=3;y++)
+    for(int x=-3; x<=3;x++)
     {
         vec4 color = vec4(1.);
         if(x!=0&&y!=0)
@@ -32,6 +32,7 @@ void main()
                 color = vec4(1., 0., 0., 1.);
             }
         }
+
     	imageStore(i_render_target, ivec2(pos.xy)+ivec2(x,y), color);
 
     }
