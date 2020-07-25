@@ -99,6 +99,11 @@ PathContextCPU pathmake_file()
 }
 int pathFinding()
 {
+	{
+		auto d = normalize(vec2(0.8, 0.5));
+		d /= glm::max(d.x, d.y);
+		int a = 0;
+	}
 	PathContextCPU::Description desc;
 	desc.m_size = ivec2(1024);
 	desc.m_start = ivec2(11, 11);

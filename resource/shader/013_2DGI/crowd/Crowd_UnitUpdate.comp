@@ -66,16 +66,18 @@ void main()
 		pos.w = move;
 	}
 
-	if(false)
+	dir = rotate(remap(pos.z, 0., 6.283, -3.1415, 3.1415));
+	move*=deltatime;
+//	dir /= max(dir.x, dir.y);
 	{
 
 		// march
-		move*=deltatime;
-		for(int _i = 0; move>0. && _i<2000; _i++)
+		while(move>0.)
 		{
 			ivec2 ipos = ivec2(pos.xy);
-			vec2 pos_next = pos.xy + dir * clamp(move-1., 0., 1.);
+			vec2 pos_next = pos.xy + dir * clamp(move, 0., 1.);
 			move -= 1.;
+
 
 			// hit確認
 			ivec2 ipos_next = ivec2(pos_next);
@@ -100,12 +102,9 @@ void main()
 			{
 				// 何もないのでそのまま進む
 				pos.xy = pos_next;
-
 			}
 		}
 	}
-	dir = rotate(remap(pos.z, 0., 6.283, -3.1415, 3.1415));
-	pos.xy+=dir*move*deltatime;
 	pos.z=mod(pos.z, 6.283);
 	b_unit_pos[index] = pos;
 }
