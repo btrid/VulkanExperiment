@@ -17,7 +17,7 @@ float remap(float original_value, float original_min, float original_max, float 
 void main()
 {
     vec4 pos = b_unit_pos[gl_GlobalInvocationID.x];
-    pos.z = remap(pos.z, 0., 6.283, -3.1415, 3.1415);
+//    pos.z = remap(pos.z, 0., 6.283, -3.1415, 3.1415);
 
     for(int y=-3; y<=3;y++)
     for(int x=-3; x<=3;x++)

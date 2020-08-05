@@ -95,10 +95,69 @@ PathContextCPU pathmake_file()
 	PathContextCPU pf(desc);
 	pf.m_field = data;
 	return pf;
-
 }
+#include <glm/gtx/rotate_vector.hpp>
 int pathFinding()
 {
+	{
+		vec2 a = vec2(0.f, 0.f);
+		vec2 b = vec2(1.f, 0.5f);
+		float angle = 0.5f;
+//		float target_angle = 0.5f;
+		vec2 dir = rotate(vec2(0.f, 1.f), angle);
+//		vec2 dir = normalize(vec2(3.f));
+		vec2 target_dir = normalize(b-a);
+		float target_angle = atan2(target_dir.y, target_dir.x);
+		for (int i = 0; i<10; i++)
+		{
+			float d = dot(dir, target_dir);
+			float rotate_angle = acos(d);
+			//		rotate_angle = min(rotate_angle, nit_info.angler_speed);
+
+			float c = cross(vec3(dir, 0.), vec3(target_dir, 0.)).z;
+			angle += glm::sign(c) * rotate_angle;
+			dir = rotate(vec2(0.f, 1.f), angle);
+		}
+
+	}
+	vec3 amin(0.2f);
+	vec3 amax(0.8f);
+	{
+//		for (int z = 0; z < 10; z++)
+		for (int y = 0; y < 10; y++)
+		{
+			for (int x = 0; x < 10; x++)
+			{
+				vec3 p = vec3(x, y, 5.f) / 10.f;
+				printf("%c", (glm::all(glm::lessThan(p, amax)) && glm::all(glm::greaterThan(p, amin))) ? '@' : ' ');
+			}
+			printf("\n");
+		}
+		int a = 0;
+	}
+
+	{
+		vec2 inertia = vec2(0.2);
+		ivec2 diff = ivec2(0,1);
+
+/*		uint8_t wall = 0b00000111;
+		bool wall_x = diff.x == 1 ? ((wall & (1<<3)) != 0) : diff.x == -1 ? ((wall & (1<<7))!= 0) : false;
+		bool wall_y = diff.y == 1 ? ((wall & (1<<1)) != 0) : diff.y == -1 ? ((wall & (1<<1))!= 0) : false;
+		vec2 n = glm::normalize(vec2(wall_x, wall_y) * glm::sign(vec2(diff)));
+*/
+
+		vec2 wall = normalize(vec2(diff));
+		inertia = reflect(inertia, wall);
+
+
+//		if (wall_x || wall_y)
+		{
+//			inertia = reflect(inertia, -n);
+		}
+
+		int a = 0;
+
+	}
 	{
 		auto d = normalize(vec2(0.8, 0.5));
 		d /= glm::max(d.x, d.y);

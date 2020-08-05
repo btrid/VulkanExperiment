@@ -104,7 +104,7 @@ struct CrowdContext
 			u_unit_info = m_context->m_uniform_memory.allocateMemory<UnitInfo>({ m_crowd_info.unit_info_max, {} });
 			b_crowd = m_context->m_storage_memory.allocateMemory<CrowdData>({ m_crowd_info.crowd_data_max, {} });
 			b_unit_pos = m_context->m_storage_memory.allocateMemory<vec4>({ m_crowd_info.unit_data_max, {} });
-			b_unit_rot = m_context->m_storage_memory.allocateMemory<vec2>({ m_crowd_info.unit_data_max, {} });
+			b_unit_move = m_context->m_storage_memory.allocateMemory<vec2>({ m_crowd_info.unit_data_max, {} });
 			b_unit_counter = m_context->m_storage_memory.allocateMemory<uvec4>({ 1, {} });
 			b_unit_link_head = m_context->m_storage_memory.allocateMemory<int32_t>({ gi2d_context->m_desc.Resolution.x*gi2d_context->m_desc.Resolution.y, {} });
 	
@@ -121,7 +121,7 @@ struct CrowdContext
 			};
 			vk::DescriptorBufferInfo storages_data[] = {
 				b_unit_pos.getInfo(),
-				b_unit_rot.getInfo(),
+				b_unit_move.getInfo(),
 			};
 			vk::WriteDescriptorSet write[] = {
 				vk::WriteDescriptorSet()
@@ -170,11 +170,11 @@ struct CrowdContext
 					auto p = abs(glm::ballRand(800.f).xy()) + vec2(200.f);
 					float r = (std::rand() % 628) * 0.01f;
 					pos[i] = vec4(p, r, 0.f);
-					rot[i] = vec2(r);
+					rot[i] = vec2(0.f);
 				}
 
 				cmd.updateBuffer<vec4>(b_unit_pos.getInfo().buffer, b_unit_pos.getInfo().offset, pos);
-				cmd.updateBuffer<vec2>(b_unit_rot.getInfo().buffer, b_unit_rot.getInfo().offset, rot);
+				cmd.updateBuffer<vec2>(b_unit_move.getInfo().buffer, b_unit_move.getInfo().offset, rot);
 
 			}
 
@@ -203,7 +203,7 @@ struct CrowdContext
 				u_crowd_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 				u_unit_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 				b_unit_pos.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-				b_unit_rot.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+				b_unit_move.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 				b_unit_link_head.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, 0, {}, array_length(to_read), to_read, 0, {});
@@ -240,7 +240,7 @@ struct CrowdContext
 	btr::BufferMemoryEx<UnitInfo> u_unit_info;
 	btr::BufferMemoryEx<CrowdData> b_crowd;
 	btr::BufferMemoryEx<vec4> b_unit_pos;
-	btr::BufferMemoryEx<vec2> b_unit_rot;
+	btr::BufferMemoryEx<vec2> b_unit_move;
 	btr::BufferMemoryEx<uvec4> b_unit_counter;
 	btr::BufferMemoryEx<int32_t> b_unit_link_head;
 

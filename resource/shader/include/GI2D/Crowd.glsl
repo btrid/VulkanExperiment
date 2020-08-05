@@ -78,9 +78,9 @@ layout(set=USE_Crowd2D, binding=20, std430) restrict buffer UnitPosBuffer
 {
 	vec4 b_unit_pos[];
 };
-layout(set=USE_Crowd2D, binding=21, std430) restrict buffer UnitRotBuffer 
+layout(set=USE_Crowd2D, binding=21, std430) restrict buffer UnitMoveBuffer 
 {
-	vec2 b_unit_rot[];
+	vec2 b_unit_move[];
 };
 layout(set=USE_Crowd2D, binding=23, std430) restrict buffer UnitInfoBuffer 
 {
