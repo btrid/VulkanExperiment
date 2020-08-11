@@ -160,7 +160,8 @@ int pathFinding()
 	}
 	{
 		auto d = normalize(vec2(0.8, 0.5));
-		d /= glm::max(d.x, d.y);
+		auto d1 = d/glm::max(d.x, d.y);
+		auto d2 = d/glm::min(d.x, d.y);
 		int a = 0;
 	}
 	PathContextCPU::Description desc;
@@ -194,6 +195,7 @@ int pathFinding()
 	GI2DDescription gi2d_desc;
 	gi2d_desc.Resolution = uvec2(1024);
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
+	std::shared_ptr<GI2DSDF> gi2d_sdf_context = std::make_shared<GI2DSDF>(gi2d_context);
 	std::shared_ptr<CrowdContext> crowd_context = std::make_shared<CrowdContext>(context, gi2d_context);
 	std::shared_ptr<GI2DPathContext> gi2d_path_context = std::make_shared<GI2DPathContext>(gi2d_context);
 
@@ -201,7 +203,7 @@ int pathFinding()
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
-	Crowd_Procedure crowd_procedure(crowd_context, gi2d_context, gi2d_path_context);
+	Crowd_Procedure crowd_procedure(crowd_context, gi2d_context, gi2d_sdf_context, gi2d_path_context);
 //	Crowd_CalcWorldMatrix crowd_calc_world_matrix(crowd_context, appmodel_context);
 	Crowd_Debug crowd_debug(crowd_context);
 
@@ -237,6 +239,7 @@ int pathFinding()
 				crowd_context->execute(cmd);
 				gi2d_debug.executeMakeFragment(cmd);
 				gi2d_make_hierarchy.executeMakeFragmentMap(cmd);
+				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
 				gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
 
 //				if (0)

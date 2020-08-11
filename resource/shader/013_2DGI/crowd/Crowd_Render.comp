@@ -5,9 +5,11 @@
 #include "GI2D/Crowd.glsl"
 #define USE_GI2D 1
 #include "GI2D/GI2D.glsl"
-#define USE_GI2D_Path 2
+#define USE_GI2D_SDF 2
+#include "GI2D/GI2DSDF.glsl"
+#define USE_GI2D_Path 3
 #include "GI2D/GI2DPath.glsl"
-#define USE_RenderTarget 3
+#define USE_RenderTarget 4
 #include "applib/System.glsl"
 
 layout (local_size_x = 64) in;

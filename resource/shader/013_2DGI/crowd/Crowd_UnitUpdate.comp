@@ -5,7 +5,9 @@
 #include "GI2D/Crowd.glsl"
 #define USE_GI2D 1
 #include "GI2D/GI2D.glsl"
-#define USE_GI2D_Path 2
+#define USE_GI2D_SDF 2
+#include "GI2D/GI2DSDF.glsl"
+#define USE_GI2D_Path 3
 #include "GI2D/GI2DPath.glsl"
 
 float remap(float original_value, float original_min, float original_max, float new_min, float new_max){ return (original_value - original_min) / (original_max - original_min) * (new_max - new_min) + new_min; }
@@ -48,7 +50,7 @@ void main()
 		float d = dot(dir, target_dir);
 		if(d <= 0.98)
 		{
-			float rotate_angle = acos(d);
+			float rotate_angle = acos(d)+0.001;
 			rotate_angle = min(rotate_angle, unit_info.angler_speed);
 
 			float c = cross(vec3(dir, 0.), vec3(target_dir, 0.)).z;
@@ -63,15 +65,19 @@ void main()
 	}
 
 	dir = normalize_safe(inertia, vec2(0.));
-	float move = length(inertia*deltatime);
-	float advance = 0.;
+
+	if(dot(dir, dir)> 0.001)
 	{
+		float a = 1./max(abs(dir.x), abs(dir.y));
+//		dir *= a;
+		float move = length(inertia*deltatime);
+		float advance = 0.;
 
 		// march
 		while(advance<move)
 		{
-			vec2 pos_next = pos.xy + dir * clamp(move-advance, 0., 1.);
-			advance += 1.;
+			vec2 pos_next = pos.xy + dir * clamp(move-advance, 0., a);
+			advance += a;
 
 
 			// hit確認
@@ -87,7 +93,7 @@ void main()
 			{
 				// 壁にぶつかったので反射
 				vec2 wall = normalize(vec2(pos_next-ivec2(pos.xy)));
-				inertia = reflect(inertia, wall);
+				inertia = reflect(inertia, wall) * 0.3 - wall*2.;
 				dir = reflect(dir, wall);
 
 			}
@@ -98,7 +104,7 @@ void main()
 			}
 		}
 	}
-//	pos.z=mod(pos.z, 6.283);
+	pos.z=mod(pos.z+3.1415, 6.283)-3.1415;
 	b_unit_pos[index] = pos;
 	b_unit_move[index] = inertia;
 }
