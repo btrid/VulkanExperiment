@@ -98,8 +98,6 @@ void main()
 
 				// 押し出し
 				pos.xy += normalize(push_dir);
-
-
 			}
 			else
 			{

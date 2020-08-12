@@ -239,18 +239,12 @@ int pathFinding()
 				crowd_context->execute(cmd);
 				gi2d_debug.executeMakeFragment(cmd);
 				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
+				gi2d_make_hierarchy.executeMakeReachMap(cmd, gi2d_path_context);
+
+				crowd_procedure.executeUpdateUnit(cmd);
+
 				gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
-
-//				if (0)
-				{
-					gi2d_make_hierarchy.executeMakeReachMap(cmd, gi2d_path_context);
-					
-//					crowd_debug.execute(cmd);
- 					crowd_procedure.executeUpdateUnit(cmd);
-//  					crowd_procedure.executeMakeLinkList(cmd);
-					crowd_procedure.executeRendering(cmd, app.m_window->getFrontBuffer());
-				}
-
+				crowd_procedure.executeRendering(cmd, app.m_window->getFrontBuffer());
 				{
 //					gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
 //					gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
