@@ -50,7 +50,7 @@ void main()
 		float d = dot(dir, target_dir);
 		if(d <= 0.98)
 		{
-			float rotate_angle = acos(d)+0.001;
+			float rotate_angle = acos(d);
 			rotate_angle = min(rotate_angle, unit_info.angler_speed);
 
 			float c = cross(vec3(dir, 0.), vec3(target_dir, 0.)).z;
@@ -59,9 +59,9 @@ void main()
 		}
 		else
 		{
-			inertia += dir * pow(1.01, 1.+deltatime);
-			inertia = normalize_safe(inertia, vec2(0.)) * min(length(inertia), unit_info.linear_speed);
 		}
+		inertia += dir * pow(1.01, 1.+deltatime);
+		inertia = normalize_safe(inertia, vec2(0.)) * min(length(inertia), unit_info.linear_speed);
 	}
 
 	dir = normalize_safe(inertia, vec2(0.));
@@ -92,9 +92,12 @@ void main()
 			if((fragment_map & bit) != 0)
 			{
 				// 壁にぶつかったので反射
-				vec2 push_dir = vec2(b_jfa[ipos_next.x + ipos_next.y*reso.x]);
+				vec2 push_dir = vec2(b_jfa[ipos_next.x + ipos_next.y*reso.x] - ipos_next);
 				vec2 wall = normalize(vec2(pos_next-ivec2(pos.xy)));
-				inertia = reflect(inertia, wall) * 0.3 + normalize(push_dir)*2.;
+				inertia = reflect(inertia, push_dir) * 0.3 + normalize(push_dir)*2.;
+
+				// 押し出し
+				pos.xy += normalize(push_dir)*2.;
 
 				dir = reflect(dir, wall);
 

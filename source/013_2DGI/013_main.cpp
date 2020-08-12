@@ -238,7 +238,6 @@ int pathFinding()
 				gi2d_context->execute(cmd);
 				crowd_context->execute(cmd);
 				gi2d_debug.executeMakeFragment(cmd);
-				gi2d_make_hierarchy.executeMakeFragmentMap(cmd);
 				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
 				gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
 
@@ -252,9 +251,9 @@ int pathFinding()
 					crowd_procedure.executeRendering(cmd, app.m_window->getFrontBuffer());
 				}
 
-//				if (0)
 				{
-					
+//					gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
+//					gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
 				}
 
 				cmd.end();
