@@ -93,13 +93,12 @@ void main()
 			{
 				// 壁にぶつかったので反射
 				vec2 push_dir = vec2(b_jfa[ipos_next.x + ipos_next.y*reso.x] - ipos_next);
-				vec2 wall = normalize(vec2(pos_next-ivec2(pos.xy)));
 				inertia = reflect(inertia, push_dir) * 0.3 + normalize(push_dir)*2.;
+				dir = reflect(dir, push_dir);
 
 				// 押し出し
-				pos.xy += normalize(push_dir)*2.;
+				pos.xy += normalize(push_dir);
 
-				dir = reflect(dir, wall);
 
 			}
 			else
