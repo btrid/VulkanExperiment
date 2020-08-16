@@ -96,10 +96,10 @@ struct DrawHelper : public Singleton<DrawHelper>
 				memcpy(staging.getMappedPtr(), v.data(), desc.size);
 
 				vk::BufferCopy copy;
-				copy.setSrcOffset(staging.getBufferInfo().offset);
-				copy.setDstOffset(m_mesh_vertex[Box].getBufferInfo().offset);
+				copy.setSrcOffset(staging.getInfo().offset);
+				copy.setDstOffset(m_mesh_vertex[Box].getInfo().offset);
 				copy.setSize(desc.size);
-				cmd.copyBuffer(staging.getBufferInfo().buffer, m_mesh_vertex[Box].getBufferInfo().buffer, copy);
+				cmd.copyBuffer(staging.getInfo().buffer, m_mesh_vertex[Box].getInfo().buffer, copy);
 			}
 
 			{
@@ -111,10 +111,10 @@ struct DrawHelper : public Singleton<DrawHelper>
 				memcpy(staging.getMappedPtr(), i.data(), desc.size);
 
 				vk::BufferCopy copy;
-				copy.setSrcOffset(staging.getBufferInfo().offset);
-				copy.setDstOffset(m_mesh_index[Box].getBufferInfo().offset);
+				copy.setSrcOffset(staging.getInfo().offset);
+				copy.setDstOffset(m_mesh_index[Box].getInfo().offset);
 				copy.setSize(desc.size);
-				cmd.copyBuffer(staging.getBufferInfo().buffer, m_mesh_index[Box].getBufferInfo().buffer, copy);
+				cmd.copyBuffer(staging.getInfo().buffer, m_mesh_index[Box].getInfo().buffer, copy);
 			}
 			m_mesh_index_num[Box] = i.size();
 
@@ -133,10 +133,10 @@ struct DrawHelper : public Singleton<DrawHelper>
 				memcpy(staging.getMappedPtr(), v.data(), desc.size);
 
 				vk::BufferCopy copy;
-				copy.setSrcOffset(staging.getBufferInfo().offset);
-				copy.setDstOffset(m_mesh_vertex[SPHERE].getBufferInfo().offset);
+				copy.setSrcOffset(staging.getInfo().offset);
+				copy.setDstOffset(m_mesh_vertex[SPHERE].getInfo().offset);
 				copy.setSize(desc.size);
-				cmd.copyBuffer(staging.getBufferInfo().buffer, m_mesh_vertex[SPHERE].getBufferInfo().buffer, copy);
+				cmd.copyBuffer(staging.getInfo().buffer, m_mesh_vertex[SPHERE].getInfo().buffer, copy);
 			}
 
 			{
@@ -148,10 +148,10 @@ struct DrawHelper : public Singleton<DrawHelper>
 				memcpy(staging.getMappedPtr(), i.data(), desc.size);
 
 				vk::BufferCopy copy;
-				copy.setSrcOffset(staging.getBufferInfo().offset);
-				copy.setDstOffset(m_mesh_index[SPHERE].getBufferInfo().offset);
+				copy.setSrcOffset(staging.getInfo().offset);
+				copy.setDstOffset(m_mesh_index[SPHERE].getInfo().offset);
 				copy.setSize(desc.size);
-				cmd.copyBuffer(staging.getBufferInfo().buffer, m_mesh_index[SPHERE].getBufferInfo().buffer, copy);
+				cmd.copyBuffer(staging.getInfo().buffer, m_mesh_index[SPHERE].getInfo().buffer, copy);
 			}
 			m_mesh_index_num[SPHERE] = i.size() * 3;
 		}
@@ -327,8 +327,8 @@ struct DrawHelper : public Singleton<DrawHelper>
 				continue;
 			}
 
-			cmd.bindVertexBuffers(0, m_mesh_vertex[i].getBufferInfo().buffer, m_mesh_vertex[i].getBufferInfo().offset);
-			cmd.bindIndexBuffer(m_mesh_index[i].getBufferInfo().buffer, m_mesh_index[i].getBufferInfo().offset, vk::IndexType::eUint32);
+			cmd.bindVertexBuffers(0, m_mesh_vertex[i].getInfo().buffer, m_mesh_vertex[i].getInfo().offset);
+			cmd.bindIndexBuffer(m_mesh_index[i].getInfo().buffer, m_mesh_index[i].getInfo().offset, vk::IndexType::eUint32);
 
 			auto cmd_data = cmd_list.get();
 			for (auto& dcmd : cmd_data)

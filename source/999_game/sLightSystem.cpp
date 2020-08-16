@@ -10,8 +10,8 @@ void sLightSystem::setup(std::shared_ptr<btr::Context>& context)
 {
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
-	auto size = app::g_app_instance->m_window->getClientSize();
-	m_tile_info_cpu.m_resolusion = uvec2(size.x, size.y);
+	auto size = app::g_app_instance->m_window->getFrontBuffer()->m_resolution;
+	m_tile_info_cpu.m_resolusion = uvec2(size.width, size.height);
 	m_tile_info_cpu.m_tile_num = uvec2(32);
 	m_tile_info_cpu.m_tile_index_map_max = 256;
 	m_tile_info_cpu.m_tile_buffer_max_num = m_tile_info_cpu.m_tile_index_map_max * m_tile_info_cpu.m_tile_num.x*m_tile_info_cpu.m_tile_num.y;
@@ -25,11 +25,11 @@ void sLightSystem::setup(std::shared_ptr<btr::Context>& context)
 			auto staging = context->m_staging_memory.allocateMemory(desc);
 			staging.getMappedPtr()->m_max_num = num;
 			vk::BufferCopy copy;
-			copy.setSize(staging.getBufferInfo().range);
-			copy.setSrcOffset(staging.getBufferInfo().offset);
-			copy.setDstOffset(m_light_info.getBufferInfo().offset);
+			copy.setSize(staging.getInfo().range);
+			copy.setSrcOffset(staging.getInfo().offset);
+			copy.setDstOffset(m_light_info.getInfo().offset);
 
-			cmd.copyBuffer(staging.getBufferInfo().buffer, m_light_info.getBufferInfo().buffer, copy);
+			cmd.copyBuffer(staging.getInfo().buffer, m_light_info.getInfo().buffer, copy);
 		}
 		{
 			btr::BufferMemoryDescriptorEx<TileInfo> desc;
@@ -39,11 +39,11 @@ void sLightSystem::setup(std::shared_ptr<btr::Context>& context)
 			auto staging = context->m_staging_memory.allocateMemory(desc);
 			*staging.getMappedPtr() = m_tile_info_cpu;
 			vk::BufferCopy copy;
-			copy.setSize(staging.getBufferInfo().range);
-			copy.setSrcOffset(staging.getBufferInfo().offset);
-			copy.setDstOffset(m_tile_info.getBufferInfo().offset);
+			copy.setSize(staging.getInfo().range);
+			copy.setSrcOffset(staging.getInfo().offset);
+			copy.setDstOffset(m_tile_info.getInfo().offset);
 
-			cmd.copyBuffer(staging.getBufferInfo().buffer, m_tile_info.getBufferInfo().buffer, copy);
+			cmd.copyBuffer(staging.getInfo().buffer, m_tile_info.getInfo().buffer, copy);
 		}
 		{
 			btr::BufferMemoryDescriptorEx<LightDataEx> desc;
@@ -82,7 +82,7 @@ void sLightSystem::setup(std::shared_ptr<btr::Context>& context)
 		std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 		for (uint32_t i = 0; i < SHADER_NUM; i++)
 		{
-			m_shader_module[i] = loadShaderUnique(context->m_device.get(), path + shader_desc[i].name);
+			m_shader_module[i] = loadShaderUnique(context->m_device, path + shader_desc[i].name);
 			m_shader_info[i].setModule(m_shader_module[i].get());
 			m_shader_info[i].setStage(shader_desc[i].stage);
 			m_shader_info[i].setPName("main");
@@ -148,14 +148,14 @@ void sLightSystem::setup(std::shared_ptr<btr::Context>& context)
 		{
 
 			std::vector<vk::DescriptorBufferInfo> uniforms = {
-				m_light_info.getBufferInfo(),
-				m_tile_info.getBufferInfo(),
+				m_light_info.getInfo(),
+				m_tile_info.getInfo(),
 			};
 			std::vector<vk::DescriptorBufferInfo> storages = {
-				m_light_data.getBufferInfo(),
-				m_light_data_counter.getBufferInfo(),
-				m_tile_data_counter.getBufferInfo(),
-				m_tile_data_map.getBufferInfo(),
+				m_light_data.getInfo(),
+				m_light_data_counter.getInfo(),
+				m_tile_data_counter.getInfo(),
+				m_tile_data_map.getInfo(),
 			};
 			std::vector<vk::WriteDescriptorSet> write_desc =
 			{
@@ -272,8 +272,8 @@ vk::CommandBuffer sLightSystem::execute(std::shared_ptr<btr::Context>& context)
 			to_transfer2.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, { to_transfer, to_transfer2 }, {});
 
-			cmd.fillBuffer(m_light_data_counter.getBufferInfo().buffer, m_light_data_counter.getBufferInfo().offset, m_light_data_counter.getBufferInfo().range, 0u);
-			cmd.fillBuffer(m_tile_data_counter.getBufferInfo().buffer, m_tile_data_counter.getBufferInfo().offset, m_tile_data_counter.getBufferInfo().range, 0u);
+			cmd.fillBuffer(m_light_data_counter.getInfo().buffer, m_light_data_counter.getInfo().offset, m_light_data_counter.getInfo().range, 0u);
+			cmd.fillBuffer(m_tile_data_counter.getInfo().buffer, m_tile_data_counter.getInfo().offset, m_tile_data_counter.getInfo().range, 0u);
 
 			auto to_write = m_light_data_counter.makeMemoryBarrier();
 			to_write.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);

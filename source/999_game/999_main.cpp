@@ -62,8 +62,8 @@ struct Player
 	void execute(std::shared_ptr<btr::Context>& context)
 	{
 		const cInput& input = context->m_window->getInput();
-		auto resolution = context->m_window->getClientSize();
-		auto mouse_n1_to_1 = (glm::vec2(input.m_mouse.xy) / glm::vec2(resolution) - 0.5f) * 2.f;
+		auto resolution = context->m_window->getSwapchain()->getSize();
+		auto mouse_n1_to_1 = (glm::vec2(input.m_mouse.xy) / glm::vec2(resolution.width, resolution.height) - 0.5f) * 2.f;
 		if (glm::dot(mouse_n1_to_1, mouse_n1_to_1) >= 0.0001f) {
 			m_dir = glm::normalize(-glm::vec3(mouse_n1_to_1.x, 0.f, mouse_n1_to_1.y));
 		}
@@ -128,15 +128,14 @@ int main()
 	camera->getData().m_far = 50000.f;
 	camera->getData().m_near = 0.01f;
 
-	auto gpu = sGlobal::Order().getGPU(0);
-	auto device = sGlobal::Order().getGPU(0).getDevice();
 
 	app::AppDescriptor app_desc;
-	app_desc.m_gpu = gpu;
 	app_desc.m_window_size = uvec2(1200, 800);
 	app::App app(app_desc);
 
 	auto context = app.m_context;
+	auto gpu = context->m_physical_device;
+	auto device = context->m_device;
 
 	cModel model;
 	Player m_player;
@@ -147,24 +146,25 @@ int main()
 		model.load(context, "..\\..\\resource\\tiny.x");
 
 		sScene::Order().setup(context);
-		sBoid::Order().setup(context, app.m_window->getRenderTarget());
-		sBulletSystem::Order().setup(context, app.m_window->getRenderTarget());
+		sBoid::Order().setup(context, app.m_window->getFrontBuffer());
+		sBulletSystem::Order().setup(context, app.m_window->getFrontBuffer());
 		sCollisionSystem::Order().setup(context);
 		sLightSystem::Order().setup(context);
-		sMap::Order().setup(context, app.m_window->getRenderTarget());
+		sMap::Order().setup(context, app.m_window->getFrontBuffer());
 
 	}
-	AppModel::DescriptorSet::Create(context);
-	AppModelRenderStage renderer(context, app.m_window->getRenderTarget());
-	AppModelAnimationStage animater(context);
+//	AppModel::DescriptorSet::Create(context);
+	auto appmodel_context = std::make_shared<AppModelContext>(context);
+	AppModelRenderStage renderer(context, appmodel_context, app.m_window->getFrontBuffer());
+	AppModelAnimationStage animater(context, appmodel_context);
 
-	std::shared_ptr<AppModel> player_model = std::make_shared<AppModel>(context, model.getResource(), 1);
+	std::shared_ptr<AppModel> player_model = std::make_shared<AppModel>(context, appmodel_context, model.getResource(), 1);
 
 	auto drawCmd = renderer.createCmd(player_model);
 	auto animeCmd = animater.createCmd(player_model);
 
-	ClearPipeline clear_render_target(context, app.m_window->getRenderTarget());
-	PresentPipeline present_pipeline(context, app.m_window->getRenderTarget(), app.m_window->getSwapchain());
+	ClearPipeline clear_render_target(context, app.m_window->getFrontBuffer());
+	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchain());
 
 	app.setup();
 	while (true)
@@ -185,7 +185,7 @@ int main()
 				{
 					motion_worker_syncronized_point.arrive();
 				};
-				sGlobal::Order().getThreadPool().enque(job);
+				app.m_thread_pool.enque(job);
 			}
 			enum 
 			{
@@ -216,7 +216,7 @@ int main()
 					render_cmds[cmd_map_draw] = sMap::Order().draw(context);
 					render_syncronized_point.arrive();
 				};
-				sGlobal::Order().getThreadPool().enque(job);
+				app.m_thread_pool.enque(job);
 			}
 			{
 				cThreadJob job;
@@ -226,16 +226,16 @@ int main()
 					{
 						std::vector<vk::CommandBuffer> cmds(1);
 						cmds[0] = animeCmd.get();
-						render_cmds[cmd_player_animate] = animater.dispach(cmds);
+						animater.dispatchCmd(render_cmds[cmd_player_animate], cmds);
 					}
 					{
 						std::vector<vk::CommandBuffer> cmds(1);
 						cmds[0] = drawCmd.get();
-						render_cmds[cmd_player_draw] = renderer.draw(cmds);
+						renderer.dispach(render_cmds[cmd_player_draw], cmds);
 					}
 					render_syncronized_point.arrive();
 				};
-				sGlobal::Order().getThreadPool().enque(job);
+				app.m_thread_pool.enque(job);
 			}
 			{
 				cThreadJob job;
@@ -246,7 +246,7 @@ int main()
 					render_cmds[cmd_boid_draw] = sBoid::Order().draw(context);
 					render_syncronized_point.arrive();
 				};
-				sGlobal::Order().getThreadPool().enque(job);
+				app.m_thread_pool.enque(job);
 			}
 			{
 				cThreadJob job;
@@ -257,7 +257,7 @@ int main()
 					render_cmds[cmd_bullet_draw] = sBulletSystem::Order().draw(context);
 					render_syncronized_point.arrive();
 				};
-				sGlobal::Order().getThreadPool().enque(job);
+				app.m_thread_pool.enque(job);
 			}
 			{
 				cThreadJob job;
@@ -267,7 +267,7 @@ int main()
 					render_cmds[cmd_collision_exeute] = sCollisionSystem::Order().execute(context);
 					render_syncronized_point.arrive();
 				};
-				sGlobal::Order().getThreadPool().enque(job);
+				app.m_thread_pool.enque(job);
 			}
 			{
 				cThreadJob job;
@@ -277,7 +277,7 @@ int main()
 					render_cmds[cmd_light_exeute] = sLightSystem::Order().execute(context);
 					render_syncronized_point.arrive();
 				};
-				sGlobal::Order().getThreadPool().enque(job);
+				app.m_thread_pool.enque(job);
 			}
 			{
 				cThreadJob job;
@@ -286,7 +286,7 @@ int main()
 				{
 					render_syncronized_point.arrive();
 				};
-				sGlobal::Order().getThreadPool().enque(job);
+				app.m_thread_pool.enque(job);
 			}
 
 			render_syncronized_point.wait();

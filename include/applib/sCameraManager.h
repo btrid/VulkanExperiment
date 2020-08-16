@@ -71,8 +71,8 @@ struct sCameraManager : public Singleton<sCameraManager>
 		{
 
 			vk::DescriptorBufferInfo uniforms[] = {
-				m_camera.getBufferInfo(),
-				m_camera_frustom.getBufferInfo(),
+				m_camera.getInfo(),
+				m_camera_frustom.getInfo(),
 			};
 			std::vector<vk::WriteDescriptorSet> write_desc =
 			{
@@ -125,7 +125,7 @@ struct sCameraManager : public Singleton<sCameraManager>
 		}
 
 		vk::BufferCopy copy_info[] = { m_camera.update(context->getGPUFrame()), m_camera_frustom.update(context->getGPUFrame()) };
-		cmd.copyBuffer(m_camera.getStagingBufferInfo().buffer, m_camera.getBufferInfo().buffer, array_length(copy_info), copy_info);
+		cmd.copyBuffer(m_camera.getStagingBufferInfo().buffer, m_camera.getInfo().buffer, array_length(copy_info), copy_info);
 
 		std::vector<vk::BufferMemoryBarrier> to_draw_barrier = {
 			m_camera.getBufferMemory().makeMemoryBarrierEx().setSrcAccessMask(vk::AccessFlagBits::eTransferWrite).setDstAccessMask(vk::AccessFlagBits::eShaderRead),

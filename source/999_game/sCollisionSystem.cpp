@@ -18,7 +18,7 @@ void sCollisionSystem::setup(std::shared_ptr<btr::Context>& context)
 		std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 		for (uint32_t i = 0; i < SHADER_NUM; i++)
 		{
-			m_shader_module[i] = loadShaderUnique(context->m_device.get(), path + shader_desc[i].name);
+			m_shader_module[i] = loadShaderUnique(context->m_device, path + shader_desc[i].name);
 			m_shader_info[i].setModule(m_shader_module[i].get());
 			m_shader_info[i].setStage(shader_desc[i].stage);
 			m_shader_info[i].setPName("main");
@@ -108,8 +108,8 @@ vk::CommandBuffer sCollisionSystem::execute(std::shared_ptr<btr::Context>& conte
 	auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 	{
 		std::vector<vk::BufferMemoryBarrier> to_read = {
-			sBoid::Order().getLL().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
-			sBoid::Order().getSoldier().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead| vk::AccessFlagBits::eShaderWrite),
+			sBoid::Order().getLL().makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			sBoid::Order().getSoldier().makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead| vk::AccessFlagBits::eShaderWrite),
 			sBulletSystem::Order().getBullet().makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
@@ -124,8 +124,8 @@ vk::CommandBuffer sCollisionSystem::execute(std::shared_ptr<btr::Context>& conte
 		cmd.dispatch(1, 1, 1);
 
 		std::vector<vk::BufferMemoryBarrier> to = {
-			sBoid::Order().getSoldier().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
-			sBulletSystem::Order().getBullet().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
+			sBoid::Order().getSoldier().makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			sBulletSystem::Order().getBullet().makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to, {});
 	}

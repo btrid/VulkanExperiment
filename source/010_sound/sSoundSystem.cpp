@@ -319,7 +319,7 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 		{
 			vk::DescriptorBufferInfo uniforms[] = {
 				m_sound_format.getInfo(),
-				m_sound_play_info.getBufferInfo(),
+				m_sound_play_info.getInfo(),
 			};
 			vk::DescriptorBufferInfo storages[] = {
 				m_buffer.getInfo(),
@@ -665,7 +665,7 @@ vk::CommandBuffer sSoundSystem::execute_loop(const std::shared_ptr<btr::Context>
 				to_transfer.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
 			}
-			cmd.copyBuffer(m_sound_play_info.getStagingBufferInfo().buffer, m_sound_play_info.getBufferInfo().buffer, copy);
+			cmd.copyBuffer(m_sound_play_info.getStagingBufferInfo().buffer, m_sound_play_info.getInfo().buffer, copy);
 			{
 				auto to_read = m_sound_play_info.getBufferMemory().makeMemoryBarrierEx();
 				to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);

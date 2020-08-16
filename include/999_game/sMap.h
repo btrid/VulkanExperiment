@@ -30,10 +30,10 @@ struct DrawDescriptor
 	void updateDescriptor(const std::shared_ptr<btr::Context>& context, vk::DescriptorSet descriptor_set)
 	{
 		vk::DescriptorBufferInfo storages[] = {
-			m_world.getBufferInfo(),
-			m_visible.getBufferInfo(),
-			m_draw_cmd.getBufferInfo(),
-			m_instance_index_map.getBufferInfo(),
+			m_world.getInfo(),
+			m_visible.getInfo(),
+			m_draw_cmd.getInfo(),
+			m_instance_index_map.getInfo(),
 		};
 		vk::WriteDescriptorSet write_desc[] =
 		{
@@ -166,10 +166,10 @@ struct sMap : public Singleton<sMap>
 				indirect_cmd->firstInstance = 0;
 
 				vk::BufferCopy copy;
-				copy.setSrcOffset(staging.getBufferInfo().offset);
-				copy.setDstOffset(resource->m_draw_indirect.getBufferInfo().offset);
+				copy.setSrcOffset(staging.getInfo().offset);
+				copy.setDstOffset(resource->m_draw_indirect.getInfo().offset);
 				copy.setSize(desc.size);
-				cmd->copyBuffer(staging.getBufferInfo().buffer, resource->m_draw_indirect.getBufferInfo().buffer, copy);
+				cmd->copyBuffer(staging.getInfo().buffer, resource->m_draw_indirect.getInfo().buffer, copy);
 			}
 			{
 				btr::BufferMemoryDescriptor desc;
@@ -333,7 +333,6 @@ struct sMap : public Singleton<sMap>
 #include <999_game/sLightSystem.h>
 #include <999_game/sScene.h>
 
-#include <btrlib/VoxelPipeline.h>
 
 struct sMap : public Singleton<sMap>
 {
@@ -364,7 +363,7 @@ struct sMap : public Singleton<sMap>
 	std::array<vk::UniquePipeline, PIPELINE_NUM> m_pipeline;
 	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
 
-	VoxelPipeline m_voxelize_pipeline;
+//	VoxelPipeline m_voxelize_pipeline;
 
 	void setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target)
 	{
@@ -452,7 +451,7 @@ struct sMap : public Singleton<sMap>
 
 			std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 			for (size_t i = 0; i < SHADER_NUM; i++) {
-				m_shader_module[i] = loadShaderUnique(context->m_device.get(), path + shader_info[i].name);
+				m_shader_module[i] = loadShaderUnique(context->m_device, path + shader_info[i].name);
 			}
 		}
 

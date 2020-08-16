@@ -546,13 +546,13 @@ struct UpdateBufferAligned
 	{
 		vk::BufferCopy copy_info;
 		copy_info.setSize(m_stride*m_desc.element_num);
-		copy_info.setSrcOffset(m_staging_buffer.getBufferInfo().offset + m_stride*m_desc.element_num*cpu_index);
-		copy_info.setDstOffset(m_device_buffer.getBufferInfo().offset);
+		copy_info.setSrcOffset(m_staging_buffer.getInfo().offset + m_stride*m_desc.element_num*cpu_index);
+		copy_info.setDstOffset(m_device_buffer.getInfo().offset);
 		return copy_info;
 	}
 
-	vk::DescriptorBufferInfo getBufferInfo()const { return m_device_buffer.getBufferInfo(); }
-	vk::DescriptorBufferInfo getStagingBufferInfo()const { return m_staging_buffer.getBufferInfo(); }
+	vk::DescriptorBufferInfo getInfo()const { return m_device_buffer.getInfo(); }
+	vk::DescriptorBufferInfo getStagingBufferInfo()const { return m_staging_buffer.getInfo(); }
 	const UpdateBufferDescriptor& getDescriptor()const { return m_desc; }
 	BufferMemory& getBufferMemory() { return m_device_buffer; }
 	const BufferMemory& getBufferMemory()const { return m_device_buffer; }
@@ -620,16 +620,16 @@ struct UpdateBuffer
 
 		vk::BufferCopy copy_info;
 		copy_info.setSize(area.m_end - area.m_begin);
-		copy_info.setSrcOffset(m_staging_buffer.getBufferInfo().offset + sizeof(T)*m_element_max*cpu_index + area.m_begin);
-		copy_info.setDstOffset(m_device_buffer.getBufferInfo().offset + area.m_begin);
+		copy_info.setSrcOffset(m_staging_buffer.getInfo().offset + sizeof(T)*m_element_max*cpu_index + area.m_begin);
+		copy_info.setDstOffset(m_device_buffer.getInfo().offset + area.m_begin);
 
 		area.reset();
 
 		return copy_info;
 	}
 
-	vk::DescriptorBufferInfo getBufferInfo()const { return m_device_buffer.getBufferInfo(); }
-	vk::DescriptorBufferInfo getStagingBufferInfo()const { return m_staging_buffer.getBufferInfo(); }
+	vk::DescriptorBufferInfo getInfo()const { return m_device_buffer.getInfo(); }
+	vk::DescriptorBufferInfo getStagingBufferInfo()const { return m_staging_buffer.getInfo(); }
 	const UpdateBufferDescriptor& getDescriptor()const { return m_desc; }
 	BufferMemory& getBufferMemory() { return m_device_buffer; }
 	const BufferMemory& getBufferMemory()const { return m_device_buffer; }
@@ -734,16 +734,16 @@ struct UpdateBuffer2
 
 		vk::BufferCopy copy_info;
 		copy_info.setSize(area.m_end - area.m_begin);
-		copy_info.setSrcOffset(m_staging_buffer.getBufferInfo().offset + sizeof(T)*m_element_max*cpu_index + area.m_begin);
-		copy_info.setDstOffset(m_device_buffer.getBufferInfo().offset + area.m_begin);
+		copy_info.setSrcOffset(m_staging_buffer.getInfo().offset + sizeof(T)*m_element_max*cpu_index + area.m_begin);
+		copy_info.setDstOffset(m_device_buffer.getInfo().offset + area.m_begin);
 
 		area.reset();
 
 		return copy_info;
 	}
 
-	vk::DescriptorBufferInfo getBufferInfo()const { return m_device_buffer.getBufferInfo(); }
-	vk::DescriptorBufferInfo getStagingBufferInfo()const { return m_staging_buffer.getBufferInfo(); }
+	vk::DescriptorBufferInfo getBufferInfo()const { return m_device_buffer.getInfo(); }
+	vk::DescriptorBufferInfo getStagingBufferInfo()const { return m_staging_buffer.getInfo(); }
 	BufferMemory& getBufferMemory() { return m_device_buffer; }
 	const BufferMemory& getBufferMemory()const { return m_device_buffer; }
 

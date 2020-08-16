@@ -60,9 +60,9 @@ struct cTriangleLL
 
 					vk::BufferCopy copy;
 					copy.setSize(desc.size);
-					copy.setSrcOffset(staging.getBufferInfo().offset);
-					copy.setDstOffset(m_vertex.getBufferInfo().offset);
-					loader.m_cmd.copyBuffer(staging.getBufferInfo().buffer, m_vertex.getBufferInfo().buffer, copy);
+					copy.setSrcOffset(staging.getInfo().offset);
+					copy.setDstOffset(m_vertex.getInfo().offset);
+					loader.m_cmd.copyBuffer(staging.getInfo().buffer, m_vertex.getInfo().buffer, copy);
 
 				}
 				{
@@ -76,9 +76,9 @@ struct cTriangleLL
 
 					vk::BufferCopy copy;
 					copy.setSize(desc.size);
-					copy.setSrcOffset(staging.getBufferInfo().offset);
-					copy.setDstOffset(m_index.getBufferInfo().offset);
-					loader.m_cmd.copyBuffer(staging.getBufferInfo().buffer, m_index.getBufferInfo().buffer, copy);
+					copy.setSrcOffset(staging.getInfo().offset);
+					copy.setDstOffset(m_index.getInfo().offset);
+					loader.m_cmd.copyBuffer(staging.getInfo().buffer, m_index.getInfo().buffer, copy);
 
 				}
 
@@ -152,10 +152,10 @@ struct cTriangleLL
 				{
 
 					std::vector<vk::DescriptorBufferInfo> uniforms = {
-						m_parent->m_triangle_info.getBufferInfo(),
+						m_parent->m_triangle_info.getInfo(),
 					};
 					std::vector<vk::DescriptorBufferInfo> storages = {
-						m_parent->m_triangleLL_head.getBufferInfo(),
+						m_parent->m_triangleLL_head.getInfo(),
 					};
 					std::vector<vk::WriteDescriptorSet> write_desc =
 					{
@@ -271,8 +271,8 @@ struct cTriangleLL
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline);
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout, 0, m_descriptor_set, {});
-			cmd.bindVertexBuffers(0, { m_vertex.getBufferInfo().buffer }, { m_vertex.getBufferInfo().offset });
-			cmd.bindIndexBuffer(m_index.getBufferInfo().buffer, m_index.getBufferInfo().offset, vk::IndexType::eUint32);
+			cmd.bindVertexBuffers(0, { m_vertex.getInfo().buffer }, { m_vertex.getInfo().offset });
+			cmd.bindIndexBuffer(m_index.getInfo().buffer, m_index.getInfo().offset, vk::IndexType::eUint32);
 
 			CameraGPU camera;
 			camera.setup(*cCamera::sCamera::Order().getCameraList()[0]);
@@ -354,9 +354,9 @@ struct cTriangleLL
 
 				vk::BufferCopy copy;
 				copy.setSize(desc.size);
-				copy.setSrcOffset(staging_buffer.getBufferInfo().offset);
-				copy.setDstOffset(m_triangle_info.getBufferInfo().offset);
-				loader.m_cmd.copyBuffer(staging_buffer.getBufferInfo().buffer, m_triangle_info.getBufferInfo().buffer, copy);
+				copy.setSrcOffset(staging_buffer.getInfo().offset);
+				copy.setDstOffset(m_triangle_info.getInfo().offset);
+				loader.m_cmd.copyBuffer(staging_buffer.getInfo().buffer, m_triangle_info.getInfo().buffer, copy);
 			}
 
 			{
@@ -527,13 +527,13 @@ struct cTriangleLL
 			{
 
 				std::vector<vk::DescriptorBufferInfo> uniforms = {
-					m_triangle_info.getBufferInfo(),
-					m_triangle_projection.getBufferInfo(),
+					m_triangle_info.getInfo(),
+					m_triangle_projection.getInfo(),
 				};
 				std::vector<vk::DescriptorBufferInfo> storages = {
-					m_triangleLL_head.getBufferInfo(),
-					m_triangleLL.getBufferInfo(),
-					m_triangleLL_count.getBufferInfo(),
+					m_triangleLL_head.getInfo(),
+					m_triangleLL.getInfo(),
+					m_triangleLL_count.getInfo(),
 				};
 				std::vector<vk::DescriptorImageInfo> images = {
 					vk::DescriptorImageInfo()
@@ -683,8 +683,8 @@ struct cTriangleLL
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, to_transfer, to_transfer_image);
 			}
 
-			cmd.fillBuffer(m_triangleLL_count.getBufferInfo().buffer, m_triangleLL_count.getBufferInfo().offset, m_triangleLL_count.getBufferInfo().range, 0);
-			cmd.fillBuffer(m_triangleLL_head.getBufferInfo().buffer, m_triangleLL_head.getBufferInfo().offset, m_triangleLL_head.getBufferInfo().range, -1);
+			cmd.fillBuffer(m_triangleLL_count.getInfo().buffer, m_triangleLL_count.getInfo().offset, m_triangleLL_count.getInfo().range, 0);
+			cmd.fillBuffer(m_triangleLL_head.getInfo().buffer, m_triangleLL_head.getInfo().offset, m_triangleLL_head.getInfo().range, -1);
 			cmd.clearColorImage(m_brick_image, vk::ImageLayout::eTransferDstOptimal, vk::ClearColorValue(std::array<uint32_t, 4>{0}), brick_image_subresource_range);
 
 			{

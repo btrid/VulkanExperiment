@@ -13,8 +13,6 @@
 #include <applib/sCameraManager.h>
 #include <999_game/sLightSystem.h>
 
-#include <btrlib/VoxelPipeline.h>
-
 struct MapDescriptor
 {
 	glm::vec2 m_cell_size;
@@ -126,7 +124,7 @@ struct sScene : public Singleton<sScene>
 				vk::MemoryRequirements memory_request = context->m_device.getImageMemoryRequirements(image.get());
 				vk::MemoryAllocateInfo memory_alloc_info;
 				memory_alloc_info.allocationSize = memory_request.size;
-				memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(context->m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+				memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(context->m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 				auto image_memory = context->m_device.allocateMemoryUnique(memory_alloc_info);
 				context->m_device.bindImageMemory(image.get(), image_memory.get(), 0);
 
@@ -137,7 +135,7 @@ struct sScene : public Singleton<sScene>
 				vk::MemoryRequirements damage_memory_request = context->m_device.getImageMemoryRequirements(image_damage.get());
 				vk::MemoryAllocateInfo damage_memory_alloc_info;
 				damage_memory_alloc_info.allocationSize = damage_memory_request.size;
-				damage_memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(context->m_device.getGPU(), damage_memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+				damage_memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(context->m_physical_device, damage_memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 				auto image_damage_memory = context->m_device.allocateMemoryUnique(damage_memory_alloc_info);
 				context->m_device.bindImageMemory(image_damage.get(), image_damage_memory.get(), 0);
 
@@ -148,7 +146,7 @@ struct sScene : public Singleton<sScene>
 				auto sub_memory_request = context->m_device.getImageMemoryRequirements(subimage.get());
 				vk::MemoryAllocateInfo sub_memory_alloc_info;
 				sub_memory_alloc_info.allocationSize = sub_memory_request.size;
-				sub_memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(context->m_device.getGPU(), sub_memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+				sub_memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(context->m_physical_device, sub_memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 				auto subimage_memory = context->m_device.allocateMemoryUnique(sub_memory_alloc_info);
 				context->m_device.bindImageMemory(subimage.get(), subimage_memory.get(), 0);
 
@@ -222,11 +220,11 @@ struct sScene : public Singleton<sScene>
 						auto staging = context->m_staging_memory.allocateMemory(desc);
 						memcpy_s(staging.getMappedPtr(), desc.size, map.data(), vector_sizeof(map));
 						vk::BufferImageCopy copy;
-						copy.setBufferOffset(staging.getBufferInfo().offset);
+						copy.setBufferOffset(staging.getInfo().offset);
 						copy.setImageSubresource(l);
 						copy.setImageExtent(image_info.extent);
 
-						cmd.copyBufferToImage(staging.getBufferInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, copy);
+						cmd.copyBufferToImage(staging.getInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, copy);
 					}
 					{
 						btr::BufferMemoryDescriptor desc;
@@ -236,11 +234,11 @@ struct sScene : public Singleton<sScene>
 
 						memcpy_s(staging.getMappedPtr(), desc.size, submap.data(), vector_sizeof(submap));
 						vk::BufferImageCopy copy;
-						copy.setBufferOffset(staging.getBufferInfo().offset);
+						copy.setBufferOffset(staging.getInfo().offset);
 						copy.setImageSubresource(l);
 						copy.setImageExtent(sub_image_info.extent);
 
-						cmd.copyBufferToImage(staging.getBufferInfo().buffer, subimage.get(), vk::ImageLayout::eTransferDstOptimal, copy);
+						cmd.copyBufferToImage(staging.getInfo().buffer, subimage.get(), vk::ImageLayout::eTransferDstOptimal, copy);
 
 					}
 
@@ -250,7 +248,7 @@ struct sScene : public Singleton<sScene>
 				{
 
 					vk::ImageMemoryBarrier to_shader_read;
-					to_shader_read.dstQueueFamilyIndex = context->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
+//					to_shader_read.dstQueueFamilyIndex = context->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
 					to_shader_read.image = image.get();
 					to_shader_read.oldLayout = vk::ImageLayout::eTransferDstOptimal;
 					to_shader_read.newLayout = vk::ImageLayout::eGeneral;
@@ -290,11 +288,11 @@ struct sScene : public Singleton<sScene>
 
 				vk::BufferCopy vertex_copy;
 				vertex_copy.setSize(desc.size);
-				vertex_copy.setSrcOffset(staging.getBufferInfo().offset);
-				vertex_copy.setDstOffset(m_map_info.getBufferInfo().offset);
-				cmd.copyBuffer(staging.getBufferInfo().buffer, m_map_info.getBufferInfo().buffer, vertex_copy);
+				vertex_copy.setSrcOffset(staging.getInfo().offset);
+				vertex_copy.setDstOffset(m_map_info.getInfo().offset);
+				cmd.copyBuffer(staging.getInfo().buffer, m_map_info.getInfo().buffer, vertex_copy);
 
-				auto barrier = m_map_info.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
+				auto barrier = m_map_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { barrier }, {});
 			}
 			{
@@ -361,7 +359,7 @@ struct sScene : public Singleton<sScene>
 
 			{
 				std::vector<vk::DescriptorBufferInfo> uniforms = {
-					m_map_info.getBufferInfo(),
+					m_map_info.getInfo(),
 				};
 				std::vector<vk::DescriptorImageInfo> images = {
 					vk::DescriptorImageInfo().setImageLayout(vk::ImageLayout::eGeneral).setImageView(m_map_image_view.get()),
@@ -387,7 +385,7 @@ struct sScene : public Singleton<sScene>
 
 			}
 			std::vector<vk::DescriptorBufferInfo> uniforms = {
-				m_scene_data.getBufferInfo(),
+				m_scene_data.getInfo(),
 			};
 			std::vector<vk::WriteDescriptorSet> write_desc =
 			{
@@ -417,7 +415,7 @@ struct sScene : public Singleton<sScene>
 
 			std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 			for (size_t i = 0; i < SHADER_NUM; i++) {
-				m_shader_module[i] = loadShaderUnique(context->m_device.get(), path + shader_info[i].name);
+				m_shader_module[i] = loadShaderUnique(context->m_device, path + shader_info[i].name);
 				m_shader_info[i].setModule(m_shader_module[i].get());
 				m_shader_info[i].setStage(shader_info[i].stage);
 				m_shader_info[i].setPName("main");
@@ -466,9 +464,9 @@ struct sScene : public Singleton<sScene>
 
 		vk::BufferCopy copy;
 		copy.setSize(desc.size);
-		copy.setSrcOffset(staging.getBufferInfo().offset);
-		copy.setDstOffset(m_scene_data.getBufferInfo().offset);
-		cmd.copyBuffer(staging.getBufferInfo().buffer, m_scene_data.getBufferInfo().buffer, copy);
+		copy.setSrcOffset(staging.getInfo().offset);
+		copy.setDstOffset(m_scene_data.getInfo().offset);
+		cmd.copyBuffer(staging.getInfo().buffer, m_scene_data.getInfo().buffer, copy);
 
 		vk::ImageMemoryBarrier to_read;
 		to_read.oldLayout = vk::ImageLayout::eGeneral;

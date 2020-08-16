@@ -37,7 +37,7 @@ sSystem::sSystem(const std::shared_ptr<btr::Context>& context)
 	{
 
 		vk::DescriptorBufferInfo uniforms[] = {
-			m_data.getBufferInfo(),
+			m_data.getInfo(),
 		};
 		std::vector<vk::WriteDescriptorSet> write_desc =
 		{
@@ -114,7 +114,7 @@ vk::CommandBuffer sSystem::execute(const std::shared_ptr<btr::Context>& context)
 	to_transfer.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
 
-	cmd.copyBuffer(m_data.getStagingBufferInfo().buffer, m_data.getBufferInfo().buffer, copy_info);
+	cmd.copyBuffer(m_data.getStagingBufferInfo().buffer, m_data.getInfo().buffer, copy_info);
 
 	auto to_read = m_data.getBufferMemory().makeMemoryBarrierEx();
 	to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);

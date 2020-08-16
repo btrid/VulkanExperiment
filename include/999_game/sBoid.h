@@ -18,14 +18,14 @@ class sBoid : public Singleton<sBoid>
 		void setup(const btr::BufferMemory& buffer)
 		{
 			m_buffer = buffer;
-			m_buffer_info[0] = m_buffer.getBufferInfo();
-			m_buffer_info[1] = m_buffer.getBufferInfo();
+			m_buffer_info[0] = m_buffer.getInfo();
+			m_buffer_info[1] = m_buffer.getInfo();
 			m_buffer_info[0].range /= 2;
 			m_buffer_info[1].range /= 2;
 			m_buffer_info[1].offset += m_buffer_info[0].range;
 		}
 
-		vk::DescriptorBufferInfo getOrg()const { return m_buffer.getBufferInfo(); }
+		vk::DescriptorBufferInfo getOrg()const { return m_buffer.getInfo(); }
 		vk::DescriptorBufferInfo getInfo(uint32_t index)const { return m_buffer_info[index]; }
 
 	};

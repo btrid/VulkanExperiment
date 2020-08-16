@@ -32,7 +32,7 @@ SoundBuffer::SoundBuffer(const std::shared_ptr<btr::Context>& context, const std
 		vk::BufferCopy copy;
 		copy.setSrcOffset(staging.getInfo().offset);
 		copy.setDstOffset(m_buffer.getInfo().offset);
-		copy.setSize(staging.getBufferInfo().range);
+		copy.setSize(staging.getInfo().range);
 		cmd.copyBuffer(staging.getInfo().buffer, m_buffer.getInfo().buffer, copy);
 		{
 			auto to_read = m_buffer.makeMemoryBarrier();
@@ -57,7 +57,7 @@ SoundBuffer::SoundBuffer(const std::shared_ptr<btr::Context>& context, const std
 		vk::BufferCopy copy;
 		copy.setSrcOffset(staging.getInfo().offset);
 		copy.setDstOffset(m_info.getInfo().offset);
-		copy.setSize(staging.getBufferInfo().range);
+		copy.setSize(staging.getInfo().range);
 		cmd.copyBuffer(staging.getInfo().buffer, m_info.getInfo().buffer, copy);
 
 		{

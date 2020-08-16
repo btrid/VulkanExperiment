@@ -152,7 +152,7 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context, const std::sha
 		std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 		for (uint32_t i = 0; i < SHADER_NUM; i++)
 		{
-			m_shader_module[i] = loadShaderUnique(context->m_device.get(), path + shader_desc[i].name);
+			m_shader_module[i] = loadShaderUnique(context->m_device, path + shader_desc[i].name);
 		}
 	}
 

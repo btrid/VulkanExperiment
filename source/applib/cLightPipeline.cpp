@@ -130,14 +130,14 @@ void cFowardPlusPipeline::setup(const std::shared_ptr<btr::Context>& context)
 		{
 			std::vector<vk::DescriptorBufferInfo> uniforms =
 			{
-				m_light_info_gpu.getBufferInfo(),
+				m_light_info_gpu.getInfo(),
 			};
 			std::vector<vk::DescriptorBufferInfo> storages =
 			{
-				m_light.getBufferInfo(),
-				m_lightLL_head.getBufferInfo(),
-				m_lightLL.getBufferInfo(),
-				m_light_counter.getBufferInfo(),
+				m_light.getInfo(),
+				m_lightLL_head.getInfo(),
+				m_lightLL.getInfo(),
+				m_light_counter.getInfo(),
 			};
 
 			vk::WriteDescriptorSet desc;
@@ -214,7 +214,7 @@ vk::CommandBuffer cFowardPlusPipeline::execute(const std::shared_ptr<btr::Contex
 	}
 	{
 		uint32_t zero = 0;
-		cmd.updateBuffer<uint32_t>(m_light_counter.getBufferInfo().buffer, m_light_counter.getBufferInfo().offset, { zero });
+		cmd.updateBuffer<uint32_t>(m_light_counter.getInfo().buffer, m_light_counter.getInfo().offset, { zero });
 	}
 
 	{
@@ -231,14 +231,14 @@ vk::CommandBuffer cFowardPlusPipeline::execute(const std::shared_ptr<btr::Contex
 
 			m_light.flushSubBuffer(light_num, 0, context->getGPUFrame());
 			auto copy_info = m_light.update(context->getGPUFrame());
-			cmd.copyBuffer(m_light.getStagingBufferInfo().buffer, m_light.getBufferInfo().buffer, copy_info);
+			cmd.copyBuffer(m_light.getStagingBufferInfo().buffer, m_light.getInfo().buffer, copy_info);
 		}
 		{
 
 			m_light_info.m_active_light_num = light_num;
 			m_light_info_gpu.subupdate(&m_light_info, 1, 0, context->getGPUFrame());
 			auto copy_info = m_light_info_gpu.update(context->getGPUFrame());
-			cmd.copyBuffer(m_light_info_gpu.getStagingBufferInfo().buffer, m_light_info_gpu.getBufferInfo().buffer, copy_info);
+			cmd.copyBuffer(m_light_info_gpu.getStagingBufferInfo().buffer, m_light_info_gpu.getInfo().buffer, copy_info);
 
 			auto to_shader_read_barrier = m_light_info_gpu.getBufferMemory().makeMemoryBarrierEx();
 			to_shader_read_barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);

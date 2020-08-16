@@ -413,9 +413,9 @@ struct ModelVoxelize
 					model->m_model_descriptor_set.get(),
 				};
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_MAKE_VOXEL].get(), 2, descriptor, {});
-				cmd.bindIndexBuffer(model->m_index.getBufferInfo().buffer, model->m_index.getBufferInfo().offset, vk::IndexType::eUint32);
-				cmd.bindVertexBuffers(0, model->m_vertex.getBufferInfo().buffer, model->m_vertex.getBufferInfo().offset);
-				cmd.drawIndexedIndirect(model->m_indirect.getBufferInfo().buffer, model->m_indirect.getBufferInfo().offset, model->m_mesh_count, sizeof(vk::DrawIndexedIndirectCommand));
+				cmd.bindIndexBuffer(model->m_index.getInfo().buffer, model->m_index.getInfo().offset, vk::IndexType::eUint32);
+				cmd.bindVertexBuffers(0, model->m_vertex.getInfo().buffer, model->m_vertex.getInfo().offset);
+				cmd.drawIndexedIndirect(model->m_indirect.getInfo().buffer, model->m_indirect.getInfo().offset, model->m_mesh_count, sizeof(vk::DrawIndexedIndirectCommand));
 			}
 			cmd.endRenderPass();
 		}
@@ -467,9 +467,9 @@ struct ModelVoxelize
 
 			vk::BufferCopy copy;
 			copy.setSize(desc.size);
-			copy.setDstOffset(resource->m_vertex.getBufferInfo().offset);
-			copy.setSrcOffset(staging.getBufferInfo().offset);
-			cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_vertex.getBufferInfo().buffer, copy);
+			copy.setDstOffset(resource->m_vertex.getInfo().offset);
+			copy.setSrcOffset(staging.getInfo().offset);
+			cmd.copyBuffer(staging.getInfo().buffer, resource->m_vertex.getInfo().buffer, copy);
 		}
 
 		{
@@ -483,9 +483,9 @@ struct ModelVoxelize
 
 			vk::BufferCopy copy;
 			copy.setSize(desc.size);
-			copy.setDstOffset(resource->m_index.getBufferInfo().offset);
-			copy.setSrcOffset(staging.getBufferInfo().offset);
-			cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_index.getBufferInfo().buffer, copy);
+			copy.setDstOffset(resource->m_index.getInfo().offset);
+			copy.setSrcOffset(staging.getInfo().offset);
+			cmd.copyBuffer(staging.getInfo().buffer, resource->m_index.getInfo().buffer, copy);
 		}
 		{
 			btr::BufferMemoryDescriptor desc;
@@ -498,9 +498,9 @@ struct ModelVoxelize
 
 			vk::BufferCopy copy;
 			copy.setSize(desc.size);
-			copy.setDstOffset(resource->m_indirect.getBufferInfo().offset);
-			copy.setSrcOffset(staging.getBufferInfo().offset);
-			cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_indirect.getBufferInfo().buffer, copy);
+			copy.setDstOffset(resource->m_indirect.getInfo().offset);
+			copy.setSrcOffset(staging.getInfo().offset);
+			cmd.copyBuffer(staging.getInfo().buffer, resource->m_indirect.getInfo().buffer, copy);
 		}
 
 		{
@@ -514,9 +514,9 @@ struct ModelVoxelize
 
 			vk::BufferCopy copy;
 			copy.setSize(desc.size);
-			copy.setDstOffset(resource->m_mesh_info.getBufferInfo().offset);
-			copy.setSrcOffset(staging.getBufferInfo().offset);
-			cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_mesh_info.getBufferInfo().buffer, copy);
+			copy.setDstOffset(resource->m_mesh_info.getInfo().offset);
+			copy.setSrcOffset(staging.getInfo().offset);
+			cmd.copyBuffer(staging.getInfo().buffer, resource->m_mesh_info.getInfo().buffer, copy);
 		}
 		{
 			btr::BufferMemoryDescriptor desc;
@@ -529,9 +529,9 @@ struct ModelVoxelize
 
 			vk::BufferCopy copy;
 			copy.setSize(desc.size);
-			copy.setDstOffset(resource->m_material.getBufferInfo().offset);
-			copy.setSrcOffset(staging.getBufferInfo().offset);
-			cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_material.getBufferInfo().buffer, copy);
+			copy.setDstOffset(resource->m_material.getInfo().offset);
+			copy.setSrcOffset(staging.getInfo().offset);
+			cmd.copyBuffer(staging.getInfo().buffer, resource->m_material.getInfo().buffer, copy);
 		}
 
 
@@ -546,8 +546,8 @@ struct ModelVoxelize
 			resource->m_model_descriptor_set = std::move(context->m_device.allocateDescriptorSetsUnique(info)[0]);
 
 			vk::DescriptorBufferInfo storages[] = {
-				resource->m_material.getBufferInfo(),
-				resource->m_mesh_info.getBufferInfo(),
+				resource->m_material.getInfo(),
+				resource->m_mesh_info.getInfo(),
 			};
 			vk::WriteDescriptorSet write_desc;
 			write_desc.setDescriptorType(vk::DescriptorType::eStorageBuffer);

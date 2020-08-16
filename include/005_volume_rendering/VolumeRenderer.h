@@ -239,11 +239,11 @@ public:
 					auto staging = loader->m_staging_memory.allocateMemory(desc);
 					memcpy(staging.getMappedPtr(), rgba.data(), desc.size);
 					vk::BufferImageCopy copy;
-					copy.setBufferOffset(staging.getBufferInfo().offset);
+					copy.setBufferOffset(staging.getInfo().offset);
 					copy.setImageSubresource(l);
 					copy.setImageExtent(image_info.extent);
 
-					cmd.copyBufferToImage(staging.getBufferInfo().buffer, m_volume_image.get(), vk::ImageLayout::eTransferDstOptimal, copy);
+					cmd.copyBufferToImage(staging.getInfo().buffer, m_volume_image.get(), vk::ImageLayout::eTransferDstOptimal, copy);
 				}
 
 				vk::ImageMemoryBarrier to_shader_read;
@@ -329,7 +329,7 @@ public:
 			{
 
 				std::vector<vk::DescriptorBufferInfo> uniforms = {
-					m_volume_scene_gpu.getBufferInfo(),
+					m_volume_scene_gpu.getInfo(),
 				};
 				std::vector<vk::DescriptorImageInfo> images = {
 					vk::DescriptorImageInfo().setSampler(m_volume_sampler.get()).setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal).setImageView(m_volume_image_view.get()),
@@ -505,15 +505,15 @@ public:
 		auto staging = executer->m_staging_memory.allocateMemory(desc);
 		*staging.getMappedPtr<VolumeScene>() = m_volume_scene_cpu;
 		vk::BufferCopy copy;
-		copy.setSrcOffset(staging.getBufferInfo().offset);
-		copy.setDstOffset(m_volume_scene_gpu.getBufferInfo().offset);
+		copy.setSrcOffset(staging.getInfo().offset);
+		copy.setDstOffset(m_volume_scene_gpu.getInfo().offset);
 		copy.setSize(desc.size);
 
 		{
 			auto to_write = m_volume_scene_gpu.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_write, {});
 		}
-		cmd.copyBuffer(staging.getBufferInfo().buffer, m_volume_scene_gpu.getBufferInfo().buffer, copy);
+		cmd.copyBuffer(staging.getInfo().buffer, m_volume_scene_gpu.getInfo().buffer, copy);
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, m_volume_scene_gpu.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead), {});
 
 		vk::RenderPassBeginInfo render_begin_info;

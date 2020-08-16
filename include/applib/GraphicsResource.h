@@ -49,7 +49,7 @@ struct sGraphicsResource : public Singleton<sGraphicsResource>
 			// staging_bufferÇ©ÇÁimageÇ÷ÉRÉsÅ[
 
 			vk::BufferImageCopy copy;
-			copy.bufferOffset = staging_buffer.getBufferInfo().offset;
+			copy.bufferOffset = staging_buffer.getInfo().offset;
 			copy.imageExtent = { 1, 1, 1 };
 			copy.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
 			copy.imageSubresource.baseArrayLayer = 0;
@@ -72,7 +72,7 @@ struct sGraphicsResource : public Singleton<sGraphicsResource>
 			to_shader_read_barrier.subresourceRange = subresourceRange;
 
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
-			cmd.copyBufferToImage(staging_buffer.getBufferInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, { copy });
+			cmd.copyBufferToImage(staging_buffer.getInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, { copy });
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllGraphics, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
 
 		}

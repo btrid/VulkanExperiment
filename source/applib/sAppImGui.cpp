@@ -53,7 +53,7 @@ sAppImGui::sAppImGui(const std::shared_ptr<btr::Context>& context)
 				memcpy_s(staging_buffer.getMappedPtr<unsigned char>(), staging_buffer.getInfo().range, pixels, staging_desc.size);
 
 				vk::BufferImageCopy copy;
-				copy.bufferOffset = staging_buffer.getBufferInfo().offset;
+				copy.bufferOffset = staging_buffer.getInfo().offset;
 				copy.imageExtent = vk::Extent3D(width, height, 1);
 				copy.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
 				copy.imageSubresource.baseArrayLayer = 0;
@@ -76,7 +76,7 @@ sAppImGui::sAppImGui(const std::shared_ptr<btr::Context>& context)
 				to_shader_read_barrier.subresourceRange = subresourceRange;
 
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
-				cmd.copyBufferToImage(staging_buffer.getBufferInfo().buffer, m_font_image.get(), vk::ImageLayout::eTransferDstOptimal, 1, &copy);
+				cmd.copyBufferToImage(staging_buffer.getInfo().buffer, m_font_image.get(), vk::ImageLayout::eTransferDstOptimal, 1, &copy);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllGraphics, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
 
 			}

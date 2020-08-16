@@ -103,9 +103,9 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<
 			*staging.getMappedPtr() = m_boid_info;
 			vk::BufferCopy copy;
 			copy.setSize(m_boid_info_gpu.getInfo().range);
-			copy.setSrcOffset(staging.getBufferInfo().offset);
+			copy.setSrcOffset(staging.getInfo().offset);
 			copy.setDstOffset(m_boid_info_gpu.getInfo().offset);
-			cmd.copyBuffer(staging.getBufferInfo().buffer, m_boid_info_gpu.getBufferInfo().buffer, copy);
+			cmd.copyBuffer(staging.getInfo().buffer, m_boid_info_gpu.getInfo().buffer, copy);
 		}
 		{
 			btr::BufferMemoryDescriptorEx<SoldierInfo> desc;
@@ -129,7 +129,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<
 			desc.size = sizeof(BrainData) * m_boid_info.m_brain_max;
 			auto brain_gpu = context->m_storage_memory.allocateMemory(desc);
 
-			cmd.fillBuffer(brain_gpu.getBufferInfo().buffer, brain_gpu.getBufferInfo().offset, brain_gpu.getBufferInfo().range, 0);
+			cmd.fillBuffer(brain_gpu.getInfo().buffer, brain_gpu.getInfo().offset, brain_gpu.getInfo().range, 0);
 
 			m_brain_gpu.setup(brain_gpu);
 		}
@@ -139,7 +139,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<
 			desc.size = sizeof(SoldierData) * m_boid_info.m_soldier_max*2;
 			auto soldier_gpu = context->m_storage_memory.allocateMemory(desc);
 
-			cmd.fillBuffer(soldier_gpu.getBufferInfo().buffer, soldier_gpu.getBufferInfo().offset, soldier_gpu.getBufferInfo().range, 0);
+			cmd.fillBuffer(soldier_gpu.getInfo().buffer, soldier_gpu.getInfo().offset, soldier_gpu.getInfo().range, 0);
 
 			m_soldier_gpu.setup(soldier_gpu);
 		}
@@ -188,7 +188,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<
 			copy.setSize(m_soldier_draw_indiret_gpu.getInfo().range);
 			copy.setSrcOffset(staging.getInfo().offset);
 			copy.setDstOffset(m_soldier_draw_indiret_gpu.getInfo().offset);
-			cmd.copyBuffer(staging.getBufferInfo().buffer, m_soldier_draw_indiret_gpu.getBufferInfo().buffer, copy);
+			cmd.copyBuffer(staging.getInfo().buffer, m_soldier_draw_indiret_gpu.getInfo().buffer, copy);
 		}
 
 		{
@@ -205,13 +205,13 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<
 			image_info.sharingMode = vk::SharingMode::eExclusive;
 			image_info.initialLayout = vk::ImageLayout::eUndefined;
 			image_info.extent = { (uint32_t)maze->getSizeX(), (uint32_t)maze->getSizeY(), 1 };
-			image_info.flags = vk::ImageCreateFlagBits::e2DArrayCompatibleKHR;
+//			image_info.flags = vk::ImageCreateFlagBits::e2DArrayCompatibleKHR;
 			auto image = context->m_device.createImageUnique(image_info);
 
 			vk::MemoryRequirements memory_request = context->m_device.getImageMemoryRequirements(image.get());
 			vk::MemoryAllocateInfo memory_alloc_info;
 			memory_alloc_info.allocationSize = memory_request.size;
-			memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(context->m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+			memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(context->m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
 			auto image_memory = context->m_device.allocateMemoryUnique(memory_alloc_info);
 			context->m_device.bindImageMemory(image.get(), image_memory.get(), 0);
@@ -258,15 +258,15 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<
 				auto staging = context->m_staging_memory.allocateMemory(desc);
 				memcpy(staging.getMappedPtr(), solver.data(), desc.size);
 				vk::BufferImageCopy copy;
-				copy.setBufferOffset(staging.getBufferInfo().offset);
+				copy.setBufferOffset(staging.getInfo().offset);
 				copy.setImageSubresource(l);
 				copy.setImageExtent(image_info.extent);
-				cmd.copyBufferToImage(staging.getBufferInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, copy);
+				cmd.copyBufferToImage(staging.getInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, copy);
 			}
 
 			{
 				vk::ImageMemoryBarrier to_shader_read;
-				to_shader_read.dstQueueFamilyIndex = context->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
+//				to_shader_read.dstQueueFamilyIndex = context->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
 				to_shader_read.image = image.get();
 				to_shader_read.oldLayout = vk::ImageLayout::eTransferDstOptimal;
 				to_shader_read.newLayout = vk::ImageLayout::eGeneral;
@@ -302,7 +302,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<
 		std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 		for (size_t i = 0; i < SHADER_NUM; i++)
 		{
-			m_shader_module[i] = loadShaderUnique(context->m_device.get(), path + shader_info[i].name);
+			m_shader_module[i] = loadShaderUnique(context->m_device, path + shader_info[i].name);
 		}
 	}
 
@@ -374,15 +374,15 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<
 			{
 
 				std::vector<vk::DescriptorBufferInfo> uniforms = {
-					m_boid_info_gpu.getBufferInfo(),
-					m_soldier_info_gpu.getBufferInfo(),
+					m_boid_info_gpu.getInfo(),
+					m_soldier_info_gpu.getInfo(),
 				};
 				std::vector<vk::DescriptorBufferInfo> storages = {
 					m_brain_gpu.getOrg(),
 					m_soldier_gpu.getOrg(),
-					m_soldier_draw_indiret_gpu.getBufferInfo(),
+					m_soldier_draw_indiret_gpu.getInfo(),
 					m_soldier_LL_head_gpu.getOrg(),
-					m_soldier_emit_data.getBufferInfo(),
+					m_soldier_emit_data.getInfo(),
 				};
 				std::vector<vk::DescriptorImageInfo> images = {
 					vk::DescriptorImageInfo()
@@ -571,7 +571,7 @@ vk::CommandBuffer sBoid::execute(std::shared_ptr<btr::Context>& context)
 			to_transfer.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
 
-			cmd.updateBuffer<vk::DrawIndirectCommand>(m_soldier_draw_indiret_gpu.getBufferInfo().buffer, m_soldier_draw_indiret_gpu.getBufferInfo().offset, vk::DrawIndirectCommand(0, 1, 0, 0));
+			cmd.updateBuffer<vk::DrawIndirectCommand>(m_soldier_draw_indiret_gpu.getInfo().buffer, m_soldier_draw_indiret_gpu.getInfo().offset, vk::DrawIndirectCommand(0, 1, 0, 0));
 			cmd.fillBuffer(m_soldier_LL_head_gpu.getInfo(sGlobal::Order().getRenderIndex()).buffer, m_soldier_LL_head_gpu.getInfo(sGlobal::Order().getRenderIndex()).offset, m_soldier_LL_head_gpu.getInfo(sGlobal::Order().getRenderIndex()).range, 0xFFFFFFFF);
 
 			vk::BufferMemoryBarrier to_read = m_soldier_draw_indiret_gpu.makeMemoryBarrier();
@@ -605,9 +605,9 @@ vk::CommandBuffer sBoid::execute(std::shared_ptr<btr::Context>& context)
 
 				vk::BufferCopy copy_info;
 				copy_info.setSize(desc.size);
-				copy_info.setSrcOffset(staging.getBufferInfo().offset);
-				copy_info.setDstOffset(m_soldier_emit_data.getBufferInfo().offset);
-				cmd.copyBuffer(staging.getBufferInfo().buffer, m_soldier_emit_data.getBufferInfo().buffer, copy_info);
+				copy_info.setSrcOffset(staging.getInfo().offset);
+				copy_info.setDstOffset(m_soldier_emit_data.getInfo().offset);
+				cmd.copyBuffer(staging.getInfo().buffer, m_soldier_emit_data.getInfo().buffer, copy_info);
 
 				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_SOLDIER_EMIT].get());
 				cmd.pushConstants<uvec2>(m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_EMIT].get(), vk::ShaderStageFlagBits::eCompute, 0, uvec2(data.size(), 0));

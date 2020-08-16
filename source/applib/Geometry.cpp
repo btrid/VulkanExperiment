@@ -268,9 +268,9 @@ Geometry Geometry::MakeGeometry(std::shared_ptr<btr::Context>& loader, const voi
 
 			vk::BufferCopy vertex_copy;
 			vertex_copy.setSize(vertex_size);
-			vertex_copy.setSrcOffset(staging.getBufferInfo().offset);
-			vertex_copy.setDstOffset(resource->m_vertex.getBufferInfo().offset);
-			cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_vertex.getBufferInfo().buffer, vertex_copy);
+			vertex_copy.setSrcOffset(staging.getInfo().offset);
+			vertex_copy.setDstOffset(resource->m_vertex.getInfo().offset);
+			cmd.copyBuffer(staging.getInfo().buffer, resource->m_vertex.getInfo().buffer, vertex_copy);
 		}
 		{
 			btr::BufferMemoryDescriptor index_desc;
@@ -283,9 +283,9 @@ Geometry Geometry::MakeGeometry(std::shared_ptr<btr::Context>& loader, const voi
 
 			vk::BufferCopy index_copy;
 			index_copy.setSize(index_size);
-			index_copy.setSrcOffset(staging.getBufferInfo().offset);
-			index_copy.setDstOffset(resource->m_index.getBufferInfo().offset);
-			cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_index.getBufferInfo().buffer, index_copy);
+			index_copy.setSrcOffset(staging.getInfo().offset);
+			index_copy.setDstOffset(resource->m_index.getInfo().offset);
+			cmd.copyBuffer(staging.getInfo().buffer, resource->m_index.getInfo().buffer, index_copy);
 		}
 
 		{
@@ -304,9 +304,9 @@ Geometry Geometry::MakeGeometry(std::shared_ptr<btr::Context>& loader, const voi
 
 			vk::BufferCopy indirect_copy;
 			indirect_copy.setSize(indirect_desc.size);
-			indirect_copy.setSrcOffset(staging.getBufferInfo().offset);
-			indirect_copy.setDstOffset(resource->m_indirect.getBufferInfo().offset);
-			cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_indirect.getBufferInfo().buffer, indirect_copy);
+			indirect_copy.setSrcOffset(staging.getInfo().offset);
+			indirect_copy.setDstOffset(resource->m_indirect.getInfo().offset);
+			cmd.copyBuffer(staging.getInfo().buffer, resource->m_indirect.getInfo().buffer, indirect_copy);
 
 		}
 	}

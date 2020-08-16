@@ -193,7 +193,7 @@ struct MotionTexture
 		subresourceRange.levelCount = 1;
 
 		vk::BufferImageCopy copy;
-		copy.bufferOffset = staging_buffer.getBufferInfo().offset;
+		copy.bufferOffset = staging_buffer.getInfo().offset;
 		copy.imageExtent = { SIZE, 1u, 1u };
 		copy.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
 		copy.imageSubresource.baseArrayLayer = 0;
@@ -209,7 +209,7 @@ struct MotionTexture
 			to_copy_barrier.subresourceRange = subresourceRange;
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
 		}
-		cmd.copyBufferToImage(staging_buffer.getBufferInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, { copy });
+		cmd.copyBufferToImage(staging_buffer.getInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, { copy });
 		{
 			vk::ImageMemoryBarrier to_shader_read_barrier;
 			to_shader_read_barrier.image = image.get();
