@@ -105,6 +105,7 @@ struct GI2DContext
 				vk::DescriptorSetLayoutBinding binding[] = {
 					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -262,7 +263,8 @@ struct GI2DSDF
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 		{
 			b_jfa = context->m_storage_memory.allocateMemory<i16vec2>({ gi2d_context->FragmentBufferSize * SDF_USE_NUM,{} });
- 			b_sdf = context->m_storage_memory.allocateMemory<float>({ gi2d_context->FragmentBufferSize * SDF_USE_NUM,{} });
+			b_sdf = context->m_storage_memory.allocateMemory<float>({ gi2d_context->FragmentBufferSize * SDF_USE_NUM,{} });
+			b_edge = context->m_storage_memory.allocateMemory<uint8_t>({ gi2d_context->FragmentBufferSize,{} });
 		}
 
 		{
@@ -279,6 +281,7 @@ struct GI2DSDF
 				vk::DescriptorBufferInfo storages[] = {
  					b_jfa.getInfo(),
  					b_sdf.getInfo(),
+					b_edge.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] = {
@@ -299,7 +302,8 @@ struct GI2DSDF
 	std::shared_ptr<GI2DContext> m_gi2d_context;
 
  	btr::BufferMemoryEx<i16vec2> b_jfa;
- 	btr::BufferMemoryEx<float> b_sdf;
+	btr::BufferMemoryEx<float> b_sdf;
+	btr::BufferMemoryEx<uint8_t> b_edge;
 
 	vk::UniqueDescriptorSet m_descriptor_set;
 

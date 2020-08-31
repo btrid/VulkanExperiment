@@ -16,6 +16,11 @@ layout(set=USE_GI2D_SDF, binding=0, std430) restrict buffer JFABuffer {
 layout(set=USE_GI2D_SDF, binding=1, std430) restrict buffer SDFBuffer {
 	float b_sdf[];
 };
+
+layout(set=USE_GI2D_SDF, binding=2, std430) restrict buffer EdgeBuffer {
+	uint8_t b_edge[];
+};
+
 #endif
 
 #endif //GI2D_SDF_

@@ -48,7 +48,7 @@ void main()
 		uint path_dir = PathData_dirtype(b_path_data[ipos.x+ipos.y*reso.x]);
 		vec2 target_dir = normalize(-vec2(g_neighbor[path_dir]));
 		float d = dot(dir, target_dir);
-		if(d <= 0.98)
+		if(d <= 0.95)
 		{
 			float rotate_angle = acos(d);
 			rotate_angle = min(rotate_angle, unit_info.angler_speed);
@@ -78,7 +78,6 @@ void main()
 		{
 			vec2 pos_next = pos.xy + dir * clamp(move-advance, 0., a);
 			advance += a;
-
 
 			// hit確認
 //			ivec2 ipos = ivec2(pos.xy);

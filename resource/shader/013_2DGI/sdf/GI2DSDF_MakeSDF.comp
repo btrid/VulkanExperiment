@@ -17,6 +17,7 @@ layout(push_constant) uniform Input
 	uint distance;
 } constant;
 
+shared uint64_t s_map[6][6];
 void main() 
 {
 	const ivec2 reso = ivec2(u_gi2d_info.m_resolution.xy);
@@ -28,4 +29,58 @@ void main()
 //	cell = b_jfa[current.x + current.y*reso.x + reso.x*reso.y];
 //	b_sdf[current.x+current.y*reso.x + reso.x*reso.y] = (((cell.y & 0x8000) == 0) ? -1. : 1.) *length(vec2((cell&0x7fff) - ivec2(gl_GlobalInvocationID.xy)));
 //	b_sdf[getMemoryOrder(current) + reso.x*reso.y] = (((cell.y & 0x8000) == 0) ? -1. : 1.) *length(vec2((cell&0x7fff) - ivec2(gl_GlobalInvocationID.xy)));
+
+	{
+		if(gl_LocalInvocationID.x < 6 && gl_LocalInvocationID.y < 6)
+		{
+			uint i = gl_LocalInvocationID.x+gl_LocalInvocationID.y*6;
+			uvec2 offset_xy = gl_LocalInvocationID.xy-1;
+			uvec2 index = gl_WorkGroupID.xy*4 + offset_xy;
+
+			uint64_t map = -1ul;
+			if(all(lessThan(index, u_gi2d_info.m_resolution.zw)))
+			{
+				map = b_fragment_map[index.x + index.y * u_gi2d_info.m_resolution.z];
+			}
+			s_map[gl_LocalInvocationID.y][gl_LocalInvocationID.x] = map;
+		}
+		{
+/*			ivec2 ii = ivec2(gl_LocalInvocationID.xy) + ivec2(8);
+			ivec2 map_index = ii / 8;
+			ivec2 map_bit = ii % 8;
+			if((s_map[map_index.y][map_index.x] & (1ul<<(map_bit.x+map_bit.y*8))) != 0ul)
+			{
+				// 壁なので何もしない
+//				is_wall = true;
+			}
+*/		}
+
+		const ivec2 g_neighbor[8] = 
+		{
+			ivec2(-1,-1), 
+			ivec2( 0,-1),
+			ivec2( 1,-1),
+			ivec2( 1, 0),
+			ivec2( 1, 1),
+			ivec2( 0, 1),
+			ivec2(-1, 1),
+			ivec2(-1, 0),
+		};
+		uint8_t bit = uint8_t(0);
+		for(int i = 0; i < g_neighbor.length(); i++)
+		{
+			ivec2 ii = ivec2(gl_LocalInvocationID.xy) + g_neighbor[i] + ivec2(8);
+			ivec2 map_index = ii / 8;
+			ivec2 map_bit = ii % 8;
+			if((s_map[map_index.y][map_index.x] & (1ul<<(map_bit.x+map_bit.y*8))) != 0ul)
+			{
+				bit |= uint8_t(1<<i);
+			}
+		}
+
+		b_edge[current.x + current.y*reso.x] = bit;
+
+	}
+
+
 }

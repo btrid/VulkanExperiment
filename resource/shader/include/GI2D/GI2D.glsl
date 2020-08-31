@@ -88,6 +88,7 @@ layout(std430, set=USE_GI2D, binding=3) restrict buffer FragmentMapBuffer {
 	uint64_t b_fragment_map[];
 };
 
+
 #endif
 
 vec2 rotate(in float angle)
