@@ -24,6 +24,10 @@ vec2 normalize_safe(in vec2 v, in vec2 a){ return dot(v, v) >= 0.001 ? normalize
 float acos_safe(in float a){ return acos(clamp(a, -1., 1.)); }
 float atan2(in float y, in float x){ return x==0.0 ? sign(y)*(3.1415/2.) : atan(y, x); }
 
+//int bit_table[] = { 0, 1, 2, 7, 0, 3, 6, 5, 4};
+int bit_table_x[] = { 7, 31, 3};
+int bit_table_y[] = { 1, 31, 5};
+
 void main()
 {
 	uint index = gl_GlobalInvocationID.x;
@@ -80,8 +84,9 @@ void main()
 			advance += a;
 
 			// hit確認
-//			ivec2 ipos = ivec2(pos.xy);
+			ivec2 ipos = ivec2(pos.xy);
 			ivec2 ipos_next = ivec2(pos_next);
+
 			ivec4 fragment_index = ivec4(ipos_next/8, ipos_next%8);
 			int findex = fragment_index.x + fragment_index.y*reso.z;
 			uint64_t fragment_map = b_fragment_map[findex].x;
@@ -91,7 +96,17 @@ void main()
 			if((fragment_map & bit) != 0)
 			{
 				// 壁にぶつかったので反射
+#if 0
 				vec2 push_dir = vec2(b_jfa[ipos_next.x + ipos_next.y*reso.x] - ipos_next);
+#else
+				ivec2 diff = ipos_next-ipos+1;
+				int bit = diff.x+diff.y*3;
+
+				uint8_t edge = b_edge[ipos_next.x+ipos_next.y*reso.x];
+				bool is_wall_x = (edge&(1<<bit_table_x[diff.x])) != 0;
+				bool is_wall_y = (edge&(1<<bit_table_y[diff.y])) != 0;
+				vec2 push_dir = normalize_safe(vec2(is_wall_x, is_wall_y), vec2(0.1)) * -sign(dir);
+#endif
 				inertia = reflect(inertia, push_dir) * 0.3 + normalize(push_dir)*2.;
 				dir = reflect(dir, push_dir);
 
