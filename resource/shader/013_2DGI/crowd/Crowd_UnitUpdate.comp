@@ -103,11 +103,19 @@ void main()
 				int bit = diff.x+diff.y*3;
 
 				uint8_t edge = b_edge[ipos_next.x+ipos_next.y*reso.x];
-				bool is_wall_x = (edge&(1<<bit_table_x[diff.x])) != 0;
-				bool is_wall_y = (edge&(1<<bit_table_y[diff.y])) != 0;
-				vec2 push_dir = normalize_safe(vec2(is_wall_x, is_wall_y), vec2(0.1)) * -sign(dir);
+				vec2 push_dir;
+
+				if(edge== 0xff)
+				{
+					push_dir = normalize(vec2(b_jfa[ipos_next.x + ipos_next.y*reso.x] - ipos_next));
+				}else
+				{
+					bool is_wall_x = (edge&(1<<bit_table_x[diff.x])) != 0;
+					bool is_wall_y = (edge&(1<<bit_table_y[diff.y])) != 0;
+					push_dir = normalize_safe(vec2(is_wall_x, is_wall_y), vec2(0.1)) * -sign(dir);
+				}
 #endif
-				inertia = reflect(inertia, push_dir) * 0.3 + normalize(push_dir)*2.;
+				inertia = reflect(inertia, push_dir) * 0.3 + push_dir*2.;
 				dir = reflect(dir, push_dir);
 
 				// 押し出し
