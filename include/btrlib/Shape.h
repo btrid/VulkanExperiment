@@ -29,8 +29,7 @@ struct Segment2
 	{
 		auto ab = b_ - a_;
 		float t = glm::dot(c - a_, ab) / glm::dot(ab, ab);
-		glm::clamp(t, 0.f, 1.f);
-		return a_ + t*ab;
+		return a_ + glm::clamp(t, 0.f, 1.f) * ab;
 	}
 
 	float distance(const glm::vec2& c)const

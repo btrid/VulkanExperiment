@@ -209,9 +209,75 @@ int pathFinding()
 
 }
 
+vec2 nearestAABBPoint(const vec4 &box, const vec2 &p)
+{
+	return min(max(p, box.xy()), box.zw());
+}
+
+vec2 intersection(vec4 aabb, vec2 p, vec2 dir)
+{
+	using glm::max; using glm::min;
+
+	vec4 t = (aabb - p.xyxy()) / dir.xyxy();
+	vec2 tmin = min(t.xy(), t.zw());
+
+	return p + max(tmin.x, tmin.y) * dir;
+}
+
+vec2 intersectionAABBSegment(vec4 aabb, vec2 p, vec2 dir, vec2 inv_dir)
+{
+	using namespace glm;
+	vec4 t = (aabb - p.xyxy) * inv_dir.xyxy;
+	vec2 tmin = min(t.xy(), t.zw());
+	vec2 tmax = max(t.xy(), t.zw());
+
+	float n = max(tmin.x, tmin.y);
+	float f = min(tmax.x, tmax.y);
+
+	return p + (n >= 0. ? n : f) * dir;
+}
+
+vec2 closest(const vec4 seg, const vec2& p)
+{
+	auto ab = seg.zw() - seg.xy();
+	float t = dot(p - seg.xy(), ab) / dot(ab, ab);
+	t = glm::clamp(t, 0.f, 1.f);
+	return seg.xy() + t * ab;
+}
+
 int rigidbody()
 {
+	{
+		auto a = closest(vec4(0.f, 0.f, 1.f, 0.f), vec2(3.f));
+		int _ = 0;
+	}
+	{
+		vec2 sdf{1.f, 0.f};
+		auto a = vec2(4.5f, 4.5f) - nearestAABBPoint(vec4(4.f, 4.f, 5.f, 5.f), vec2(3.5f, 4.5f));
+		auto a1 = sdf * dot(a, sdf);
+		auto b = vec2(4.5f, 4.5f) - nearestAABBPoint(vec4(4.f, 4.f, 5.f, 5.f), vec2(4.5f, 3.5f));
+		auto b1 = sdf * dot(b, sdf);
+		auto c = vec2(4.2f, 4.5f) - nearestAABBPoint(vec4(4.f, 4.f, 5.f, 5.f), vec2(4.8f, 3.8f));
+		auto c1 = sdf * dot(c, sdf);
+		auto d = vec2(4.2f, 4.9f) - nearestAABBPoint(vec4(4.f, 4.f, 5.f, 5.f), vec2(5.1f, 5.1f));
+		auto d1 = sdf * dot(d, sdf);
+		int _0 = 0;
+	}
 
+	{
+		vec2 sdf = vec2(-1.f, 0.f);
+		auto a = intersection(vec4(4.f, 4.f, 5.f, 5.f), vec2(3.5f, 3.8f), vec2(1.f));
+		auto a1 = intersectionAABBSegment(vec4(4.f, 4.f, 5.f, 5.f), vec2(4.9f, 4.1f), vec2(1.f), 1.f/ vec2(1.f));
+		//		a -= vec2(0.0001f);
+		auto b = intersection(vec4(4.f, 4.f, 5.f, 5.f), vec2(5.5f, 5.8f), vec2(-1.f));
+		auto b1 = intersectionAABBSegment(vec4(4.f, 4.f, 5.f, 5.f), vec2(4.1f, 4.8f), vec2(-1.f), 1.f/vec2(-1.f));
+		//		b -= vec2(-0.0001f);
+		auto c = intersection(vec4(4.f, 4.f, 5.f, 5.f), vec2(5.5f, 3.5f), vec2(-1.f, 1.f));
+		auto c1 = intersectionAABBSegment(vec4(4.f, 4.f, 5.f, 5.f), vec2(4.7f, 4.1f), vec2(-1.f, 1.f), 1.f / vec2(-1.f, 1.f));
+		//		c -= vec2(-0.0001f, 0.0001f);
+
+		int _ = 0;
+	}
 	app::AppDescriptor app_desc;
 	app_desc.m_window_size = uvec2(1024, 1024);
 	app::App app(app_desc);
@@ -292,8 +358,8 @@ int rigidbody()
 
  				gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
 				gi2d_physics_proc.execute(cmd, gi2d_physics_context, gi2d_sdf_context);
-//				gi2d_physics_proc.executeDrawParticle(cmd, gi2d_physics_context, app.m_window->getFrontBuffer());
-				gi2d_physics_proc.executeDebugDrawCollisionHeatMap(cmd, gi2d_physics_context, app.m_window->getFrontBuffer());
+				gi2d_physics_proc.executeDrawParticle(cmd, gi2d_physics_context, app.m_window->getFrontBuffer());
+//				gi2d_physics_proc.executeDebugDrawCollisionHeatMap(cmd, gi2d_physics_context, app.m_window->getFrontBuffer());
 
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;
@@ -498,21 +564,13 @@ void makeCircle(int Ox, int Oy, int R)
 			dedx -= 2;
 		}
 
-//		assert(field[(Ox + x) + (Oy + y) * S] == 0);
 		field[(Ox + x) + (Oy + y) * S] = 1;// +theta
-//		assert(field[(Ox + x) + (Oy - y) * S] == 0);
 		field[(Ox + x) + (Oy - y) * S] = 1;// -theta
-//		assert(field[(Ox - x) + (Oy + y) * S] == 0);
 		field[(Ox - x) + (Oy + y) * S] = 1;// 180-theta
-//		assert(field[(Ox - x) + (Oy - y) * S] == 0);
 		field[(Ox - x) + (Oy - y) * S] = 1;// 180+theta
-//		assert(field[(Ox + y) + (Oy + x) * S] == 0);
 		field[(Ox + y) + (Oy + x) * S] = 1;// 90+theta
-//		assert(field[(Ox + y) + (Oy - x) * S] == 0);
 		field[(Ox + y) + (Oy - x) * S] = 1;// 90-theta
-//		assert(field[(Ox - y) + (Oy + x) * S] == 0);
 		field[(Ox - y) + (Oy + x) * S] = 1;// 270+theta
-//		assert(field[(Ox - y) + (Oy - x) * S] == 0);
 		field[(Ox - y) + (Oy - x) * S] = 1;// 270-theta
 	}
 
@@ -730,10 +788,10 @@ int main()
 	camera->getData().m_far = 5000.f;
 	camera->getData().m_near = 0.01f;
 
-	return pathFinding();
-//	return rigidbody();
+//	return pathFinding();
+	return rigidbody();
 //	return radiosity();
-	return radiosity2();
+//	return radiosity2();
 //	return radiosity3();
 
 	app::AppDescriptor app_desc;

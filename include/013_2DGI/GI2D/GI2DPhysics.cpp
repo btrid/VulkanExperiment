@@ -377,7 +377,24 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const GI2DRB_MakeParam& param)
 			size_min = glm::min(pos[i], size_min);
 		}
 	}
-	ivec2 jfa_max = ivec2(ceil(size_max));
+//	for (uint32_t y = 0; y < box.w; y++)
+	{
+		for (uint32_t x = 0; x < box.z; x++)
+		{
+			uint i1 = x + 0 * box.z;
+			uint i2 = x + (box.w - 1) * box.z;
+			pstate[i1].flag |= RBP_FLAG_COLLIDABLE;
+			pstate[i2].flag |= RBP_FLAG_COLLIDABLE;
+		}
+		for (uint32_t y = 0; y < box.w; y++)
+		{
+			uint i1 = 0 + y * box.z;
+			uint i2 = (box.z-1) + y * box.z;
+			pstate[i1].flag |= RBP_FLAG_COLLIDABLE;
+			pstate[i2].flag |= RBP_FLAG_COLLIDABLE;
+		}
+	}
+			ivec2 jfa_max = ivec2(ceil(size_max));
 	ivec2 jfa_min = ivec2(trunc(size_min));
 	auto area = jfa_max - jfa_min;
 	assert(area.x*area.y <= MAKE_RB_JFA_CELL);
