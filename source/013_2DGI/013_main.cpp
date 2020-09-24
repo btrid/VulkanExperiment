@@ -233,8 +233,10 @@ vec2 intersectionAABBSegment(vec4 aabb, vec2 p, vec2 dir, vec2 inv_dir)
 
 	float n = max(tmin.x, tmin.y);
 	float f = min(tmax.x, tmax.y);
-
-	return p + (n >= 0. ? n : f) * dir;
+//	auto pp = p + (n >= 0. ? n : f) * dir;
+	auto pp = p + f * dir;
+	printf("out=[%6.3f,%6.3f], p=[%6.3f,%6.3f], d=[%6.3f,%6.3f], nf=[%6.3f,%6.3f]\n", pp.x, pp.y, p.x, p.y, dir.x, dir.y, n, f);
+	return pp;
 }
 
 vec2 closest(const vec4 seg, const vec2& p)
@@ -243,13 +245,92 @@ vec2 closest(const vec4 seg, const vec2& p)
 	float t = dot(p - seg.xy(), ab) / dot(ab, ab);
 	t = glm::clamp(t, 0.f, 1.f);
 	return seg.xy() + t * ab;
+
 }
 
+vec2 inetsectLineCircle(const vec2& p, const vec2& d, const vec2& cp)
+{
+//https://stackoverflow.com/questions/1073336/circle-line-segment-collision-detection-algorithm
+	vec2 result = p;
+	float t1=0.f, t2=0.f;
+	float r = 0.5f;
+	float a = dot(d,d);
+	float b = 2.f * dot(p-cp, d);
+	float c = dot(p-cp, p-cp) - r*r;
+
+	float discriminant = b * b - 4 * a*c;
+	float l = distance(p, cp);
+	if (distance(p, cp) > r)
+	{
+		int _ = 0;
+	}
+	else if (discriminant < 0)
+	{
+		// no intersection
+		int _ = 0;
+	}
+	else
+	{
+		// ray didn't totally miss sphere,
+		// so there is a solution to
+		// the equation.
+		discriminant = sqrt(discriminant);
+
+		// either solution may be on or off the ray so need to test both
+		// t1 is always the smaller value, because BOTH discriminant and
+		// a are nonnegative.
+		t1 = (-b - discriminant) / (2.f * a);
+		t2 = (-b + discriminant) / (2.f * a);
+
+		// 3x HIT cases:
+		//          -o->             --|-->  |            |  --|->
+		// Impale(t1 hit,t2 hit), Poke(t1 hit,t2>1), ExitWound(t1<0, t2 hit), 
+
+		// 3x MISS cases:
+		//       ->  o                     o ->              | -> |
+		// FallShort (t1>1,t2>1), Past (t1<0,t2<0), CompletelyInside(t1<0, t2>1)
+
+		if (t1 >= 0 && t1 <= 1)
+		{
+			// t1 is the intersection, and it's closer than t2
+			// (since t1 uses -b - discriminant)
+			// Impale, Poke
+//			return true;
+		}
+
+		// here t1 didn't intersect so we are either started
+		// inside the sphere or completely past it
+		if (t2 >= 0 && t2 <= 1)
+		{
+			// ExitWound
+//			return true;
+		}
+
+		// no intn: FallShort, Past, CompletelyInside
+//		return false;
+		if (t1 >= 0.f)
+			result = p + d * t1;
+		else
+			result = p + d * t2;
+	}
+
+	printf("out=[%6.3f,%6.3f], p=[%6.3f,%6.3f], cp=[%6.3f,%6.3f], d=[%6.3f,%6.3f], nf=[%6.3f,%6.3f] dist=[%6.3f], %s\n", result.x, result.y, p.x, p.y, cp.x, cp.y, d.x, d.y, t1, t2, l, glm::all(glm::epsilonEqual(p, result, 0.001f))?"not hit":"hit");
+	return result;
+}
 int rigidbody()
 {
+	for (int i = 0; i < 1000; i++)
+	{
+		vec2 sdf = glm::circularRand(1.f);
+		vec2 pos = glm::linearRand(vec2(0.f), vec2(1.f));
+		vec2 cpos = glm::linearRand(vec2(0.f), vec2(1.f));
+		inetsectLineCircle(pos, sdf, cpos);
+	}
+
 	{
 		auto a = closest(vec4(0.f, 0.f, 1.f, 0.f), vec2(3.f));
 		int _ = 0;
+
 	}
 	{
 		vec2 sdf{1.f, 0.f};
@@ -265,16 +346,24 @@ int rigidbody()
 	}
 
 	{
-		vec2 sdf = vec2(-1.f, 0.f);
-		auto a = intersection(vec4(4.f, 4.f, 5.f, 5.f), vec2(3.5f, 3.8f), vec2(1.f));
-		auto a1 = intersectionAABBSegment(vec4(4.f, 4.f, 5.f, 5.f), vec2(4.9f, 4.1f), vec2(1.f), 1.f/ vec2(1.f));
-		//		a -= vec2(0.0001f);
-		auto b = intersection(vec4(4.f, 4.f, 5.f, 5.f), vec2(5.5f, 5.8f), vec2(-1.f));
-		auto b1 = intersectionAABBSegment(vec4(4.f, 4.f, 5.f, 5.f), vec2(4.1f, 4.8f), vec2(-1.f), 1.f/vec2(-1.f));
-		//		b -= vec2(-0.0001f);
-		auto c = intersection(vec4(4.f, 4.f, 5.f, 5.f), vec2(5.5f, 3.5f), vec2(-1.f, 1.f));
-		auto c1 = intersectionAABBSegment(vec4(4.f, 4.f, 5.f, 5.f), vec2(4.7f, 4.1f), vec2(-1.f, 1.f), 1.f / vec2(-1.f, 1.f));
+// 		vec2 sdf = vec2(-1.f, 0.f);
+// 		auto a = intersection(vec4(4.f, 4.f, 5.f, 5.f), vec2(3.5f, 3.8f), vec2(1.f));
+// 		auto a1 = intersectionAABBSegment(vec4(4.f, 4.f, 5.f, 5.f), vec2(4.9f, 4.1f), vec2(1.f), 1.f/ vec2(1.f));
+// 		//		a -= vec2(0.0001f);
+// 		auto b = intersection(vec4(4.f, 4.f, 5.f, 5.f), vec2(5.5f, 5.8f), vec2(-1.f));
+// 		auto b1 = intersectionAABBSegment(vec4(4.f, 4.f, 5.f, 5.f), vec2(4.1f, 4.8f), vec2(-1.f), 1.f/vec2(-1.f));
+// 		//		b -= vec2(-0.0001f);
+// 		auto c = intersection(vec4(4.f, 4.f, 5.f, 5.f), vec2(5.5f, 3.5f), vec2(-1.f, 1.f));
+// 		auto c1 = intersectionAABBSegment(vec4(4.f, 4.f, 5.f, 5.f), vec2(4.7f, 4.1f), vec2(-1.f, 1.f), 1.f / vec2(-1.f, 1.f));
 		//		c -= vec2(-0.0001f, 0.0001f);
+
+
+		for (int i = 0; i < 1000; i++)
+		{
+			vec2 sdf = glm::circularRand(1.f);
+			vec2 pos = glm::linearRand(vec2(0.f) , vec2(1.f));
+			intersectionAABBSegment(vec4(0.f, 0.f, 1.f, 1.f), pos, sdf, 1.f / sdf);
+		}
 
 		int _ = 0;
 	}
@@ -584,41 +673,6 @@ void makeCircle(int Ox, int Oy, int R)
 	}
 }
 
-bool intersection() 
-{
-	vec4 aabb = vec4(0, 0, 1023, 1023);
-	vec2 p0 = vec2(1011, 667);
-	vec2 p1 = vec2(1013, 669);
-	vec2 dir = vec2(p1 - p0);
-
-// 	float tx1 = (aabb.x - p0.x) / dir.x;
-// 	float tx2 = (aabb.z - p0.x) / dir.x;
-// 
-// 	float tmin = glm::min(tx1, tx2);
-// 	float tmax = glm::max(tx1, tx2);
-// 
-// 	float ty1 = (aabb.y - p0.y) / dir.y;
-// 	float ty2 = (aabb.w - p0.y) / dir.y;
-// 
-// 	tmin = glm::max(tmin, glm::min(ty1, ty2));
-// 	tmax = glm::min(tmax, glm::max(ty1, ty2));
-// 
-// 	return tmax >= tmin;
-
-	vec2 line[] = {
-		aabb.xy() - aabb.zy(),
-		aabb.zy() - aabb.zw(),
-		aabb.zw() - aabb.xw(),
-		aabb.xw() - aabb.xy(),
-	};
-	bool inner = false;
-	for (int i = 0; i<4; i++ )
-	{
-		inner |= cross(vec3(line[i], 0.f), vec3(p0, 0.f)).z >= 0.f;
-		inner |= cross(vec3(line[i], 0.f), vec3(p1, 0.f)).z >= 0.f;
-	}
-	return inner;
-}
 int radiosity2()
 {
 

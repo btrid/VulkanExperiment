@@ -39,8 +39,8 @@ vec2 intersectionAABBSegment(in vec4 aabb, in vec2 p, in vec2 dir, in vec2 inv_d
 	float n = max(tmin.x, tmin.y);
 	float f = min(tmax.x, tmax.y);
 
-	return p + (n >= 0. ? n : f) * dir;
-//	return p + f * dir;
+//	return p + (n >= 0. ? n : f) * dir;
+	return p + f * dir;
  }
 
 vec2 closestSegmentPoint(in vec4 seg, in vec2 p)
@@ -48,74 +48,6 @@ vec2 closestSegmentPoint(in vec4 seg, in vec2 p)
 	vec2 ab = seg.zw - seg.xy;
 	float t = dot(p - seg.xy, ab) / dot(ab, ab);
 	return seg.xy + clamp(t, 0., 1.) * ab;
-}
-
-vec2 inetsectLineCircle(in vec2 p, in vec2 d, in vec2 cp)
-{
-//https://stackoverflow.com/questions/1073336/circle-line-segment-collision-detection-algorithm
-//	vec2 result = p;
-//	float t1=0.f, t2=0.f;
-	float r = 0.5f;
-	float a = dot(d,d);
-	float b = 2.f * dot(p-cp, d);
-	float c = dot(p-cp, p-cp) - r*r;
-
-	float discriminant = b * b - 4 * a*c;
-	float l = distance(p, cp);
-	if (distance(p, cp) > r)
-	{
-		// no intersection
-	}
-	else if (discriminant < 0)
-	{
-		// no intersection
-	}
-	else
-	{
-		// ray didn't totally miss sphere,
-		// so there is a solution to
-		// the equation.
-		discriminant = sqrt(discriminant);
-
-		// either solution may be on or off the ray so need to test both
-		// t1 is always the smaller value, because BOTH discriminant and
-		// a are nonnegative.
-		float t1 = (-b - discriminant) / (2.f * a);
-		float t2 = (-b + discriminant) / (2.f * a);
-
-		// 3x HIT cases:
-		//          -o->             --|-->  |            |  --|->
-		// Impale(t1 hit,t2 hit), Poke(t1 hit,t2>1), ExitWound(t1<0, t2 hit), 
-
-		// 3x MISS cases:
-		//       ->  o                     o ->              | -> |
-		// FallShort (t1>1,t2>1), Past (t1<0,t2<0), CompletelyInside(t1<0, t2>1)
-
-		if (t1 >= 0 && t1 <= 1)
-		{
-			// t1 is the intersection, and it's closer than t2
-			// (since t1 uses -b - discriminant)
-			// Impale, Poke
-//			return true;
-		}
-
-		// here t1 didn't intersect so we are either started
-		// inside the sphere or completely past it
-		if (t2 >= 0 && t2 <= 1)
-		{
-			// ExitWound
-//			return true;
-		}
-
-		// no intn: FallShort, Past, CompletelyInside
-//		return false;
-		if (t1 >= 0.f)
-			p = p + d * t1;
-		else
-			p = p + (d * t2)*0.5;
-	}
-
-	return p;
 }
 void main() 
 {
@@ -142,7 +74,8 @@ void main()
 	// まず壁と判定
 	vec2 pos_prev = pos_old;
 	vec2 pos_i = pos_old;
-	for(uint iter = 0; iter < len+1.; iter++)
+	int iter = 0;
+	for(;iter < len+1.; iter++)
 	{
 		pos_prev = pos_i;
 		pos_i = pos_old + dir * min(iter, len);
@@ -151,8 +84,8 @@ void main()
 		if(any(greaterThanEqual(map_index, reso.xy))){ continue; }
 		uint findex = map_index.x + map_index.y * reso.x;
 		vec2 sdf_j = -b_collidable_wall[findex].sdf;
-
-		if(dot(sdf_j,sdf_j) > 0.001)
+//		float inv_mass = 0.;
+		if(dot(sdf_j,sdf_j) >=0.001)
 		{
 			vec2 inv_dir;
 			inv_dir.x = abs(dir.x)<=0.0001 ? 9999. : (1./dir.x);
@@ -166,7 +99,6 @@ void main()
 		else
 		{
 			int count = int(min(b_collidable_counter[findex], COLLIDABLE_NUM));
-			vec2 pj;
 			for(uint ii = 0; ii < count; ii++)
 			{
 				uint fj_id = findex*COLLIDABLE_NUM + ii;
@@ -175,33 +107,36 @@ void main()
 					// 自分とは判定しない
 					continue;
 				}
-				pj = b_collidable[fj_id].grid_relative_pos;
-				if(distance(pos_i-map_index, pj)>=0.5)
-				{
-					continue;
-				}
-
 				sdf_j = -b_collidable[fj_id].sdf;
+//				inv_mass = b_collidable[fj_id].inv_mass;
 				break;
 			}
 
-			if(dot(sdf_j,sdf_j) < 0.001){continue;}
+			if(dot(sdf_j,sdf_j) <= 0.001){ continue; }
 
-//			vec2 inv_dir;
-//			inv_dir.x = abs(dir.x)<=0.0001 ? 9999. : (1./(dir.x*len));
-//			inv_dir.y = abs(dir.y)<=0.0001 ? 9999. : (1./(dir.y*len));
-//			pos = intersectionAABBSegment(vec2(map_index).xyxy+vec4(0,0,1,1), pos_prev, dir*len, inv_dir)+normalize(sdf_j)*len*0.25;
-			pos = map_index + inetsectLineCircle(pos_i-map_index, normalize(sdf_j), pj);
-//			pos = pos_i+normalize(sdf_j)*len*0.25;
 
-			b_rbParticle[p_id].flag_color |= _RBP_FLAG_COLLIDED;
-			is_hit = true;
-			break;
+			// sdfが無いなら壁ではない
+			{
+	#if 0
+				vec2 inv_dir;
+				inv_dir.x = abs(sdf_j.x)<=0.0001 ? 9999. : (1./sdf_j.x);
+				inv_dir.y = abs(sdf_j.y)<=0.0001 ? 9999. : (1./sdf_j.y);
+				pos = intersectionAABBSegment(vec2(map_index).xyxy+vec4(0,0,1,1), pos_i, sdf_j, inv_dir)+sdf_j*len*0.25;
+	#else
+				vec2 inv_dir;
+				inv_dir.x = abs(dir.x)<=0.0001 ? 9999. : (1./dir.x);
+				inv_dir.y = abs(dir.y)<=0.0001 ? 9999. : (1./dir.y);
+				pos = intersectionAABBSegment(vec2(map_index).xyxy+vec4(0,0,1,1), pos_prev, dir, inv_dir)+normalize(sdf_j)*len*0.25;
+	//			pos = intersectionAABBSegment(vec2(map_index).xyxy+vec4(0,0,1,1), pos_prev, dir, inv_dir)-dir*len*0.1;
 
+	#endif
+			}
 		}
 
+		b_rbParticle[p_id].flag_color |= _RBP_FLAG_COLLIDED;
+		is_hit = true;
+		break;
 	}
-
 
 	if(is_hit)
 	{
