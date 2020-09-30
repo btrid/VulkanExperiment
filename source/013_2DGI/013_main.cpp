@@ -209,9 +209,16 @@ int pathFinding()
 
 }
 
-vec2 nearestAABBPoint(const vec4 &box, const vec2 &p)
+vec2 nearestAABBPoint(const vec4& aabb, const vec2& p)
 {
-	return min(max(p, box.xy()), box.zw());
+	return min(max(p, aabb.xy()), aabb.zw());
+}
+
+
+bool containsAABBPoint(const vec4& aabb, const vec2& p)
+{
+	return p.x >= aabb.x && p.x <= aabb.z
+		&& p.y >= aabb.y && p.y <= aabb.w;
 }
 
 vec2 intersection(vec4 aabb, vec2 p, vec2 dir)
@@ -317,9 +324,78 @@ vec2 inetsectLineCircle(const vec2& p, const vec2& d, const vec2& cp)
 	printf("out=[%6.3f,%6.3f], p=[%6.3f,%6.3f], cp=[%6.3f,%6.3f], d=[%6.3f,%6.3f], nf=[%6.3f,%6.3f] dist=[%6.3f], %s\n", result.x, result.y, p.x, p.y, cp.x, cp.y, d.x, d.y, t1, t2, l, glm::all(glm::epsilonEqual(p, result, 0.001f))?"not hit":"hit");
 	return result;
 }
+
+
+float Signed2DTriArea(vec2 a, vec2 b, vec2 c)
+{
+	return (a.x - c.x)*(b.y - c.y) - (a.y - c.y)*(b.x - c.x);
+}
+// Test2DSegmentSegment
+bool intersectSegmentSegment(vec2 a, vec2 b, vec2 c, vec2 d, float& t, vec2& p)
+{
+	float a1 = Signed2DTriArea(a, b, d);
+	float a2 = Signed2DTriArea(a, b, c);
+
+	if (a1*a2 < 0.f)
+	{
+		float a3 = Signed2DTriArea(c, d, a);
+		float a4 = a3 + a2 - a1;
+		if (a3*a4 < 0.f)
+		{
+			t = a3 / (a3 - a4);
+			p = a + t * (b - a);
+			return true;
+		}
+	}
+	return false;
+}
+
+bool inetsectSegmentRect(vec2 pos, vec2 dir, vec2 center, vec2 unit)
+{
+	vec2 u = unit * 0.5f;
+	float t=99.f;
+	vec2 p;
+
+	do 
+	{
+		if (intersectSegmentSegment(pos, pos + dir, center + vec2(-u.x, -u.y), center + vec2(u.x, -u.y), t, p)) {};
+		intersectSegmentSegment(pos, pos + dir, center + vec2(u.x, -u.y), center + vec2(u.x, u.y), t, p);
+		bool c = intersectSegmentSegment(pos, pos + dir, center + vec2(u.x, u.y), center + vec2(-u.x, u.y), t, p);
+		bool d = intersectSegmentSegment(pos, pos + dir, center + vec2(-u.x, u.y), center + vec2(-u.x, -u.y), t, p);
+	} while (false);
+//	printf();
+	return false;
+}
+
+vec2 rotate(vec2 v, float angle) 
+{
+	float c = cos(angle);
+	float s = sin(angle);
+
+	return vec2(v.x * c - v.y * s,
+				v.x * s + v.y * c);
+}
+vec2 rotate(float angle) { return rotate(vec2(1.f, 0.f), angle); }
+//vec2 rotate(float angle) { return vec2(cos(angle), sin(angle)); }
 int rigidbody()
 {
 	for (int i = 0; i < 1000; i++)
+	{
+		vec2 pos = glm::linearRand(vec2(0.f), vec2(1.f));
+		vec2 dir = glm::circularRand(1.f);
+		float r = glm::linearRand(-3.14f, 3.14f);
+
+		auto unit = rotate(r);
+		vec2 sdf = glm::circularRand(1.f);
+		inetsectSegmentRect(pos, dir, vec2(0.5f), unit);
+
+
+//		intersectionAABBSegment(vec4(0.f, 0.f, 1.f, 1.f), pos, sdf_r, 1.f / sdf);
+
+
+
+	}
+	for (int i = 0; i < 10; i++)
 	{
 		vec2 sdf = glm::circularRand(1.f);
 		vec2 pos = glm::linearRand(vec2(0.f), vec2(1.f));
@@ -358,7 +434,7 @@ int rigidbody()
 		//		c -= vec2(-0.0001f, 0.0001f);
 
 
-		for (int i = 0; i < 1000; i++)
+		for (int i = 0; i < 10; i++)
 		{
 			vec2 sdf = glm::circularRand(1.f);
 			vec2 pos = glm::linearRand(vec2(0.f) , vec2(1.f));

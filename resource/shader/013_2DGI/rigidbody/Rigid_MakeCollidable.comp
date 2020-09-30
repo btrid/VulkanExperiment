@@ -35,6 +35,7 @@ void main()
 		c.grid_relative_pos = f16vec2(pos-index);
 		c.sdf = b_rbParticle[p_id].local_sdf;
 		c.vel = f16vec2(pos - b_rbParticle[p_id].pos_old);
+//		c.rot = ;
 
 		b_collidable[i*COLLIDABLE_NUM + ci] = c;
 	}

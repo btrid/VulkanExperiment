@@ -25,24 +25,45 @@ float length_safe(in vec2 v)
 	return isZero(v) ? 0. : length(v);
 }
 
-vec2 nearestAABBPoint(in vec4 box, in vec2 p)
+vec2 nearestAABBPoint(in vec4 aabb, in vec2 p)
 {
-	return min(max(p, box.xy), box.zw);
+	return min(max(p, aabb.xy), aabb.zw);
+}
+
+bool containsAABBPoint(in vec4 aabb, in vec2 p)
+{
+	return p.x >= aabb.x && p.x <= aabb.z 
+		&& p.y >= aabb.y && p.y <= aabb.w;
 }
 
 vec2 intersectionAABBSegment(in vec4 aabb, in vec2 p, in vec2 dir, in vec2 inv_dir)
 {
 	vec4 t = (aabb - p.xyxy) * inv_dir.xyxy;
-	vec2 tmin = min(t.xy, t.zw);
+//	vec2 tmin = min(t.xy, t.zw);
  	vec2 tmax = max(t.xy, t.zw);
 
-	float n = max(tmin.x, tmin.y);
+//	float n = max(tmin.x, tmin.y);
 	float f = min(tmax.x, tmax.y);
 
-	return p + (n >= 0. ? n : f) * dir;
-//	return p + f * dir;
+//	return p + (n >= 0. ? n : f) * dir;
+	return p + f * dir;
+//	return p + min(f, fmax) * dir;
  }
 
+/*vec2 intersectionAABBSegment2(in vec4 aabb, in vec2 p, in vec2 dir)
+{
+	vec4 t = (aabb - p.xyxy) * inv_dir.xyxy;
+//	vec2 tmin = min(t.xy, t.zw);
+ 	vec2 tmax = max(t.xy, t.zw);
+
+//	float n = max(tmin.x, tmin.y);
+	float f = min(tmax.x, tmax.y);
+
+//	return p + (n >= 0. ? n : f) * dir;
+	return p + f * dir;
+//	return p + min(f, fmax) * dir;
+ }
+*/
 vec2 closestSegmentPoint(in vec4 seg, in vec2 p)
 {
 	vec2 ab = seg.zw - seg.xy;
@@ -50,23 +71,19 @@ vec2 closestSegmentPoint(in vec4 seg, in vec2 p)
 	return seg.xy + clamp(t, 0., 1.) * ab;
 }
 
-vec2 inetsectLineCircle(in vec2 p, in vec2 d, in vec2 cp)
+bool inetsectLineCircle(inout vec2 ap, in vec2 ad, in vec2 bp)
 {
 //https://stackoverflow.com/questions/1073336/circle-line-segment-collision-detection-algorithm
 //	vec2 result = p;
 //	float t1=0.f, t2=0.f;
-	float r = 0.5f;
-	float a = dot(d,d);
-	float b = 2.f * dot(p-cp, d);
-	float c = dot(p-cp, p-cp) - r*r;
+
+	float r =0.5;
+	float a = dot(ad,ad);
+	float b = 2.f * dot(ap-bp, ad);
+	float c = dot(ap-bp, ap-bp) - r*r;
 
 	float discriminant = b * b - 4 * a*c;
-	float l = distance(p, cp);
-	if (distance(p, cp) > r)
-	{
-		// no intersection
-	}
-	else if (discriminant < 0)
+	if (discriminant < 0)
 	{
 		// no intersection
 	}
@@ -96,7 +113,8 @@ vec2 inetsectLineCircle(in vec2 p, in vec2 d, in vec2 cp)
 			// t1 is the intersection, and it's closer than t2
 			// (since t1 uses -b - discriminant)
 			// Impale, Poke
-//			return true;
+			ap = ap + ad * t1;
+			return true;
 		}
 
 		// here t1 didn't intersect so we are either started
@@ -104,19 +122,51 @@ vec2 inetsectLineCircle(in vec2 p, in vec2 d, in vec2 cp)
 		if (t2 >= 0 && t2 <= 1)
 		{
 			// ExitWound
+//			ap = ap + (ad * t2)*0.25;
 //			return true;
 		}
 
 		// no intn: FallShort, Past, CompletelyInside
 //		return false;
-		if (t1 >= 0.f)
-			p = p + d * t1;
-		else
-			p = p + (d * t2)*0.5;
 	}
-
-	return p;
+	return false;
 }
+
+bool inetsectLineCircle(inout vec2 ap, in vec2 ad, in vec2 bp, in vec2 bd)
+{
+	float r =0.5;
+	float a = dot(ad,ad);
+	float b = 2.f * dot(ap-bp, ad);
+	float c = dot(ap-bp, ap-bp) - r*r;
+
+	float discriminant = b * b - 4 * a*c;
+	if (discriminant < 0)
+	{
+		// no intersection
+	}
+	else
+	{
+		discriminant = sqrt(discriminant);
+
+		float t1 = (-b - discriminant) / (2.f * a);
+		float t2 = (-b + discriminant) / (2.f * a);
+
+		if (/*t1 >= 0 &&*/ t1 <= 1)
+		{
+			ap = ap + ad * t1;
+			return true;
+		}
+		if (t2 >= 0 /*&& t2 <= 1*/)
+		{
+			// ExitWound
+			ap = ap + (ad * t2);
+			return true;
+		}
+
+	}
+	return false;
+}
+
 void main() 
 {
 	uint pb_id = b_pb_update_list[b_world.cpu_index*b_manager.pb_list_size+gl_WorkGroupID.x];
@@ -136,6 +186,9 @@ void main()
 	vec2 vel = pos - pos_old;
 	float len = length_safe(vel);
 	vec2 dir = normalize_safe(vel);
+	vec2 inv_dir;
+	inv_dir.x = abs(dir.x)<=0.0001 ? 9999. : (1./dir.x);
+	inv_dir.y = abs(dir.y)<=0.0001 ? 9999. : (1./dir.y);
 
 	bool is_hit = false;
 
@@ -154,19 +207,18 @@ void main()
 
 		if(dot(sdf_j,sdf_j) > 0.001)
 		{
-			vec2 inv_dir;
-			inv_dir.x = abs(dir.x)<=0.0001 ? 9999. : (1./dir.x);
-			inv_dir.y = abs(dir.y)<=0.0001 ? 9999. : (1./dir.y);
-			pos = intersectionAABBSegment(vec2(map_index).xyxy+vec4(0,0,1,1), pos_prev, dir, inv_dir)+normalize(sdf_j)*len*0.25;
+			pos = intersectionAABBSegment(vec2(map_index).xyxy+vec4(0,0,1,1), pos_i, -dir, -inv_dir)+normalize(sdf_j)*len*0.25;
 
 			b_rbParticle[p_id].flag_color |= _RBP_FLAG_COLLIDED;
 			is_hit = true;
-			break;
+			iter = 99999;
+//			break;
 		}
 		else
 		{
+			vec2 p_j;
+			vec2 vel_j;
 			int count = int(min(b_collidable_counter[findex], COLLIDABLE_NUM));
-			vec2 pj;
 			for(uint ii = 0; ii < count; ii++)
 			{
 				uint fj_id = findex*COLLIDABLE_NUM + ii;
@@ -175,28 +227,42 @@ void main()
 					// 自分とは判定しない
 					continue;
 				}
-				pj = b_collidable[fj_id].grid_relative_pos;
-				if(distance(pos_i-map_index, pj)>=0.5)
+				sdf_j = -b_collidable[fj_id].sdf;
+				p_j = b_collidable[fj_id].grid_relative_pos;
+				vel_j = b_collidable[fj_id].vel;
+//				if(distance(pos_i-map_index, p_j)>=0.5)
+//				{
+//					continue;
+//				}
+
+				if(dot(sdf_j,sdf_j) < 0.001){continue;}
+//				sdf_j = normalize(sdf_j);
+
+/*				vec2 ppp=pos_prev;
+				if(!inetsectLineCircle(ppp, normalize(dir), map_index+p_j))
 				{
 					continue;
 				}
+				pos = ppp;
+*/
+/*				sdf_j = normalize(sdf_j);
+				vec2 inv_dir;
+				inv_dir.x = abs(sdf_j.x)<=0.0001 ? 9999. : (1./sdf_j.x);
+				inv_dir.y = abs(sdf_j.y)<=0.0001 ? 9999. : (1./sdf_j.y);
+				pos = intersectionAABBSegment(vec2(map_index).xyxy+vec4(0,0,1,1), pos_prev, sdf_j, inv_dir);
+*/
+				if(!containsAABBPoint(vec2(map_index+p_j).xyxy+vec4(-0.5,-0.5,0.5,0.5), pos_i)){ continue; }
+				pos = intersectionAABBSegment(vec2(map_index+p_j).xyxy+vec4(-0.5,-0.5,0.5,0.5), pos_i, -dir, -inv_dir)+normalize(sdf_j)*len*0.25;
 
-				sdf_j = -b_collidable[fj_id].sdf;
+//				pos += normalize(sdf_j)*0.25;
+//				sdf_j = normalize(sdf_j) * 0.5;
+//				map_index+p_j;
+
+				b_rbParticle[p_id].flag_color |= _RBP_FLAG_COLLIDED;
+				is_hit = true;
+				iter = 99999;
 				break;
 			}
-
-			if(dot(sdf_j,sdf_j) < 0.001){continue;}
-
-//			vec2 inv_dir;
-//			inv_dir.x = abs(dir.x)<=0.0001 ? 9999. : (1./(dir.x*len));
-//			inv_dir.y = abs(dir.y)<=0.0001 ? 9999. : (1./(dir.y*len));
-//			pos = intersectionAABBSegment(vec2(map_index).xyxy+vec4(0,0,1,1), pos_prev, dir*len, inv_dir)+normalize(sdf_j)*len*0.25;
-			pos = map_index + inetsectLineCircle(pos_i-map_index, normalize(sdf_j), pj);
-//			pos = pos_i+normalize(sdf_j)*len*0.25;
-
-			b_rbParticle[p_id].flag_color |= _RBP_FLAG_COLLIDED;
-			is_hit = true;
-			break;
 
 		}
 
