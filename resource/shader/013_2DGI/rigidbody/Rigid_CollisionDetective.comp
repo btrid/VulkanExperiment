@@ -194,75 +194,59 @@ void main()
 
 	// まず壁と判定
 	vec2 pos_prev = pos_old;
-	vec2 pos_i = pos_old;
+//	vec2 pos_i = pos_old;
 	for(uint iter = 0; iter < len+1.; iter++)
 	{
-		pos_prev = pos_i;
-		pos_i = pos_old + dir * min(iter, len);
+		pos_prev = pos;
+		pos = pos_old + dir * min(iter, len);
 
-		uvec2 map_index = uvec2(pos_i);
+		uvec2 map_index = uvec2(pos);
 		if(any(greaterThanEqual(map_index, reso.xy))){ continue; }
 		uint findex = map_index.x + map_index.y * reso.x;
 		vec2 sdf_j = -b_collidable_wall[findex].sdf;
 
 		if(dot(sdf_j,sdf_j) > 0.001)
 		{
-			pos = intersectionAABBSegment(vec2(map_index).xyxy+vec4(0,0,1,1), pos_i, -dir, -inv_dir)+normalize(sdf_j)*len*0.25;
+			pos = intersectionAABBSegment(vec2(map_index).xyxy+vec4(0,0,1,1), pos, -dir, -inv_dir)+normalize(sdf_j)*len*0.25;
 
 			b_rbParticle[p_id].flag_color |= _RBP_FLAG_COLLIDED;
 			is_hit = true;
 			iter = 99999;
-//			break;
 		}
 		else
 		{
-			vec2 p_j;
-			vec2 vel_j;
-			int count = int(min(b_collidable_counter[findex], COLLIDABLE_NUM));
-			for(uint ii = 0; ii < count; ii++)
+			ivec2 offset = ivec2(greaterThan(fract(pos), vec2(0.5)))-1;
+			ivec4 pos_x = ivec4(pos.xxxx)+offset.xxxx+ivec4(0,0,1,1);
+			ivec4 pos_y = ivec4(pos.yyyy)+offset.yyyy+ivec4(0,1,0,1);
+
+			for(int i = 0; i<4; i++)
 			{
-				uint fj_id = findex*COLLIDABLE_NUM + ii;
-				if( b_collidable[fj_id].r_id == r_id)
+				ivec2 map_index = ivec2(pos_x[i], pos_y[i]);
+				if(any(greaterThanEqual(map_index, reso.xy))){ continue; }
+
+				uint findex = map_index.x + map_index.y * reso.x;
+
+				int count = int(min(b_collidable_counter[findex], COLLIDABLE_NUM));
+				for(uint ii = 0; ii < count; ii++)
 				{
-					// 自分とは判定しない
-					continue;
+					uint fj_id = findex*COLLIDABLE_NUM + ii;
+					if( b_collidable[fj_id].r_id == r_id)
+					{
+						// 自分とは判定しない
+						continue;
+					}
+					vec2 sdf_j = -b_collidable[fj_id].sdf;
+					vec2 p_j = b_collidable[fj_id].grid_relative_pos;
+
+					if(!containsAABBPoint(vec2(map_index+p_j).xyxy+vec4(-0.5,-0.5,0.5,0.5), pos)){ continue; }
+					pos = intersectionAABBSegment(vec2(map_index+p_j).xyxy+vec4(-0.5,-0.5,0.5,0.5), pos, -dir, -inv_dir)+normalize(sdf_j)*len*0.25;
+
+					b_rbParticle[p_id].flag_color |= _RBP_FLAG_COLLIDED;
+					is_hit = true;
+					iter = 99999;
 				}
-				sdf_j = -b_collidable[fj_id].sdf;
-				p_j = b_collidable[fj_id].grid_relative_pos;
-				vel_j = b_collidable[fj_id].vel;
-//				if(distance(pos_i-map_index, p_j)>=0.5)
-//				{
-//					continue;
-//				}
-
-				if(dot(sdf_j,sdf_j) < 0.001){continue;}
-//				sdf_j = normalize(sdf_j);
-
-/*				vec2 ppp=pos_prev;
-				if(!inetsectLineCircle(ppp, normalize(dir), map_index+p_j))
-				{
-					continue;
-				}
-				pos = ppp;
-*/
-/*				sdf_j = normalize(sdf_j);
-				vec2 inv_dir;
-				inv_dir.x = abs(sdf_j.x)<=0.0001 ? 9999. : (1./sdf_j.x);
-				inv_dir.y = abs(sdf_j.y)<=0.0001 ? 9999. : (1./sdf_j.y);
-				pos = intersectionAABBSegment(vec2(map_index).xyxy+vec4(0,0,1,1), pos_prev, sdf_j, inv_dir);
-*/
-				if(!containsAABBPoint(vec2(map_index+p_j).xyxy+vec4(-0.5,-0.5,0.5,0.5), pos_i)){ continue; }
-				pos = intersectionAABBSegment(vec2(map_index+p_j).xyxy+vec4(-0.5,-0.5,0.5,0.5), pos_i, -dir, -inv_dir)+normalize(sdf_j)*len*0.25;
-
-//				pos += normalize(sdf_j)*0.25;
-//				sdf_j = normalize(sdf_j) * 0.5;
-//				map_index+p_j;
-
-				b_rbParticle[p_id].flag_color |= _RBP_FLAG_COLLIDED;
-				is_hit = true;
-				iter = 99999;
-				break;
 			}
+
 
 		}
 
