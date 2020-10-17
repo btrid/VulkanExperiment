@@ -135,6 +135,8 @@ bool inetsectLineCircle(inout vec2 ap, in vec2 ad, in vec2 bp)
 bool inetsectLineCircle(inout vec2 ap, in vec2 ad, in vec2 bp, in vec2 bd)
 {
 	float r =0.5;
+	if(distance(ap, bp)>=r){return false;}
+
 	float a = dot(ad,ad);
 	float b = 2.f * dot(ap-bp, ad);
 	float c = dot(ap-bp, ap-bp) - r*r;
@@ -142,30 +144,27 @@ bool inetsectLineCircle(inout vec2 ap, in vec2 ad, in vec2 bp, in vec2 bd)
 	float discriminant = b * b - 4 * a*c;
 	if (discriminant < 0)
 	{
-		// no intersection
+		return false;
 	}
-	else
+
+	discriminant = sqrt(discriminant);
+
+	float t1 = (-b - discriminant) / (2.f * a);
+	float t2 = (-b + discriminant) / (2.f * a);
+
+	if (/*t1 >= 0 &&*/ t1 <= 1)
 	{
-		discriminant = sqrt(discriminant);
-
-		float t1 = (-b - discriminant) / (2.f * a);
-		float t2 = (-b + discriminant) / (2.f * a);
-
-		if (/*t1 >= 0 &&*/ t1 <= 1)
-		{
-			ap = ap + ad * t1;
-			return true;
-		}
-		if (t2 >= 0 /*&& t2 <= 1*/)
-		{
-			// ExitWound
-			ap = ap + (ad * t2);
-			return true;
-		}
-
+		ap = ap + ad * t1;
+		return true;
 	}
-	return false;
+	if (t2 >= 0 /*&& t2 <= 1*/)
+	{
+		// ExitWound
+		ap = ap + (ad * t2);
+		return true;
+	}
 }
+
 
 void main() 
 {
@@ -194,7 +193,6 @@ void main()
 
 	// まず壁と判定
 	vec2 pos_prev = pos_old;
-//	vec2 pos_i = pos_old;
 	for(uint iter = 0; iter < len+1.; iter++)
 	{
 		pos_prev = pos;
@@ -209,53 +207,51 @@ void main()
 		{
 			pos = intersectionAABBSegment(vec2(map_index).xyxy+vec4(0,0,1,1), pos, -dir, -inv_dir)+normalize(sdf_j)*len*0.25;
 
-			b_rbParticle[p_id].flag_color |= _RBP_FLAG_COLLIDED;
 			is_hit = true;
-			iter = 99999;
+			break;
 		}
-		else
+	}
+
+	if(!is_hit)
+	{
+//		ivec2 offset = ivec2(greaterThan(fract(pos), vec2(0.5)))-1;
+//		ivec4 pos_x = ivec4(pos.xxxx)+offset.xxxx+ivec4(0,0,1,1);
+//		ivec4 pos_y = ivec4(pos.yyyy)+offset.yyyy+ivec4(0,1,0,1);
+
+//		for(int i = 0; i<4; i++)
 		{
-			ivec2 offset = ivec2(greaterThan(fract(pos), vec2(0.5)))-1;
-			ivec4 pos_x = ivec4(pos.xxxx)+offset.xxxx+ivec4(0,0,1,1);
-			ivec4 pos_y = ivec4(pos.yyyy)+offset.yyyy+ivec4(0,1,0,1);
+//				ivec2 map_index = ivec2(pos_x[i], pos_y[i]);
+			uvec2 map_index = uvec2(pos);
+//			if(any(greaterThanEqual(map_index, reso.xy))){ }
 
-			for(int i = 0; i<4; i++)
+			uint findex = map_index.x + map_index.y * reso.x;
+
+			int count = int(min(b_collidable_counter[findex], COLLIDABLE_NUM));
+			for(uint ii = 0; ii < count; ii++)
 			{
-				ivec2 map_index = ivec2(pos_x[i], pos_y[i]);
-				if(any(greaterThanEqual(map_index, reso.xy))){ continue; }
-
-				uint findex = map_index.x + map_index.y * reso.x;
-
-				int count = int(min(b_collidable_counter[findex], COLLIDABLE_NUM));
-				for(uint ii = 0; ii < count; ii++)
+				uint fj_id = findex*COLLIDABLE_NUM + ii;
+				if( b_collidable[fj_id].r_id == r_id)
 				{
-					uint fj_id = findex*COLLIDABLE_NUM + ii;
-					if( b_collidable[fj_id].r_id == r_id)
-					{
-						// 自分とは判定しない
-						continue;
-					}
-					vec2 sdf_j = -b_collidable[fj_id].sdf;
-					vec2 p_j = b_collidable[fj_id].grid_relative_pos;
-
-					if(!containsAABBPoint(vec2(map_index+p_j).xyxy+vec4(-0.5,-0.5,0.5,0.5), pos)){ continue; }
-					pos = intersectionAABBSegment(vec2(map_index+p_j).xyxy+vec4(-0.5,-0.5,0.5,0.5), pos, -dir, -inv_dir)+normalize(sdf_j)*len*0.25;
-
-					b_rbParticle[p_id].flag_color |= _RBP_FLAG_COLLIDED;
-					is_hit = true;
-					iter = 99999;
+					// 自分とは判定しない
+					continue;
 				}
+				vec2 sdf_j = -b_collidable[fj_id].sdf;
+				vec2 p_j = b_collidable[fj_id].grid_relative_pos;
+				vec2 inv_sdf;
+				inv_sdf.x = abs(sdf_j.x)<=0.0001 ? 9999. : (1./sdf_j.x);
+				inv_sdf.y = abs(sdf_j.y)<=0.0001 ? 9999. : (1./sdf_j.y);
+
+				pos = intersectionAABBSegment(vec2(map_index).xyxy+vec4(0.,0.,1.,1.), pos, sdf_j, inv_sdf);
+				is_hit = true;
+				break;
 			}
-
-
 		}
 
 	}
 
-
 	if(is_hit)
 	{
-//		b_rbParticle[p_id].flag_color |= _RBP_FLAG_COLLIDED;
+		b_rbParticle[p_id].flag_color |= _RBP_FLAG_COLLIDED;
 		b_rbParticle[p_id].pos = pos;
 	}
 	else

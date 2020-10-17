@@ -342,6 +342,10 @@ bool intersectSegmentSegment(vec2 a, vec2 b, vec2 c, vec2 d, float& t, vec2& p)
 		float a4 = a3 + a2 - a1;
 		if (a3*a4 < 0.f)
 		{
+			if (abs((a3 - a4)) < 0.001)
+			{
+				int aa = 0;
+			}
 			t = a3 / (a3 - a4);
 			p = a + t * (b - a);
 			return true;
@@ -353,17 +357,25 @@ bool intersectSegmentSegment(vec2 a, vec2 b, vec2 c, vec2 d, float& t, vec2& p)
 bool inetsectSegmentRect(vec2 pos, vec2 dir, vec2 center, vec2 unit)
 {
 	vec2 u = unit * 0.5f;
-	float t=99.f;
-	vec2 p;
+	float t=-1.f;
+	vec2 p = pos;
 
-	do 
-	{
-		if (intersectSegmentSegment(pos, pos + dir, center + vec2(-u.x, -u.y), center + vec2(u.x, -u.y), t, p)) {};
-		intersectSegmentSegment(pos, pos + dir, center + vec2(u.x, -u.y), center + vec2(u.x, u.y), t, p);
-		bool c = intersectSegmentSegment(pos, pos + dir, center + vec2(u.x, u.y), center + vec2(-u.x, u.y), t, p);
-		bool d = intersectSegmentSegment(pos, pos + dir, center + vec2(-u.x, u.y), center + vec2(-u.x, -u.y), t, p);
+	auto c = dot(dir, unit);
+	do {
+		if (abs(c) > 0.0001)
+		{
+			if (intersectSegmentSegment(pos, pos + dir, center + vec2(-u.x, -u.y), center + vec2(u.x, -u.y), t, p)) { break; }
+			if (intersectSegmentSegment(pos, pos + dir, center + vec2(u.x, u.y), center + vec2(-u.x, u.y), t, p)) { break; }
+		}
+		if (abs(c) < 0.9999)
+		{
+			if (intersectSegmentSegment(pos, pos + dir, center + vec2(u.x, -u.y), center + vec2(u.x, u.y), t, p)) { break; }
+			if (intersectSegmentSegment(pos, pos + dir, center + vec2(-u.x, u.y), center + vec2(-u.x, -u.y), t, p)) { break; }
+		}
 	} while (false);
-//	printf();
+
+	printf("out=[%6.3f,%6.3f], p=[%6.3f,%6.3f], d=[%6.3f,%6.3f], t=[%6.3f], %s\n", p.x, p.y, pos.x, pos.y, dir.x, dir.y, t, t>=0.f?"not hit":"hit");
+
 	return false;
 }
 
@@ -375,11 +387,13 @@ vec2 rotate(vec2 v, float angle)
 	return vec2(v.x * c - v.y * s,
 				v.x * s + v.y * c);
 }
+
 vec2 rotate(float angle) { return rotate(vec2(1.f, 0.f), angle); }
 //vec2 rotate(float angle) { return vec2(cos(angle), sin(angle)); }
 int rigidbody()
 {
-	for (int i = 0; i < 1000; i++)
+	for (int i = 0; i < 0; i++)
+//	while (true)
 	{
 		vec2 pos = glm::linearRand(vec2(0.f), vec2(1.f));
 		vec2 dir = glm::circularRand(1.f);
@@ -390,7 +404,8 @@ int rigidbody()
 		inetsectSegmentRect(pos, dir, vec2(0.5f), unit);
 
 
-//		intersectionAABBSegment(vec4(0.f, 0.f, 1.f, 1.f), pos, sdf_r, 1.f / sdf);
+		vec2 sdf_r = rotate(sdf, r);
+		intersectionAABBSegment(vec4(0.f, 0.f, 1.f, 1.f), pos, sdf_r, 1.f / sdf);
 
 
 
