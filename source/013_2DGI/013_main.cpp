@@ -921,6 +921,13 @@ struct Player
 
 int main()
 {
+// 	for(;;)
+// 	{ 
+//		double a = glm::linearRand(UINT_MAX - 3, UINT_MAX) / double(UINT_MAX);
+// 		float a = glm::linearRand((UINT_MAX&0x7fffff) - 3, (UINT_MAX & 0x7fffff)) / float(UINT_MAX & 0x7fffff);
+// 		printf("%36.24f\n", a);
+// 	}
+
 	dda_test();
 
 	btr::setResourceAppPath("../../resource/");
@@ -933,8 +940,8 @@ int main()
 	camera->getData().m_far = 5000.f;
 	camera->getData().m_near = 0.01f;
 
-//	return pathFinding();
-	return rigidbody();
+	return pathFinding();
+//	return rigidbody();
 //	return radiosity();
 //	return radiosity2();
 //	return radiosity3();

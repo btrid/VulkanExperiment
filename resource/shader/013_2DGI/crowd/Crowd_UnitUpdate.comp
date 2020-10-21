@@ -24,6 +24,22 @@ vec2 normalize_safe(in vec2 v, in vec2 a){ return dot(v, v) >= 0.001 ? normalize
 float acos_safe(in float a){ return acos(clamp(a, -1., 1.)); }
 float atan2(in float y, in float x){ return x==0.0 ? sign(y)*(3.1415/2.) : atan(y, x); }
 
+vec2 intersectionAABBSegment(in vec4 aabb, in vec2 p, in vec2 dir, in vec2 inv_dir)
+{
+	vec4 t = (aabb - p.xyxy) * inv_dir.xyxy;
+ 	vec2 tmax = max(t.xy, t.zw);
+
+	float f = min(tmax.x, tmax.y);
+	return p + f * dir;
+ }
+
+float DistanceAABBSegment(in vec4 aabb, in vec2 p, in vec2 dir, in vec2 inv_dir)
+{
+	vec4 t = (aabb - p.xyxy) * inv_dir.xyxy;
+ 	t.xy = max(t.xy, t.zw);
+	return min(t.x, t.y);
+ }
+
 //int bit_table[] = { 0, 1, 2, 7, 0, 3, 6, 5, 4};
 int bit_table_x[] = { 7, 31, 3};
 int bit_table_y[] = { 1, 31, 5};
@@ -72,16 +88,15 @@ void main()
 
 	if(dot(dir, dir)> 0.001)
 	{
-		float a = 1./max(abs(dir.x), abs(dir.y));
+//		float a = 1./max(abs(dir.x), abs(dir.y));
 //		dir *= a;
 		float move = length(inertia*deltatime);
 		float advance = 0.;
 
 		// march
-		while(advance<move)
+		for(int i = 0; i < move+1.; i++)
 		{
-			vec2 pos_next = pos.xy + dir * clamp(move-advance, 0., a);
-			advance += a;
+			vec2 pos_next = pos.xy + dir * clamp(move-i, 0., 1.);
 
 			// hit確認
 			ivec2 ipos = ivec2(pos.xy);
@@ -98,6 +113,22 @@ void main()
 				// 壁にぶつかったので反射
 #if 0
 				vec2 push_dir = vec2(b_jfa[ipos_next.x + ipos_next.y*reso.x] - ipos_next);
+				inertia = reflect(inertia, push_dir) * 0.3 + push_dir*2.;
+				dir = reflect(dir, push_dir);
+
+				// 押し出し
+				pos.xy += normalize(push_dir);
+#elif 1
+//				vec2 push_dir = normalize(vec2(b_sdf[ipos_next.x + ipos_next.y*reso.x]));
+				vec2 push_dir = normalize(vec2(b_jfa[ipos_next.x + ipos_next.y*reso.x] - ipos_next));
+
+				vec2 inv = push_dir;
+				inv.x = abs(inv.x)<=0.0001 ? 9999. : (1./inv.x);
+				inv.y = abs(inv.y)<=0.0001 ? 9999. : (1./inv.y);
+//				pos.xy  = intersectionAABBSegment(ipos_next.xyxy+ivec4(0,0,1,1), pos_next.xy, push_dir, inv);
+				float t = DistanceAABBSegment(ipos_next.xyxy+ivec4(0,0,1,1), pos_next, push_dir, inv);
+				pos.xy = pos_next.xy + (t+0.01)*push_dir;
+
 #else
 				ivec2 diff = ipos_next-ipos+1;
 				int bit = diff.x+diff.y*3;
@@ -114,12 +145,13 @@ void main()
 					bool is_wall_y = (edge&(1<<bit_table_y[diff.y])) != 0;
 					push_dir = normalize_safe(vec2(is_wall_x, is_wall_y), vec2(0.1)) * -sign(dir);
 				}
-#endif
+
 				inertia = reflect(inertia, push_dir) * 0.3 + push_dir*2.;
 				dir = reflect(dir, push_dir);
 
 				// 押し出し
 				pos.xy += normalize(push_dir);
+#endif
 			}
 			else
 			{

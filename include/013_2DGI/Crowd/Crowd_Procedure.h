@@ -143,7 +143,8 @@ struct Crowd_Procedure
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 1, { m_gi2d_context->getDescriptorSet() }, {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 2, { m_sdf_context->getDescriptorSet() }, {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 3, { m_path_context->getDescriptorSet() }, {});
-			cmd.dispatch(1, 1, 1);
+			auto num = app::calcDipatchGroups(uvec3(m_context->m_crowd_info.unit_data_max, 1, 1), uvec3(64, 1, 1));
+			cmd.dispatch(num.x, num.y, num.z);
 		}
 
 	}
@@ -165,7 +166,8 @@ struct Crowd_Procedure
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 1, { m_gi2d_context->getDescriptorSet() }, {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 2, { m_sdf_context->getDescriptorSet() }, {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 3, { m_path_context->getDescriptorSet() }, {});
-			cmd.dispatch(1, 1, 1);
+			auto num = app::calcDipatchGroups(uvec3(m_context->m_crowd_info.unit_data_max, 1, 1), uvec3(64, 1, 1));
+			cmd.dispatch(num.x, num.y, num.z);
 		}
 
 	}
@@ -190,7 +192,9 @@ struct Crowd_Procedure
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 2, { m_sdf_context->getDescriptorSet() }, {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 3, { m_path_context->getDescriptorSet() }, {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 4, { render_target->m_descriptor.get() }, {});
-			cmd.dispatch(1, 1, 1);
+
+			auto num = app::calcDipatchGroups(uvec3(m_context->m_crowd_info.unit_data_max, 1, 1), uvec3(64, 1, 1));
+			cmd.dispatch(num.x, num.y, num.z);
 		}
 
 		// XV

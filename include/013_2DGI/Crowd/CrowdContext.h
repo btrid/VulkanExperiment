@@ -61,7 +61,7 @@ struct CrowdContext
 			m_crowd_info.crowd_info_max = 1;
 			m_crowd_info.unit_info_max = 16;
 			m_crowd_info.crowd_data_max = 16;
-			m_crowd_info.unit_data_max = 64;
+			m_crowd_info.unit_data_max = 64*16;
 
 			m_crowd_scene.m_deltatime= 0.f;
 //			m_crowd_scene.m_skip = 0;
