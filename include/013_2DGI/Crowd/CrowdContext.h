@@ -21,9 +21,6 @@ struct CrowdContext
 
 	struct CrowdScene
 	{
-//		int m_frame;
-//		int m_hierarchy;
-//		uint m_skip;
 		float m_deltatime;
 	};
 
@@ -76,6 +73,7 @@ struct CrowdContext
 					vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(20, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(21, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(22, vk::DescriptorType::eStorageBuffer, 1, stage),
@@ -99,6 +97,7 @@ struct CrowdContext
 		}
 
 		{
+			auto link_size = gi2d_context->m_gi2d_info.m_resolution.x*gi2d_context->m_gi2d_info.m_resolution.y / (32*32);
 			u_crowd_info = m_context->m_uniform_memory.allocateMemory<CrowdInfo>({ 1, {} });
 			u_crowd_scene = m_context->m_uniform_memory.allocateMemory<CrowdScene>({ 1, {} });
 			u_unit_info = m_context->m_uniform_memory.allocateMemory<UnitInfo>({ m_crowd_info.unit_info_max, {} });
@@ -106,8 +105,9 @@ struct CrowdContext
 			b_unit_pos = m_context->m_storage_memory.allocateMemory<vec4>({ m_crowd_info.unit_data_max, {} });
 			b_unit_move = m_context->m_storage_memory.allocateMemory<vec2>({ m_crowd_info.unit_data_max, {} });
 			b_unit_counter = m_context->m_storage_memory.allocateMemory<uvec4>({ 1, {} });
-			b_unit_link_head = m_context->m_storage_memory.allocateMemory<int32_t>({ gi2d_context->m_desc.Resolution.x*gi2d_context->m_desc.Resolution.y, {} });
-	
+			b_unit_link_head = m_context->m_storage_memory.allocateMemory<int32_t>(link_size);
+			b_unit_link_next = m_context->m_storage_memory.allocateMemory<int32_t>(m_crowd_info.unit_data_max);
+
 
 			vk::DescriptorBufferInfo uniforms[] = {
 				u_crowd_info.getInfo(),
@@ -118,6 +118,7 @@ struct CrowdContext
 				b_crowd.getInfo(),
 				b_unit_counter.getInfo(),
 				b_unit_link_head.getInfo(),
+				b_unit_link_next.getInfo(),
 			};
 			vk::DescriptorBufferInfo storages_data[] = {
 				b_unit_pos.getInfo(),
@@ -184,7 +185,7 @@ struct CrowdContext
 				{
 					auto& info = *staging.getMappedPtr(i);
 					info.linear_speed = 50.f;
-					info.angler_speed = 50.5f;
+					info.angler_speed = 500.5f;
 				}
 
 				vk::BufferCopy copy;
@@ -243,6 +244,7 @@ struct CrowdContext
 	btr::BufferMemoryEx<vec2> b_unit_move;
 	btr::BufferMemoryEx<uvec4> b_unit_counter;
 	btr::BufferMemoryEx<int32_t> b_unit_link_head;
+	btr::BufferMemoryEx<int32_t> b_unit_link_next;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;

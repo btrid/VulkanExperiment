@@ -18,6 +18,18 @@ float calcAngle2(in vec2 x, in vec2 y)
 {
 	return acos(clamp(dot(x, y), -1., 1));
 }
+
+vec2 AngleToDirection(in float angle)
+{
+	float c = cos(angle);
+	float s = sin(angle);
+	return vec2(c, s);
+}
+
+float DirectionToAngle(in vec2 dir)
+{
+	return dir.x==0.0 ? sign(dir.y)*(3.1415/2.) : atan(dir.y, dir.x);
+}
 vec3 normalize_safe(in vec3 v, in vec3 a){ return dot(v, v) >= 0.001 ? normalize(v) : a;}
 vec2 normalize_safe(in vec2 v, in vec2 a){ return dot(v, v) >= 0.001 ? normalize(v) : a;}
 
@@ -59,108 +71,135 @@ void main()
 	vec2 inertia = b_unit_move[index];
 	UnitInfo unit_info = u_unit_info[0];
 
-	inertia = normalize_safe(inertia, vec2(0.)) * max(length(inertia) * pow(0.999, 1.+deltatime), unit_info.linear_speed*0.2);
+	inertia = normalize_safe(inertia, vec2(0.)) * max(length(inertia) * pow(0.995, 1.+deltatime), unit_info.linear_speed*0.2);
 
-	vec2 dir = rotate(pos.z);
+	vec2 dir = AngleToDirection(pos.z);
+	vec2 power = vec2(0.);
 	{
+		vec2 gi = pos.xy/g_crowd_density_cell_size;
+		ivec4 grid_offset = ivec2(greaterThan(fract(gi.xy), vec2(0.5))).xxyy-ivec4(1,0,1,0);
+		ivec2 grid_reso = reso.xy / g_crowd_density_cell_size;
+		ivec4 grid_index = ivec2(gi).xxyy + grid_offset;
+		ivec4 grid_index_i = grid_index.xxyy+grid_index.zwzw*grid_reso.xxxx;
+
+
+		vec3 nearest = vec3(9999.);
+		float nearest_dist = 9999.;
+		vec3 group = vec3(0.);
+		int num = 0;
+		for(int y = 0; y < 2; y++)
+		{
+			if(grid_index[2+y]<0||grid_index[2+y]>=grid_reso.y){continue; }
+
+			for(int x = 0; x < 2; x++) 
+			{
+				if(grid_index[x]<0||grid_index[x]>=grid_reso.x){continue; }
+
+				int i = x+y*2;
+
+				for(int link = b_unit_link_head[grid_index_i[i]]; link != -1; link = b_unit_link_next[link])
+				{
+					if(link == index){ continue; }
+
+					vec3 p_j = b_unit_pos[link].xyz;
+					if(distance(pos.xy, p_j.xy) >= 16.) { continue;}
+
+					float d = p_j.z - pos.z;
+					d = d > 3.14 ? 6.28 - d : d;
+					d = d < -3.14 ? 6.28 + d : d;
+					if(abs(d)>=radians(120.)) { continue; }
+
+					if(distance(pos.xy, p_j.xy) < nearest_dist)
+					{
+						nearest_dist = distance(pos.xy, p_j.xy);
+						nearest = p_j;
+					}
+					group += p_j;
+					num++;
+
+				}
+			}
+		}
+		if(num != 0)
+		{
+			// 近づきすぎない遠ざかりすぎない
+			{
+				vec2 target_dir = normalize_safe(nearest.xy - pos.xy, vec2(0.));
+				power = power + (nearest_dist<2.?-target_dir:nearest_dist>4.?target_dir:vec2(0.)) * 0.25;
+			}
+			// 向きを合わせる
+			{
+				vec2 nearest_dir = rotate(nearest.z);
+				power += nearest_dir;
+			}
+
+			{
+				group /= num;
+				vec2 target_dir = normalize_safe(group.xy - pos.xy, vec2(0.));
+				power += target_dir;
+			}
+		}
+
+
 		// 目的地に向かう
 		ivec2 ipos = ivec2(pos.xy);
 		uint path_dir = PathData_dirtype(b_path_data[ipos.x+ipos.y*reso.x]);
 		vec2 target_dir = normalize(-vec2(g_neighbor[path_dir]));
 		float d = dot(dir, target_dir);
-		if(d <= 0.95)
+		if(d <= 0.99)
 		{
 			float rotate_angle = acos(d);
-			rotate_angle = min(rotate_angle, unit_info.angler_speed);
+			rotate_angle = min(rotate_angle, radians(unit_info.angler_speed)*deltatime);
 
 			float c = cross(vec3(dir, 0.), vec3(target_dir, 0.)).z;
-			pos.z += sign(c) * rotate_angle*deltatime;
+			pos.z += sign(c) * rotate_angle;
+			dir = AngleToDirection(pos.z);
+		}
 
-		}
-		else
-		{
-		}
+		dir += power;
 		inertia += dir * pow(1.01, 1.+deltatime);
 		inertia = normalize_safe(inertia, vec2(0.)) * min(length(inertia), unit_info.linear_speed);
 	}
+	pos.z = DirectionToAngle(dir);
+//	pos.z=mod(pos.z+3.1415, 6.283)-3.1415;
 
 	dir = normalize_safe(inertia, vec2(0.));
 
-	if(dot(dir, dir)> 0.001)
+	float move = length(inertia*deltatime);
+	float advance = 0.;
+
+	// march
+	for(int i = 0; i < move+1.; i++)
 	{
-//		float a = 1./max(abs(dir.x), abs(dir.y));
-//		dir *= a;
-		float move = length(inertia*deltatime);
-		float advance = 0.;
+		vec2 pos_next = pos.xy + dir * clamp(move-i, 0., 1.);
 
-		// march
-		for(int i = 0; i < move+1.; i++)
+		// hit確認
+		ivec2 ipos_next = ivec2(pos_next);
+
+		ivec4 fragment_index = ivec4(ipos_next/8, ipos_next%8);
+		int findex = fragment_index.x + fragment_index.y*reso.z;
+		uint64_t fragment_map = b_fragment_map[findex].x;
+
+		ivec2 shift = fragment_index.zw;
+		uint64_t bit = 1ul<<(shift.x+shift.y*8);
+		if((fragment_map & bit) != 0)
 		{
-			vec2 pos_next = pos.xy + dir * clamp(move-i, 0., 1.);
+			vec2 push_dir = normalize(vec2(b_jfa[ipos_next.x + ipos_next.y*reso.x] - ipos_next));
 
-			// hit確認
-			ivec2 ipos = ivec2(pos.xy);
-			ivec2 ipos_next = ivec2(pos_next);
-
-			ivec4 fragment_index = ivec4(ipos_next/8, ipos_next%8);
-			int findex = fragment_index.x + fragment_index.y*reso.z;
-			uint64_t fragment_map = b_fragment_map[findex].x;
-
-			ivec2 shift = fragment_index.zw;
-			uint64_t bit = 1ul<<(shift.x+shift.y*8);
-			if((fragment_map & bit) != 0)
-			{
-				// 壁にぶつかったので反射
-#if 0
-				vec2 push_dir = vec2(b_jfa[ipos_next.x + ipos_next.y*reso.x] - ipos_next);
-				inertia = reflect(inertia, push_dir) * 0.3 + push_dir*2.;
-				dir = reflect(dir, push_dir);
-
-				// 押し出し
-				pos.xy += normalize(push_dir);
-#elif 1
-//				vec2 push_dir = normalize(vec2(b_sdf[ipos_next.x + ipos_next.y*reso.x]));
-				vec2 push_dir = normalize(vec2(b_jfa[ipos_next.x + ipos_next.y*reso.x] - ipos_next));
-
-				vec2 inv = push_dir;
-				inv.x = abs(inv.x)<=0.0001 ? 9999. : (1./inv.x);
-				inv.y = abs(inv.y)<=0.0001 ? 9999. : (1./inv.y);
-//				pos.xy  = intersectionAABBSegment(ipos_next.xyxy+ivec4(0,0,1,1), pos_next.xy, push_dir, inv);
-				float t = DistanceAABBSegment(ipos_next.xyxy+ivec4(0,0,1,1), pos_next, push_dir, inv);
-				pos.xy = pos_next.xy + (t+0.01)*push_dir;
-
-#else
-				ivec2 diff = ipos_next-ipos+1;
-				int bit = diff.x+diff.y*3;
-
-				uint8_t edge = b_edge[ipos_next.x+ipos_next.y*reso.x];
-				vec2 push_dir;
-
-				if(edge== 0xff)
-				{
-					push_dir = normalize(vec2(b_jfa[ipos_next.x + ipos_next.y*reso.x] - ipos_next));
-				}else
-				{
-					bool is_wall_x = (edge&(1<<bit_table_x[diff.x])) != 0;
-					bool is_wall_y = (edge&(1<<bit_table_y[diff.y])) != 0;
-					push_dir = normalize_safe(vec2(is_wall_x, is_wall_y), vec2(0.1)) * -sign(dir);
-				}
-
-				inertia = reflect(inertia, push_dir) * 0.3 + push_dir*2.;
-				dir = reflect(dir, push_dir);
-
-				// 押し出し
-				pos.xy += normalize(push_dir);
-#endif
-			}
-			else
-			{
-				// 何もないのでそのまま進む
-				pos.xy = pos_next;
-			}
+			vec2 inv = push_dir;
+			inv.x = abs(inv.x)<=0.0001 ? 9999. : (1./inv.x);
+			inv.y = abs(inv.y)<=0.0001 ? 9999. : (1./inv.y);
+			float t = DistanceAABBSegment(ipos_next.xyxy+ivec4(0,0,1,1), pos_next, push_dir, inv);
+			pos.xy = pos_next.xy + (t+0.01)*push_dir;
+		}
+		else
+		{
+			// 何もないのでそのまま進む
+			pos.xy = pos_next;
 		}
 	}
 	pos.z=mod(pos.z+3.1415, 6.283)-3.1415;
 	b_unit_pos[index] = pos;
 	b_unit_move[index] = inertia;
+
 }

@@ -71,8 +71,11 @@ layout(set=USE_Crowd2D, binding=3, std430) restrict buffer CrowdBuffer {
 layout(set=USE_Crowd2D, binding=4, std430) restrict buffer UnitCounter {
 	ivec4 b_unit_counter;
 };
-layout(set=USE_Crowd2D, binding=5, std430) restrict buffer UnitLinkList {
+layout(set=USE_Crowd2D, binding=5, std430) restrict buffer UnitLink_Head {
 	int b_unit_link_head[];
+};
+layout(set=USE_Crowd2D, binding=6, std430) restrict buffer UnitLink_Next {
+	int b_unit_link_next[];
 };
 layout(set=USE_Crowd2D, binding=20, std430) restrict buffer UnitPosBuffer 
 {
@@ -87,7 +90,7 @@ layout(set=USE_Crowd2D, binding=23, std430) restrict buffer UnitInfoBuffer
 	Info b_unit_info[];
 };
 
-const int g_crowd_density_cell_size = 64;
+const int g_crowd_density_cell_size = 32;
 #endif
 
 

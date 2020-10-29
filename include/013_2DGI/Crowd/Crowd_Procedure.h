@@ -126,15 +126,7 @@ struct Crowd_Procedure
 
 	void executeUpdateUnit(vk::CommandBuffer cmd)
 	{
-		// カウンターのclear
-		{
-			cmd.updateBuffer<uvec4>(m_context->b_unit_counter.getInfo().buffer, m_context->b_unit_counter.getInfo().offset, uvec4(0));
-			vk::BufferMemoryBarrier to_read[] = {
-				m_context->b_unit_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderWrite),
-				m_context->b_unit_link_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer| vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, 0, {}, array_length(to_read), to_read, 0, {});
-		}
+		_executeMakeLinkList(cmd);
 
 		// 更新
 		{
@@ -148,19 +140,27 @@ struct Crowd_Procedure
 		}
 
 	}
-	void executeMakeLinkList(vk::CommandBuffer cmd)
+	void _executeMakeLinkList(vk::CommandBuffer cmd)
 	{
 		// カウンターのclear
 		{
-			cmd.fillBuffer(m_context->b_unit_link_head.getInfo().buffer, m_context->b_unit_link_head.getInfo().offset, m_context->b_unit_link_head.getInfo().range, -1);
-			vk::BufferMemoryBarrier to_read[] = {
-				m_context->b_unit_link_head.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderWrite),
+			vk::BufferMemoryBarrier to_write[] = {
+				m_context->b_unit_link_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
 			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, 0, {}, array_length(to_read), to_read, 0, {});
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, 0, {}, array_length(to_write), to_write, 0, {});
+
+			cmd.fillBuffer(m_context->b_unit_link_head.getInfo().buffer, m_context->b_unit_link_head.getInfo().offset, m_context->b_unit_link_head.getInfo().range, -1);
 		}
 
 		// 更新
 		{
+			vk::BufferMemoryBarrier to_read[] = {
+				m_context->b_unit_link_head.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderWrite),
+				m_context->b_unit_link_next.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
+				m_context->b_unit_pos.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader|vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, 0, {}, array_length(to_read), to_read, 0, {});
+
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeLinkList].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 0, { m_context->getDescriptorSet() }, {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 1, { m_gi2d_context->getDescriptorSet() }, {});
@@ -170,6 +170,15 @@ struct Crowd_Procedure
 			cmd.dispatch(num.x, num.y, num.z);
 		}
 
+
+		// barrier
+		{
+			vk::BufferMemoryBarrier to_read[] = {
+				m_context->b_unit_link_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				m_context->b_unit_link_next.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, 0, {}, array_length(to_read), to_read, 0, {});
+		}
 	}
 	void executeRendering(vk::CommandBuffer cmd, const std::shared_ptr<RenderTarget>& render_target)
 	{

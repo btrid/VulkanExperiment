@@ -185,6 +185,7 @@ int pathFinding()
 				gi2d_debug.executeMakeFragment(cmd);
 				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
 				gi2d_make_hierarchy.executeMakeReachMap(cmd, gi2d_path_context);
+//				gi2d_make_hierarchy.
 
 				crowd_procedure.executeUpdateUnit(cmd);
 
@@ -192,7 +193,8 @@ int pathFinding()
 				crowd_procedure.executeRendering(cmd, app.m_window->getFrontBuffer());
 				{
 //					gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
-//					gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
+//					gi2d_debug.executeDrawReachMap(cmd, gi2d_path_context, app.m_window->getFrontBuffer());
+					//					gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
 				}
 
 				cmd.end();
@@ -926,6 +928,16 @@ int main()
 //		double a = glm::linearRand(UINT_MAX - 3, UINT_MAX) / double(UINT_MAX);
 // 		float a = glm::linearRand((UINT_MAX&0x7fffff) - 3, (UINT_MAX & 0x7fffff)) / float(UINT_MAX & 0x7fffff);
 // 		printf("%36.24f\n", a);
+// 	}
+
+// 	for (;;)
+// 	{
+// 		float a = glm::linearRand(-glm::pi<float>(), glm::pi<float>());
+// 		float b = glm::linearRand(-glm::pi<float>(), glm::pi<float>());
+// 		float d = b - a;
+// 		d = d > 3.14f ? 6.28f - d : d;
+// 		d = d < -3.14f ? 6.28f + d : d;
+// 		printf("a=%8.3f, b=%8.3f, d=%8.3f\n", a, b, d);
 // 	}
 
 	dda_test();
