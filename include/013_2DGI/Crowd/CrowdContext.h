@@ -184,7 +184,7 @@ struct CrowdContext
 				for (int32_t i = 0; i < m_crowd_info.unit_info_max; i++)
 				{
 					auto& info = *staging.getMappedPtr(i);
-					info.linear_speed = 50.f;
+					info.linear_speed = 5.f;
 					info.angler_speed = 500.5f;
 				}
 
@@ -196,16 +196,11 @@ struct CrowdContext
 
 			}
 
-			{
-				cmd.fillBuffer(b_unit_link_head.getInfo().buffer, b_unit_link_head.getInfo().offset, b_unit_link_head.getInfo().range, -1);
-
-			}
 			vk::BufferMemoryBarrier to_read[] = {
 				u_crowd_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 				u_unit_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 				b_unit_pos.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 				b_unit_move.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-				b_unit_link_head.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, 0, {}, array_length(to_read), to_read, 0, {});
 		}

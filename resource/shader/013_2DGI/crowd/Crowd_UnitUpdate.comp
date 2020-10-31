@@ -78,9 +78,10 @@ void main()
 	{
 		vec2 gi = pos.xy/g_crowd_density_cell_size;
 		ivec4 grid_offset = ivec2(greaterThan(fract(gi.xy), vec2(0.5))).xxyy-ivec4(1,0,1,0);
-		ivec2 grid_reso = reso.xy / g_crowd_density_cell_size;
 		ivec4 grid_index = ivec2(gi).xxyy + grid_offset;
-		ivec4 grid_index_i = grid_index.xxyy+grid_index.zwzw*grid_reso.xxxx;
+
+		ivec2 grid_reso = reso.xy / g_crowd_density_cell_size;
+		ivec4 grid_index_i = grid_index.xyxy + grid_index.zzww*grid_reso.xxxx;
 
 
 		vec3 nearest = vec3(9999.);
@@ -89,12 +90,11 @@ void main()
 		int num = 0;
 		for(int y = 0; y < 2; y++)
 		{
-			if(grid_index[2+y]<0||grid_index[2+y]>=grid_reso.y){continue; }
+			if(grid_index[y*2]<0||grid_index[y*2]>=grid_reso.y){continue; }
 
 			for(int x = 0; x < 2; x++) 
 			{
 				if(grid_index[x]<0||grid_index[x]>=grid_reso.x){continue; }
-
 				int i = x+y*2;
 
 				for(int link = b_unit_link_head[grid_index_i[i]]; link != -1; link = b_unit_link_next[link])
@@ -125,7 +125,7 @@ void main()
 			// 近づきすぎない遠ざかりすぎない
 			{
 				vec2 target_dir = normalize_safe(nearest.xy - pos.xy, vec2(0.));
-				power = power + (nearest_dist<2.?-target_dir:nearest_dist>4.?target_dir:vec2(0.)) * 0.25;
+				power = power + (nearest_dist<8.?target_dir:nearest_dist>12.?-target_dir:vec2(0.)) * 0.5;
 			}
 			// 向きを合わせる
 			{
@@ -138,31 +138,37 @@ void main()
 				vec2 target_dir = normalize_safe(group.xy - pos.xy, vec2(0.));
 				power += target_dir;
 			}
+
 		}
-
-
-		// 目的地に向かう
-		ivec2 ipos = ivec2(pos.xy);
-		uint path_dir = PathData_dirtype(b_path_data[ipos.x+ipos.y*reso.x]);
-		vec2 target_dir = normalize(-vec2(g_neighbor[path_dir]));
-		float d = dot(dir, target_dir);
-		if(d <= 0.99)
+		else
 		{
-			float rotate_angle = acos(d);
-			rotate_angle = min(rotate_angle, radians(unit_info.angler_speed)*deltatime);
+/*			// 目的地に向かう
+			ivec2 ipos = ivec2(pos.xy);
+			uint path_dir = PathData_dirtype(b_path_data[ipos.x+ipos.y*reso.x]);
+			vec2 target_dir = normalize(-vec2(g_neighbor[path_dir]));
+			float d = dot(dir, target_dir);
+			if(d <= 0.99)
+			{
+				float rotate_angle = acos(d);
+				rotate_angle = min(rotate_angle, radians(unit_info.angler_speed)*deltatime);
 
-			float c = cross(vec3(dir, 0.), vec3(target_dir, 0.)).z;
-			pos.z += sign(c) * rotate_angle;
-			dir = AngleToDirection(pos.z);
+				float c = cross(vec3(dir, 0.), vec3(target_dir, 0.)).z;
+				pos.z += sign(c) * rotate_angle;
+				dir = AngleToDirection(pos.z);
+			}
+*/
 		}
 
-		dir += power;
-		inertia += dir * pow(1.01, 1.+deltatime);
-		inertia = normalize_safe(inertia, vec2(0.)) * min(length(inertia), unit_info.linear_speed);
+
+
 	}
+//	dir += power;
+	inertia += dir * pow(1.01, 1.+deltatime);
+	inertia = normalize_safe(inertia, vec2(0.)) * min(length(inertia), unit_info.linear_speed);
 	pos.z = DirectionToAngle(dir);
 //	pos.z=mod(pos.z+3.1415, 6.283)-3.1415;
 
+//	inertia = dir;
 	dir = normalize_safe(inertia, vec2(0.));
 
 	float move = length(inertia*deltatime);

@@ -1,19 +1,14 @@
 #version 460
 #extension GL_GOOGLE_include_directive : require
 
-#include "btrlib/ConvertDimension.glsl"
-#include "btrlib/Common.glsl"
-#include "btrlib/Math.glsl"
-
-#define USE_GI2D 2
-#include "GI2D/GI2D.glsl"
-
 #define USE_Crowd2D 0
 #include "GI2D/Crowd.glsl"
-
-#define USE_SYSTEM 1
-#include "applib/System.glsl"
-
+#define USE_GI2D 1
+#include "GI2D/GI2D.glsl"
+#define USE_GI2D_SDF 2
+#include "GI2D/GI2DSDF.glsl"
+#define USE_GI2D_Path 3
+#include "GI2D/GI2DPath.glsl"
 
 layout (local_size_x = 64, local_size_y = 1) in;
 
@@ -34,10 +29,11 @@ void main()
 	ivec2 grid_reso = reso.xy/size;
 
 	vec4 unit_pos = b_unit_pos[index];
-	uvec2 ipos = uvec2(unit_pos.xy) / g_crowd_density_cell_size;
-//	if(greaterThanEqual(ipos, grid_reso)){
-//		b_unit_link_next[index] = -1;
-//	}
+	uvec2 ipos = uvec2(unit_pos.xy / g_crowd_density_cell_size);
+	if(any(greaterThanEqual(ipos, grid_reso)))
+	{
+		return;
+	}
 
 	uint lindex = ipos.x + ipos.y * grid_reso.x;
 	int head = atomicExchange(b_unit_link_head[lindex], int(index));
