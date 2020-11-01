@@ -102,7 +102,7 @@ void main()
 					if(link == index){ continue; }
 
 					vec3 p_j = b_unit_pos[link].xyz;
-					if(distance(pos.xy, p_j.xy) >= 16.) { continue;}
+					if(distance(pos.xy, p_j.xy) >= g_crowd_density_cell_size) { continue;}
 
 					float d = p_j.z - pos.z;
 					d = d > 3.14 ? 6.28 - d : d;
@@ -125,29 +125,30 @@ void main()
 			// 近づきすぎない遠ざかりすぎない
 			{
 				vec2 target_dir = normalize_safe(nearest.xy - pos.xy, vec2(0.));
-				power = power + (nearest_dist<8.?target_dir:nearest_dist>12.?-target_dir:vec2(0.)) * 0.5;
+				power += (nearest_dist<g_crowd_density_cell_size?-target_dir:nearest_dist>g_crowd_density_cell_size?target_dir:vec2(0.)) * 0.05;
 			}
 			// 向きを合わせる
 			{
 				vec2 nearest_dir = rotate(nearest.z);
-				power += nearest_dir;
+				power += nearest_dir * 0.02;
 			}
 
+			if(num>=2)
 			{
 				group /= num;
 				vec2 target_dir = normalize_safe(group.xy - pos.xy, vec2(0.));
-				power += target_dir;
+//				power += target_dir * 0.05;
 			}
 
 		}
 		else
 		{
-/*			// 目的地に向かう
+			// 目的地に向かう
 			ivec2 ipos = ivec2(pos.xy);
 			uint path_dir = PathData_dirtype(b_path_data[ipos.x+ipos.y*reso.x]);
 			vec2 target_dir = normalize(-vec2(g_neighbor[path_dir]));
 			float d = dot(dir, target_dir);
-			if(d <= 0.99)
+/*			if(d <= 0.99)
 			{
 				float rotate_angle = acos(d);
 				rotate_angle = min(rotate_angle, radians(unit_info.angler_speed)*deltatime);
@@ -157,18 +158,16 @@ void main()
 				dir = AngleToDirection(pos.z);
 			}
 */
+			power += target_dir*0.05;
 		}
 
 
 
 	}
-//	dir += power;
+	dir += power;
 	inertia += dir * pow(1.01, 1.+deltatime);
 	inertia = normalize_safe(inertia, vec2(0.)) * min(length(inertia), unit_info.linear_speed);
-	pos.z = DirectionToAngle(dir);
-//	pos.z=mod(pos.z+3.1415, 6.283)-3.1415;
 
-//	inertia = dir;
 	dir = normalize_safe(inertia, vec2(0.));
 
 	float move = length(inertia*deltatime);
@@ -204,7 +203,8 @@ void main()
 			pos.xy = pos_next;
 		}
 	}
-	pos.z=mod(pos.z+3.1415, 6.283)-3.1415;
+	pos.z = DirectionToAngle(dir);
+//	pos.z=mod(pos.z+3.1415, 6.283)-3.1415;
 	b_unit_pos[index] = pos;
 	b_unit_move[index] = inertia;
 
