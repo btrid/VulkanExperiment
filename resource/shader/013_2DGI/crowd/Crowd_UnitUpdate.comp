@@ -125,7 +125,7 @@ void main()
 			// 近づきすぎない遠ざかりすぎない
 			{
 				vec2 target_dir = normalize_safe(nearest.xy - pos.xy, vec2(0.));
-				power += (nearest_dist<g_crowd_density_cell_size?-target_dir:nearest_dist>g_crowd_density_cell_size?target_dir:vec2(0.)) * 0.05;
+				power += (nearest_dist<g_crowd_density_cell_size*0.5?-target_dir:nearest_dist>g_crowd_density_cell_size*0.5?target_dir:vec2(0.)) * 0.1;
 			}
 			// 向きを合わせる
 			{
@@ -137,11 +137,11 @@ void main()
 			{
 				group /= num;
 				vec2 target_dir = normalize_safe(group.xy - pos.xy, vec2(0.));
-//				power += target_dir * 0.05;
+//				power += target_dir * 0.01;
 			}
 
 		}
-		else
+//		else
 		{
 			// 目的地に向かう
 			ivec2 ipos = ivec2(pos.xy);
