@@ -117,7 +117,7 @@ App::App(const AppDescriptor& desc)
 	std::vector<const char*> LayerName =
 	{
 #if _DEBUG
-			"VK_LAYER_LUNARG_standard_validation"
+			"VK_LAYER_KHRONOS_validation"
 #endif
 	};
 	std::vector<const char*> ExtensionName =
@@ -125,7 +125,7 @@ App::App(const AppDescriptor& desc)
 		VK_KHR_SURFACE_EXTENSION_NAME,
 		VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
 #if USE_DEBUG_REPORT
-			VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+		VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
 #endif
 	};
 
@@ -159,6 +159,9 @@ App::App(const AppDescriptor& desc)
 			VK_KHR_SHADER_ATOMIC_INT64_EXTENSION_NAME,
 			VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME,
 			VK_KHR_8BIT_STORAGE_EXTENSION_NAME,
+			VK_KHR_RAY_TRACING_EXTENSION_NAME,
+			VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME,
+			VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
 		};
 
 		auto gpu_propaty = m_physical_device.getProperties();
@@ -213,8 +216,7 @@ App::App(const AppDescriptor& desc)
 
 		m_device = m_physical_device.createDeviceUnique(device_info, nullptr);
 	}
-
-	m_dispatch = vk::DispatchLoaderDynamic(m_instance.get(), m_device.get());
+	m_dispatch = vk::DispatchLoaderDynamic(m_instance.get(), &::vkGetInstanceProcAddr, m_device.get(), &::vkGetDeviceProcAddr);
 
 //	auto device = sGlobal::Order().getGPU(0).getDevice();
 

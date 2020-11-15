@@ -11,6 +11,7 @@
 // #define VULKAN_HPP_NO_EXCEPTIONS
 // #define VULKAN_HPP_DISABLE_ENHANCED_MODE
 #include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan_beta.h>
 
 
 #include <btrlib/DefineMath.h>

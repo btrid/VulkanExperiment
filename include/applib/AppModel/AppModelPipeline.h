@@ -67,9 +67,10 @@ struct AppModelAnimationStage
 			.setLayout(m_pipeline_layout.get()),
 		};
 
-		auto p = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
-		for (size_t i = 0; i < p.size(); i++) {
-			m_pipeline[i] = std::move(p[i]);
+		for (int i = 0; i < compute_pipeline_info.size(); i++)
+		{
+			auto p = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[i]);
+ 			m_pipeline[i] = std::move(p.value);
 		}
 
 
@@ -364,7 +365,7 @@ struct AppModelRenderStage
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			m_pipeline = std::move(device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info)[0]);
+//			m_pipeline = std::move(device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info).value[0]);
 		}
 		m_render_target = render_target;
 	}

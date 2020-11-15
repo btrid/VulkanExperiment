@@ -1,0 +1,36 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_PM 0
+#include "PM.glsl"
+
+layout (local_size_x = 64) in;
+
+shared uint64_t s_map;
+shared uvec4 s_map_subgroup;
+shared uint s_bitcount; 
+shared uint s_start;
+void main() 
+{
+	uint map_index = gl_WorkGroupID.x + gl_WorkGroupID.y*gl_NumWorkGroups.x + gl_WorkGroupID.z*gl_NumWorkGroups.x*gl_NumWorkGroups.y;
+	if(gl_LocalInvocationIndex ==0 )
+	{
+		uint64_t map = b_voxel_map[map_index];
+		uint bitcount = bitCount(map);
+		s_map = map;
+		s_bitcount = bitcount;
+		s_map_subgroup = uvec4();
+		if(bitcount != 0)
+		{
+			s_start = atomicAdd(b_voxel_counter.x, bitcount+1);
+
+			s_start++;
+		}
+	}
+	memoryBarrierShared();
+	barrier();
+
+	if(s_map & (1ul<<gl_LocalInvocationIndex) == 0ul){ return; }
+	uint voxel_index = bitCount(bitfieldExtract(s_map, 0, gl_LocalInvocationIndex));
+	s_start + voxel_index;
+}

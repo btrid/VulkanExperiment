@@ -78,7 +78,7 @@ protected:
 	vk::UniqueDescriptorPool createDescriptorPool(const std::shared_ptr<btr::Context>& context, const std::vector<vk::DescriptorSetLayoutBinding>& binding, uint32_t set_size)
 	{
 		auto& device = context->m_device;
-		std::vector<vk::DescriptorPoolSize> pool_size(VK_DESCRIPTOR_TYPE_RANGE_SIZE);
+		std::vector<vk::DescriptorPoolSize> pool_size(16);
 		for (auto& b : binding)
 		{
 			pool_size[(uint32_t)b.descriptorType].setType(b.descriptorType);
@@ -156,7 +156,7 @@ namespace btr
 		static vk::UniqueDescriptorPool createDescriptorPool(const std::shared_ptr<btr::Context>& context, const std::vector<vk::DescriptorSetLayoutBinding>& binding, uint32_t set_size)
 		{
 			auto& device = context->m_device;
-			std::vector<vk::DescriptorPoolSize> pool_size(VK_DESCRIPTOR_TYPE_RANGE_SIZE);
+			std::vector<vk::DescriptorPoolSize> pool_size(16);
 			for (auto& b : binding)
 			{
 				pool_size[(uint32_t)b.descriptorType].setType(b.descriptorType);

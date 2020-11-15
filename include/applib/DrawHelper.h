@@ -299,8 +299,11 @@ struct DrawHelper : public Singleton<DrawHelper>
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			auto pipelines = context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info);
-			m_pipeline[PIPELINE_DRAW_PRIMITIVE] = std::move(pipelines[0]);
+// 			auto pipelines = context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info);
+// 			if (pipelines.result == vk::Result::eSuccess)
+// 			{
+// 				m_pipeline[PIPELINE_DRAW_PRIMITIVE] = std::move(pipelines.value[0]);
+// 			}
 
 		}
 

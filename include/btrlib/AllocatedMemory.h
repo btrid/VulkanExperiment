@@ -166,7 +166,7 @@ enum class BufferMemoryAttributeFlagBits : uint32_t
 {
 	SHORT_LIVE_BIT = 1 << 0,
 };
-using BufferMemoryAttributeFlags = vk::Flags<BufferMemoryAttributeFlagBits, uint32_t>;
+using BufferMemoryAttributeFlags = vk::Flags<BufferMemoryAttributeFlagBits>;
 struct BufferMemoryDescriptor
 {
 	vk::DeviceSize size;

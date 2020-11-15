@@ -310,8 +310,7 @@ PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, c
 			.setPDepthStencilState(&depth_stencil_info)
 			.setPColorBlendState(&blend_info)
 		};
-		auto pipelines = context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info);
-		m_pipeline = std::move(pipelines[0]);
+		m_pipeline = std::move(context->m_device.createGraphicsPipelineUnique(vk::PipelineCache(), graphics_pipeline_info).value);
 	}
 
 	{

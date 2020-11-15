@@ -123,8 +123,8 @@ void cFowardPlusPipeline::setup(const std::shared_ptr<btr::Context>& context)
 		descriptor_set_alloc_info.setDescriptorPool(context->m_descriptor_pool.get());
 		descriptor_set_alloc_info.setDescriptorSetCount(array_length(layouts));
 		descriptor_set_alloc_info.setPSetLayouts(layouts);
-		auto descriptors = device.allocateDescriptorSetsUnique(descriptor_set_alloc_info);
-		std::copy(std::make_move_iterator(descriptors.begin()), std::make_move_iterator(descriptors.end()), m_descriptor_set.begin());
+ 		auto descriptors = device.allocateDescriptorSetsUnique(descriptor_set_alloc_info);
+		m_descriptor_set[0] = std::move(descriptors[0]);
 
 		// update descriptor_set
 		{
@@ -172,15 +172,15 @@ void cFowardPlusPipeline::setup(const std::shared_ptr<btr::Context>& context)
 
 	// Create pipeline
 	{
-		std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info = {
-			vk::ComputePipelineCreateInfo()
+		auto compute_pipeline_info = vk::ComputePipelineCreateInfo()
 			.setStage(m_shader_info[SHADER_COMPUTE_CULL_LIGHT])
-			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_CULL_LIGHT].get()),
-		};
+			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_CULL_LIGHT].get());
 
-		auto p = device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
-		for (size_t i = 0; i < compute_pipeline_info.size(); i++) {
-			m_pipeline[i] = std::move(p[i]);
+		auto p = device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info);
+		if (p.result == vk::Result::eSuccess) {
+//			for (size_t i = 0; i < p.value.size(); i++) {
+				m_pipeline[0] = std::move(p.value);
+//			}
 		}
 
 	}
@@ -189,6 +189,7 @@ void cFowardPlusPipeline::setup(const std::shared_ptr<btr::Context>& context)
 
 vk::CommandBuffer cFowardPlusPipeline::execute(const std::shared_ptr<btr::Context>& context)
 {
+
 	// lightの更新
 	{
 		// 新しいライトの追加
@@ -258,7 +259,7 @@ vk::CommandBuffer cFowardPlusPipeline::execute(const std::shared_ptr<btr::Contex
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, barrier, {});
 		}
 
-		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_CULL_LIGHT].get());
+//		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_CULL_LIGHT].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_CULL_LIGHT].get(), 0, m_descriptor_set[DESCRIPTOR_SET_LIGHT].get(), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_CULL_LIGHT].get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 		cmd.dispatch(1, 1, 1);

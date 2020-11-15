@@ -331,8 +331,8 @@ void sParticlePipeline::setup(std::shared_ptr<btr::Context>& context)
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			auto pipelines = context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info);
-			m_pipeline[PIPELINE_DRAW] = std::move(pipelines[0]);
+// 			auto pipelines = context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info);
+// 			m_pipeline[PIPELINE_DRAW] = std::move(pipelines.value[0]);
 		}
 	}
 }

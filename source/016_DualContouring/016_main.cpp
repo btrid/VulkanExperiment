@@ -33,24 +33,85 @@
 #pragma comment(lib, "vulkan-1.lib")
 #pragma comment(lib, "imgui.lib")
 
+#include <assimp/Importer.hpp>
+#include <assimp/postprocess.h>
+#include <assimp/scene.h>
+#include <assimp/material.h>
+struct Model
+{
+	btr::BufferMemory m_vertex;
+	btr::BufferMemory m_index;
+};
+
+std::shared_ptr<Model> LoadModel(const std::shared_ptr<btr::Context>& context, const std::string& filename)
+{
+	int OREORE_PRESET = 0
+		| aiProcess_JoinIdenticalVertices
+		| aiProcess_ImproveCacheLocality
+		| aiProcess_LimitBoneWeights
+		| aiProcess_RemoveRedundantMaterials
+		| aiProcess_SplitLargeMeshes
+		| aiProcess_SortByPType
+		//		| aiProcess_OptimizeMeshes
+		| aiProcess_Triangulate
+		//		| aiProcess_MakeLeftHanded
+		;
+	cStopWatch timer;
+	Assimp::Importer importer;
+	const aiScene* scene = importer.ReadFile(filename, OREORE_PRESET);
+	if (!scene) { return nullptr; }
+
+	unsigned numIndex = 0;
+	unsigned numVertex = 0;
+	for (size_t i = 0; i < scene->mNumMeshes; i++)
+	{
+		numVertex += scene->mMeshes[i]->mNumVertices;
+		numIndex += scene->mMeshes[i]->mNumFaces * 3;
+	}
+//	std::vector<uint32_t> index;
+//	std::vector<aiVector3D> vertex;
+//	index.reserve(numIndex);
+//	vertex.reserve(numVertex);
+
+	auto vertex = context->m_staging_memory.allocateMemory(numVertex * sizeof(aiVector3D), true);
+	auto index = context->m_staging_memory.allocateMemory(numIndex * sizeof(uint32_t), true);
+
+	uint32_t index_offset = 0;
+	uint32_t vertex_offset = 0;
+	for (size_t i = 0; i < scene->mNumMeshes; i++)
+	{
+		aiMesh* mesh = scene->mMeshes[i];
+		for (u32 n = 0; n < mesh->mNumFaces; n++) {
+//			std::copy(mesh->mFaces[n].mIndices, mesh->mFaces[n].mIndices + 3, std::back_inserter(index));
+			std::copy(mesh->mFaces[n].mIndices, mesh->mFaces[n].mIndices + 3, vertex.getMappedPtr<uint32_t>(index_offset));
+			index_offset += 3;
+		}
+//		std::copy(mesh->mVertices, mesh->mVertices + mesh->mNumVertices, std::back_inserter(vertex));
+		std::copy(mesh->mVertices, mesh->mVertices + mesh->mNumVertices, vertex.getMappedPtr<aiVector3D>(vertex_offset));
+		vertex_offset += mesh->mNumVertices;
+	}
+
+	importer.FreeScene();
+
+	std::shared_ptr<Model> model = std::make_shared<Model>();
+	model->m_vertex = context->m_vertex_memory.allocateMemory(numVertex*sizeof(aiVector3D));
+	model->m_index = context->m_vertex_memory.allocateMemory(numIndex*sizeof(uint32_t));
+
+	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+	std::array<vk::BufferCopy, 2> copy;
+	copy[0].srcOffset = vertex.getInfo().offset;
+	copy[0].dstOffset = model->m_vertex.getInfo().offset;
+	copy[0].size = vertex.getInfo().range;
+	copy[1].srcOffset = index.getInfo().offset;
+	copy[1].dstOffset = model->m_index.getInfo().offset;
+	copy[1].size = index.getInfo().range;
+	cmd.copyBuffer(vertex.getInfo().buffer, model->m_vertex.getInfo().buffer, copy);
+
+
+	return model;
+}
 int main()
 {
-	// 	for(;;)
-	// 	{ 
-	//		double a = glm::linearRand(UINT_MAX - 3, UINT_MAX) / double(UINT_MAX);
-	// 		float a = glm::linearRand((UINT_MAX&0x7fffff) - 3, (UINT_MAX & 0x7fffff)) / float(UINT_MAX & 0x7fffff);
-	// 		printf("%36.24f\n", a);
-	// 	}
-
-	// 	for (;;)
-	// 	{
-	// 		float a = glm::linearRand(-glm::pi<float>(), glm::pi<float>());
-	// 		float b = glm::linearRand(-glm::pi<float>(), glm::pi<float>());
-	// 		float d = b - a;
-	// 		d = d > 3.14f ? 6.28f - d : d;
-	// 		d = d < -3.14f ? 6.28f + d : d;
-	// 		printf("a=%8.3f, b=%8.3f, d=%8.3f\n", a, b, d);
-	// 	}
 
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
@@ -61,7 +122,6 @@ int main()
 	camera->getData().m_height = 1024;
 	camera->getData().m_far = 5000.f;
 	camera->getData().m_near = 0.01f;
-
 
 	app::AppDescriptor app_desc;
 	app_desc.m_window_size = uvec2(1024, 1024);
@@ -74,20 +134,9 @@ int main()
 
 
 
+	auto model = LoadModel(context, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\tiny.x");
 	{
-		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
-// 		cmd.updateBuffer<uint64_t>(game_context->b_state.getInfo().buffer, game_context->b_state.getInfo().offset, 1ull);
-// 		cmd.updateBuffer<vec2>(game_context->b_movable.getInfo().buffer, game_context->b_movable.getInfo().offset, vec2(756.f, 990.f));
-// 
-// 		GI2DRB_MakeParam param;
-// 		param.aabb = uvec4(756, 990, 16, 16);
-// 		param.is_fluid = false;
-// 		param.is_usercontrol = true;
-// 		gi2d_physics_context->make(cmd, param);
-// 		auto info = game_context->b_movable.getInfo();
-// 		info.offset += player.m_gameobject.index * sizeof(cMovable) + offsetof(cMovable, rb_address);
-// 		gi2d_physics_context->getRBID(cmd, info);
 	}
 
 	app.setup();

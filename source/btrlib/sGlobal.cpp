@@ -49,7 +49,7 @@ vk::UniqueShaderModule loadShaderUnique(const vk::Device& device, const std::str
 
 vk::UniqueDescriptorPool createDescriptorPool(vk::Device device, const std::vector<std::vector<vk::DescriptorSetLayoutBinding>>& bindings, uint32_t set_size)
 {
-	std::vector<vk::DescriptorPoolSize> pool_size(VK_DESCRIPTOR_TYPE_RANGE_SIZE);
+	std::vector<vk::DescriptorPoolSize> pool_size(16);
 	for (auto& binding : bindings)
 	{
 		for (auto& b : binding)
