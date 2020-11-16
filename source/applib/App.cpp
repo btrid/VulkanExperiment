@@ -216,9 +216,8 @@ App::App(const AppDescriptor& desc)
 
 		m_device = m_physical_device.createDeviceUnique(device_info, nullptr);
 	}
-	m_dispatch = vk::DispatchLoaderDynamic(m_instance.get(), &::vkGetInstanceProcAddr, m_device.get(), &::vkGetDeviceProcAddr);
+	m_dispatch = vk::DispatchLoaderDynamic(m_instance.get(), vkGetInstanceProcAddr, m_device.get(), &::vkGetDeviceProcAddr);
 
-//	auto device = sGlobal::Order().getGPU(0).getDevice();
 
 	auto init_thread_data_func = [=](const cThreadPool::InitParam& param)
 	{
@@ -234,7 +233,6 @@ App::App(const AppDescriptor& desc)
 	m_context->m_device = m_device.get();
 	m_context->m_dispach = m_dispatch;
 	
-	//	m_context = std::make_shared<AppContext>();
 	{
 		m_context->m_device = m_device.get();
 

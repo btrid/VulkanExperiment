@@ -20,7 +20,7 @@ struct sGraphicsResource : public Singleton<sGraphicsResource>
 		image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
 		image_info.sharingMode = vk::SharingMode::eExclusive;
 		image_info.initialLayout = vk::ImageLayout::eUndefined;
-		image_info.extent = { 1, 1, 1 };
+		image_info.extent = vk::Extent3D{ 1, 1, 1 };
 //		image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
 		auto image = context->m_device.createImageUnique(image_info);
 
@@ -50,7 +50,7 @@ struct sGraphicsResource : public Singleton<sGraphicsResource>
 
 			vk::BufferImageCopy copy;
 			copy.bufferOffset = staging_buffer.getInfo().offset;
-			copy.imageExtent = { 1, 1, 1 };
+			copy.imageExtent = vk::Extent3D{ 1, 1, 1 };
 			copy.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
 			copy.imageSubresource.baseArrayLayer = 0;
 			copy.imageSubresource.layerCount = 1;

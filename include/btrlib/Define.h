@@ -10,8 +10,8 @@
 #endif // MemoryBarrier
 // #define VULKAN_HPP_NO_EXCEPTIONS
 // #define VULKAN_HPP_DISABLE_ENHANCED_MODE
+#define  VK_ENABLE_BETA_EXTENSIONS
 #include <vulkan/vulkan.hpp>
-#include <vulkan/vulkan_beta.h>
 
 
 #include <btrlib/DefineMath.h>

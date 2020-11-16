@@ -248,9 +248,9 @@ void sParticlePipeline::setup(std::shared_ptr<btr::Context>& context)
 			.setStage(shader_info[2])
 			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get()),
 		};
-		m_pipeline[PIPELINE_UPDATE] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[0]);
-		m_pipeline[PIPELINE_GENERATE] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[1]);
-		m_pipeline[PIPELINE_GENERATE_DEBUG] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[2]);
+		m_pipeline[PIPELINE_UPDATE] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[0]).value;
+		m_pipeline[PIPELINE_GENERATE] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[1]).value;
+		m_pipeline[PIPELINE_GENERATE_DEBUG] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[2]).value;
 
 		vk::Extent2D size;
 		// pipeline

@@ -169,7 +169,7 @@ void ResourceTexture::load(const std::shared_ptr<btr::Context>& context, vk::Com
 	image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
 	image_info.sharingMode = vk::SharingMode::eExclusive;
 	image_info.initialLayout = vk::ImageLayout::eUndefined;
-	image_info.extent = { texture_data.m_size.x, texture_data.m_size.y, 1 };
+	image_info.extent = vk::Extent3D{ texture_data.m_size.x, texture_data.m_size.y, 1 };
 	vk::UniqueImage image = context->m_device.createImageUnique(image_info);
 
 	vk::MemoryRequirements memory_request = context->m_device.getImageMemoryRequirements(image.get());
@@ -198,7 +198,7 @@ void ResourceTexture::load(const std::shared_ptr<btr::Context>& context, vk::Com
 
 		vk::BufferImageCopy copy;
 		copy.bufferOffset = staging_buffer.getInfo().offset;
-		copy.imageExtent = { texture_data.m_size.x, texture_data.m_size.y, texture_data.m_size.z };
+		copy.imageExtent = vk::Extent3D{ texture_data.m_size.x, texture_data.m_size.y, texture_data.m_size.z };
 		copy.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
 		copy.imageSubresource.baseArrayLayer = 0;
 		copy.imageSubresource.layerCount = 1;

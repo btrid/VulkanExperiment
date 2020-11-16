@@ -91,7 +91,7 @@ struct MotionTexture
 		image_info.sharingMode = vk::SharingMode::eExclusive;
 		image_info.initialLayout = vk::ImageLayout::eUndefined;
 //		image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
-		image_info.extent = { SIZE, 1u, 1u };
+		image_info.extent = vk::Extent3D{ SIZE, 1u, 1u };
 
 		auto image_prop = context->m_physical_device.getImageFormatProperties(image_info.format, image_info.imageType, image_info.tiling, image_info.usage, image_info.flags);
 		vk::UniqueImage image = context->m_device.createImageUnique(image_info);
@@ -194,7 +194,7 @@ struct MotionTexture
 
 		vk::BufferImageCopy copy;
 		copy.bufferOffset = staging_buffer.getInfo().offset;
-		copy.imageExtent = { SIZE, 1u, 1u };
+		copy.imageExtent = vk::Extent3D{ SIZE, 1u, 1u };
 		copy.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
 		copy.imageSubresource.baseArrayLayer = 0;
 		copy.imageSubresource.layerCount = image_info.arrayLayers;
