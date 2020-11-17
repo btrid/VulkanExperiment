@@ -52,7 +52,6 @@ struct Zone
 	vk::DeviceSize m_end;
 	uint32_t m_is_reverse_alloc : 1;
 	uint32_t _flag : 31;
-	uint32_t m_wait_frame;	//!< ’x‰„íœ‚Ì‚½‚ß‚É”ƒtƒŒ[ƒ€‘Ò‚Â
 	Zone()
 		: m_start(0llu)
 		, m_end(0llu)
@@ -127,7 +126,7 @@ struct Zone
 struct GPUMemoryAllocater
 {
 	struct DelayedFree {
-		std::vector<Zone> m_list;
+		std::array<std::vector<Zone>, sGlobal::FRAME_COUNT_MAX> m_list;
 		std::mutex m_mutex;
 	};
 	std::vector<Zone> m_free_zone;
@@ -201,12 +200,21 @@ struct BufferMemory
 {
 	struct Resource
 	{
+		std::shared_ptr<GPUMemoryAllocater> m_allocater;
 		vk::DescriptorBufferInfo m_buffer_info;
 		void* m_mapped_memory;
 
 		~Resource()
 		{
 			//			m_free_zone.delayedFree(m_zone);
+			if (m_buffer_info.range != 0)
+			{
+				Zone zone;
+				zone.m_start = m_buffer_info.offset;
+				zone.m_end = m_buffer_info.offset + m_buffer_info.range;
+				m_allocater->delayedFree(zone);
+			}
+
 		}
 
 	};
@@ -360,9 +368,16 @@ struct AllocatedMemory
 		resource->m_buffer_info = buffer_info;
 
 		vk::MemoryRequirements memory_request = device.getBufferMemoryRequirements(resource->m_buffer.get());
+		vk::MemoryAllocateFlagsInfo memoryAllocateFI{};
+
 		vk::MemoryAllocateInfo memory_alloc;
 		memory_alloc.setAllocationSize(memory_request.size);
 		memory_alloc.setMemoryTypeIndex(Helper::getMemoryTypeIndex(physical_device, memory_request, memory_type));
+		if ((flag & vk::BufferUsageFlagBits::eShaderDeviceAddress) != vk::BufferUsageFlags())
+		{
+			memoryAllocateFI.flags = vk::MemoryAllocateFlagBits::eDeviceAddress;
+			memory_alloc.setPNext(&memoryAllocateFI);
+		}
 		resource->m_memory = device.allocateMemoryUnique(memory_alloc);
 		device.bindBufferMemory(resource->m_buffer.get(), resource->m_memory.get(), 0);
 
@@ -406,6 +421,7 @@ struct AllocatedMemory
 		alloc.m_resource->m_buffer_info.buffer = m_resource->m_buffer.get();
 		alloc.m_resource->m_buffer_info.offset = zone.m_start;
 		alloc.m_resource->m_buffer_info.range = desc.size;
+		alloc.m_resource->m_allocater = m_resource->m_free_zone;
 
 		alloc.m_resource->m_mapped_memory = nullptr;
 		if (m_resource->m_mapped_memory)
@@ -428,6 +444,7 @@ struct AllocatedMemory
 		alloc.m_resource->m_buffer_info.buffer = m_resource->m_buffer.get();
 		alloc.m_resource->m_buffer_info.offset = zone.m_start;
 		alloc.m_resource->m_buffer_info.range = size;
+		alloc.m_resource->m_allocater = m_resource->m_free_zone;
 
 		alloc.m_resource->m_mapped_memory = nullptr;
 		if (m_resource->m_mapped_memory)

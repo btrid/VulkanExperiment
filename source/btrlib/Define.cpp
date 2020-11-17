@@ -1,5 +1,7 @@
 #include <btrlib/Define.h>
 
+VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
+
 namespace btr
 {
 	static std::string s_app_path = "..\\..\\resource\\";
@@ -51,6 +53,8 @@ namespace Helper
 			}
 			return i;
 		}
+		assert(false);
 		return 0xffffffffu;
 	}
+
 }

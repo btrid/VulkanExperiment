@@ -10,7 +10,10 @@
 #endif // MemoryBarrier
 // #define VULKAN_HPP_NO_EXCEPTIONS
 // #define VULKAN_HPP_DISABLE_ENHANCED_MODE
-#define  VK_ENABLE_BETA_EXTENSIONS
+
+//#define VULKAN_HPP_STORAGE_SHARED
+#define VULKAN_HPP_DISPATCH_LOADER_DYNAMIC 1
+#define VK_ENABLE_BETA_EXTENSIONS
 #include <vulkan/vulkan.hpp>
 
 

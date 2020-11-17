@@ -6,7 +6,7 @@ void btr::GPUMemoryAllocater::setup(vk::DeviceSize size, vk::DeviceSize align)
 	m_align = align;
 	Zone zone;
 	zone.m_start = 0;
-	zone.m_end = size;
+	zone.m_end = btr::align(size, align);
 
 	std::lock_guard<std::mutex> lock(m_free_zone_mutex);
 	m_free_zone.push_back(zone);
@@ -46,7 +46,6 @@ void btr::GPUMemoryAllocater::delayedFree(Zone zone)
 {
 	assert(zone.isValid());
 	assert(zone.range() != 0);
-	zone.m_wait_frame = 5;
 
 	{
 		std::lock_guard<std::mutex> lock(m_free_zone_mutex);
@@ -60,7 +59,7 @@ void btr::GPUMemoryAllocater::delayedFree(Zone zone)
 
 	auto& list = m_delayed_active;
 	std::lock_guard<std::mutex> lock(list.m_mutex);
-	list.m_list.push_back(zone);
+	list.m_list[sGlobal::Order().getCurrentFrame()].push_back(zone);
 }
 
 void btr::GPUMemoryAllocater::free_impl(const Zone& zone)
@@ -95,18 +94,12 @@ void btr::GPUMemoryAllocater::gc_impl()
 	{
 		auto& list = m_delayed_active;
 		std::lock_guard<std::mutex> lock(list.m_mutex);
-		for (auto it = list.m_list.begin(); it != list.m_list.end();)
+		// cmdÇ™î≠çsÇ≥ÇÍÇΩÇÃÇ≈çÌèú
+		for (auto it : list.m_list[sGlobal::Order().getCurrentFrame()])
 		{
-			if (--it->m_wait_frame == 0)
-			{
-				// cmdÇ™î≠çsÇ≥ÇÍÇΩÇÃÇ≈çÌèú
-				free_impl(*it);
-				it = list.m_list.erase(it);
-			}
-			else {
-				it++;
-			}
+			free_impl(it);
 		}
+		list.m_list[sGlobal::Order().getCurrentFrame()].clear();
 	}
 
 	{

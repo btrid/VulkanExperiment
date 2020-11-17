@@ -129,6 +129,11 @@ App::App(const AppDescriptor& desc)
 #endif
 	};
 
+	vk::DynamicLoader dl;
+	PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr = dl.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr");
+	m_dispatch.init(vkGetInstanceProcAddr);
+	VULKAN_HPP_DEFAULT_DISPATCHER.init(vkGetInstanceProcAddr);
+
 	vk::InstanceCreateInfo instanceInfo = {};
 	instanceInfo.setPApplicationInfo(&appInfo);
 	instanceInfo.setEnabledExtensionCount((uint32_t)ExtensionName.size());
@@ -137,10 +142,9 @@ App::App(const AppDescriptor& desc)
 	instanceInfo.setPpEnabledLayerNames(LayerName.data());
 	m_instance = vk::createInstanceUnique(instanceInfo);
 
-	vk::DynamicLoader dl;
-	PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr = dl.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr");
-	m_dispatch.init(vkGetInstanceProcAddr);
 	m_dispatch.init(m_instance.get());
+	VULKAN_HPP_DEFAULT_DISPATCHER.init(m_instance.get());
+
 #if USE_DEBUG_REPORT
 	vk::DebugUtilsMessengerCreateInfoEXT debug_create_info;
 	debug_create_info.setMessageSeverity(vk::DebugUtilsMessageSeverityFlagBitsEXT::eError | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning/* | vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose*/);
@@ -214,10 +218,18 @@ App::App(const AppDescriptor& desc)
 		imageless_feature.setImagelessFramebuffer(VK_TRUE);
 		f16s8_feature.setPNext(&imageless_feature);
 
+		vk::PhysicalDeviceBufferDeviceAddressFeatures BufferDeviceAddres_Feature;
+		BufferDeviceAddres_Feature.bufferDeviceAddress = VK_TRUE;
+		imageless_feature.setPNext(&BufferDeviceAddres_Feature);
+
+		vk::PhysicalDeviceRayTracingFeaturesKHR RayTracing_Feature;
+		RayTracing_Feature.rayTracing = VK_TRUE;
+		BufferDeviceAddres_Feature.setPNext(&RayTracing_Feature);
+
 		m_device = m_physical_device.createDeviceUnique(device_info, nullptr);
 	}
 	m_dispatch = vk::DispatchLoaderDynamic(m_instance.get(), vkGetInstanceProcAddr, m_device.get(), &::vkGetDeviceProcAddr);
-
+	VULKAN_HPP_DEFAULT_DISPATCHER.init(m_device.get());
 
 	auto init_thread_data_func = [=](const cThreadPool::InitParam& param)
 	{
@@ -245,7 +257,7 @@ App::App(const AppDescriptor& desc)
 		vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
 		vk::MemoryPropertyFlags transfer_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
 //		device_memory = host_memory; // debug
-		m_context->m_vertex_memory.setup(m_physical_device, m_device.get(), vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 100);
+		m_context->m_vertex_memory.setup(m_physical_device, m_device.get(), vk::BufferUsageFlagBits::eVertexBuffer|vk::BufferUsageFlagBits::eIndexBuffer|vk::BufferUsageFlagBits::eIndirectBuffer|vk::BufferUsageFlagBits::eStorageBuffer|vk::BufferUsageFlagBits::eTransferDst|vk::BufferUsageFlagBits::eShaderDeviceAddress, device_memory, 1000 * 1000 * 100);
 		m_context->m_uniform_memory.setup(m_physical_device, m_device.get(), vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000*1000 * 20);
 		m_context->m_storage_memory.setup(m_physical_device, m_device.get(), vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eTransferSrc, device_memory, 1024 * 1024 * (1024+200));
 		m_context->m_staging_memory.setup(m_physical_device, m_device.get(), vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst, host_memory, 1000 * 1000 * 500);
@@ -408,10 +420,42 @@ void App::preUpdate()
 	}
 
 	{
+		sGlobal::Order().sync();
+
 		uint32_t index = sGlobal::Order().getCurrentFrame();
 		sDebug::Order().waitFence(m_device.get(), m_fence_list[index].get());
 		m_device->resetFences({ m_fence_list[index].get() });
 		m_cmd_pool->resetPool();
+
+		MSG msg = {};
+		while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+		{
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+
+		for (auto it = m_window_list.begin(); it != m_window_list.end();)
+		{
+			(*it)->execute();
+			(*it)->swap();
+			if ((*it)->isClose())
+			{
+				sDeleter::Order().enque(std::move(*it));
+				it = m_window_list.erase(it);
+			}
+			else {
+				it++;
+			}
+		}
+
+
+		sCameraManager::Order().sync();
+		sDeleter::Order().sync();
+		m_context->m_vertex_memory.gc();
+		m_context->m_uniform_memory.gc();
+		m_context->m_storage_memory.gc();
+		m_context->m_staging_memory.gc();
+
 	}
 
 	for (auto& request : m_window_request)
@@ -480,35 +524,6 @@ void App::preUpdate()
 
 void App::postUpdate()
 {
-	MSG msg = {};
-	while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
-	{
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
-	}
-
-	for (auto it = m_window_list.begin(); it != m_window_list.end();)
-	{
-		(*it)->execute();
-		(*it)->swap();
-		if ((*it)->isClose())
-		{
-			sDeleter::Order().enque(std::move(*it));
-			it = m_window_list.erase(it);
-		}
-		else {
-			it++;
-		}
-	}
-
-
-	sGlobal::Order().sync();
-	sCameraManager::Order().sync();
-	sDeleter::Order().sync();
-	m_context->m_vertex_memory.gc();
-	m_context->m_uniform_memory.gc();
-	m_context->m_storage_memory.gc();
-	m_context->m_staging_memory.gc();
 
 }
 

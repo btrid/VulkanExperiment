@@ -33,6 +33,7 @@
 #pragma comment(lib, "vulkan-1.lib")
 #pragma comment(lib, "imgui.lib")
 
+
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
@@ -114,18 +115,21 @@ struct Model
 
 struct RTModel
 {
+//	RTModel(const RTModel&) = delete;
+//	RTModel& operater(RTModel&) = delete;
+
 	struct RayTracingScratchBuffer
 	{
 		uint64_t deviceAddress = 0;
-		VkBuffer buffer = VK_NULL_HANDLE;
-		VkDeviceMemory memory = VK_NULL_HANDLE;
+		vk::UniqueBuffer buffer;
+		vk::UniqueDeviceMemory memory;
 	};
 
 	// Holds data for a memory object bound to an acceleration structure
 	struct RayTracingObjectMemory
 	{
-		uint64_t deviceAddress = 0;
-		VkDeviceMemory memory = VK_NULL_HANDLE;
+		uint64_t deviceAddress;
+		vk::UniqueDeviceMemory memory;
 	};
 
 	// Ray tracing acceleration structure
@@ -136,18 +140,16 @@ struct RTModel
 		RayTracingObjectMemory objectMemory;
 	};
 
-	RayTracingObjectMemory objectMemory;
-	AccelerationStructure bottomLevelAS;
-	AccelerationStructure topLevelAS;
+	AccelerationStructure m_bottomLevelAS;
+	AccelerationStructure m_topLevelAS;
 
 	static RayTracingObjectMemory createObjectMemory(std::shared_ptr<btr::Context>& ctx, vk::AccelerationStructureKHR& acceleration_structure)
 	{
 		RayTracingObjectMemory objectMemory{};
 
-		VkAccelerationStructureMemoryRequirementsInfoKHR accelerationStructureMemoryRequirements{};
-		accelerationStructureMemoryRequirements.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_INFO_KHR;
-		accelerationStructureMemoryRequirements.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_OBJECT_KHR;
-		accelerationStructureMemoryRequirements.buildType = VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR;
+		vk::AccelerationStructureMemoryRequirementsInfoKHR accelerationStructureMemoryRequirements{};
+		accelerationStructureMemoryRequirements.type = vk::AccelerationStructureMemoryRequirementsTypeKHR::eObject;
+		accelerationStructureMemoryRequirements.buildType = vk::AccelerationStructureBuildTypeKHR::eDevice;
 		accelerationStructureMemoryRequirements.accelerationStructure = acceleration_structure;
 		vk::MemoryRequirements2 memoryRequirements2 = ctx->m_device.getAccelerationStructureMemoryRequirementsKHR(accelerationStructureMemoryRequirements);
 
@@ -155,8 +157,8 @@ struct RTModel
 
 		vk::MemoryAllocateInfo memoryAI;
 		memoryAI.allocationSize = memoryRequirements.size;
-		memoryAI.memoryTypeIndex = Helper::getMemoryTypeIndex(ctx->m_physical_device, memoryRequirements.memoryTypeBits, vk::MemoryPropertyFlagBits::eDeviceLocal);
-		objectMemory.memory = ctx->m_device.allocateMemory(memoryAI);
+		memoryAI.memoryTypeIndex = Helper::getMemoryTypeIndex(ctx->m_physical_device, memoryRequirements, vk::MemoryPropertyFlagBits::eDeviceLocal);
+		objectMemory.memory = ctx->m_device.allocateMemoryUnique(memoryAI);
 
 		return objectMemory;
 	}
@@ -176,9 +178,9 @@ struct RTModel
 		bufferCI.size = memoryRequirements2.memoryRequirements.size;
 		bufferCI.usage = vk::BufferUsageFlagBits::eRayTracingKHR | vk::BufferUsageFlagBits::eShaderDeviceAddress;
 		bufferCI.sharingMode = vk::SharingMode::eExclusive;
-		scratchBuffer.buffer = ctx->m_device.createBuffer(bufferCI);
+		scratchBuffer.buffer = ctx->m_device.createBufferUnique(bufferCI);
 
-		vk::MemoryRequirements memoryRequirements = ctx->m_device.getBufferMemoryRequirements(scratchBuffer.buffer);
+		vk::MemoryRequirements memoryRequirements = ctx->m_device.getBufferMemoryRequirements(scratchBuffer.buffer.get());
 
 		vk::MemoryAllocateFlagsInfo memoryAllocateFI;
 		memoryAllocateFI.flags = vk::MemoryAllocateFlagBits::eDeviceAddress;
@@ -186,29 +188,28 @@ struct RTModel
 		vk::MemoryAllocateInfo memoryAI;
 		memoryAI.pNext = &memoryAllocateFI;
 		memoryAI.allocationSize = memoryRequirements.size;
-		memoryAI.memoryTypeIndex = Helper::getMemoryTypeIndex(ctx->m_physical_device, memoryRequirements.memoryTypeBits, vk::MemoryPropertyFlagBits::eDeviceLocal);
-		scratchBuffer.memory = ctx->m_device.allocateMemory(memoryAI);
-		ctx->m_device.bindBufferMemory(scratchBuffer.buffer, scratchBuffer.memory, 0);
+		memoryAI.memoryTypeIndex = Helper::getMemoryTypeIndex(ctx->m_physical_device, memoryRequirements, vk::MemoryPropertyFlagBits::eDeviceLocal);
+		scratchBuffer.memory = ctx->m_device.allocateMemoryUnique(memoryAI);
+		ctx->m_device.bindBufferMemory(scratchBuffer.buffer.get(), scratchBuffer.memory.get(), 0);
 
 		vk::BufferDeviceAddressInfoKHR buffer_device_address_info;
-		buffer_device_address_info.buffer = scratchBuffer.buffer;
+		buffer_device_address_info.buffer = scratchBuffer.buffer.get();
 		scratchBuffer.deviceAddress = ctx->m_device.getBufferAddress(buffer_device_address_info);
 
 		return scratchBuffer;
 	}
 	static void deleteScratchBuffer(std::shared_ptr<btr::Context>& ctx, RayTracingScratchBuffer& scratchBuffer)
 	{
-		if (scratchBuffer.memory != VK_NULL_HANDLE) {
-			vkFreeMemory(ctx->m_device, scratchBuffer.memory, nullptr);
-		}
-		if (scratchBuffer.buffer != VK_NULL_HANDLE) {
-			vkDestroyBuffer(ctx->m_device, scratchBuffer.buffer, nullptr);
-		}
+// 		if (scratchBuffer.memory != VK_NULL_HANDLE) {
+// 			vkFreeMemory(ctx->m_device, scratchBuffer.memory, nullptr);
+// 		}
+// 		if (scratchBuffer.buffer != VK_NULL_HANDLE) {
+// 			vkDestroyBuffer(ctx->m_device, scratchBuffer.buffer, nullptr);
+// 		}
 	}
 
 	static std::shared_ptr<RTModel> Construct(std::shared_ptr<btr::Context>& ctx, Model& model)
 	{
-		vk::MemoryRequirements2 memoryRequirements2;
 		auto cmd = ctx->m_cmd_pool->allocCmdTempolary(0);
 
 		AccelerationStructure bottomLevelAS;
@@ -233,7 +234,6 @@ struct RTModel
 			accelerationCI.maxGeometryCount = 1;
 			accelerationCI.pGeometryInfos = &accelerationCreateGeometryInfo;
 
-//			auto createAccelerationStructureKHR = reinterpret_cast<PFN_vkCreateAccelerationStructureKHR>(ctx->m_device.getProcAddr("vkCreateAccelerationStructureKHR"));
 			bottomLevelAS.accelerationStructure = ctx->m_device.createAccelerationStructureKHRUnique(accelerationCI);
 
 			// Bind object memory to the top level acceleration structure
@@ -241,7 +241,7 @@ struct RTModel
 
 			vk::BindAccelerationStructureMemoryInfoKHR bindAccelerationMemoryInfo;
 			bindAccelerationMemoryInfo.accelerationStructure = bottomLevelAS.accelerationStructure.get();
-			bindAccelerationMemoryInfo.memory = bottomLevelAS.objectMemory.memory;
+			bindAccelerationMemoryInfo.memory = bottomLevelAS.objectMemory.memory.get();
 			ctx->m_device.bindAccelerationStructureMemoryKHR({ bindAccelerationMemoryInfo });
 
 			std::array<vk::AccelerationStructureGeometryKHR, 1> accelerationStructureGeometry;
@@ -312,7 +312,7 @@ struct RTModel
 
 			vk::BindAccelerationStructureMemoryInfoKHR bindAccelerationMemoryInfo;
 			bindAccelerationMemoryInfo.accelerationStructure = topLevelAS.accelerationStructure.get();
-			bindAccelerationMemoryInfo.memory = topLevelAS.objectMemory.memory;
+			bindAccelerationMemoryInfo.memory = topLevelAS.objectMemory.memory.get();
 			ctx->m_device.bindAccelerationStructureMemoryKHR({ bindAccelerationMemoryInfo });
 
 			vk::TransformMatrixKHR transform_matrix = 
@@ -335,7 +335,7 @@ struct RTModel
 
 			// Buffer for instance data
 			btr::AllocatedMemory instance_memory;
-			instance_memory.setup(ctx->m_physical_device, ctx->m_device, vk::BufferUsageFlagBits::eShaderDeviceAddress, vk::MemoryPropertyFlagBits::eDeviceLocal, sizeof(instance));
+			instance_memory.setup(ctx->m_physical_device, ctx->m_device, vk::BufferUsageFlagBits::eShaderDeviceAddress| vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, sizeof(instance));
 			auto instance_buffer = instance_memory.allocateMemory(sizeof(instance));
 
 			cmd.updateBuffer<vk::AccelerationStructureInstanceKHR>(instance_buffer.getInfo().buffer, instance_buffer.getInfo().offset, {instance});
@@ -390,25 +390,17 @@ struct RTModel
 
 			topLevelAS.handle = ctx->m_device.getAccelerationStructureAddressKHR(accelerationDeviceAddressInfo);
 
-			deleteScratchBuffer(ctx, scratchBuffer);
+//			deleteScratchBuffer(ctx, scratchBuffer);
+//			sDeleter::Order().enque(std::move(scratchBuffer));
+			sDeleter::Order().enque(std::make_tuple(std::move(instance_memory), std::move(scratchBuffer), std::move(instance_buffer)));
 //			instancesBuffer.destroy();
 		}
 
-// 		VkAccelerationStructureMemoryRequirementsInfoKHR accelerationStructureMemoryRequirements{};
-// 		accelerationStructureMemoryRequirements.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_INFO_KHR;
-// 		accelerationStructureMemoryRequirements.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_OBJECT_KHR;
-// 		accelerationStructureMemoryRequirements.buildType = VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR;
-// 		accelerationStructureMemoryRequirements.accelerationStructure = acceleration_structure;
-// 		vkGetAccelerationStructureMemoryRequirementsKHR(device, &accelerationStructureMemoryRequirements, &memoryRequirements2);
-// 
-// 		VkMemoryRequirements memoryRequirements = memoryRequirements2.memoryRequirements;
-// 
-// 		VkMemoryAllocateInfo memoryAI{};
-// 		memoryAI.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-// 		memoryAI.allocationSize = memoryRequirements.size;
-// 		memoryAI.memoryTypeIndex = vulkanDevice->getMemoryType(memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-// //		VK_CHECK_RESULT(vkAllocateMemory(device, &memoryAI, nullptr, &objectMemory.memory));
+		auto rtmodel = std::make_shared<RTModel>();
+		rtmodel->m_topLevelAS = std::move(topLevelAS);
+		rtmodel->m_bottomLevelAS = std::move(bottomLevelAS);
 
+		return rtmodel;
 	}
 
 
@@ -446,6 +438,7 @@ int main()
 
 
 	auto model = Model::LoadModel(context, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\tiny.x");
+	auto rtmodel = RTModel::Construct(context, *model);
 	{
 
 	}
