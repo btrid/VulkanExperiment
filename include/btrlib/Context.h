@@ -25,8 +25,6 @@ struct Context
 	std::shared_ptr<cWindow> m_window;
 	std::shared_ptr<cCmdPool> m_cmd_pool;
 
-	vk::DispatchLoaderDynamic m_dispach;
-
 //	uint32_t getCPUFrame()const { return (m_window->getSwapchain().m_backbuffer_index + 1) % m_window->getSwapchain().getBackbufferNum(); }
 //	uint32_t getGPUFrame()const { return m_window->getSwapchain().m_backbuffer_index; }
 	uint32_t getCPUFrame()const { return sGlobal::Order().getWorkerFrame(); }
@@ -55,7 +53,7 @@ struct Context
 		name_info.pObjectName = filename.c_str();
 		name_info.objectType = vk::ObjectType::eShaderModule;
 		name_info.objectHandle = reinterpret_cast<uint64_t &>(shader_module);
-		m_device.setDebugUtilsObjectNameEXT(name_info, m_dispach);
+		m_device.setDebugUtilsObjectNameEXT(name_info);
 #endif
 		return shader_module;
 	}

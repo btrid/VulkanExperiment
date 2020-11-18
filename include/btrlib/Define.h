@@ -37,9 +37,8 @@ struct DebugLabel
 	static const uint32_t k_color_default = uint32_t(0xffffffffu);
 	static const uint32_t k_color_debug = uint32_t(0x000000ffu);
 
-	DebugLabel(vk::CommandBuffer cmd, vk::DispatchLoaderDynamic& dispatcher, const char* label, uint32_t color = k_color_default)
+	DebugLabel(vk::CommandBuffer cmd, const char* label, uint32_t color = k_color_default)
 		: m_cmd(cmd)
-		, m_dispatcher(dispatcher)
 
 	{
 #if USE_DEBUG_REPORT
@@ -48,7 +47,7 @@ struct DebugLabel
 		vk::DebugUtilsLabelEXT label_info;
 		memcpy_s(label_info.color, sizeof(label_info.color), &color_f4, sizeof(color_f4));
 		label_info.pLabelName = label;
-		cmd.beginDebugUtilsLabelEXT(label_info, dispatcher);
+		cmd.beginDebugUtilsLabelEXT(label_info);
 #endif
 	}
 
@@ -60,17 +59,16 @@ struct DebugLabel
 		vk::DebugUtilsLabelEXT label_info;
 		memcpy_s(label_info.color, sizeof(label_info.color), &color_f4, sizeof(color_f4));
 		label_info.pLabelName = label;
-		m_cmd.insertDebugUtilsLabelEXT(label_info, m_dispatcher);
+		m_cmd.insertDebugUtilsLabelEXT(label_info);
 #endif
 	}
 	~DebugLabel()
 	{
 #if USE_DEBUG_REPORT
-		m_cmd.endDebugUtilsLabelEXT(m_dispatcher);
+		m_cmd.endDebugUtilsLabelEXT();
 #endif
 	}
 	vk::CommandBuffer m_cmd;
-	vk::DispatchLoaderDynamic m_dispatcher;
 
 };
 

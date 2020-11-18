@@ -80,9 +80,9 @@ struct Model
 		for (size_t i = 0; i < scene->mNumMeshes; i++)
 		{
 			aiMesh* mesh = scene->mMeshes[i];
-			for (u32 n = 0; n < mesh->mNumFaces; n++) {
-				//			std::copy(mesh->mFaces[n].mIndices, mesh->mFaces[n].mIndices + 3, std::back_inserter(index));
-				std::copy(mesh->mFaces[n].mIndices, mesh->mFaces[n].mIndices + 3, vertex.getMappedPtr<uint32_t>(index_offset));
+			for (u32 n = 0; n < mesh->mNumFaces; n++) 
+			{
+				std::copy(mesh->mFaces[n].mIndices, mesh->mFaces[n].mIndices + 3, index.getMappedPtr<uint32_t>(index_offset));
 				index_offset += 3;
 			}
 			//		std::copy(mesh->mVertices, mesh->mVertices + mesh->mNumVertices, std::back_inserter(vertex));
@@ -106,6 +106,11 @@ struct Model
 		copy[1].size = index.getInfo().range;
 		cmd.copyBuffer(vertex.getInfo().buffer, model->m_vertex.getInfo().buffer, copy);
 
+		vk::BufferMemoryBarrier barrier[] = {
+			model->m_vertex.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
+			model->m_index.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
 		model->m_vertex_num = numVertex;
 
 		return model;
@@ -167,10 +172,9 @@ struct RTModel
 	{
 		RayTracingScratchBuffer scratchBuffer{};
 
-		VkAccelerationStructureMemoryRequirementsInfoKHR accelerationStructureMemoryRequirements{};
-		accelerationStructureMemoryRequirements.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_INFO_KHR;
-		accelerationStructureMemoryRequirements.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_BUILD_SCRATCH_KHR;
-		accelerationStructureMemoryRequirements.buildType = VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR;
+		vk::AccelerationStructureMemoryRequirementsInfoKHR accelerationStructureMemoryRequirements;
+		accelerationStructureMemoryRequirements.type = vk::AccelerationStructureMemoryRequirementsTypeKHR::eBuildScratch;
+		accelerationStructureMemoryRequirements.buildType = vk::AccelerationStructureBuildTypeKHR::eDevice;
 		accelerationStructureMemoryRequirements.accelerationStructure = AS;
 		VkMemoryRequirements2 memoryRequirements2 = ctx->m_device.getAccelerationStructureMemoryRequirementsKHR(accelerationStructureMemoryRequirements);
 
@@ -198,15 +202,6 @@ struct RTModel
 
 		return scratchBuffer;
 	}
-	static void deleteScratchBuffer(std::shared_ptr<btr::Context>& ctx, RayTracingScratchBuffer& scratchBuffer)
-	{
-// 		if (scratchBuffer.memory != VK_NULL_HANDLE) {
-// 			vkFreeMemory(ctx->m_device, scratchBuffer.memory, nullptr);
-// 		}
-// 		if (scratchBuffer.buffer != VK_NULL_HANDLE) {
-// 			vkDestroyBuffer(ctx->m_device, scratchBuffer.buffer, nullptr);
-// 		}
-	}
 
 	static std::shared_ptr<RTModel> Construct(std::shared_ptr<btr::Context>& ctx, Model& model)
 	{
@@ -214,11 +209,6 @@ struct RTModel
 
 		AccelerationStructure bottomLevelAS;
 		{
-			vk::DeviceOrHostAddressConstKHR vertexBufferDeviceAddress{};
-			vk::DeviceOrHostAddressConstKHR indexBufferDeviceAddress{};
-
-			vertexBufferDeviceAddress.deviceAddress = ctx->m_device.getBufferAddress(vk::BufferDeviceAddressInfoKHR().setBuffer(model.m_vertex.getInfo().buffer));
-			vertexBufferDeviceAddress.deviceAddress = ctx->m_device.getBufferAddress(vk::BufferDeviceAddressInfoKHR().setBuffer(model.m_index.getInfo().buffer));
 
 			vk::AccelerationStructureCreateGeometryTypeInfoKHR accelerationCreateGeometryInfo{};
 			accelerationCreateGeometryInfo.geometryType = vk::GeometryTypeKHR::eTriangles;
@@ -242,21 +232,21 @@ struct RTModel
 			vk::BindAccelerationStructureMemoryInfoKHR bindAccelerationMemoryInfo;
 			bindAccelerationMemoryInfo.accelerationStructure = bottomLevelAS.accelerationStructure.get();
 			bindAccelerationMemoryInfo.memory = bottomLevelAS.objectMemory.memory.get();
-			ctx->m_device.bindAccelerationStructureMemoryKHR({ bindAccelerationMemoryInfo });
+			ctx->m_device.bindAccelerationStructureMemoryKHR(1, &bindAccelerationMemoryInfo);
 
 			std::array<vk::AccelerationStructureGeometryKHR, 1> accelerationStructureGeometry;
 			accelerationStructureGeometry[0].flags = vk::GeometryFlagBitsKHR::eOpaque;
 			accelerationStructureGeometry[0].geometryType = vk::GeometryTypeKHR::eTriangles;
 			accelerationStructureGeometry[0].geometry.triangles.vertexFormat = vk::Format::eR32G32B32Sfloat;
-			accelerationStructureGeometry[0].geometry.triangles.vertexData.deviceAddress = vertexBufferDeviceAddress.deviceAddress;
+			accelerationStructureGeometry[0].geometry.triangles.vertexData.deviceAddress = ctx->m_device.getBufferAddress(vk::BufferDeviceAddressInfoKHR().setBuffer(model.m_vertex.getInfo().buffer)) + model.m_vertex.getInfo().offset;
 			accelerationStructureGeometry[0].geometry.triangles.vertexStride = sizeof(aiVector3D);
 			accelerationStructureGeometry[0].geometry.triangles.indexType = vk::IndexType::eUint32;
-			accelerationStructureGeometry[0].geometry.triangles.indexData.deviceAddress = indexBufferDeviceAddress.deviceAddress;
+			accelerationStructureGeometry[0].geometry.triangles.indexData.deviceAddress = ctx->m_device.getBufferAddress(vk::BufferDeviceAddressInfoKHR().setBuffer(model.m_index.getInfo().buffer)) + model.m_index.getInfo().offset;
 
 			vk::AccelerationStructureGeometryKHR* acceleration_structure_geometries = accelerationStructureGeometry.data();
 
 			// Create a small scratch buffer used during build of the bottom level acceleration structure
-			RayTracingScratchBuffer scratchBuffer = createScratchBuffer(ctx, bottomLevelAS.accelerationStructure.get());
+			auto scratchBuffer = createScratchBuffer(ctx, bottomLevelAS.accelerationStructure.get());
 
 			vk::AccelerationStructureBuildGeometryInfoKHR accelerationBuildGeometryInfo;
 			accelerationBuildGeometryInfo.type = vk::AccelerationStructureTypeKHR::eBottomLevel;
@@ -274,26 +264,25 @@ struct RTModel
 			accelerationBuildOffsetInfo.firstVertex = 0;
 			accelerationBuildOffsetInfo.transformOffset = 0x0;
 
-
+			std::vector<const vk::AccelerationStructureBuildOffsetInfoKHR*> offset = { &accelerationBuildOffsetInfo };
 //			if (rayTracingFeatures.rayTracingHostAccelerationStructureCommands)
 			{
 // 				// Implementation supports building acceleration structure building on host
-// 				VK_CHECK_RESULT(vkBuildAccelerationStructureKHR(device, 1, &accelerationBuildGeometryInfo, accelerationBuildOffsets.data()));
+//				ctx->m_device.buildAccelerationStructureKHR(1, &accelerationBuildGeometryInfo, offset.data());
 			}
 //			else
 			{
 				// Acceleration structure needs to be build on the device
-//				auto cmd = ctx->m_cmd_pool->allocCmdTempolary(0);
-				cmd.buildAccelerationStructureKHR({ accelerationBuildGeometryInfo }, { &accelerationBuildOffsetInfo });
+				cmd.buildAccelerationStructureKHR({ accelerationBuildGeometryInfo }, offset);
 			}
 
 			vk::AccelerationStructureDeviceAddressInfoKHR accelerationDeviceAddressInfo{};
 			accelerationDeviceAddressInfo.accelerationStructure = bottomLevelAS.accelerationStructure.get();
 
-			bottomLevelAS.handle = ctx->m_device.getAccelerationStructureAddressKHR(accelerationDeviceAddressInfo);
+//			bottomLevelAS.handle = ctx->m_device.getAccelerationStructureAddressKHR(accelerationDeviceAddressInfo);
+			sDeleter::Order().enque(std::move(scratchBuffer));
 
 		}
-
 		AccelerationStructure topLevelAS;
 		{
 			vk::AccelerationStructureCreateGeometryTypeInfoKHR accelerationCreateGeometryInfo;
@@ -373,27 +362,24 @@ struct RTModel
 			accelerationBuildOffsetInfo.firstVertex = 0;
 			accelerationBuildOffsetInfo.transformOffset = 0x0;
 
+			std::vector<const vk::AccelerationStructureBuildOffsetInfoKHR*> offset = { &accelerationBuildOffsetInfo };
 // 			if (rayTracingFeatures.rayTracingHostAccelerationStructureCommands)
 // 			{
 // 				// Implementation supports building acceleration structure building on host
-// 				VK_CHECK_RESULT(vkBuildAccelerationStructureKHR(device, 1, &accelerationBuildGeometryInfo, accelerationBuildOffsets.data()));
+//				ctx->m_device.buildAccelerationStructureKHR({ accelerationBuildGeometryInfo }, offset);
 // 			}
 // 			else
 			{
 				// Acceleration structure needs to be build on the device
-				cmd.buildAccelerationStructureKHR({ accelerationBuildGeometryInfo }, { &accelerationBuildOffsetInfo });
+				cmd.buildAccelerationStructureKHR({ accelerationBuildGeometryInfo }, offset);
 			}
 
 			vk::AccelerationStructureDeviceAddressInfoKHR accelerationDeviceAddressInfo;
-//			accelerationDeviceAddressInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
 			accelerationDeviceAddressInfo.accelerationStructure = topLevelAS.accelerationStructure.get();
 
-			topLevelAS.handle = ctx->m_device.getAccelerationStructureAddressKHR(accelerationDeviceAddressInfo);
+//			topLevelAS.handle = ctx->m_device.getAccelerationStructureAddressKHR(accelerationDeviceAddressInfo);
 
-//			deleteScratchBuffer(ctx, scratchBuffer);
-//			sDeleter::Order().enque(std::move(scratchBuffer));
-			sDeleter::Order().enque(std::make_tuple(std::move(instance_memory), std::move(scratchBuffer), std::move(instance_buffer)));
-//			instancesBuffer.destroy();
+			sDeleter::Order().enque(std::move(scratchBuffer), std::move(instance_buffer), std::move(instance_memory));
 		}
 
 		auto rtmodel = std::make_shared<RTModel>();
@@ -432,16 +418,13 @@ int main()
 
 	auto context = app.m_context;
 
-	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
-	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchain());
-
-
-
 	auto model = Model::LoadModel(context, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\tiny.x");
 	auto rtmodel = RTModel::Construct(context, *model);
 	{
 
 	}
+	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
+	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchain());
 
 	app.setup();
 

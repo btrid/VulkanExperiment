@@ -131,7 +131,6 @@ App::App(const AppDescriptor& desc)
 
 	vk::DynamicLoader dl;
 	PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr = dl.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr");
-	m_dispatch.init(vkGetInstanceProcAddr);
 	VULKAN_HPP_DEFAULT_DISPATCHER.init(vkGetInstanceProcAddr);
 
 	vk::InstanceCreateInfo instanceInfo = {};
@@ -142,7 +141,6 @@ App::App(const AppDescriptor& desc)
 	instanceInfo.setPpEnabledLayerNames(LayerName.data());
 	m_instance = vk::createInstanceUnique(instanceInfo);
 
-	m_dispatch.init(m_instance.get());
 	VULKAN_HPP_DEFAULT_DISPATCHER.init(m_instance.get());
 
 #if USE_DEBUG_REPORT
@@ -150,7 +148,7 @@ App::App(const AppDescriptor& desc)
 	debug_create_info.setMessageSeverity(vk::DebugUtilsMessageSeverityFlagBitsEXT::eError | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning/* | vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose*/);
 	debug_create_info.setMessageType(vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation);
 	debug_create_info.setPfnUserCallback(debug_messenger_callback);
-	m_debug_messenger = m_instance->createDebugUtilsMessengerEXTUnique(debug_create_info, nullptr, m_dispatch);
+	m_debug_messenger = m_instance->createDebugUtilsMessengerEXTUnique(debug_create_info);
 #endif
 
 	auto gpus = m_instance->enumeratePhysicalDevices();
@@ -228,8 +226,7 @@ App::App(const AppDescriptor& desc)
 
 		m_device = m_physical_device.createDeviceUnique(device_info, nullptr);
 	}
-	m_dispatch = vk::DispatchLoaderDynamic(m_instance.get(), vkGetInstanceProcAddr, m_device.get(), &::vkGetDeviceProcAddr);
-	VULKAN_HPP_DEFAULT_DISPATCHER.init(m_device.get());
+	VULKAN_HPP_DEFAULT_DISPATCHER.init(m_instance.get(), vkGetInstanceProcAddr, m_device.get(), &::vkGetDeviceProcAddr);
 
 	auto init_thread_data_func = [=](const cThreadPool::InitParam& param)
 	{
@@ -243,7 +240,6 @@ App::App(const AppDescriptor& desc)
 	m_context->m_instance = m_instance.get();
 	m_context->m_physical_device = m_physical_device;
 	m_context->m_device = m_device.get();
-	m_context->m_dispach = m_dispatch;
 	
 	{
 		m_context->m_device = m_device.get();
@@ -338,11 +334,22 @@ void App::setup()
 	auto queue = m_device->getQueue(0, 0);
 
 	vk::FenceCreateInfo fence_info;
-//	fence_info.setFlags(vk::FenceCreateFlagBits::eSignaled);
 	auto fence = m_device->createFenceUnique(fence_info);
 	queue.submit(submitInfo, fence.get());
 
+
 	sDebug::Order().waitFence(m_device.get(), fence.get());
+
+	uint32_t index = sGlobal::Order().getCurrentFrame();
+	m_cmd_pool->resetPool();
+
+
+	sCameraManager::Order().sync();
+	sDeleter::Order().sync();
+	m_context->m_vertex_memory.gc();
+	m_context->m_uniform_memory.gc();
+	m_context->m_storage_memory.gc();
+	m_context->m_staging_memory.gc();
 
 }
 
@@ -414,9 +421,26 @@ void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 void App::preUpdate()
 {
 
-	for (auto& window : m_window_list)
+	MSG msg = {};
+	while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
 	{
-		window->getSwapchain()->swap();
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+
+	for (auto it = m_window_list.begin(); it != m_window_list.end();)
+	{
+		(*it)->getSwapchain()->swap();
+		(*it)->execute();
+		(*it)->swap();
+		if ((*it)->isClose())
+		{
+			sDeleter::Order().enque(std::move(*it));
+			it = m_window_list.erase(it);
+		}
+		else {
+			it++;
+		}
 	}
 
 	{
@@ -426,28 +450,6 @@ void App::preUpdate()
 		sDebug::Order().waitFence(m_device.get(), m_fence_list[index].get());
 		m_device->resetFences({ m_fence_list[index].get() });
 		m_cmd_pool->resetPool();
-
-		MSG msg = {};
-		while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
-		{
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
-		}
-
-		for (auto it = m_window_list.begin(); it != m_window_list.end();)
-		{
-			(*it)->execute();
-			(*it)->swap();
-			if ((*it)->isClose())
-			{
-				sDeleter::Order().enque(std::move(*it));
-				it = m_window_list.erase(it);
-			}
-			else {
-				it++;
-			}
-		}
-
 
 		sCameraManager::Order().sync();
 		sDeleter::Order().sync();
@@ -811,38 +813,38 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 		name_info.objectHandle = reinterpret_cast<uint64_t &>(m_swapchain->m_backbuffer_image[i]);
 		name_info.objectType = vk::ObjectType::eImage;
 		name_info.pObjectName = buf;
-		context->m_device.setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
+		context->m_device.setDebugUtilsObjectNameEXT(name_info);
 	}
 
 	name_info.objectHandle = reinterpret_cast<uint64_t &>(m_front_buffer->m_image);
 	name_info.objectType = vk::ObjectType::eImage;
 	name_info.pObjectName = "AppWindow FrontBufferImage";
-	context->m_device.setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
+	context->m_device.setDebugUtilsObjectNameEXT(name_info);
 
 	name_info.objectHandle = reinterpret_cast<uint64_t &>(m_front_buffer->m_view);
 	name_info.objectType = vk::ObjectType::eImageView;
 	name_info.pObjectName = "AppWindow FrontBufferImageView";
-	context->m_device.setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
+	context->m_device.setDebugUtilsObjectNameEXT(name_info);
 
 	name_info.objectHandle = reinterpret_cast<uint64_t &>(m_front_buffer->m_memory);
 	name_info.objectType = vk::ObjectType::eDeviceMemory;
 	name_info.pObjectName = "AppWindow FrontBufferImageMemory";
-	context->m_device.setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
+	context->m_device.setDebugUtilsObjectNameEXT(name_info);
 
 	name_info.objectHandle = reinterpret_cast<uint64_t &>(m_depth_image.get());
 	name_info.objectType = vk::ObjectType::eImage;
 	name_info.pObjectName = "AppWindow DepthImage";
-	context->m_device.setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
+	context->m_device.setDebugUtilsObjectNameEXT(name_info);
 
 	name_info.objectHandle = reinterpret_cast<uint64_t &>(m_depth_view.get());
 	name_info.objectType = vk::ObjectType::eImageView;
 	name_info.pObjectName = "AppWindow DepthImageView";
-	context->m_device.setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
+	context->m_device.setDebugUtilsObjectNameEXT(name_info);
 
 	name_info.objectHandle = reinterpret_cast<uint64_t &>(m_depth_memory.get());
 	name_info.objectType = vk::ObjectType::eDeviceMemory;
 	name_info.pObjectName = "AppWindow DepthImageMemory";
-	context->m_device.setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
+	context->m_device.setDebugUtilsObjectNameEXT(name_info);
 #endif
 
 }

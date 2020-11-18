@@ -116,8 +116,7 @@ struct App
 
 	std::vector<vk::UniqueFence> m_fence_list;
 
-	vk::DispatchLoaderDynamic m_dispatch;
-	vk::UniqueHandle<vk::DebugUtilsMessengerEXT, vk::DispatchLoaderDynamic> m_debug_messenger;
+	vk::UniqueDebugUtilsMessengerEXT m_debug_messenger;
 
 	App(const AppDescriptor& desc);
 	void setup();

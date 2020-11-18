@@ -92,7 +92,7 @@ ClearPipeline::ClearPipeline(const std::shared_ptr<btr::Context>& context, const
 	name_info.objectHandle = reinterpret_cast<uint64_t &>(m_cmd.get());
 	name_info.objectType = vk::ObjectType::eCommandBuffer;
 	name_info.pObjectName = "ClearPipeline CMD";
-	context->m_device.setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
+	context->m_device.setDebugUtilsObjectNameEXT(name_info);
 #endif
 
 
@@ -357,7 +357,7 @@ PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, c
 		{
 			name_info.objectHandle = reinterpret_cast<uint64_t &>(m_cmd[i].get());
 			sprintf_s(buf, "PresentPipeline CMD[%d]", i);
-			context->m_device.setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
+			context->m_device.setDebugUtilsObjectNameEXT(name_info);
 		}
 #endif
 	}

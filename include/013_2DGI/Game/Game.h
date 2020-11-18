@@ -183,7 +183,7 @@ struct GameProcedure
 			name_info.pObjectName = "PipelineLayout_PlayerUpdate";
 			name_info.objectType = vk::ObjectType::ePipelineLayout;
 			name_info.objectHandle = reinterpret_cast<uint64_t &>(m_pipeline_layout[PipelineLayout_MovableUpdate].get());
-			context->m_device.setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
+			context->m_device.setDebugUtilsObjectNameEXT(name_info);
 #endif
 		}
 		{
@@ -207,7 +207,7 @@ struct GameProcedure
 			name_info.pObjectName = "PipelineLayout_MovableUpdate";
 			name_info.objectType = vk::ObjectType::ePipelineLayout;
 			name_info.objectHandle = reinterpret_cast<uint64_t &>(m_pipeline_layout[PipelineLayout_MovableUpdate].get());
-			context->m_device.setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
+			context->m_device.setDebugUtilsObjectNameEXT(name_info);
 #endif
 		}
 
@@ -242,7 +242,7 @@ struct GameProcedure
 			name_info.pObjectName = "Pipeline_MovableUpdate";
 			name_info.objectType = vk::ObjectType::ePipeline;
 			name_info.objectHandle = reinterpret_cast<uint64_t &>(compute_pipeline[0].get());
-			context->m_device.setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
+			context->m_device.setDebugUtilsObjectNameEXT(name_info);
 #endif
 
 			m_pipeline[PipelinePlayer_Update] = std::move(compute_pipeline[0]);
@@ -254,7 +254,7 @@ struct GameProcedure
 
 	void executePlayerUpdate(vk::CommandBuffer cmd, const std::shared_ptr <btr::Context>& context, const std::shared_ptr<GameContext>& game_context, const DS_GameObject& ds)
 	{
-		DebugLabel _label(cmd, context->m_dispach, __FUNCTION__);
+		DebugLabel _label(cmd, __FUNCTION__);
 
 		{
 			vk::BufferMemoryBarrier to_read[] = {
@@ -283,7 +283,7 @@ struct GameProcedure
 	}
 	void executeMovableUpdatePrePyhsics(vk::CommandBuffer cmd, const std::shared_ptr <btr::Context>& context, const std::shared_ptr<GameContext>& game_context, const DS_GameObject& ds)
 	{
-		DebugLabel _label(cmd, context->m_dispach, __FUNCTION__);
+		DebugLabel _label(cmd, __FUNCTION__);
 
 		{
 			vk::BufferMemoryBarrier to_read[] = {
@@ -312,7 +312,7 @@ struct GameProcedure
 	}
 	void executeMovableUpdatePostPyhsics(vk::CommandBuffer cmd, const std::shared_ptr <btr::Context>& context, const std::shared_ptr<GameContext>& game_context, const DS_GameObject& ds)
 	{
-		DebugLabel _label(cmd, context->m_dispach, __FUNCTION__);
+		DebugLabel _label(cmd, __FUNCTION__);
 
 		{
 			vk::BufferMemoryBarrier to_read[] = {

@@ -473,7 +473,7 @@ struct SkyNoise
 
 	void execute(const std::shared_ptr<btr::Context>& context, vk::CommandBuffer& cmd)
 	{
-		DebugLabel _label(cmd, context->m_dispach, __FUNCTION__);
+		DebugLabel _label(cmd, __FUNCTION__);
 
 		{
 			vk::DescriptorSet descs[] =
@@ -568,7 +568,7 @@ struct SkyNoise
 
 	void execute_Render(const std::shared_ptr<btr::Context>& context, vk::CommandBuffer& cmd, const std::shared_ptr<RenderTarget>& render_target)
 	{
-		DebugLabel _label(cmd, context->m_dispach, __FUNCTION__);
+		DebugLabel _label(cmd, __FUNCTION__);
 
 		{
 			vk::DescriptorSet descs[] =

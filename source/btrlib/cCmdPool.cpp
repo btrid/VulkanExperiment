@@ -99,7 +99,7 @@ vk::CommandBuffer cCmdPool::allocCmdOnetime(int device_family_index, const char*
 	name_info.objectType = vk::ObjectType::eCommandBuffer;
 	name_info.pObjectName = name ? name : buf;
 	name_info.objectHandle = reinterpret_cast<uint64_t &>(cmd);
-	m_context->m_device.setDebugUtilsObjectNameEXT(name_info, m_context->m_dispach);
+	m_context->m_device.setDebugUtilsObjectNameEXT(name_info);
 #endif
 
 	return cmd;
@@ -119,7 +119,7 @@ vk::CommandBuffer cCmdPool::allocCmdTempolary(uint32_t device_family_index, cons
 		name_info.objectType = vk::ObjectType::eCommandBuffer;
 		name_info.pObjectName = name ? name : buf;
 		name_info.objectHandle = reinterpret_cast<uint64_t &>(cmd);
-		m_context->m_device.setDebugUtilsObjectNameEXT(name_info, m_context->m_dispach);
+		m_context->m_device.setDebugUtilsObjectNameEXT(name_info);
 #endif
 	}
 	return cmd;
