@@ -28,7 +28,7 @@ void sGlobal::sync()
 
 vk::UniqueShaderModule loadShaderUnique(const vk::Device& device, const std::string& filename)
 {
-	std::experimental::filesystem::path filepath(filename);
+	std::filesystem::path filepath(filename);
 	std::ifstream file(filepath, std::ios_base::ate | std::ios::binary);
 	if (!file.is_open()) {
 		printf("file not found \"%s\"", filename.c_str());

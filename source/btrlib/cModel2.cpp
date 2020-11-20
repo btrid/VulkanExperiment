@@ -53,7 +53,7 @@ namespace {
 
 std::vector<cModel2::Material> loadMaterial(const aiScene* scene, const std::string& filename, const std::shared_ptr<btr::Context>& context, vk::CommandBuffer cmd)
 {
-	std::string path = std::experimental::filesystem::path(filename).remove_filename().string();
+	std::string path = std::filesystem::path(filename).remove_filename().string();
 	std::vector<cModel2::Material> material(scene->mNumMaterials);
 	for (size_t i = 0; i < scene->mNumMaterials; i++)
 	{

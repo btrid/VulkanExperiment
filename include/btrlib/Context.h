@@ -32,8 +32,8 @@ struct Context
 
 	vk::UniqueShaderModule loadShaderUnique(const std::string& filename)
 	{
-		std::experimental::filesystem::path filepath(filename);
-		std::ifstream file(filepath, std::ios_base::ate | std::ios::binary);
+		std::filesystem::path p(filename);
+		std::ifstream file(p, std::ios_base::ate | std::ios::binary);
 		assert(file.is_open());
 
 		size_t file_size = (size_t)file.tellg();

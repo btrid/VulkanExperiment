@@ -1,9 +1,10 @@
 @echo off
 cd /d %~dp0
 
-SET exe=glslangValidator.exe --target-env vulkan1.1 -V -I./ 
+SET exe=glslangValidator.exe --target-env vulkan1.2 -V -I./ 
 SET output=-o ../binary/
 
-%exe% %output%/DC_MakeVoxel.vert.spv DC_MakeVoxel.vert
-%exe% %output%/DC_MakeVoxel.geom.spv DC_MakeVoxel.geom
-%exe% %output%/DC_MakeVoxel.frag.spv DC_MakeVoxel.frag
+%exe% %output%/LDC_Construct.rgen.spv LDC_Construct.rgen
+%exe% %output%/LDC_Construct.rmiss.spv LDC_Construct.rmiss
+%exe% %output%/LDC_Construct.rchit.spv LDC_Construct.rchit
+%exe% %output%/LDC_Construct.rahit.spv LDC_Construct.rahit

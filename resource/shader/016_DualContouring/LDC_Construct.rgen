@@ -1,0 +1,29 @@
+#version 460
+
+#extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_ray_tracing : enable
+
+layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
+
+layout(location = 0) rayPayloadEXT vec3 hitValue;
+layout(location = 1) rayPayloadEXT int ahitValue[32];
+
+void main() 
+{
+	vec3 axis[] = {vec3(1., 0., 0.),vec3(0., 1., 0.),vec3(0., 0., 1.),};
+	vec3 f = axis[gl_LaunchIDEXT.z];
+	vec3 s = axis[(gl_LaunchIDEXT.z+1)%3] * (gl_LaunchIDEXT.x+0.5); 
+	vec3 u = axis[(gl_LaunchIDEXT.z+2)%3] * (gl_LaunchIDEXT.y+0.5); 
+
+	vec3 origin = s+u;
+	vec3 direction = f;
+
+	float tmin = 0.0;
+	float tmax = 10000.0;
+
+    hitValue = vec3(0.0);
+	ahitValue[31] = 0;
+    traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin.xyz, tmin, direction.xyz, tmax, 0);
+    traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin.xyz, tmin, direction.xyz, tmax, 0);
+
+}

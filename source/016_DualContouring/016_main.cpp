@@ -265,21 +265,13 @@ struct RTModel
 			accelerationBuildOffsetInfo.transformOffset = 0x0;
 
 			std::vector<const vk::AccelerationStructureBuildOffsetInfoKHR*> offset = { &accelerationBuildOffsetInfo };
-//			if (rayTracingFeatures.rayTracingHostAccelerationStructureCommands)
-			{
-// 				// Implementation supports building acceleration structure building on host
-//				ctx->m_device.buildAccelerationStructureKHR(1, &accelerationBuildGeometryInfo, offset.data());
-			}
-//			else
-			{
-				// Acceleration structure needs to be build on the device
-				cmd.buildAccelerationStructureKHR({ accelerationBuildGeometryInfo }, offset);
-			}
+			// Acceleration structure needs to be build on the device
+			cmd.buildAccelerationStructureKHR({ accelerationBuildGeometryInfo }, offset);
 
 			vk::AccelerationStructureDeviceAddressInfoKHR accelerationDeviceAddressInfo{};
 			accelerationDeviceAddressInfo.accelerationStructure = bottomLevelAS.accelerationStructure.get();
 
-//			bottomLevelAS.handle = ctx->m_device.getAccelerationStructureAddressKHR(accelerationDeviceAddressInfo);
+			bottomLevelAS.handle = ctx->m_device.getAccelerationStructureAddressKHR(accelerationDeviceAddressInfo);
 			sDeleter::Order().enque(std::move(scratchBuffer));
 
 		}
@@ -363,21 +355,12 @@ struct RTModel
 			accelerationBuildOffsetInfo.transformOffset = 0x0;
 
 			std::vector<const vk::AccelerationStructureBuildOffsetInfoKHR*> offset = { &accelerationBuildOffsetInfo };
-// 			if (rayTracingFeatures.rayTracingHostAccelerationStructureCommands)
-// 			{
-// 				// Implementation supports building acceleration structure building on host
-//				ctx->m_device.buildAccelerationStructureKHR({ accelerationBuildGeometryInfo }, offset);
-// 			}
-// 			else
-			{
-				// Acceleration structure needs to be build on the device
-				cmd.buildAccelerationStructureKHR({ accelerationBuildGeometryInfo }, offset);
-			}
+			cmd.buildAccelerationStructureKHR({ accelerationBuildGeometryInfo }, offset);
 
 			vk::AccelerationStructureDeviceAddressInfoKHR accelerationDeviceAddressInfo;
 			accelerationDeviceAddressInfo.accelerationStructure = topLevelAS.accelerationStructure.get();
 
-//			topLevelAS.handle = ctx->m_device.getAccelerationStructureAddressKHR(accelerationDeviceAddressInfo);
+			topLevelAS.handle = ctx->m_device.getAccelerationStructureAddressKHR(accelerationDeviceAddressInfo);
 
 			sDeleter::Order().enque(std::move(scratchBuffer), std::move(instance_buffer), std::move(instance_memory));
 		}
@@ -388,8 +371,172 @@ struct RTModel
 
 		return rtmodel;
 	}
+};
+
+struct LDCModel
+{
+	struct Ctx
+	{
+		vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
+		vk::UniquePipelineLayout m_pipeline_layout;
+		vk::UniquePipeline m_pipeline;
+		btr::AllocatedMemory m_shader_binding_table_memory;
+		btr::BufferMemory b_shader_binding_table;
+		std::array<vk::StridedBufferRegionKHR, 4> m_shader_binding_table;
 
 
+		Ctx(std::shared_ptr<btr::Context>& ctx)
+		{
+			auto cmd = ctx->m_cmd_pool->allocCmdTempolary(0);
+			// descriptor set layout
+			{
+				vk::DescriptorSetLayoutBinding accelerationStructureLayoutBinding;
+				auto stage = vk::ShaderStageFlagBits::eRaygenKHR;
+				vk::DescriptorSetLayoutBinding binding[] = {
+					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eAccelerationStructureKHR, 1, stage),
+					vk::DescriptorSetLayoutBinding(10, vk::DescriptorType::eStorageBuffer, 1, stage),
+				};
+				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
+				desc_layout_info.setBindingCount(array_length(binding));
+				desc_layout_info.setPBindings(binding);
+				m_descriptor_set_layout = ctx->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
+
+			}
+
+
+			// pipeline layout
+			{
+				vk::DescriptorSetLayout layouts[] = {
+					m_descriptor_set_layout.get(),
+				};
+// 				vk::PushConstantRange constants[] = {
+// 				};
+				vk::PipelineLayoutCreateInfo pipeline_layout_info;
+				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
+				pipeline_layout_info.setPSetLayouts(layouts);
+//				pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
+//				pipeline_layout_info.setPPushConstantRanges(constants);
+				m_pipeline_layout = ctx->m_device.createPipelineLayoutUnique(pipeline_layout_info);
+			}
+
+			const uint32_t shaderIndexRaygen = 0;
+			const uint32_t shaderIndexMiss = 1;
+			const uint32_t shaderIndexClosestHit = 2;
+
+			std::array<vk::PipelineShaderStageCreateInfo, 3> shaderStages;
+			const char* name[] =
+			{
+				"LDC_Construct.rgen.spv",
+				"LDC_Construct.rmiss.spv",
+				"LDC_Construct.rchit.spv",
+			};
+			std::array<vk::UniqueShaderModule, array_length(name)> shader;
+			for (size_t i = 0; i < array_length(name); i++)
+			{
+				shader[i] = loadShaderUnique(ctx->m_device, btr::getResourceShaderPath() + name[i]);
+			}
+			shaderStages[0].setModule(shader[0].get()).setStage(vk::ShaderStageFlagBits::eRaygenKHR).setPName("main");
+			shaderStages[1].setModule(shader[1].get()).setStage(vk::ShaderStageFlagBits::eMissKHR).setPName("main");
+			shaderStages[2].setModule(shader[2].get()).setStage(vk::ShaderStageFlagBits::eClosestHitKHR).setPName("main");
+
+			//	Setup ray tracing shader groups
+			std::array<vk::RayTracingShaderGroupCreateInfoKHR, 3> shader_group;
+			shader_group[0].type = vk::RayTracingShaderGroupTypeKHR::eGeneral;
+			shader_group[0].generalShader = shaderIndexRaygen;
+			shader_group[0].closestHitShader = VK_SHADER_UNUSED_KHR;
+			shader_group[0].anyHitShader = VK_SHADER_UNUSED_KHR;
+			shader_group[0].intersectionShader = VK_SHADER_UNUSED_KHR;
+
+			shader_group[1].type = vk::RayTracingShaderGroupTypeKHR::eGeneral;
+			shader_group[1].generalShader = shaderIndexMiss;
+			shader_group[1].closestHitShader = VK_SHADER_UNUSED_KHR;
+			shader_group[1].anyHitShader = VK_SHADER_UNUSED_KHR;
+			shader_group[1].intersectionShader = VK_SHADER_UNUSED_KHR;
+
+			shader_group[2].type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup;
+			shader_group[2].generalShader = VK_SHADER_UNUSED_KHR;
+			shader_group[2].closestHitShader = shaderIndexClosestHit;
+			shader_group[2].anyHitShader = VK_SHADER_UNUSED_KHR;
+			shader_group[2].intersectionShader = VK_SHADER_UNUSED_KHR;
+
+			vk::RayTracingPipelineCreateInfoKHR rayTracingPipelineCI;
+			rayTracingPipelineCI.stageCount = static_cast<uint32_t>(shaderStages.size());
+			rayTracingPipelineCI.pStages = shaderStages.data();
+			rayTracingPipelineCI.groupCount = static_cast<uint32_t>(shader_group.size());
+			rayTracingPipelineCI.pGroups = shader_group.data();
+			rayTracingPipelineCI.maxRecursionDepth = 1;
+			rayTracingPipelineCI.layout = m_pipeline_layout.get();
+			m_pipeline = ctx->m_device.createRayTracingPipelineKHRUnique(vk::PipelineCache(), rayTracingPipelineCI).value;
+
+			// shader binding table
+			{
+				auto props2 = ctx->m_physical_device.getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceRayTracingPropertiesKHR>();
+				auto rayTracingProperties = props2.get<vk::PhysicalDeviceRayTracingPropertiesKHR>();
+
+				const uint32_t groupCount = static_cast<uint32_t>(shader_group.size());
+
+				const uint32_t sbtSize = rayTracingProperties.shaderGroupBaseAlignment * groupCount;
+
+				m_shader_binding_table_memory.setup(ctx->m_physical_device, ctx->m_device, vk::BufferUsageFlagBits::eRayTracingKHR | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, sbtSize);
+				b_shader_binding_table = m_shader_binding_table_memory.allocateMemory(sbtSize);
+
+				auto shaderHandleStorage = ctx->m_device.getRayTracingShaderGroupHandlesKHR<uint8_t>(m_pipeline.get(), 0, groupCount, rayTracingProperties.shaderGroupHandleSize*groupCount);
+
+				std::vector<uint8_t> data(sbtSize);
+ 				for (uint32_t i = 0; i < groupCount; i++)
+ 				{
+ 					memcpy(data.data()+i*rayTracingProperties.shaderGroupBaseAlignment, shaderHandleStorage.data()+i*rayTracingProperties.shaderGroupHandleSize, rayTracingProperties.shaderGroupHandleSize);
+ 				}
+ 				cmd.updateBuffer<uint8_t>(b_shader_binding_table.getInfo().buffer, b_shader_binding_table.getInfo().offset, data);
+
+				vk::BufferMemoryBarrier barrier[] = 
+				{
+					b_shader_binding_table.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
+
+
+				m_shader_binding_table[0].buffer = b_shader_binding_table.getInfo().buffer;
+				m_shader_binding_table[0].offset = static_cast<VkDeviceSize>(rayTracingProperties.shaderGroupBaseAlignment * 0);
+				m_shader_binding_table[0].stride = rayTracingProperties.shaderGroupBaseAlignment;
+				m_shader_binding_table[0].size = sbtSize;
+
+				m_shader_binding_table[1].buffer = b_shader_binding_table.getInfo().buffer;
+				m_shader_binding_table[1].offset = static_cast<VkDeviceSize>(rayTracingProperties.shaderGroupBaseAlignment * 1);
+				m_shader_binding_table[1].stride = rayTracingProperties.shaderGroupBaseAlignment;
+				m_shader_binding_table[1].size = sbtSize;
+
+				vk::StridedBufferRegionKHR hitShaderSBTEntry;
+				m_shader_binding_table[2].buffer = b_shader_binding_table.getInfo().buffer;
+				m_shader_binding_table[2].offset = static_cast<VkDeviceSize>(rayTracingProperties.shaderGroupBaseAlignment * 2);
+				m_shader_binding_table[2].stride = rayTracingProperties.shaderGroupBaseAlignment;
+				m_shader_binding_table[2].size = sbtSize;
+
+			}
+
+		}
+
+	};
+	static std::shared_ptr<LDCModel> Construct(std::shared_ptr<btr::Context>& ctx, std::shared_ptr<LDCModel::Ctx>& ctx_ldc, Model& model, RTModel& rt_model)
+	{
+		auto cmd = ctx->m_cmd_pool->allocCmdTempolary(0);
+
+		// Dispatch the ray tracing commands
+		cmd.bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, ctx_ldc->m_pipeline.get());
+//		cmd.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, ctx_ldc->m_pipeline_layout.get(), 0, 1, &rt_model->, 0, 0);
+
+		cmd.traceRaysKHR(
+			ctx_ldc->m_shader_binding_table[0],
+			ctx_ldc->m_shader_binding_table[1],
+			ctx_ldc->m_shader_binding_table[2],
+			ctx_ldc->m_shader_binding_table[3],
+			64,
+			64,
+			3);
+
+
+		return nullptr;
+	}
 };
 struct Renderer
 {
@@ -419,7 +566,10 @@ int main()
 	auto context = app.m_context;
 
 	auto model = Model::LoadModel(context, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\tiny.x");
-	auto rtmodel = RTModel::Construct(context, *model);
+	auto rt_model = RTModel::Construct(context, *model);
+
+	std::shared_ptr<LDCModel::Ctx> LDCModel_ctx = std::make_shared<LDCModel::Ctx>(context);
+	auto ldc_model = LDCModel::Construct(context, LDCModel_ctx, *model, *rt_model);
 	{
 
 	}
