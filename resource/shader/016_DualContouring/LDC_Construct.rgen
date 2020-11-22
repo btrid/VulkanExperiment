@@ -3,33 +3,51 @@
 #extension GL_GOOGLE_include_directive : require
 #include "LDC.glsl"
 
+layout(location = 0) rayPayloadEXT float RayMaxT;
 
 
 void main() 
 {
 	vec3 axis[] = {vec3(1., 0., 0.),vec3(0., 1., 0.),vec3(0., 0., 1.),};
 	vec3 f = axis[gl_LaunchIDEXT.z];
-	vec3 s = axis[(gl_LaunchIDEXT.z+1)%3] * (gl_LaunchIDEXT.x+0.5); 
-	vec3 u = axis[(gl_LaunchIDEXT.z+2)%3] * (gl_LaunchIDEXT.y+0.5); 
+	vec3 s = axis[(gl_LaunchIDEXT.z+1)%3]; 
+	vec3 u = axis[(gl_LaunchIDEXT.z+2)%3]; 
+	vec3 rate = (vec3(gl_LaunchIDEXT) / gl_LaunchSizeEXT);
 
-	vec3 origin = s+u;
+	vec3 extent = u_info.m_aabb_max.xyz-u_info.m_aabb_min.xyz;
+	vec3 min = u_info.m_aabb_min.xyz;
+
+	vec3 origin = min + (s+u) * extent * rate;
 	vec3 direction = f;
 
-	float tmin = 0.0;
-	float tmax = 10000.0;
+	RayMaxT = 0.;
+	float tmax = extent[gl_LaunchIDEXT.z];
 	uint OpaqueNum = 0;
-	IsEnd = false;
 
-//	for (;;)
+	for (;;)
 	{
-		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT|gl_RayFlagsCullBackFacingTrianglesEXT, 0xff, 0, 0, 0, origin.xyz, tmin, direction.xyz, tmax, 0);
-
-		if(IsEnd)
+		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT|gl_RayFlagsCullBackFacingTrianglesEXT, 0xff, 0, 0, 0, origin.xyz, RayMaxT, direction.xyz, tmax, 0);
+		if(RayMaxT < 0.)
 		{
-//			break;
+			break;
 		}
-
+		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT|gl_RayFlagsCullFrontFacingTrianglesEXT, 0xff, 0, 0, 0, origin.xyz, RayMaxT, direction.xyz, tmax, 0);
 		OpaqueNum++;
+	}
 
+	if(OpaqueNum==0)
+	{
+		b_ldc_area[gl_LaunchIDEXT.x + gl_LaunchIDEXT.y*gl_LaunchSizeEXT.x + gl_LaunchIDEXT.z*gl_LaunchSizeEXT.x*gl_LaunchSizeEXT.y] = uvec2(0);
+		return;
+	}
+	uint index = atomicAdd(b_ldc_counter, OpaqueNum);
+	b_ldc_area[gl_LaunchIDEXT.x + gl_LaunchIDEXT.y*gl_LaunchSizeEXT.x + gl_LaunchIDEXT.z*gl_LaunchSizeEXT.x*gl_LaunchSizeEXT.y] = uvec2(index, OpaqueNum);
+	for (uint i = 0; i<OpaqueNum; i++)
+	{
+		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT|gl_RayFlagsCullBackFacingTrianglesEXT, 0xff, 0, 0, 0, origin.xyz, RayMaxT, direction.xyz, tmax, 0);
+		float begin = RayMaxT;
+		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT|gl_RayFlagsCullFrontFacingTrianglesEXT, 0xff, 0, 0, 0, origin.xyz, RayMaxT, direction.xyz, tmax, 0);
+		float end = RayMaxT;
+		b_ldc_range[index++] = vec2(begin, end);
 	}
 }

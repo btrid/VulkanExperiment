@@ -1,9 +1,11 @@
 #version 460
-#extension GL_EXT_ray_tracing : enable
 
-layout(location = 0) rayPayloadInEXT vec3 hitValue;
-layout(location = 1) rayPayloadEXT int ahitValue[32];
+#extension GL_GOOGLE_include_directive : require
+#include "LDC.glsl"
+
+layout(location = 0) rayPayloadInEXT float RayMaxT;
 
 void main()
 {
+  RayMaxT = -1.;
 }

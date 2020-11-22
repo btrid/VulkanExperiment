@@ -7,4 +7,3 @@ SET output=-o ../binary/
 %exe% %output%/LDC_Construct.rgen.spv LDC_Construct.rgen
 %exe% %output%/LDC_Construct.rmiss.spv LDC_Construct.rmiss
 %exe% %output%/LDC_Construct.rchit.spv LDC_Construct.rchit
-%exe% %output%/LDC_Construct.rahit.spv LDC_Construct.rahit

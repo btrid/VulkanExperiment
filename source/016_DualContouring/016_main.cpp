@@ -38,12 +38,21 @@
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 #include <assimp/material.h>
+
 struct Model
 {
-	btr::BufferMemory m_vertex;
-	btr::BufferMemory m_index;
+	struct Info
+	{
+		vec4 m_aabb_min;
+		vec4 m_aabb_max;
+		uint m_vertex_num;
+	};
+	btr::BufferMemory b_vertex;
+	btr::BufferMemory b_index;
+	btr::BufferMemoryEx<Info> u_info;
 
-	uint m_vertex_num;
+	Info m_info;
+
 
 	static std::shared_ptr<Model> LoadModel(const std::shared_ptr<btr::Context>& context, const std::string& filename)
 	{
@@ -77,6 +86,8 @@ struct Model
 
 		uint32_t index_offset = 0;
 		uint32_t vertex_offset = 0;
+		Info info{ .m_aabb_min = vec4{999.f}, .m_aabb_max = vec4{-999.f} };
+
 		for (size_t i = 0; i < scene->mNumMeshes; i++)
 		{
 			aiMesh* mesh = scene->mMeshes[i];
@@ -85,33 +96,53 @@ struct Model
 				std::copy(mesh->mFaces[n].mIndices, mesh->mFaces[n].mIndices + 3, index.getMappedPtr<uint32_t>(index_offset));
 				index_offset += 3;
 			}
-			//		std::copy(mesh->mVertices, mesh->mVertices + mesh->mNumVertices, std::back_inserter(vertex));
 			std::copy(mesh->mVertices, mesh->mVertices + mesh->mNumVertices, vertex.getMappedPtr<aiVector3D>(vertex_offset));
+
+			for (uint32_t v = 0; v < mesh->mNumVertices; v++)
+			{
+				info.m_aabb_min.x = std::min(info.m_aabb_min.x, mesh->mVertices[v].x);
+				info.m_aabb_min.y = std::min(info.m_aabb_min.y, mesh->mVertices[v].y);
+				info.m_aabb_min.z = std::min(info.m_aabb_min.z, mesh->mVertices[v].z);
+				info.m_aabb_max.x = std::max(info.m_aabb_max.x, mesh->mVertices[v].x);
+				info.m_aabb_max.y = std::max(info.m_aabb_max.y, mesh->mVertices[v].y);
+				info.m_aabb_max.z = std::max(info.m_aabb_max.z, mesh->mVertices[v].z);
+			}
+
 			vertex_offset += mesh->mNumVertices;
 		}
-
 		importer.FreeScene();
 
-		std::shared_ptr<Model> model = std::make_shared<Model>();
-		model->m_vertex = context->m_vertex_memory.allocateMemory(numVertex * sizeof(aiVector3D));
-		model->m_index = context->m_vertex_memory.allocateMemory(numIndex * sizeof(uint32_t));
-
+		info.m_vertex_num = numVertex;
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-		std::array<vk::BufferCopy, 2> copy;
-		copy[0].srcOffset = vertex.getInfo().offset;
-		copy[0].dstOffset = model->m_vertex.getInfo().offset;
-		copy[0].size = vertex.getInfo().range;
-		copy[1].srcOffset = index.getInfo().offset;
-		copy[1].dstOffset = model->m_index.getInfo().offset;
-		copy[1].size = index.getInfo().range;
-		cmd.copyBuffer(vertex.getInfo().buffer, model->m_vertex.getInfo().buffer, copy);
+		std::shared_ptr<Model> model = std::make_shared<Model>();
+		{
+			model->b_vertex = context->m_vertex_memory.allocateMemory(numVertex * sizeof(aiVector3D));
+			model->b_index = context->m_vertex_memory.allocateMemory(numIndex * sizeof(uint32_t));
+
+			std::array<vk::BufferCopy, 2> copy;
+			copy[0].srcOffset = vertex.getInfo().offset;
+			copy[0].dstOffset = model->b_vertex.getInfo().offset;
+			copy[0].size = vertex.getInfo().range;
+			copy[1].srcOffset = index.getInfo().offset;
+			copy[1].dstOffset = model->b_index.getInfo().offset;
+			copy[1].size = index.getInfo().range;
+			cmd.copyBuffer(vertex.getInfo().buffer, model->b_vertex.getInfo().buffer, copy);
+		}
+
+		{
+			model->m_info = info;
+			model->u_info = context->m_uniform_memory.allocateMemory<Info>(1);
+
+			cmd.updateBuffer<Info>(model->u_info.getInfo().buffer, model->u_info.getInfo().offset, info);
+		}
+
 
 		vk::BufferMemoryBarrier barrier[] = {
-			model->m_vertex.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
-			model->m_index.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
+			model->b_vertex.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
+			model->b_index.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
+			model->u_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
-		model->m_vertex_num = numVertex;
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR| vk::PipelineStageFlagBits::eRayTracingShaderKHR, {}, {}, { array_size(barrier), barrier }, {});
 
 		return model;
 	}
@@ -237,7 +268,7 @@ struct RTModel
 			accelerationCreateGeometryInfo.geometryType = vk::GeometryTypeKHR::eTriangles;
 			accelerationCreateGeometryInfo.maxPrimitiveCount = 1;
 			accelerationCreateGeometryInfo.indexType = vk::IndexType::eUint32;
-			accelerationCreateGeometryInfo.maxVertexCount = model.m_vertex_num;
+			accelerationCreateGeometryInfo.maxVertexCount = model.m_info.m_vertex_num;
 			accelerationCreateGeometryInfo.vertexFormat = vk::Format::eR32G32B32Sfloat;
 			accelerationCreateGeometryInfo.allowsTransforms = VK_FALSE;
 
@@ -261,10 +292,10 @@ struct RTModel
 			accelerationStructureGeometry[0].flags = vk::GeometryFlagBitsKHR::eOpaque;
 			accelerationStructureGeometry[0].geometryType = vk::GeometryTypeKHR::eTriangles;
 			accelerationStructureGeometry[0].geometry.triangles.vertexFormat = vk::Format::eR32G32B32Sfloat;
-			accelerationStructureGeometry[0].geometry.triangles.vertexData.deviceAddress = ctx->m_device.getBufferAddress(vk::BufferDeviceAddressInfoKHR().setBuffer(model.m_vertex.getInfo().buffer)) + model.m_vertex.getInfo().offset;
+			accelerationStructureGeometry[0].geometry.triangles.vertexData.deviceAddress = ctx->m_device.getBufferAddress(vk::BufferDeviceAddressInfoKHR().setBuffer(model.b_vertex.getInfo().buffer)) + model.b_vertex.getInfo().offset;
 			accelerationStructureGeometry[0].geometry.triangles.vertexStride = sizeof(aiVector3D);
 			accelerationStructureGeometry[0].geometry.triangles.indexType = vk::IndexType::eUint32;
-			accelerationStructureGeometry[0].geometry.triangles.indexData.deviceAddress = ctx->m_device.getBufferAddress(vk::BufferDeviceAddressInfoKHR().setBuffer(model.m_index.getInfo().buffer)) + model.m_index.getInfo().offset;
+			accelerationStructureGeometry[0].geometry.triangles.indexData.deviceAddress = ctx->m_device.getBufferAddress(vk::BufferDeviceAddressInfoKHR().setBuffer(model.b_index.getInfo().buffer)) + model.b_index.getInfo().offset;
 
 			vk::AccelerationStructureGeometryKHR* acceleration_structure_geometries = accelerationStructureGeometry.data();
 
@@ -445,9 +476,12 @@ struct Ctx
 			vk::DescriptorSetLayoutBinding accelerationStructureLayoutBinding;
 			auto stage = vk::ShaderStageFlagBits::eRaygenKHR;
 			vk::DescriptorSetLayoutBinding binding[] = {
-				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eUniformBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
@@ -602,8 +636,14 @@ struct LDCModel
 			ldc_model->b_ldc_area = ctx->m_staging_memory.allocateMemory<uvec2>(64*64*3);
 			ldc_model->b_ldc_length = ctx->m_staging_memory.allocateMemory<vec2>(64*64*3*8);
 
+			vk::DescriptorBufferInfo uniforms[] =
+			{
+				model.u_info.getInfo(),
+			};
 			vk::DescriptorBufferInfo storages[] =
 			{
+				model.b_vertex.getInfo(),
+				model.b_index.getInfo(),
 				ldc_model->b_ldc_counter.getInfo(),
 				ldc_model->b_ldc_area.getInfo(),
 				ldc_model->b_ldc_length.getInfo(),
@@ -612,10 +652,16 @@ struct LDCModel
 			vk::WriteDescriptorSet write[] =
 			{
 				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+				.setDescriptorCount(array_length(uniforms))
+				.setPBufferInfo(uniforms)
+				.setDstBinding(0)
+				.setDstSet(ldc_model->m_DS.get()),
+				vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 				.setDescriptorCount(array_length(storages))
 				.setPBufferInfo(storages)
-				.setDstBinding(0)
+				.setDstBinding(1)
 				.setDstSet(ldc_model->m_DS.get()),
 			};
 			ctx->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
