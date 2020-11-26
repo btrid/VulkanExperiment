@@ -48,6 +48,7 @@ struct Model
 		uint m_vertex_num;
 	};
 	btr::BufferMemory b_vertex;
+	btr::BufferMemory b_normal;
 	btr::BufferMemory b_index;
 	btr::BufferMemoryEx<Info> u_info;
 
@@ -82,6 +83,7 @@ struct Model
 
 
 		auto vertex = context->m_staging_memory.allocateMemory(numVertex * sizeof(aiVector3D), true);
+		auto normal = context->m_staging_memory.allocateMemory(numVertex * sizeof(aiVector3D), true);
 		auto index = context->m_staging_memory.allocateMemory(numIndex * sizeof(uint32_t), true);
 
 		uint32_t index_offset = 0;
@@ -97,6 +99,7 @@ struct Model
 				index_offset += 3;
 			}
 			std::copy(mesh->mVertices, mesh->mVertices + mesh->mNumVertices, vertex.getMappedPtr<aiVector3D>(vertex_offset));
+			std::copy(mesh->mNormals, mesh->mNormals + mesh->mNumVertices, normal.getMappedPtr<aiVector3D>(vertex_offset));
 
 			for (uint32_t v = 0; v < mesh->mNumVertices; v++)
 			{
@@ -117,15 +120,19 @@ struct Model
 		std::shared_ptr<Model> model = std::make_shared<Model>();
 		{
 			model->b_vertex = context->m_vertex_memory.allocateMemory(numVertex * sizeof(aiVector3D));
+			model->b_normal = context->m_vertex_memory.allocateMemory(numVertex * sizeof(aiVector3D));
 			model->b_index = context->m_vertex_memory.allocateMemory(numIndex * sizeof(uint32_t));
 
-			std::array<vk::BufferCopy, 2> copy;
+			std::array<vk::BufferCopy, 3> copy;
 			copy[0].srcOffset = vertex.getInfo().offset;
 			copy[0].dstOffset = model->b_vertex.getInfo().offset;
 			copy[0].size = vertex.getInfo().range;
-			copy[1].srcOffset = index.getInfo().offset;
-			copy[1].dstOffset = model->b_index.getInfo().offset;
-			copy[1].size = index.getInfo().range;
+			copy[1].srcOffset = normal.getInfo().offset;
+			copy[1].dstOffset = model->b_normal.getInfo().offset;
+			copy[1].size = normal.getInfo().range;
+			copy[2].srcOffset = index.getInfo().offset;
+			copy[2].dstOffset = model->b_index.getInfo().offset;
+			copy[2].size = index.getInfo().range;
 			cmd.copyBuffer(vertex.getInfo().buffer, model->b_vertex.getInfo().buffer, copy);
 		}
 
@@ -139,6 +146,7 @@ struct Model
 
 		vk::BufferMemoryBarrier barrier[] = {
 			model->b_vertex.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
+			model->b_normal.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
 			model->b_index.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
 			model->u_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 		};
@@ -456,6 +464,18 @@ struct RTModel
 	}
 };
 
+struct LDCPoint
+{
+	float p;
+	uint normal;
+	uint inout_next;
+};
+struct LDCCell
+{
+	u8vec4 usepoint_xyz;
+	uvec3 normal[3];
+};
+
 namespace LDC
 {
 struct Ctx
@@ -467,6 +487,9 @@ struct Ctx
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniquePipelineLayout m_pipeline_layout;
 	vk::UniquePipeline m_pipeline;
+	vk::UniquePipeline m_pipeline_MakeDCCell;
+
+	vk::UniquePipeline m_pipeline_makeDCV;
 
 	Ctx(std::shared_ptr<btr::Context>& ctx, const RT::Ctx& rt_ctx)
 	{
@@ -474,14 +497,17 @@ struct Ctx
 		// descriptor set layout
 		{
 			vk::DescriptorSetLayoutBinding accelerationStructureLayoutBinding;
-			auto stage = vk::ShaderStageFlagBits::eRaygenKHR;
+			auto stage = vk::ShaderStageFlagBits::eRaygenKHR| vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eCompute;
 			vk::DescriptorSetLayoutBinding binding[] = {
 				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eUniformBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(10, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(11, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(12, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(13, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(14, vk::DescriptorType::eStorageBuffer, 1, stage),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
@@ -508,98 +534,123 @@ struct Ctx
 			m_pipeline_layout = ctx->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
-		const uint32_t shaderIndexRaygen = 0;
-		const uint32_t shaderIndexMiss = 1;
-		const uint32_t shaderIndexClosestHit = 2;
-
-		std::array<vk::PipelineShaderStageCreateInfo, 3> shaderStages;
-		const char* name[] =
 		{
-			"LDC_Construct.rgen.spv",
-			"LDC_Construct.rmiss.spv",
-			"LDC_Construct.rchit.spv",
-		};
-		std::array<vk::UniqueShaderModule, array_length(name)> shader;
-		for (size_t i = 0; i < array_length(name); i++)
-		{
-			shader[i] = loadShaderUnique(ctx->m_device, btr::getResourceShaderPath() + name[i]);
-		}
-		shaderStages[0].setModule(shader[0].get()).setStage(vk::ShaderStageFlagBits::eRaygenKHR).setPName("main");
-		shaderStages[1].setModule(shader[1].get()).setStage(vk::ShaderStageFlagBits::eMissKHR).setPName("main");
-		shaderStages[2].setModule(shader[2].get()).setStage(vk::ShaderStageFlagBits::eClosestHitKHR).setPName("main");
+			const uint32_t shaderIndexRaygen = 0;
+			const uint32_t shaderIndexMiss = 1;
+			const uint32_t shaderIndexClosestHit = 2;
 
-		//	Setup ray tracing shader groups
-		std::array<vk::RayTracingShaderGroupCreateInfoKHR, 3> shader_group;
-		shader_group[0].type = vk::RayTracingShaderGroupTypeKHR::eGeneral;
-		shader_group[0].generalShader = shaderIndexRaygen;
-		shader_group[0].closestHitShader = VK_SHADER_UNUSED_KHR;
-		shader_group[0].anyHitShader = VK_SHADER_UNUSED_KHR;
-		shader_group[0].intersectionShader = VK_SHADER_UNUSED_KHR;
-
-		shader_group[1].type = vk::RayTracingShaderGroupTypeKHR::eGeneral;
-		shader_group[1].generalShader = shaderIndexMiss;
-		shader_group[1].closestHitShader = VK_SHADER_UNUSED_KHR;
-		shader_group[1].anyHitShader = VK_SHADER_UNUSED_KHR;
-		shader_group[1].intersectionShader = VK_SHADER_UNUSED_KHR;
-
-		shader_group[2].type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup;
-		shader_group[2].generalShader = VK_SHADER_UNUSED_KHR;
-		shader_group[2].closestHitShader = shaderIndexClosestHit;
-		shader_group[2].anyHitShader = VK_SHADER_UNUSED_KHR;
-		shader_group[2].intersectionShader = VK_SHADER_UNUSED_KHR;
-
-		vk::RayTracingPipelineCreateInfoKHR rayTracingPipelineCI;
-		rayTracingPipelineCI.stageCount = static_cast<uint32_t>(shaderStages.size());
-		rayTracingPipelineCI.pStages = shaderStages.data();
-		rayTracingPipelineCI.groupCount = static_cast<uint32_t>(shader_group.size());
-		rayTracingPipelineCI.pGroups = shader_group.data();
-		rayTracingPipelineCI.maxRecursionDepth = 1;
-		rayTracingPipelineCI.layout = m_pipeline_layout.get();
-		m_pipeline = ctx->m_device.createRayTracingPipelineKHRUnique(vk::PipelineCache(), rayTracingPipelineCI).value;
-
-		// shader binding table
-		{
-			auto props2 = ctx->m_physical_device.getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceRayTracingPropertiesKHR>();
-			auto rayTracingProperties = props2.get<vk::PhysicalDeviceRayTracingPropertiesKHR>();
-
-			const uint32_t groupCount = static_cast<uint32_t>(shader_group.size());
-
-			const uint32_t sbtSize = rayTracingProperties.shaderGroupBaseAlignment * groupCount;
-
-			m_shader_binding_table_memory.setup(ctx->m_physical_device, ctx->m_device, vk::BufferUsageFlagBits::eRayTracingKHR | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, sbtSize);
-			b_shader_binding_table = m_shader_binding_table_memory.allocateMemory(sbtSize);
-
-			auto shaderHandleStorage = ctx->m_device.getRayTracingShaderGroupHandlesKHR<uint8_t>(m_pipeline.get(), 0, groupCount, rayTracingProperties.shaderGroupHandleSize * groupCount);
-
-			std::vector<uint8_t> data(sbtSize);
-			for (uint32_t i = 0; i < groupCount; i++)
+			struct { const char* name; vk::ShaderStageFlagBits flag; } shader_param[] =
 			{
-				memcpy(data.data() + i * rayTracingProperties.shaderGroupBaseAlignment, shaderHandleStorage.data() + i * rayTracingProperties.shaderGroupHandleSize, rayTracingProperties.shaderGroupHandleSize);
-			}
-			cmd.updateBuffer<uint8_t>(b_shader_binding_table.getInfo().buffer, b_shader_binding_table.getInfo().offset, data);
-
-			vk::BufferMemoryBarrier barrier[] =
-			{
-				b_shader_binding_table.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
+				{"LDC_Construct.rgen.spv", vk::ShaderStageFlagBits::eRaygenKHR},
+				{"LDC_Construct.rmiss.spv", vk::ShaderStageFlagBits::eMissKHR},
+				{"LDC_Construct.rchit.spv", vk::ShaderStageFlagBits::eClosestHitKHR},
 			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
+			std::array<vk::UniqueShaderModule, array_length(shader_param)> shader;
+			std::array<vk::PipelineShaderStageCreateInfo, array_length(shader_param)> shaderStages;
+			for (size_t i = 0; i < array_length(shader_param); i++)
+			{
+				shader[i] = loadShaderUnique(ctx->m_device, btr::getResourceShaderPath() + shader_param[i].name);
+				shaderStages[i].setModule(shader[i].get()).setStage(shader_param[i].flag).setPName("main");
+			}
+
+			//	Setup ray tracing shader groups
+			std::array<vk::RayTracingShaderGroupCreateInfoKHR, 3> shader_group;
+			shader_group[0].type = vk::RayTracingShaderGroupTypeKHR::eGeneral;
+			shader_group[0].generalShader = shaderIndexRaygen;
+			shader_group[0].closestHitShader = VK_SHADER_UNUSED_KHR;
+			shader_group[0].anyHitShader = VK_SHADER_UNUSED_KHR;
+			shader_group[0].intersectionShader = VK_SHADER_UNUSED_KHR;
+
+			shader_group[1].type = vk::RayTracingShaderGroupTypeKHR::eGeneral;
+			shader_group[1].generalShader = shaderIndexMiss;
+			shader_group[1].closestHitShader = VK_SHADER_UNUSED_KHR;
+			shader_group[1].anyHitShader = VK_SHADER_UNUSED_KHR;
+			shader_group[1].intersectionShader = VK_SHADER_UNUSED_KHR;
+
+			shader_group[2].type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup;
+			shader_group[2].generalShader = VK_SHADER_UNUSED_KHR;
+			shader_group[2].closestHitShader = shaderIndexClosestHit;
+			shader_group[2].anyHitShader = VK_SHADER_UNUSED_KHR;
+			shader_group[2].intersectionShader = VK_SHADER_UNUSED_KHR;
+
+			vk::RayTracingPipelineCreateInfoKHR rayTracingPipelineCI;
+			rayTracingPipelineCI.stageCount = static_cast<uint32_t>(shaderStages.size());
+			rayTracingPipelineCI.pStages = shaderStages.data();
+			rayTracingPipelineCI.groupCount = static_cast<uint32_t>(shader_group.size());
+			rayTracingPipelineCI.pGroups = shader_group.data();
+			rayTracingPipelineCI.maxRecursionDepth = 1;
+			rayTracingPipelineCI.layout = m_pipeline_layout.get();
+			m_pipeline = ctx->m_device.createRayTracingPipelineKHRUnique(vk::PipelineCache(), rayTracingPipelineCI).value;
+
+			// shader binding table
+			{
+				auto props2 = ctx->m_physical_device.getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceRayTracingPropertiesKHR>();
+				auto rayTracingProperties = props2.get<vk::PhysicalDeviceRayTracingPropertiesKHR>();
+
+				const uint32_t groupCount = static_cast<uint32_t>(shader_group.size());
+
+				const uint32_t sbtSize = rayTracingProperties.shaderGroupBaseAlignment * groupCount;
+
+				m_shader_binding_table_memory.setup(ctx->m_physical_device, ctx->m_device, vk::BufferUsageFlagBits::eRayTracingKHR | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, sbtSize);
+				b_shader_binding_table = m_shader_binding_table_memory.allocateMemory(sbtSize);
+
+				auto shaderHandleStorage = ctx->m_device.getRayTracingShaderGroupHandlesKHR<uint8_t>(m_pipeline.get(), 0, groupCount, rayTracingProperties.shaderGroupHandleSize * groupCount);
+
+				std::vector<uint8_t> data(sbtSize);
+				for (uint32_t i = 0; i < groupCount; i++)
+				{
+					memcpy(data.data() + i * rayTracingProperties.shaderGroupBaseAlignment, shaderHandleStorage.data() + i * rayTracingProperties.shaderGroupHandleSize, rayTracingProperties.shaderGroupHandleSize);
+				}
+				cmd.updateBuffer<uint8_t>(b_shader_binding_table.getInfo().buffer, b_shader_binding_table.getInfo().offset, data);
+
+				vk::BufferMemoryBarrier barrier[] =
+				{
+					b_shader_binding_table.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
 
 
-			m_shader_binding_table[0].buffer = b_shader_binding_table.getInfo().buffer;
-			m_shader_binding_table[0].offset = static_cast<VkDeviceSize>(rayTracingProperties.shaderGroupBaseAlignment * 0);
-			m_shader_binding_table[0].stride = rayTracingProperties.shaderGroupBaseAlignment;
-			m_shader_binding_table[0].size = sbtSize;
+				m_shader_binding_table[0].buffer = b_shader_binding_table.getInfo().buffer;
+				m_shader_binding_table[0].offset = static_cast<VkDeviceSize>(rayTracingProperties.shaderGroupBaseAlignment * 0);
+				m_shader_binding_table[0].stride = rayTracingProperties.shaderGroupBaseAlignment;
+				m_shader_binding_table[0].size = sbtSize;
 
-			m_shader_binding_table[1].buffer = b_shader_binding_table.getInfo().buffer;
-			m_shader_binding_table[1].offset = static_cast<VkDeviceSize>(rayTracingProperties.shaderGroupBaseAlignment * 1);
-			m_shader_binding_table[1].stride = rayTracingProperties.shaderGroupBaseAlignment;
-			m_shader_binding_table[1].size = sbtSize;
+				m_shader_binding_table[1].buffer = b_shader_binding_table.getInfo().buffer;
+				m_shader_binding_table[1].offset = static_cast<VkDeviceSize>(rayTracingProperties.shaderGroupBaseAlignment * 1);
+				m_shader_binding_table[1].stride = rayTracingProperties.shaderGroupBaseAlignment;
+				m_shader_binding_table[1].size = sbtSize;
 
-			vk::StridedBufferRegionKHR hitShaderSBTEntry;
-			m_shader_binding_table[2].buffer = b_shader_binding_table.getInfo().buffer;
-			m_shader_binding_table[2].offset = static_cast<VkDeviceSize>(rayTracingProperties.shaderGroupBaseAlignment * 2);
-			m_shader_binding_table[2].stride = rayTracingProperties.shaderGroupBaseAlignment;
-			m_shader_binding_table[2].size = sbtSize;
+				vk::StridedBufferRegionKHR hitShaderSBTEntry;
+				m_shader_binding_table[2].buffer = b_shader_binding_table.getInfo().buffer;
+				m_shader_binding_table[2].offset = static_cast<VkDeviceSize>(rayTracingProperties.shaderGroupBaseAlignment * 2);
+				m_shader_binding_table[2].stride = rayTracingProperties.shaderGroupBaseAlignment;
+				m_shader_binding_table[2].size = sbtSize;
+
+			}
+
+		}
+
+		// compute pipeline
+		{
+			struct { const char* name; vk::ShaderStageFlagBits flag; } shader_param[] =
+			{
+				{"DC_MakeLDCCell.comp.spv", vk::ShaderStageFlagBits::eCompute},
+			};
+			std::array<vk::UniqueShaderModule, array_length(shader_param)> shader;
+			std::array<vk::PipelineShaderStageCreateInfo, array_length(shader_param)> shaderStages;
+			for (size_t i = 0; i < array_length(shader_param); i++)
+			{
+				shader[i] = loadShaderUnique(ctx->m_device, btr::getResourceShaderPath() + shader_param[i].name);
+				shaderStages[i].setModule(shader[i].get()).setStage(shader_param[i].flag).setPName("main");
+			}
+
+			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
+			{
+				vk::ComputePipelineCreateInfo()
+				.setStage(shaderStages[0])
+				.setLayout(m_pipeline_layout.get()),
+			};
+			m_pipeline_MakeDCCell = ctx->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[0]).value;
 
 		}
 
@@ -611,10 +662,18 @@ struct Ctx
 
 struct LDCModel
 {
+	// https://www.4gamer.net/games/269/G026934/20170406111/
+	// LDC = Layered Depth Cube
+	// DCV = Dual Contouring Vertex
 	vk::UniqueDescriptorSet m_DS;
-	btr::BufferMemoryEx<uint> b_ldc_counter;
-	btr::BufferMemoryEx<uvec2> b_ldc_area;
-	btr::BufferMemoryEx<vec2> b_ldc_length;
+	btr::BufferMemoryEx<int> b_ldc_counter;
+	btr::BufferMemoryEx<int> b_ldc_point_link_head;
+	btr::BufferMemoryEx<LDCPoint> b_ldc_point;
+	btr::BufferMemoryEx<LDCCell> b_ldc_cell;
+	btr::BufferMemoryEx<uvec3> b_dcvertex_index;
+	btr::BufferMemoryEx<vec3> b_dcvertex;
+
+	btr::BufferMemoryEx<vec3> b_dc_vertex;
 
 	static std::shared_ptr<LDCModel> Construct(std::shared_ptr<btr::Context>& ctx, RT::Ctx& rt_ctx, LDC::Ctx& ldc_ctx, Model& model, RTModel& rt_model)
 	{
@@ -632,21 +691,30 @@ struct LDCModel
 			desc_info.setPSetLayouts(layouts);
 			ldc_model->m_DS = std::move(ctx->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
 
-			ldc_model->b_ldc_counter = ctx->m_staging_memory.allocateMemory<uint>(1);
-			ldc_model->b_ldc_area = ctx->m_staging_memory.allocateMemory<uvec2>(64*64*3);
-			ldc_model->b_ldc_length = ctx->m_staging_memory.allocateMemory<vec2>(64*64*3*8);
+			ldc_model->b_ldc_counter = ctx->m_storage_memory.allocateMemory<int>(1);
+			ldc_model->b_ldc_point_link_head = ctx->m_storage_memory.allocateMemory<int>(64*64*3);
+			ldc_model->b_ldc_point = ctx->m_storage_memory.allocateMemory<LDCPoint>(64*64*3*8);
+			ldc_model->b_ldc_cell = ctx->m_storage_memory.allocateMemory<LDCCell>(64*64*64);
+
+			ldc_model->b_dc_vertex = ctx->m_storage_memory.allocateMemory<vec3>(64*64*64);
 
 			vk::DescriptorBufferInfo uniforms[] =
 			{
 				model.u_info.getInfo(),
 			};
-			vk::DescriptorBufferInfo storages[] =
+			vk::DescriptorBufferInfo model_storages[] =
 			{
 				model.b_vertex.getInfo(),
+				model.b_normal.getInfo(),
 				model.b_index.getInfo(),
+			};
+			vk::DescriptorBufferInfo ldc_storages[] =
+			{
 				ldc_model->b_ldc_counter.getInfo(),
-				ldc_model->b_ldc_area.getInfo(),
-				ldc_model->b_ldc_length.getInfo(),
+				ldc_model->b_ldc_point_link_head.getInfo(),
+				ldc_model->b_ldc_point.getInfo(),
+				ldc_model->b_ldc_cell.getInfo(),
+				ldc_model->b_dc_vertex.getInfo(),
 			};
 
 			vk::WriteDescriptorSet write[] =
@@ -659,32 +727,73 @@ struct LDCModel
 				.setDstSet(ldc_model->m_DS.get()),
 				vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(array_length(storages))
-				.setPBufferInfo(storages)
+				.setDescriptorCount(array_length(model_storages))
+				.setPBufferInfo(model_storages)
 				.setDstBinding(1)
+				.setDstSet(ldc_model->m_DS.get()),
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(array_length(ldc_storages))
+				.setPBufferInfo(ldc_storages)
+				.setDstBinding(10)
 				.setDstSet(ldc_model->m_DS.get()),
 			};
 			ctx->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
 
 		}
 		// Dispatch the ray tracing commands
-		cmd.bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, ldc_ctx.m_pipeline.get());
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, ldc_ctx.m_pipeline_layout.get(), 0, { rt_model.m_DS_AS.get() }, {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, ldc_ctx.m_pipeline_layout.get(), 1, { ldc_model->m_DS.get() }, {});
+		{
+			cmd.bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, ldc_ctx.m_pipeline.get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, ldc_ctx.m_pipeline_layout.get(), 0, { rt_model.m_DS_AS.get() }, {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, ldc_ctx.m_pipeline_layout.get(), 1, { ldc_model->m_DS.get() }, {});
 
-		cmd.traceRaysKHR(
-			ldc_ctx.m_shader_binding_table[0],
-			ldc_ctx.m_shader_binding_table[1],
-			ldc_ctx.m_shader_binding_table[2],
-			ldc_ctx.m_shader_binding_table[3],
-			64,
-			64,
-			3);
+			cmd.traceRaysKHR(
+				ldc_ctx.m_shader_binding_table[0],
+				ldc_ctx.m_shader_binding_table[1],
+				ldc_ctx.m_shader_binding_table[2],
+				ldc_ctx.m_shader_binding_table[3],
+				64,
+				64,
+				3);
+
+
+			vk::BufferMemoryBarrier barrier[] =
+			{
+				ldc_model->b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				ldc_model->b_ldc_point.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eRayTracingShaderKHR, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
+		}
+
+
+		{
+
+			cmd.fillBuffer(ldc_model->b_ldc_cell.getInfo().buffer, ldc_model->b_ldc_cell.getInfo().offset, ldc_model->b_ldc_cell.getInfo().range, 0);
+			vk::BufferMemoryBarrier barrier[] =
+			{
+				ldc_model->b_ldc_cell.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead| vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, ldc_ctx.m_pipeline_MakeDCCell.get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, ldc_ctx.m_pipeline_layout.get(), 0, { rt_model.m_DS_AS.get() }, {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, ldc_ctx.m_pipeline_layout.get(), 1, { ldc_model->m_DS.get() }, {});
+
+			cmd.dispatch(1, 64, 3);
+		}
 
 
 		return ldc_model;
 	}
 
+};
+
+struct DCModel
+{
+	DCModel(btr::Context& ctx, LDC::Ctx& ldc_ctx, LDCModel& ldc_model)
+	{
+
+	}
 };
 struct Renderer
 {
@@ -713,7 +822,7 @@ int main()
 
 	auto context = app.m_context;
 
-	auto model = Model::LoadModel(context, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\tiny.x");
+	auto model = Model::LoadModel(context, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Box.dae");
 	
 	std::shared_ptr<RT::Ctx> rt_ctx = std::make_shared<RT::Ctx>(context);
 	auto rt_model = RTModel::Construct(context, *rt_ctx, *model);

@@ -161,6 +161,7 @@ App::App(const AppDescriptor& desc)
 			VK_KHR_SHADER_ATOMIC_INT64_EXTENSION_NAME,
 			VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME,
 			VK_KHR_8BIT_STORAGE_EXTENSION_NAME,
+			VK_KHR_MAINTENANCE3_EXTENSION_NAME,
 			VK_KHR_RAY_TRACING_EXTENSION_NAME,
 			VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME,
 			VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
@@ -223,6 +224,10 @@ App::App(const AppDescriptor& desc)
 		vk::PhysicalDeviceRayTracingFeaturesKHR RayTracing_Feature;
 		RayTracing_Feature.rayTracing = VK_TRUE;
 		BufferDeviceAddres_Feature.setPNext(&RayTracing_Feature);
+
+		vk::PhysicalDeviceScalarBlockLayoutFeatures ScalarBlock_Feature;
+		ScalarBlock_Feature.scalarBlockLayout = VK_TRUE;
+		RayTracing_Feature.setPNext(&ScalarBlock_Feature);
 
 		m_device = m_physical_device.createDeviceUnique(device_info, nullptr);
 	}
