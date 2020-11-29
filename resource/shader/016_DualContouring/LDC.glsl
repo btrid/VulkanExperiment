@@ -15,24 +15,29 @@ struct LDCPoint
 {
 	float p;
 	uint normal;
-	uint inout_next;
+	int inout_next;
 };
 struct LDCCell
 {
-	uint usepoint_xyz;
+	uint useaxis_xyz;
 	uvec3 normal;
 };
-
-//layout(set=0,binding=0) uniform accelerationStructureEXT topLevelAS;
-layout(set=1,binding=0, std140) uniform InfoUniform {Info u_info; };
-layout(set=1,binding=1, scalar) buffer Vertices { vec3 b_vertex[]; };
-layout(set=1,binding=2, scalar) buffer Normals { vec3 b_normal[]; };
-layout(set=1,binding=3, scalar) buffer Indices { uvec3 b_index[]; };
-layout(set=1,binding=10, std430) buffer LDCCounter { int b_ldc_counter; };
-layout(set=1,binding=11, std430) buffer LDCPointLinkHead { int b_ldc_point_link_head[]; };
-layout(set=1,binding=12, scalar) buffer LDCPointBuffer { LDCPoint b_ldc_point[]; };
-layout(set=1,binding=13, scalar) buffer LDCCellBuffer { LDCCell b_ldc_cell[]; };
-layout(set=1,binding=14, scalar) buffer DCVVertex { vec3 b_dcv_vertex[]; };
+#if defined(USE_AS)
+layout(set=USE_AS,binding=0) uniform accelerationStructureEXT topLevelAS;
+#endif
+#if defined(USE_LDC)
+layout(set=USE_LDC,binding=0, std140) uniform InfoUniform {Info u_info; };
+layout(set=USE_LDC,binding=1, scalar) buffer Vertices { vec3 b_vertex[]; };
+layout(set=USE_LDC,binding=2, scalar) buffer Normals { vec3 b_normal[]; };
+layout(set=USE_LDC,binding=3, scalar) buffer Indices { uvec3 b_index[]; };
+layout(set=USE_LDC,binding=10, std430) buffer LDCCounter { int b_ldc_counter; };
+layout(set=USE_LDC,binding=11, std430) buffer LDCPointLinkHead { int b_ldc_point_link_head[]; };
+layout(set=USE_LDC,binding=12, scalar) buffer LDCPointBuffer { LDCPoint b_ldc_point[]; };
+layout(set=USE_LDC,binding=13, scalar) buffer LDCCellBuffer { LDCCell b_ldc_cell[]; };
+layout(set=USE_LDC,binding=14, scalar) buffer DCVVertex { vec3 b_dcv_vertex[]; };
+layout(set=USE_LDC,binding=15, scalar) buffer DCVCounter { int b_dcv_counter; };
+layout(set=USE_LDC,binding=16, scalar) buffer DCVHashMap { int b_dcv_hashmap[]; };
+#endif
 
 
 // https://discourse.panda3d.org/t/glsl-octahedral-normal-packing/15233
@@ -40,17 +45,18 @@ f16vec2 sign_not_zero(in f16vec2 v)
 {
     return fma(step(f16vec2(0.0), v), f16vec2(2.0), f16vec2(-1.0));
 }
-f16vec2 pack_normal_octahedron(in vec3 _v)
+uint pack_normal_octahedron(in vec3 _v)
 {
 //	v.xy /= dot(abs(v), vec3(1));
 	f16vec3 v = f16vec3(_v.xy / dot(abs(_v), vec3(1)), _v.z);
-	return mix(v.xy, (float16_t(1.0) - abs(v.yx)) * sign_not_zero(v.xy), step(v.z, float16_t(0.0)));
+//	return mix(v.xy, (float16_t(1.0) - abs(v.yx)) * sign_not_zero(v.xy), step(v.z, float16_t(0.0)));
+	return packHalf2x16(mix(v.xy, (float16_t(1.0) - abs(v.yx)) * sign_not_zero(v.xy), step(v.z, float16_t(0.0))));
 
 }
-vec3 unpack_normal_octahedron(in f16vec2 packed_nrm)
+vec3 unpack_normal_octahedron(in uint packed_nrm)
 {
-
-	f16vec3 v = f16vec3(packed_nrm.xy, float16_t(1.0) - abs(packed_nrm.x) - abs(packed_nrm.y));
+	vec2 nrm = unpackHalf2x16(packed_nrm);
+	f16vec3 v = f16vec3(nrm.xy, float16_t(1.0) - abs(nrm.x) - abs(nrm.y));
 	v.xy = mix(v.xy, (float16_t(1.0) - abs(v.yx)) * sign_not_zero(v.xy), step(v.z, float16_t(0)));
 	return normalize(v);
 }

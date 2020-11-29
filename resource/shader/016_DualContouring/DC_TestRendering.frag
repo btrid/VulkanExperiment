@@ -5,15 +5,13 @@
 #include "DC.glsl"
 
 layout(location=1) in Transform{
-	vec3 Position;
+	flat uvec3 CellID;
 }transform;
 
+
+layout(location = 0) out vec4 FragColor;
 void main()
 {
-
-	uint a = uint(0);
-	atomicOr(a, 1);	
-//	imageAtomicOr(t_voxel_image[0], ivec3(0), 1);
-//	imageAtomicOr(t_voxel_image[0], ivec3(0), 1);
+	FragColor = vec4(1.);
 
 }

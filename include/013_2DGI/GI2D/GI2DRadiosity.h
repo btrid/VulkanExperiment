@@ -1008,7 +1008,7 @@ struct GI2DRadiosity
 	void executeGlobalLineRadiosityRendering(const vk::CommandBuffer& cmd)
 	{
 
-		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
+		DebugLabel _label(cmd, __FUNCTION__);
 
 		// render_target‚É‘‚­
 		{

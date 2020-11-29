@@ -6,6 +6,7 @@
 layout(location = 0) rayPayloadInEXT float RayMaxT;
 layout(location = 1) rayPayloadEXT uint PackedNormal;
 
+
 void main()
 {
   RayMaxT = -1.;

@@ -1,6 +1,9 @@
 #version 460
 
 #extension GL_GOOGLE_include_directive : require
+
+#define USE_AS 0
+#define USE_LDC 1
 #include "LDC.glsl"
 
 layout(location = 0) rayPayloadInEXT float RayMaxT;
@@ -20,10 +23,10 @@ void main()
 
 	const vec3 barycentric = vec3(1.0 - baryCoord.x - baryCoord.y, baryCoord.x, baryCoord.y);
 	vec3 Normal = normalize(n0 * barycentric.x + n1 * barycentric.y + n2 * barycentric.z);
-  point.normal = packHalf2x16(pack_normal_octahedron(Normal));
+  point.normal = pack_normal_octahedron(Normal);
 
 	int index = atomicAdd(b_ldc_counter, 1);
- 	uint head = b_ldc_point_link_head[gl_LaunchIDEXT.x + gl_LaunchIDEXT.y*gl_LaunchSizeEXT.x + gl_LaunchIDEXT.z*gl_LaunchSizeEXT.x*gl_LaunchSizeEXT.y];
+ 	int head = b_ldc_point_link_head[gl_LaunchIDEXT.x + gl_LaunchIDEXT.y*gl_LaunchSizeEXT.x + gl_LaunchIDEXT.z*gl_LaunchSizeEXT.x*gl_LaunchSizeEXT.y];
   b_ldc_point_link_head[gl_LaunchIDEXT.x + gl_LaunchIDEXT.y*gl_LaunchSizeEXT.x + gl_LaunchIDEXT.z*gl_LaunchSizeEXT.x*gl_LaunchSizeEXT.y] = index;
   
   point.inout_next = (gl_HitKindEXT==gl_HitKindFrontFacingTriangleEXT?0:(1<<31)) | head;

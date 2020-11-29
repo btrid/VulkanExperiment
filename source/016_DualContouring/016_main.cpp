@@ -485,11 +485,14 @@ struct Ctx
 	std::array<vk::StridedBufferRegionKHR, 4> m_shader_binding_table;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
-	vk::UniquePipelineLayout m_pipeline_layout;
-	vk::UniquePipeline m_pipeline;
+	vk::UniquePipelineLayout m_pipelinelayout_MakeLDC;
+	vk::UniquePipeline m_pipeline_MakeLDC;
+	vk::UniquePipelineLayout m_pipelinelayout_MakeDCCell;
 	vk::UniquePipeline m_pipeline_MakeDCCell;
+	vk::UniquePipeline m_pipeline_MakeDCVertex;
 
 	vk::UniquePipeline m_pipeline_makeDCV;
+
 
 	Ctx(std::shared_ptr<btr::Context>& ctx, const RT::Ctx& rt_ctx)
 	{
@@ -497,7 +500,7 @@ struct Ctx
 		// descriptor set layout
 		{
 			vk::DescriptorSetLayoutBinding accelerationStructureLayoutBinding;
-			auto stage = vk::ShaderStageFlagBits::eRaygenKHR| vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eCompute;
+			auto stage = vk::ShaderStageFlagBits::eRaygenKHR| vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eCompute| vk::ShaderStageFlagBits::eVertex;
 			vk::DescriptorSetLayoutBinding binding[] = {
 				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eUniformBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
@@ -508,6 +511,8 @@ struct Ctx
 				vk::DescriptorSetLayoutBinding(12, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(13, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(14, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(15, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(16, vk::DescriptorType::eStorageBuffer, 1, stage),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
@@ -519,19 +524,25 @@ struct Ctx
 
 		// pipeline layout
 		{
-			vk::DescriptorSetLayout layouts[] = 
+			vk::DescriptorSetLayout layouts[] =
 			{
 				rt_ctx.m_descriptor_set_layout.get(),
 				m_descriptor_set_layout.get(),
 			};
-			// 				vk::PushConstantRange constants[] = {
-			// 				};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
-			//				pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
-			//				pipeline_layout_info.setPPushConstantRanges(constants);
-			m_pipeline_layout = ctx->m_device.createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipelinelayout_MakeLDC = ctx->m_device.createPipelineLayoutUnique(pipeline_layout_info);
+		}
+		{
+			vk::DescriptorSetLayout layouts[] =
+			{
+				m_descriptor_set_layout.get(),
+			};
+			vk::PipelineLayoutCreateInfo pipeline_layout_info;
+			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
+			pipeline_layout_info.setPSetLayouts(layouts);
+			m_pipelinelayout_MakeDCCell = ctx->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 		{
@@ -579,8 +590,8 @@ struct Ctx
 			rayTracingPipelineCI.groupCount = static_cast<uint32_t>(shader_group.size());
 			rayTracingPipelineCI.pGroups = shader_group.data();
 			rayTracingPipelineCI.maxRecursionDepth = 1;
-			rayTracingPipelineCI.layout = m_pipeline_layout.get();
-			m_pipeline = ctx->m_device.createRayTracingPipelineKHRUnique(vk::PipelineCache(), rayTracingPipelineCI).value;
+			rayTracingPipelineCI.layout = m_pipelinelayout_MakeLDC.get();
+			m_pipeline_MakeLDC = ctx->m_device.createRayTracingPipelineKHRUnique(vk::PipelineCache(), rayTracingPipelineCI).value;
 
 			// shader binding table
 			{
@@ -594,7 +605,7 @@ struct Ctx
 				m_shader_binding_table_memory.setup(ctx->m_physical_device, ctx->m_device, vk::BufferUsageFlagBits::eRayTracingKHR | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, sbtSize);
 				b_shader_binding_table = m_shader_binding_table_memory.allocateMemory(sbtSize);
 
-				auto shaderHandleStorage = ctx->m_device.getRayTracingShaderGroupHandlesKHR<uint8_t>(m_pipeline.get(), 0, groupCount, rayTracingProperties.shaderGroupHandleSize * groupCount);
+				auto shaderHandleStorage = ctx->m_device.getRayTracingShaderGroupHandlesKHR<uint8_t>(m_pipeline_MakeLDC.get(), 0, groupCount, rayTracingProperties.shaderGroupHandleSize * groupCount);
 
 				std::vector<uint8_t> data(sbtSize);
 				for (uint32_t i = 0; i < groupCount; i++)
@@ -635,6 +646,7 @@ struct Ctx
 			struct { const char* name; vk::ShaderStageFlagBits flag; } shader_param[] =
 			{
 				{"DC_MakeLDCCell.comp.spv", vk::ShaderStageFlagBits::eCompute},
+				{"DC_MakeDCVertex.comp.spv", vk::ShaderStageFlagBits::eCompute},
 			};
 			std::array<vk::UniqueShaderModule, array_length(shader_param)> shader;
 			std::array<vk::PipelineShaderStageCreateInfo, array_length(shader_param)> shaderStages;
@@ -648,32 +660,35 @@ struct Ctx
 			{
 				vk::ComputePipelineCreateInfo()
 				.setStage(shaderStages[0])
-				.setLayout(m_pipeline_layout.get()),
+				.setLayout(m_pipelinelayout_MakeDCCell.get()),
+				vk::ComputePipelineCreateInfo()
+				.setStage(shaderStages[1])
+				.setLayout(m_pipelinelayout_MakeDCCell.get()),
 			};
 			m_pipeline_MakeDCCell = ctx->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[0]).value;
+			m_pipeline_MakeDCVertex = ctx->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[1]).value;
 
 		}
-
 	}
+
 
 };
 
 }
-
 struct LDCModel
 {
 	// https://www.4gamer.net/games/269/G026934/20170406111/
 	// LDC = Layered Depth Cube
 	// DCV = Dual Contouring Vertex
 	vk::UniqueDescriptorSet m_DS;
-	btr::BufferMemoryEx<int> b_ldc_counter;
-	btr::BufferMemoryEx<int> b_ldc_point_link_head;
+	btr::BufferMemoryEx<int32_t> b_ldc_counter;
+	btr::BufferMemoryEx<int32_t> b_ldc_point_link_head;
 	btr::BufferMemoryEx<LDCPoint> b_ldc_point;
 	btr::BufferMemoryEx<LDCCell> b_ldc_cell;
 	btr::BufferMemoryEx<uvec3> b_dcvertex_index;
-	btr::BufferMemoryEx<vec3> b_dcvertex;
-
 	btr::BufferMemoryEx<vec3> b_dc_vertex;
+	btr::BufferMemoryEx<int32_t> b_dcv_counter;
+	btr::BufferMemoryEx<int32_t> b_dcv_hashmap;
 
 	static std::shared_ptr<LDCModel> Construct(std::shared_ptr<btr::Context>& ctx, RT::Ctx& rt_ctx, LDC::Ctx& ldc_ctx, Model& model, RTModel& rt_model)
 	{
@@ -697,7 +712,8 @@ struct LDCModel
 			ldc_model->b_ldc_cell = ctx->m_storage_memory.allocateMemory<LDCCell>(64*64*64);
 
 			ldc_model->b_dc_vertex = ctx->m_storage_memory.allocateMemory<vec3>(64*64*64);
-
+			ldc_model->b_dcv_counter = ctx->m_storage_memory.allocateMemory<int32_t>(1);
+			ldc_model->b_dcv_hashmap = ctx->m_storage_memory.allocateMemory<int32_t>(64*64*64);
 			vk::DescriptorBufferInfo uniforms[] =
 			{
 				model.u_info.getInfo(),
@@ -715,6 +731,8 @@ struct LDCModel
 				ldc_model->b_ldc_point.getInfo(),
 				ldc_model->b_ldc_cell.getInfo(),
 				ldc_model->b_dc_vertex.getInfo(),
+				ldc_model->b_dcv_counter.getInfo(),
+				ldc_model->b_dcv_hashmap.getInfo(),
 			};
 
 			vk::WriteDescriptorSet write[] =
@@ -743,9 +761,9 @@ struct LDCModel
 		}
 		// Dispatch the ray tracing commands
 		{
-			cmd.bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, ldc_ctx.m_pipeline.get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, ldc_ctx.m_pipeline_layout.get(), 0, { rt_model.m_DS_AS.get() }, {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, ldc_ctx.m_pipeline_layout.get(), 1, { ldc_model->m_DS.get() }, {});
+			cmd.bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, ldc_ctx.m_pipeline_MakeLDC.get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, ldc_ctx.m_pipelinelayout_MakeLDC.get(), 0, { rt_model.m_DS_AS.get() }, {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, ldc_ctx.m_pipelinelayout_MakeLDC.get(), 1, { ldc_model->m_DS.get() }, {});
 
 			cmd.traceRaysKHR(
 				ldc_ctx.m_shader_binding_table[0],
@@ -769,6 +787,8 @@ struct LDCModel
 		{
 
 			cmd.fillBuffer(ldc_model->b_ldc_cell.getInfo().buffer, ldc_model->b_ldc_cell.getInfo().offset, ldc_model->b_ldc_cell.getInfo().range, 0);
+			cmd.fillBuffer(ldc_model->b_dcv_counter.getInfo().buffer, ldc_model->b_dcv_counter.getInfo().offset, ldc_model->b_dcv_counter.getInfo().range, 0);
+			cmd.fillBuffer(ldc_model->b_dcv_hashmap.getInfo().buffer, ldc_model->b_dcv_hashmap.getInfo().offset, ldc_model->b_dcv_hashmap.getInfo().range, -1);
 			vk::BufferMemoryBarrier barrier[] =
 			{
 				ldc_model->b_ldc_cell.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead| vk::AccessFlagBits::eShaderRead),
@@ -776,12 +796,10 @@ struct LDCModel
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, ldc_ctx.m_pipeline_MakeDCCell.get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, ldc_ctx.m_pipeline_layout.get(), 0, { rt_model.m_DS_AS.get() }, {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, ldc_ctx.m_pipeline_layout.get(), 1, { ldc_model->m_DS.get() }, {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, ldc_ctx.m_pipelinelayout_MakeDCCell.get(), 0, { ldc_model->m_DS.get() }, {});
 
 			cmd.dispatch(1, 64, 3);
 		}
-
 
 		return ldc_model;
 	}
@@ -797,8 +815,178 @@ struct DCModel
 };
 struct Renderer
 {
-	void render(vk::CommandBuffer& cmd)
+	vk::UniqueRenderPass m_TestRender_pass;
+	vk::UniqueFramebuffer m_TestRender_framebuffer;
+	vk::UniquePipeline m_pipeline_TestRender;
+
+	Renderer(btr::Context& ctx, LDC::Ctx& ldc_ctx, LDCModel& ldc_model, RenderTarget& rt)
 	{
+
+		{
+			// レンダーパス
+			{
+				vk::AttachmentReference color_ref[] = {
+					vk::AttachmentReference().setLayout(vk::ImageLayout::eColorAttachmentOptimal).setAttachment(0),
+				};
+
+				// sub pass
+				vk::SubpassDescription subpass;
+				subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+				subpass.setInputAttachmentCount(0);
+				subpass.setPInputAttachments(nullptr);
+				subpass.setColorAttachmentCount(array_length(color_ref));
+				subpass.setPColorAttachments(color_ref);
+
+				vk::AttachmentDescription attach_desc[] =
+				{
+					// color1
+					vk::AttachmentDescription()
+					.setFormat(rt.m_info.format)
+					.setSamples(vk::SampleCountFlagBits::e1)
+					.setLoadOp(vk::AttachmentLoadOp::eLoad)
+					.setStoreOp(vk::AttachmentStoreOp::eStore)
+					.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
+					.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
+				};
+				vk::RenderPassCreateInfo renderpass_info;
+				renderpass_info.setAttachmentCount(array_length(attach_desc));
+				renderpass_info.setPAttachments(attach_desc);
+				renderpass_info.setSubpassCount(1);
+				renderpass_info.setPSubpasses(&subpass);
+
+				m_TestRender_pass = ctx.m_device.createRenderPassUnique(renderpass_info);
+
+				{
+					vk::ImageView view[] = {
+						rt.m_view,
+					};
+					vk::FramebufferCreateInfo framebuffer_info;
+					framebuffer_info.setRenderPass(m_TestRender_pass.get());
+					framebuffer_info.setAttachmentCount(array_length(view));
+					framebuffer_info.setPAttachments(view);
+					framebuffer_info.setWidth(rt.m_info.extent.width);
+					framebuffer_info.setHeight(rt.m_info.extent.height);
+					framebuffer_info.setLayers(1);
+
+					m_TestRender_framebuffer = ctx.m_device.createFramebufferUnique(framebuffer_info);
+				}
+			}
+
+			// graphics pipeline
+			{
+				struct { const char* name; vk::ShaderStageFlagBits flag; } shader_param[] =
+				{
+					{"DC_TestRendering.vert.spv", vk::ShaderStageFlagBits::eVertex},
+					{"DC_TestRendering.frag.spv", vk::ShaderStageFlagBits::eFragment},
+				};
+				std::array<vk::UniqueShaderModule, array_length(shader_param)> shader;
+				std::array<vk::PipelineShaderStageCreateInfo, array_length(shader_param)> shaderStages;
+				for (size_t i = 0; i < array_length(shader_param); i++)
+				{
+					shader[i] = loadShaderUnique(ctx.m_device, btr::getResourceShaderPath() + shader_param[i].name);
+					shaderStages[i].setModule(shader[i].get()).setStage(shader_param[i].flag).setPName("main");
+				}
+				// assembly
+				vk::PipelineInputAssemblyStateCreateInfo assembly_info;
+				assembly_info.setPrimitiveRestartEnable(VK_FALSE);
+				assembly_info.setTopology(vk::PrimitiveTopology::ePointList);
+
+				// viewport
+				vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)rt.m_resolution.width, (float)rt.m_resolution.height, 0.f, 1.f);
+				vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(rt.m_resolution.width, rt.m_resolution.height));
+				vk::PipelineViewportStateCreateInfo viewportInfo;
+				viewportInfo.setViewportCount(1);
+				viewportInfo.setPViewports(&viewport);
+				viewportInfo.setScissorCount(1);
+				viewportInfo.setPScissors(&scissor);
+
+
+				vk::PipelineRasterizationStateCreateInfo rasterization_info;
+				rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
+				rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
+				rasterization_info.setCullMode(vk::CullModeFlagBits::eNone);
+				rasterization_info.setLineWidth(1.f);
+
+				vk::PipelineMultisampleStateCreateInfo sample_info;
+				sample_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);
+
+				vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
+				depth_stencil_info.setDepthTestEnable(VK_FALSE);
+				depth_stencil_info.setDepthWriteEnable(VK_FALSE);
+				depth_stencil_info.setDepthCompareOp(vk::CompareOp::eGreaterOrEqual);
+				depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
+				depth_stencil_info.setStencilTestEnable(VK_FALSE);
+
+
+				vk::PipelineColorBlendAttachmentState blend_state;
+				blend_state.setBlendEnable(VK_TRUE);
+				blend_state.setColorBlendOp(vk::BlendOp::eAdd);
+				blend_state.setSrcColorBlendFactor(vk::BlendFactor::eOne);
+				blend_state.setDstColorBlendFactor(vk::BlendFactor::eOne);
+				blend_state.setAlphaBlendOp(vk::BlendOp::eAdd);
+				blend_state.setSrcAlphaBlendFactor(vk::BlendFactor::eOne);
+				blend_state.setDstAlphaBlendFactor(vk::BlendFactor::eZero);
+				blend_state.setColorWriteMask(vk::ColorComponentFlagBits::eR
+					| vk::ColorComponentFlagBits::eG
+					| vk::ColorComponentFlagBits::eB);
+
+				vk::PipelineColorBlendStateCreateInfo blend_info;
+				blend_info.setAttachmentCount(1);
+				blend_info.setPAttachments(&blend_state);
+
+				vk::PipelineVertexInputStateCreateInfo vertex_input_info;
+
+				vk::GraphicsPipelineCreateInfo graphics_pipeline_info =
+					vk::GraphicsPipelineCreateInfo()
+					.setStageCount(array_length(shaderStages))
+					.setPStages(shaderStages.data())
+					.setPVertexInputState(&vertex_input_info)
+					.setPInputAssemblyState(&assembly_info)
+					.setPViewportState(&viewportInfo)
+					.setPRasterizationState(&rasterization_info)
+					.setPMultisampleState(&sample_info)
+					.setLayout(ldc_ctx.m_pipelinelayout_MakeDCCell.get())
+					.setRenderPass(m_TestRender_pass.get())
+					.setPDepthStencilState(&depth_stencil_info)
+					.setPColorBlendState(&blend_info);
+				m_pipeline_TestRender = ctx.m_device.createGraphicsPipelineUnique(vk::PipelineCache(), graphics_pipeline_info).value;
+			}
+		}
+	}
+	void ExecuteTestRender(vk::CommandBuffer cmd, LDC::Ctx& ldc_ctx, LDCModel& ldc_model, RenderTarget& rt)
+	{
+		{
+			// 			vk::BufferMemoryBarrier to_read[] = {
+			// 				b_radiance.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			// 			};
+
+			vk::ImageMemoryBarrier image_barrier;
+			image_barrier.setImage(rt.m_image);
+			image_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+			image_barrier.setOldLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			image_barrier.setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+			image_barrier.setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			image_barrier.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eColorAttachmentOutput,
+				{}, {}, { /*array_size(to_read), to_read*/ }, { image_barrier });
+		}
+
+		vk::RenderPassBeginInfo begin_render_Info;
+		begin_render_Info.setRenderPass(m_TestRender_pass.get());
+		begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(rt.m_info.extent.width, rt.m_info.extent.height)));
+		begin_render_Info.setFramebuffer(m_TestRender_framebuffer.get());
+		begin_render_Info.setClearValueCount(1);
+		auto color = vk::ClearValue(vk::ClearColorValue(std::array<uint32_t, 4>{}));
+		begin_render_Info.setPClearValues(&color);
+		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
+
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, ldc_ctx.m_pipelinelayout_MakeDCCell.get(), 0, ldc_model.m_DS.get(), {});
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline_TestRender.get());
+		cmd.draw(64*64*64, 1, 0, 0);
+
+		cmd.endRenderPass();
 
 	}
 };
@@ -829,9 +1017,8 @@ int main()
 
 	std::shared_ptr<LDC::Ctx> ldc_ctx = std::make_shared<LDC::Ctx>(context, *rt_ctx);
 	auto ldc_model = LDCModel::Construct(context, *rt_ctx, *ldc_ctx, *model, *rt_model);
-	{
+	Renderer renderer(*context, *ldc_ctx, *ldc_model, *app.m_window->getFrontBuffer());
 
-	}
 	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
 	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchain());
 
@@ -846,7 +1033,7 @@ int main()
 			enum
 			{
 				cmd_render_clear,
-				cmd_gi2d,
+				cmd_render,
 				cmd_render_present,
 				cmd_num
 			};
@@ -854,6 +1041,10 @@ int main()
 
 			{
 				cmds[cmd_render_clear] = clear_pipeline.execute();
+				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+				renderer.ExecuteTestRender(cmd, *ldc_ctx, *ldc_model, *app.m_window->getFrontBuffer());
+				cmd.end();
+				cmds[cmd_render] = cmd;
 				cmds[cmd_render_present] = present_pipeline.execute();
 			}
 			app.submit(std::move(cmds));

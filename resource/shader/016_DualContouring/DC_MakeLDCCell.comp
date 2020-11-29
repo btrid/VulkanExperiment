@@ -1,8 +1,9 @@
 #version 460
 
 #extension GL_GOOGLE_include_directive : require
-#include "LDC.glsl"
 
+#define USE_LDC 0
+#include "LDC.glsl"
 
 layout (local_size_x = 64) in;
 
@@ -18,18 +19,22 @@ void main()
 	vec3 extent = u_info.m_aabb_max.xyz-u_info.m_aabb_min.xyz;
 	vec3 voxel_size = extent / reso;
 
-	uint index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*reso.x + gl_GlobalInvocationID.z*reso.x*reso.y;
+	int index = int(gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*reso.x + gl_GlobalInvocationID.z*reso.x*reso.y);
 	for(index = b_ldc_point_link_head[index]; index>=0;)
 	{
 		LDCPoint point = b_ldc_point[index];
 		index = point.inout_next&((1<<31)-1);
 
-		uint p = uint(mod(point.p/voxel_size[gl_GlobalInvocationID.z], 255.));
+		uint p = uint(fract(point.p/voxel_size[gl_GlobalInvocationID.z])*255.);
 		uint n = point.normal;
 
 		uvec3 cell_index = uvec3(s+f + voxel_size*point.p);		
 		uint i = cell_index.x + cell_index.y*reso.x + cell_index.z*reso.x*reso.y;
-		atomicOr(b_ldc_cell[i].usepoint_xyz, ((1u<<gl_GlobalInvocationID.z)<<24u)|(p<<(gl_GlobalInvocationID.z*8u)));
+		uint is_used = atomicOr(b_ldc_cell[i].useaxis_xyz, ((1u<<gl_GlobalInvocationID.z)<<24u)|(p<<(gl_GlobalInvocationID.z*8u)));
+		if(is_used == 0)
+		{
+			b_dcv_hashmap[i] = atomicAdd(b_dcv_counter, 1);
+		}
 		b_ldc_cell[i].normal[gl_GlobalInvocationID.z] = n;
 	}
 

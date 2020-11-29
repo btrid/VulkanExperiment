@@ -1,36 +1,121 @@
 #version 460
 
 #extension GL_GOOGLE_include_directive : require
+
+#define USE_LDC 0
 #include "LDC.glsl"
 
 
-layout (local_size_x = 64) in;
+/* Solves for x in  A*x = b.
+	'A' contains the matrix row-wise.
+	'b' and 'x' are column vectors.
+Uses cramers rule.
+*/
+vec3 solve3x3(in float A[3][3], in float b[3]) {
+	float det = determinant(mat3(
+		A[0][0], A[0][1], A[0][2],
+		A[1][0], A[1][1], A[1][2],
+		A[2][0], A[2][1], A[2][2]));
+
+	if (abs(det) <= 1e-12) {
+//		std::cerr << "Oh-oh - small determinant: " << det << std::endl;
+		return vec3(0.5);
+	}
+
+	return vec3 
+	(
+		determinant(mat3(
+			b[0],    A[0][1], A[0][2],
+			b[1],    A[1][1], A[1][2],
+			b[2],    A[2][1], A[2][2])),
+
+		determinant(mat3(
+			A[0][0], b[0],    A[0][2],
+			A[1][0], b[1],    A[1][2],
+			A[2][0], b[2],    A[2][2])),
+
+		determinant(mat3(
+			A[0][0], A[0][1], b[0],
+			A[1][0], A[1][1], b[1],
+			A[2][0], A[2][1], b[2]))
+	) / det;
+}
+
+/*
+Solves A*x = b for over-determined systems.
+
+Solves using  At*A*x = At*b   trick where At is the transponate of A
+*/
+vec3 leastSquares(in int N, in vec3[24] A, in float b[24])
+{
+	float At_A[3][3];
+	float At_b[3];
+
+	for (int i=0; i<3; ++i)
+	{
+		for (int j=0; j<3; ++j)
+		{
+			float sum = 0.;
+			for (int k=0; k<N; ++k)
+			{
+				sum += A[k][i] * A[k][j];
+			}
+			At_A[i][j] = sum;
+		}
+	}
+
+	for (int i=0; i<3; ++i)
+	{
+		float sum = 0.;
+		for (int k=0; k<N; ++k)
+		{
+			sum += A[k][i] * b[k];
+		}
+
+		At_b[i] = sum;
+	}
+	return solve3x3(At_A, At_b);
+}
+
+layout (local_size_x = 64, local_size_y=3) in;
 
 void main() 
 {
+	vec3 axis[] = {vec3(1., 0., 0.),vec3(0., 1., 0.),vec3(0., 0., 1.),};
 	uvec3 reso = gl_WorkGroupID * gl_WorkGroupSize;
 
-	vec3 f = axis[gl_GlobalInvocationID.z];
-	vec3 s = axis[(gl_GlobalInvocationID.z+1)%3]; 
-	vec3 u = axis[(gl_GlobalInvocationID.z+2)%3]; 
-	
 	vec3 extent = u_info.m_aabb_max.xyz-u_info.m_aabb_min.xyz;
 	vec3 voxel_size = extent / reso;
 
-	uint index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*reso.x + gl_GlobalInvocationID.z*reso.x*reso.y;
-	
+	vec3 plane_normal[24];
+	float d[24];
+	int normal_num = 0;
+
+	for(int z = 0; z < 2; z++)
+	for(int y = 0; y < 2; y++)
+	for(int x = 0; x < 2; x++)
 	{
-		LDCPoint point = b_ldc_point[index];
-		index = point.inout_next&((1<<31)-1);
+		uvec3 _i = gl_GlobalInvocationID+uvec3(x, y, z);
+		uint idx = _i.x + _i.y*reso.x + _i.z*reso.x*reso.y;
+		if(b_dcv_hashmap[idx]<0){ continue; }
 
-		uint p = uint(mod(point.p/voxel_size[gl_GlobalInvocationID.z], 255.));
-		uint n = point.normal;
+		LDCCell cell = b_ldc_cell[idx];
+		uint use_axis = (cell.useaxis_xyz>>24);
+		vec3 point = vec3((uvec3(cell.useaxis_xyz)>>uvec3(0, 8, 16)) & uvec3((1<<8)-1)) / 255. * voxel_size;
 
-		uvec3 cell_index = uvec3(s+f + voxel_size*point.p);		
-		uint i = cell_index.x + cell_index.y*reso.x + cell_index.z*reso.x*reso.y;
-		atomicOr(b_ldc_cell[i].usepoint_xyz, ((1u<<gl_GlobalInvocationID.z)<<24u)|(p<<(gl_GlobalInvocationID.z*8u)));
-		b_ldc_cell[i].normal[gl_GlobalInvocationID.z] = n;
+		for(int i = 0; i < 3; i++)
+		{
+			if((use_axis&(1<<i)) == 0){ continue; }
+
+			vec3 nrm = unpack_normal_octahedron(cell.normal[i]);
+			plane_normal[normal_num] = nrm;
+			d[normal_num] = dot(nrm, vec3(point[i])*axis[i]);
+			normal_num++;
+		}
+
 	}
 
+	uint idx = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*reso.x + gl_GlobalInvocationID.z*reso.x*reso.y;
+	b_dcv_vertex[idx] = leastSquares(normal_num, plane_normal, d);
 
 }
