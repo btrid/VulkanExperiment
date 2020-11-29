@@ -4,6 +4,8 @@
 #define USE_LDC 0
 #include "LDC.glsl"
 
+#define SETPOINT_CAMERA 1
+#include "btrlib/Camera.glsl"
 out gl_PerVertex
 {
 	vec4 gl_Position;
@@ -25,9 +27,9 @@ void main()
 	{
 		gl_Position = vec4(-1.);
 	}
-	else
+//	else
 	{
-		gl_Position = vec4(x, y, z, 1.0);
+		gl_Position = u_camera[0].u_projection * u_camera[0].u_view * vec4(x, y, z, 1.0);
 		gl_PointSize = 10.;
 		Out.CellID = uvec3(x, y, z);
 	}

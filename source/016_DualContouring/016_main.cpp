@@ -24,7 +24,7 @@
 #include <applib/App.h>
 #include <applib/AppPipeline.h>
 #include <btrlib/Context.h>
-
+#include <applib/sCameraManager.h>
 #include <applib/sAppImGui.h>
 
 
@@ -818,9 +818,22 @@ struct Renderer
 	vk::UniqueRenderPass m_TestRender_pass;
 	vk::UniqueFramebuffer m_TestRender_framebuffer;
 	vk::UniquePipeline m_pipeline_TestRender;
+	vk::UniquePipelineLayout m_pl;
 
 	Renderer(btr::Context& ctx, LDC::Ctx& ldc_ctx, LDCModel& ldc_model, RenderTarget& rt)
 	{
+		// pipeline layout
+		{
+			vk::DescriptorSetLayout layouts[] =
+			{
+				ldc_ctx.m_descriptor_set_layout.get(),
+				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
+			};
+			vk::PipelineLayoutCreateInfo pipeline_layout_info;
+			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
+			pipeline_layout_info.setPSetLayouts(layouts);
+			m_pl = ctx.m_device.createPipelineLayoutUnique(pipeline_layout_info);
+		}
 
 		{
 			// レンダーパス
@@ -945,7 +958,7 @@ struct Renderer
 					.setPViewportState(&viewportInfo)
 					.setPRasterizationState(&rasterization_info)
 					.setPMultisampleState(&sample_info)
-					.setLayout(ldc_ctx.m_pipelinelayout_MakeDCCell.get())
+					.setLayout(m_pl.get())
 					.setRenderPass(m_TestRender_pass.get())
 					.setPDepthStencilState(&depth_stencil_info)
 					.setPColorBlendState(&blend_info);
@@ -981,7 +994,8 @@ struct Renderer
 		begin_render_Info.setPClearValues(&color);
 		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, ldc_ctx.m_pipelinelayout_MakeDCCell.get(), 0, ldc_model.m_DS.get(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl.get(), 0, ldc_model.m_DS.get(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline_TestRender.get());
 		cmd.draw(64*64*64, 1, 0, 0);
@@ -996,8 +1010,8 @@ int main()
 
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
-	camera->getData().m_position = glm::vec3(0.f, 0.f, 1.f);
-	camera->getData().m_target = glm::vec3(0.f, 0.f, 0.f);
+	camera->getData().m_position = glm::vec3(0.f, 100.f, -200.f);
+	camera->getData().m_target = glm::vec3(100.f, 0.f, 100.f);
 	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
 	camera->getData().m_width = 1024;
 	camera->getData().m_height = 1024;
@@ -1041,11 +1055,16 @@ int main()
 
 			{
 				cmds[cmd_render_clear] = clear_pipeline.execute();
+				cmds[cmd_render_present] = present_pipeline.execute();
+			}
+			{
+//				cCamera::sCamera::Order().getCameraList()[0]->control(app.m_window->getInput(), 0.016f);
+
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				renderer.ExecuteTestRender(cmd, *ldc_ctx, *ldc_model, *app.m_window->getFrontBuffer());
 				cmd.end();
 				cmds[cmd_render] = cmd;
-				cmds[cmd_render_present] = present_pipeline.execute();
+
 			}
 			app.submit(std::move(cmds));
 		}
