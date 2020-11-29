@@ -98,11 +98,10 @@ struct Model
 				std::copy(mesh->mFaces[n].mIndices, mesh->mFaces[n].mIndices + 3, index.getMappedPtr<uint32_t>(index_offset));
 				index_offset += 3;
 			}
-			std::copy(mesh->mVertices, mesh->mVertices + mesh->mNumVertices, vertex.getMappedPtr<aiVector3D>(vertex_offset));
-			std::copy(mesh->mNormals, mesh->mNormals + mesh->mNumVertices, normal.getMappedPtr<aiVector3D>(vertex_offset));
 
 			for (uint32_t v = 0; v < mesh->mNumVertices; v++)
 			{
+				mesh->mVertices[v] *= 100.f;
 				info.m_aabb_min.x = std::min(info.m_aabb_min.x, mesh->mVertices[v].x);
 				info.m_aabb_min.y = std::min(info.m_aabb_min.y, mesh->mVertices[v].y);
 				info.m_aabb_min.z = std::min(info.m_aabb_min.z, mesh->mVertices[v].z);
@@ -110,6 +109,10 @@ struct Model
 				info.m_aabb_max.y = std::max(info.m_aabb_max.y, mesh->mVertices[v].y);
 				info.m_aabb_max.z = std::max(info.m_aabb_max.z, mesh->mVertices[v].z);
 			}
+
+			std::copy(mesh->mVertices, mesh->mVertices + mesh->mNumVertices, vertex.getMappedPtr<aiVector3D>(vertex_offset));
+			std::copy(mesh->mNormals, mesh->mNormals + mesh->mNumVertices, normal.getMappedPtr<aiVector3D>(vertex_offset));
+
 
 			vertex_offset += mesh->mNumVertices;
 		}
@@ -761,6 +764,18 @@ struct LDCModel
 		}
 		// Dispatch the ray tracing commands
 		{
+			{
+
+				cmd.fillBuffer(ldc_model->b_ldc_counter.getInfo().buffer, ldc_model->b_ldc_counter.getInfo().offset, ldc_model->b_ldc_counter.getInfo().range, 0);
+
+				vk::BufferMemoryBarrier barrier[] =
+				{
+					ldc_model->b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eRayTracingShaderKHR, {}, {}, { array_size(barrier), barrier }, {});
+
+			}
+
 			cmd.bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, ldc_ctx.m_pipeline_MakeLDC.get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, ldc_ctx.m_pipelinelayout_MakeLDC.get(), 0, { rt_model.m_DS_AS.get() }, {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, ldc_ctx.m_pipelinelayout_MakeLDC.get(), 1, { ldc_model->m_DS.get() }, {});
@@ -779,6 +794,7 @@ struct LDCModel
 			{
 				ldc_model->b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				ldc_model->b_ldc_point.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				ldc_model->b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eRayTracingShaderKHR, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
 		}
@@ -791,7 +807,7 @@ struct LDCModel
 			cmd.fillBuffer(ldc_model->b_dcv_hashmap.getInfo().buffer, ldc_model->b_dcv_hashmap.getInfo().offset, ldc_model->b_dcv_hashmap.getInfo().range, -1);
 			vk::BufferMemoryBarrier barrier[] =
 			{
-				ldc_model->b_ldc_cell.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead| vk::AccessFlagBits::eShaderRead),
+				ldc_model->b_ldc_cell.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
 

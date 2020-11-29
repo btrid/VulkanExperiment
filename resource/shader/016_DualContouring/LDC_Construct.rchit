@@ -29,8 +29,8 @@ void main()
  	int head = b_ldc_point_link_head[gl_LaunchIDEXT.x + gl_LaunchIDEXT.y*gl_LaunchSizeEXT.x + gl_LaunchIDEXT.z*gl_LaunchSizeEXT.x*gl_LaunchSizeEXT.y];
   b_ldc_point_link_head[gl_LaunchIDEXT.x + gl_LaunchIDEXT.y*gl_LaunchSizeEXT.x + gl_LaunchIDEXT.z*gl_LaunchSizeEXT.x*gl_LaunchSizeEXT.y] = index;
   
-  point.inout_next = (gl_HitKindEXT==gl_HitKindFrontFacingTriangleEXT?0:(1<<31)) | head;
-  b_ldc_point[gl_LaunchIDEXT.x + gl_LaunchIDEXT.y*gl_LaunchSizeEXT.x + gl_LaunchIDEXT.z*gl_LaunchSizeEXT.x*gl_LaunchSizeEXT.y] = point;
+  point.inout_next = /*(gl_HitKindEXT==gl_HitKindFrontFacingTriangleEXT?0:(1<<31)) |*/ head;
+  b_ldc_point[index] = point;
 
 
 
