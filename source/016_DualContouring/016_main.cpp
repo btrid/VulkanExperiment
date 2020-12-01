@@ -625,18 +625,18 @@ struct Ctx
 
 
 				m_shader_binding_table[0].buffer = b_shader_binding_table.getInfo().buffer;
-				m_shader_binding_table[0].offset = static_cast<VkDeviceSize>(rayTracingProperties.shaderGroupBaseAlignment * 0);
+				m_shader_binding_table[0].offset = static_cast<VkDeviceSize>(b_shader_binding_table.getInfo().offset + rayTracingProperties.shaderGroupBaseAlignment * 0);
 				m_shader_binding_table[0].stride = rayTracingProperties.shaderGroupBaseAlignment;
 				m_shader_binding_table[0].size = sbtSize;
 
 				m_shader_binding_table[1].buffer = b_shader_binding_table.getInfo().buffer;
-				m_shader_binding_table[1].offset = static_cast<VkDeviceSize>(rayTracingProperties.shaderGroupBaseAlignment * 1);
+				m_shader_binding_table[1].offset = static_cast<VkDeviceSize>(b_shader_binding_table.getInfo().offset + rayTracingProperties.shaderGroupBaseAlignment * 1);
 				m_shader_binding_table[1].stride = rayTracingProperties.shaderGroupBaseAlignment;
 				m_shader_binding_table[1].size = sbtSize;
 
 				vk::StridedBufferRegionKHR hitShaderSBTEntry;
 				m_shader_binding_table[2].buffer = b_shader_binding_table.getInfo().buffer;
-				m_shader_binding_table[2].offset = static_cast<VkDeviceSize>(rayTracingProperties.shaderGroupBaseAlignment * 2);
+				m_shader_binding_table[2].offset = static_cast<VkDeviceSize>(b_shader_binding_table.getInfo().offset + rayTracingProperties.shaderGroupBaseAlignment * 2);
 				m_shader_binding_table[2].stride = rayTracingProperties.shaderGroupBaseAlignment;
 				m_shader_binding_table[2].size = sbtSize;
 
@@ -711,7 +711,7 @@ struct LDCModel
 
 			ldc_model->b_ldc_counter = ctx->m_storage_memory.allocateMemory<int>(1);
 			ldc_model->b_ldc_point_link_head = ctx->m_storage_memory.allocateMemory<int>(64*64*3);
-			ldc_model->b_ldc_point = ctx->m_storage_memory.allocateMemory<LDCPoint>(64*64*3*8);
+			ldc_model->b_ldc_point = ctx->m_storage_memory.allocateMemory<LDCPoint>(64*64*3*64);
 			ldc_model->b_ldc_cell = ctx->m_storage_memory.allocateMemory<LDCCell>(64*64*64);
 
 			ldc_model->b_dc_vertex = ctx->m_storage_memory.allocateMemory<vec3>(64*64*64);
@@ -771,6 +771,8 @@ struct LDCModel
 				vk::BufferMemoryBarrier barrier[] =
 				{
 					ldc_model->b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+					ldc_model->b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+					ldc_model->b_ldc_point.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 				};
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eRayTracingShaderKHR, {}, {}, { array_size(barrier), barrier }, {});
 
@@ -792,9 +794,9 @@ struct LDCModel
 
 			vk::BufferMemoryBarrier barrier[] =
 			{
+				ldc_model->b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				ldc_model->b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				ldc_model->b_ldc_point.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-				ldc_model->b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eRayTracingShaderKHR, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
 		}
@@ -905,8 +907,8 @@ struct Renderer
 			{
 				struct { const char* name; vk::ShaderStageFlagBits flag; } shader_param[] =
 				{
-					{"DC_TestRendering.vert.spv", vk::ShaderStageFlagBits::eVertex},
-					{"DC_TestRendering.frag.spv", vk::ShaderStageFlagBits::eFragment},
+					{"DCDebug_Rendering.vert.spv", vk::ShaderStageFlagBits::eVertex},
+					{"DCDebug_Rendering.frag.spv", vk::ShaderStageFlagBits::eFragment},
 				};
 				std::array<vk::UniqueShaderModule, array_length(shader_param)> shader;
 				std::array<vk::PipelineShaderStageCreateInfo, array_length(shader_param)> shaderStages;

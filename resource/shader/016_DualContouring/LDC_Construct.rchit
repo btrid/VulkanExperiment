@@ -26,8 +26,9 @@ void main()
   point.normal = pack_normal_octahedron(Normal);
 
 	int index = atomicAdd(b_ldc_counter, 1);
- 	int head = b_ldc_point_link_head[gl_LaunchIDEXT.x + gl_LaunchIDEXT.y*gl_LaunchSizeEXT.x + gl_LaunchIDEXT.z*gl_LaunchSizeEXT.x*gl_LaunchSizeEXT.y];
-  b_ldc_point_link_head[gl_LaunchIDEXT.x + gl_LaunchIDEXT.y*gl_LaunchSizeEXT.x + gl_LaunchIDEXT.z*gl_LaunchSizeEXT.x*gl_LaunchSizeEXT.y] = index;
+  uint grid = gl_LaunchIDEXT.x + gl_LaunchIDEXT.y*gl_LaunchSizeEXT.x + gl_LaunchIDEXT.z*gl_LaunchSizeEXT.x*gl_LaunchSizeEXT.y;
+ 	int head = b_ldc_point_link_head[grid];
+  b_ldc_point_link_head[grid] = index;
   
   point.inout_next = /*(gl_HitKindEXT==gl_HitKindFrontFacingTriangleEXT?0:(1<<31)) |*/ head;
   b_ldc_point[index] = point;

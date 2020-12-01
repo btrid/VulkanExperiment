@@ -11,5 +11,5 @@ SET output=-o ../binary/
 %exe% %output%/DC_MakeLDCCell.comp.spv DC_MakeLDCCell.comp
 %exe% %output%/DC_MakeDCVertex.comp.spv DC_MakeDCVertex.comp
 
-%exe% %output%/DC_TestRendering.vert.spv DC_TestRendering.vert
-%exe% %output%/DC_TestRendering.frag.spv DC_TestRendering.frag
+%exe% %output%/DCDebug_Rendering.vert.spv DCDebug_Rendering.vert
+%exe% %output%/DCDebug_Rendering.frag.spv DCDebug_Rendering.frag

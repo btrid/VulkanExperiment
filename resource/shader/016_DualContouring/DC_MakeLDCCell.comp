@@ -24,6 +24,7 @@ void main()
 	{
 		LDCPoint point = b_ldc_point[index];
 		index = point.inout_next&int((1u<<31u)-1);
+		index = point.inout_next;
 
 		uint p = uint(fract(point.p/voxel_size[gl_GlobalInvocationID.z])*255.);
 		uint n = point.normal;

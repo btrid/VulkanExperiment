@@ -19,15 +19,15 @@ void main()
 	vec3 min = u_info.m_aabb_min.xyz;
 
 	vec3 rate = (vec3(gl_LaunchIDEXT) / gl_LaunchSizeEXT);
-	vec3 origin = min + (s+u) * extent * rate;
+	vec3 origin = min + s*rate.x + u*rate.y;
 
-	RayMaxT = 0.;
+	RayMaxT = 0.01;
 	float tmax = extent[gl_LaunchIDEXT.z];
 
 	b_ldc_point_link_head[gl_LaunchIDEXT.x + gl_LaunchIDEXT.y*gl_LaunchSizeEXT.x + gl_LaunchIDEXT.z*gl_LaunchSizeEXT.x*gl_LaunchSizeEXT.y] = -1;
 	for (;;)
 	{
-		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin.xyz, RayMaxT, f, tmax, 0);
+		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin.xyz, RayMaxT, vec3(0., 0., 1.), tmax, 0);
 		if(RayMaxT < 0.)
 		{
 			break;
