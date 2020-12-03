@@ -82,7 +82,7 @@ layout (local_size_x = 64, local_size_y=3) in;
 void main() 
 {
 	vec3 axis[] = {vec3(1., 0., 0.),vec3(0., 1., 0.),vec3(0., 0., 1.),};
-	uvec3 reso = gl_WorkGroupID * gl_WorkGroupSize;
+	uvec3 reso = gl_NumWorkGroups * gl_WorkGroupSize;
 
 	vec3 extent = u_info.m_aabb_max.xyz-u_info.m_aabb_min.xyz;
 	vec3 voxel_size = extent / reso;

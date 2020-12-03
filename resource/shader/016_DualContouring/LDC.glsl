@@ -5,6 +5,7 @@
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_EXT_shader_explicit_arithmetic_types : require
 
+#define Voxel_Reso uvec3(64)
 struct Info
 {
 	vec4 m_aabb_min;

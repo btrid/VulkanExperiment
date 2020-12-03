@@ -22,11 +22,14 @@ void main()
 	int z = gl_VertexIndex.x/64/64;
 	int y = (gl_VertexIndex.x/64) % 64;
 	int x = gl_VertexIndex.x % 64;
-	gl_PointSize = 10.;
+	gl_PointSize = 1.;
 	Out.CellID = uvec3(x, y, z);
 
-	int hash = b_dcv_hashmap[gl_VertexIndex];
-	if(b_ldc_counter<1)
+//	int hash = b_dcv_hashmap[gl_VertexIndex];
+	int hash = b_ldc_point_link_head[gl_VertexIndex];
+//	int hash = b_ldc_counter;
+//	int hash = b_dcv_counter;
+	if(hash <= 0)
 	{
 		gl_Position = vec4(-1.);
 	}

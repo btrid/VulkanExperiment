@@ -8,5 +8,5 @@ layout(location = 0) rayPayloadInEXT float RayMaxT;
 
 void main()
 {
-  RayMaxT = -1.;
+  RayMaxT = -10.;
 }

@@ -10,28 +10,30 @@ layout (local_size_x = 64) in;
 void main() 
 {
 	vec3 axis[] = {vec3(1., 0., 0.),vec3(0., 1., 0.),vec3(0., 0., 1.)};
-	uvec3 reso = gl_WorkGroupID * gl_WorkGroupSize;
+//	uvec3 reso = gl_NumWorkGroups * gl_WorkGroupSize;
+
+	vec3 extent = u_info.m_aabb_max.xyz-u_info.m_aabb_min.xyz;
+	vec3 voxel_size = extent / Voxel_Reso;
 
 	vec3 f = axis[gl_GlobalInvocationID.z];
 	vec3 s = axis[(gl_GlobalInvocationID.z+1)%3]; 
 	vec3 u = axis[(gl_GlobalInvocationID.z+2)%3]; 
 	
-	vec3 extent = u_info.m_aabb_max.xyz-u_info.m_aabb_min.xyz;
-	vec3 voxel_size = extent / reso;
 
-	int index = int(gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*reso.x + gl_GlobalInvocationID.z*reso.x*reso.y);
+	int index = int(gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*Voxel_Reso.x + gl_GlobalInvocationID.z*Voxel_Reso.x*Voxel_Reso.y);
 	for(index = b_ldc_point_link_head[index]; index>=0;)
 	{
 		LDCPoint point = b_ldc_point[index];
-		index = point.inout_next&int((1u<<31u)-1);
+//		index = point.inout_next&int((1u<<31u)-1);
 		index = point.inout_next;
 
-		uint p = uint(fract(point.p/voxel_size[gl_GlobalInvocationID.z])*255.);
+		float voxel_p = (point.p/extent*Voxel_Reso)[gl_GlobalInvocationID.z];
 		uint n = point.normal;
 
-		uvec3 cell_index = uvec3(s+u + f*point.p);		
-		uint i = cell_index.x + cell_index.y*reso.x + cell_index.z*reso.x*reso.y;
-		uint is_used = atomicOr(b_ldc_cell[i].useaxis_xyz, ((1u<<gl_GlobalInvocationID.z)<<24u)|(p<<(gl_GlobalInvocationID.z*8u)));
+		uvec3 voxel_index = uvec3(s*gl_GlobalInvocationID.x + u*gl_GlobalInvocationID.y + f*voxel_p);
+		uint i = voxel_index.x + voxel_index.y*Voxel_Reso.x + voxel_index.z*Voxel_Reso.x*Voxel_Reso.y;
+//		uint is_used = atomicOr(b_ldc_cell[i].useaxis_xyz, ((1u<<gl_GlobalInvocationID.z)<<24u)|(uint(fract(voxel_p)*255.)<<(gl_GlobalInvocationID.z*8u)));
+		uint is_used = atomicOr(b_ldc_cell[i].useaxis_xyz, 1);
 		if(is_used == 0)
 		{
 			b_dcv_hashmap[i] = atomicAdd(b_dcv_counter, 1);

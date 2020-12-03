@@ -46,6 +46,7 @@ struct Model
 		vec4 m_aabb_min;
 		vec4 m_aabb_max;
 		uint m_vertex_num;
+		uint m_primitive_num;
 	};
 	btr::BufferMemory b_vertex;
 	btr::BufferMemory b_normal;
@@ -140,6 +141,7 @@ struct Model
 		}
 
 		{
+			info.m_primitive_num = numIndex / 3;
 			model->m_info = info;
 			model->u_info = context->m_uniform_memory.allocateMemory<Info>(1);
 
@@ -324,7 +326,7 @@ struct RTModel
 			accelerationBuildGeometryInfo.scratchData.deviceAddress = scratchBuffer.deviceAddress;
 
 			vk::AccelerationStructureBuildOffsetInfoKHR accelerationBuildOffsetInfo{};
-			accelerationBuildOffsetInfo.primitiveCount = 1;
+			accelerationBuildOffsetInfo.primitiveCount = model.m_info.m_primitive_num;
 			accelerationBuildOffsetInfo.primitiveOffset = 0x0;
 			accelerationBuildOffsetInfo.firstVertex = 0;
 			accelerationBuildOffsetInfo.transformOffset = 0x0;
@@ -1016,7 +1018,7 @@ struct Renderer
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline_TestRender.get());
-		cmd.draw(64*64*64, 1, 0, 0);
+		cmd.draw(64*64*3, 1, 0, 0);
 
 		cmd.endRenderPass();
 
