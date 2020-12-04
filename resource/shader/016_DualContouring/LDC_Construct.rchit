@@ -7,6 +7,7 @@
 #include "LDC.glsl"
 
 layout(location = 0) rayPayloadInEXT float RayMaxT;
+//layout(location = 1) rayPayloadInEXT LDCPoint Point;
 
 hitAttributeEXT vec2 baryCoord;
 void main()

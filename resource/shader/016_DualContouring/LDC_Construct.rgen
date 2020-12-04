@@ -7,6 +7,7 @@
 #include "LDC.glsl"
 
 layout(location = 0) rayPayloadEXT float RayMaxT;
+//layout(location = 1) rayPayloadEXT LDCPoint Point;
 
 
 void main() 
@@ -23,9 +24,11 @@ void main()
 	vec3 origin = min + (s*rate.x+u*rate.y)-f*0.5;
 
 	RayMaxT = 0.;
-	float tmax = extent[gl_LaunchIDEXT.z]+2.;
+	float tmax = extent[gl_LaunchIDEXT.z]+1.;
 
-	b_ldc_point_link_head[gl_LaunchIDEXT.x + gl_LaunchIDEXT.y*gl_LaunchSizeEXT.x + gl_LaunchIDEXT.z*gl_LaunchSizeEXT.x*gl_LaunchSizeEXT.y] = -1;
+	uint grid = gl_LaunchIDEXT.x + gl_LaunchIDEXT.y*gl_LaunchSizeEXT.x + gl_LaunchIDEXT.z*gl_LaunchSizeEXT.x*gl_LaunchSizeEXT.y;
+	int head = -1;
+	b_ldc_point_link_head[grid] = head;
 	for (;;)
 	{
 		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin.xyz, RayMaxT, f, tmax, 0);
@@ -33,6 +36,14 @@ void main()
 		{
 			break;
 		}
+
+/*		int index = atomicAdd(b_ldc_counter, 1);
+		Point.p = clamp(Point.p-0.5, 0, tmax-1.5);
+		Point.inout_next |=  head;
+		b_ldc_point[index] = Point;
+		b_ldc_point_link_head[grid] = index;
+		head = index;
+*/
 		RayMaxT += 0.05;
 	}
 

@@ -23,6 +23,23 @@ struct LDCCell
 	uint useaxis_xyz;
 	uvec3 normal;
 };
+
+struct VkDrawIndexedIndirectCommand 
+{
+    uint32_t    indexCount;
+    uint32_t    instanceCount;
+    uint32_t    firstIndex;
+    int32_t     vertexOffset;
+    uint32_t    firstInstance;
+};
+struct VkDrawIndirectCommand {
+    uint32_t    vertexCount;
+    uint32_t    instanceCount;
+    uint32_t    firstVertex;
+    uint32_t    firstInstance;
+};
+
+
 #if defined(USE_AS)
 layout(set=USE_AS,binding=0) uniform accelerationStructureEXT topLevelAS;
 #endif
@@ -38,6 +55,8 @@ layout(set=USE_LDC,binding=13, scalar) buffer LDCCellBuffer { LDCCell b_ldc_cell
 layout(set=USE_LDC,binding=14, scalar) buffer DCVVertex { vec3 b_dcv_vertex[]; };
 layout(set=USE_LDC,binding=15, scalar) buffer DCVCounter { int b_dcv_counter; };
 layout(set=USE_LDC,binding=16, scalar) buffer DCVHashMap { int b_dcv_hashmap[]; };
+layout(set=USE_LDC,binding=17, scalar) buffer DCVIndexCounter { VkDrawIndirectCommand b_dcv_index_counter; };
+layout(set=USE_LDC,binding=18, scalar) buffer DCVIndexBuffer { uvec3 b_dcv_index[]; };
 #endif
 
 

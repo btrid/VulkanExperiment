@@ -416,7 +416,7 @@ struct RTModel
 			accelerationBuildGeometryInfo.scratchData.deviceAddress = scratchBuffer.deviceAddress;
 
 			vk::AccelerationStructureBuildOffsetInfoKHR accelerationBuildOffsetInfo;
-			accelerationBuildOffsetInfo.primitiveCount = 1;
+			accelerationBuildOffsetInfo.primitiveCount = model.m_info.m_primitive_num;
 			accelerationBuildOffsetInfo.primitiveOffset = 0x0;
 			accelerationBuildOffsetInfo.firstVertex = 0;
 			accelerationBuildOffsetInfo.transformOffset = 0x0;
@@ -495,6 +495,7 @@ struct Ctx
 	vk::UniquePipelineLayout m_pipelinelayout_MakeDCCell;
 	vk::UniquePipeline m_pipeline_MakeDCCell;
 	vk::UniquePipeline m_pipeline_MakeDCVertex;
+	vk::UniquePipeline m_pipeline_MakeDCFace;
 
 	vk::UniquePipeline m_pipeline_makeDCV;
 
@@ -518,6 +519,8 @@ struct Ctx
 				vk::DescriptorSetLayoutBinding(14, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(15, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(16, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(17, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(18, vk::DescriptorType::eStorageBuffer, 1, stage),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
@@ -652,6 +655,7 @@ struct Ctx
 			{
 				{"DC_MakeLDCCell.comp.spv", vk::ShaderStageFlagBits::eCompute},
 				{"DC_MakeDCVertex.comp.spv", vk::ShaderStageFlagBits::eCompute},
+				{"DC_MakeDCVFace.comp.spv", vk::ShaderStageFlagBits::eCompute}
 			};
 			std::array<vk::UniqueShaderModule, array_length(shader_param)> shader;
 			std::array<vk::PipelineShaderStageCreateInfo, array_length(shader_param)> shaderStages;
@@ -669,9 +673,13 @@ struct Ctx
 				vk::ComputePipelineCreateInfo()
 				.setStage(shaderStages[1])
 				.setLayout(m_pipelinelayout_MakeDCCell.get()),
+				vk::ComputePipelineCreateInfo()
+				.setStage(shaderStages[2])
+				.setLayout(m_pipelinelayout_MakeDCCell.get()),
 			};
 			m_pipeline_MakeDCCell = ctx->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[0]).value;
 			m_pipeline_MakeDCVertex = ctx->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[1]).value;
+			m_pipeline_MakeDCFace = ctx->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[2]).value;
 
 		}
 	}
@@ -690,10 +698,11 @@ struct LDCModel
 	btr::BufferMemoryEx<int32_t> b_ldc_point_link_head;
 	btr::BufferMemoryEx<LDCPoint> b_ldc_point;
 	btr::BufferMemoryEx<LDCCell> b_ldc_cell;
-	btr::BufferMemoryEx<uvec3> b_dcvertex_index;
 	btr::BufferMemoryEx<vec3> b_dc_vertex;
 	btr::BufferMemoryEx<int32_t> b_dcv_counter;
 	btr::BufferMemoryEx<int32_t> b_dcv_hashmap;
+	btr::BufferMemoryEx<vk::DrawIndirectCommand> b_dcv_index_counter;
+	btr::BufferMemoryEx<uvec3> b_dcv_index;
 
 	static std::shared_ptr<LDCModel> Construct(std::shared_ptr<btr::Context>& ctx, RT::Ctx& rt_ctx, LDC::Ctx& ldc_ctx, Model& model, RTModel& rt_model)
 	{
@@ -718,7 +727,11 @@ struct LDCModel
 
 			ldc_model->b_dc_vertex = ctx->m_storage_memory.allocateMemory<vec3>(64*64*64);
 			ldc_model->b_dcv_counter = ctx->m_storage_memory.allocateMemory<int32_t>(1);
-			ldc_model->b_dcv_hashmap = ctx->m_storage_memory.allocateMemory<int32_t>(64*64*64);
+			ldc_model->b_dcv_hashmap = ctx->m_storage_memory.allocateMemory<int32_t>(64 * 64 * 64);
+
+			ldc_model->b_dcv_index_counter = ctx->m_storage_memory.allocateMemory<vk::DrawIndirectCommand>(1);
+			ldc_model->b_dcv_index = ctx->m_storage_memory.allocateMemory<uvec3>(65000);
+
 			vk::DescriptorBufferInfo uniforms[] =
 			{
 				model.u_info.getInfo(),
@@ -738,6 +751,8 @@ struct LDCModel
 				ldc_model->b_dc_vertex.getInfo(),
 				ldc_model->b_dcv_counter.getInfo(),
 				ldc_model->b_dcv_hashmap.getInfo(),
+				ldc_model->b_dcv_index_counter.getInfo(),
+				ldc_model->b_dcv_index.getInfo(),
 			};
 
 			vk::WriteDescriptorSet write[] =
@@ -821,6 +836,24 @@ struct LDCModel
 			cmd.dispatch(1, 64, 3);
 		}
 
+		{
+			
+			std::array<vk::DrawIndirectCommand, 1> data = { vk::DrawIndirectCommand(0,1,0,0)};
+			cmd.updateBuffer<vk::DrawIndirectCommand>(ldc_model->b_dcv_index_counter.getInfo().buffer, ldc_model->b_dcv_index_counter.getInfo().offset, data);
+			vk::BufferMemoryBarrier barrier[] =
+			{
+				ldc_model->b_dc_vertex.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				ldc_model->b_ldc_cell.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				ldc_model->b_dcv_index_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer| vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, ldc_ctx.m_pipeline_MakeDCFace.get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, ldc_ctx.m_pipelinelayout_MakeDCCell.get(), 0, { ldc_model->m_DS.get() }, {});
+
+			cmd.dispatch(1, 64, 64);
+
+		}
 		return ldc_model;
 	}
 
@@ -838,6 +871,7 @@ struct Renderer
 	vk::UniqueRenderPass m_TestRender_pass;
 	vk::UniqueFramebuffer m_TestRender_framebuffer;
 	vk::UniquePipeline m_pipeline_TestRender;
+	vk::UniquePipeline m_pipeline_Render;
 	vk::UniquePipelineLayout m_pl;
 
 	Renderer(btr::Context& ctx, LDC::Ctx& ldc_ctx, LDCModel& ldc_model, RenderTarget& rt)
@@ -984,15 +1018,90 @@ struct Renderer
 					.setPColorBlendState(&blend_info);
 				m_pipeline_TestRender = ctx.m_device.createGraphicsPipelineUnique(vk::PipelineCache(), graphics_pipeline_info).value;
 			}
+
+			{
+				struct { const char* name; vk::ShaderStageFlagBits flag; } shader_param[] =
+				{
+					{"DC_Rendering.vert.spv", vk::ShaderStageFlagBits::eVertex},
+					{"DC_Rendering.frag.spv", vk::ShaderStageFlagBits::eFragment},
+				};
+				std::array<vk::UniqueShaderModule, array_length(shader_param)> shader;
+				std::array<vk::PipelineShaderStageCreateInfo, array_length(shader_param)> shaderStages;
+				for (size_t i = 0; i < array_length(shader_param); i++)
+				{
+					shader[i] = loadShaderUnique(ctx.m_device, btr::getResourceShaderPath() + shader_param[i].name);
+					shaderStages[i].setModule(shader[i].get()).setStage(shader_param[i].flag).setPName("main");
+				}
+				// assembly
+				vk::PipelineInputAssemblyStateCreateInfo assembly_info;
+				assembly_info.setPrimitiveRestartEnable(VK_FALSE);
+				assembly_info.setTopology(vk::PrimitiveTopology::eTriangleList);
+
+				// viewport
+				vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)rt.m_resolution.width, (float)rt.m_resolution.height, 0.f, 1.f);
+				vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(rt.m_resolution.width, rt.m_resolution.height));
+				vk::PipelineViewportStateCreateInfo viewportInfo;
+				viewportInfo.setViewportCount(1);
+				viewportInfo.setPViewports(&viewport);
+				viewportInfo.setScissorCount(1);
+				viewportInfo.setPScissors(&scissor);
+
+
+				vk::PipelineRasterizationStateCreateInfo rasterization_info;
+				rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
+				rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
+				rasterization_info.setCullMode(vk::CullModeFlagBits::eNone);
+				rasterization_info.setLineWidth(1.f);
+
+				vk::PipelineMultisampleStateCreateInfo sample_info;
+				sample_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);
+
+				vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
+				depth_stencil_info.setDepthTestEnable(VK_FALSE);
+				depth_stencil_info.setDepthWriteEnable(VK_FALSE);
+				depth_stencil_info.setDepthCompareOp(vk::CompareOp::eGreaterOrEqual);
+				depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
+				depth_stencil_info.setStencilTestEnable(VK_FALSE);
+
+
+				vk::PipelineColorBlendAttachmentState blend_state;
+				blend_state.setBlendEnable(VK_TRUE);
+				blend_state.setColorBlendOp(vk::BlendOp::eAdd);
+				blend_state.setSrcColorBlendFactor(vk::BlendFactor::eOne);
+				blend_state.setDstColorBlendFactor(vk::BlendFactor::eOne);
+				blend_state.setAlphaBlendOp(vk::BlendOp::eAdd);
+				blend_state.setSrcAlphaBlendFactor(vk::BlendFactor::eOne);
+				blend_state.setDstAlphaBlendFactor(vk::BlendFactor::eZero);
+				blend_state.setColorWriteMask(vk::ColorComponentFlagBits::eR
+					| vk::ColorComponentFlagBits::eG
+					| vk::ColorComponentFlagBits::eB);
+
+				vk::PipelineColorBlendStateCreateInfo blend_info;
+				blend_info.setAttachmentCount(1);
+				blend_info.setPAttachments(&blend_state);
+
+				vk::PipelineVertexInputStateCreateInfo vertex_input_info;
+
+				vk::GraphicsPipelineCreateInfo graphics_pipeline_info =
+					vk::GraphicsPipelineCreateInfo()
+					.setStageCount(array_length(shaderStages))
+					.setPStages(shaderStages.data())
+					.setPVertexInputState(&vertex_input_info)
+					.setPInputAssemblyState(&assembly_info)
+					.setPViewportState(&viewportInfo)
+					.setPRasterizationState(&rasterization_info)
+					.setPMultisampleState(&sample_info)
+					.setLayout(m_pl.get())
+					.setRenderPass(m_TestRender_pass.get())
+					.setPDepthStencilState(&depth_stencil_info)
+					.setPColorBlendState(&blend_info);
+				m_pipeline_Render = ctx.m_device.createGraphicsPipelineUnique(vk::PipelineCache(), graphics_pipeline_info).value;
+			}
 		}
 	}
 	void ExecuteTestRender(vk::CommandBuffer cmd, LDC::Ctx& ldc_ctx, LDCModel& ldc_model, RenderTarget& rt)
 	{
 		{
-			// 			vk::BufferMemoryBarrier to_read[] = {
-			// 				b_radiance.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			// 			};
-
 			vk::ImageMemoryBarrier image_barrier;
 			image_barrier.setImage(rt.m_image);
 			image_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
@@ -1018,7 +1127,40 @@ struct Renderer
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline_TestRender.get());
-		cmd.draw(64*64*3, 1, 0, 0);
+		cmd.draw(64 * 64 * 64, 1, 0, 0);
+
+		cmd.endRenderPass();
+
+	}
+	void ExecuteRender(vk::CommandBuffer cmd, LDC::Ctx& ldc_ctx, LDCModel& ldc_model, RenderTarget& rt)
+	{
+		{
+			vk::ImageMemoryBarrier image_barrier;
+			image_barrier.setImage(rt.m_image);
+			image_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+			image_barrier.setOldLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			image_barrier.setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+			image_barrier.setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			image_barrier.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eColorAttachmentOutput,
+				{}, {}, { /*array_size(to_read), to_read*/ }, { image_barrier });
+		}
+
+		vk::RenderPassBeginInfo begin_render_Info;
+		begin_render_Info.setRenderPass(m_TestRender_pass.get());
+		begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(rt.m_info.extent.width, rt.m_info.extent.height)));
+		begin_render_Info.setFramebuffer(m_TestRender_framebuffer.get());
+		begin_render_Info.setClearValueCount(1);
+		auto color = vk::ClearValue(vk::ClearColorValue(std::array<uint32_t, 4>{}));
+		begin_render_Info.setPClearValues(&color);
+		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
+
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl.get(), 0, ldc_model.m_DS.get(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline_Render.get());
+		cmd.drawIndirect(ldc_model.b_dcv_index_counter.getInfo().buffer, ldc_model.b_dcv_index_counter.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
 
 		cmd.endRenderPass();
 
@@ -1081,7 +1223,8 @@ int main()
 //				cCamera::sCamera::Order().getCameraList()[0]->control(app.m_window->getInput(), 0.016f);
 
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
-				renderer.ExecuteTestRender(cmd, *ldc_ctx, *ldc_model, *app.m_window->getFrontBuffer());
+//				renderer.ExecuteTestRender(cmd, *ldc_ctx, *ldc_model, *app.m_window->getFrontBuffer());
+				renderer.ExecuteRender(cmd, *ldc_ctx, *ldc_model, *app.m_window->getFrontBuffer());
 				cmd.end();
 				cmds[cmd_render] = cmd;
 

@@ -10,6 +10,11 @@ SET output=-o ../binary/
 
 %exe% %output%/DC_MakeLDCCell.comp.spv DC_MakeLDCCell.comp
 %exe% %output%/DC_MakeDCVertex.comp.spv DC_MakeDCVertex.comp
+%exe% %output%/DC_MakeDCVFace.comp.spv DC_MakeDCVFace.comp
+
+%exe% %output%/DC_Rendering.vert.spv DC_Rendering.vert
+%exe% %output%/DC_Rendering.frag.spv DC_Rendering.frag
 
 %exe% %output%/DCDebug_Rendering.vert.spv DCDebug_Rendering.vert
+%exe% %output%/DCDebug_Rendering.geom.spv DCDebug_Rendering.geom
 %exe% %output%/DCDebug_Rendering.frag.spv DCDebug_Rendering.frag

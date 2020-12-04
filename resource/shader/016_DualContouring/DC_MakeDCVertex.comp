@@ -114,6 +114,7 @@ void main()
 		}
 
 	}
+	if(normal_num == 0){ return; }
 
 	uint idx = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*reso.x + gl_GlobalInvocationID.z*reso.x*reso.y;
 	b_dcv_vertex[idx] = leastSquares(normal_num, plane_normal, d);
