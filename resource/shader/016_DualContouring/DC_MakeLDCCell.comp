@@ -32,8 +32,7 @@ void main()
 
 		uvec3 voxel_index = min(uvec3(s*gl_GlobalInvocationID.x + u*gl_GlobalInvocationID.y + f*voxel_p), 63);
 		uint i = voxel_index.x + voxel_index.y*Voxel_Reso.x + voxel_index.z*Voxel_Reso.x*Voxel_Reso.y;
-//		uint is_used = atomicOr(b_ldc_cell[i].useaxis_xyz, ((1u<<gl_GlobalInvocationID.z)<<24u)|(uint(fract(voxel_p)*255.)<<(gl_GlobalInvocationID.z*8u)));
-		uint is_used = atomicOr(b_ldc_cell[i].useaxis_xyz, 1);
+		uint is_used = atomicOr(b_ldc_cell[i].useaxis_xyz, (1u<<gl_GlobalInvocationID.z)|(uint(fract(voxel_p)*255.)<<(gl_GlobalInvocationID.z*8u+8u)));
 		if(is_used == 0)
 		{
 			b_dcv_hashmap[i] = atomicAdd(b_dcv_counter, 1);

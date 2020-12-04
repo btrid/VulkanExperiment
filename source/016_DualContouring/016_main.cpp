@@ -299,7 +299,8 @@ struct RTModel
 			vk::BindAccelerationStructureMemoryInfoKHR bindAccelerationMemoryInfo;
 			bindAccelerationMemoryInfo.accelerationStructure = bottomLevelAS.accelerationStructure.get();
 			bindAccelerationMemoryInfo.memory = bottomLevelAS.objectMemory.memory.get();
-			ctx->m_device.bindAccelerationStructureMemoryKHR(1, &bindAccelerationMemoryInfo);
+			auto isbind =  ctx->m_device.bindAccelerationStructureMemoryKHR(1, &bindAccelerationMemoryInfo);
+			assert(isbind == vk::Result::eSuccess);
 
 			std::array<vk::AccelerationStructureGeometryKHR, 1> accelerationStructureGeometry;
 			accelerationStructureGeometry[0].flags = vk::GeometryFlagBitsKHR::eOpaque;
@@ -477,8 +478,9 @@ struct LDCPoint
 };
 struct LDCCell
 {
-	u8vec4 usepoint_xyz;
-	uvec3 normal[3];
+	uvec3 normal;
+	uint8_t usepoint;
+	u8vec3 xyz;
 };
 
 namespace LDC
@@ -837,13 +839,28 @@ struct LDCModel
 		}
 
 		{
+
+			vk::BufferMemoryBarrier barrier[] =
+			{
+				ldc_model->b_ldc_cell.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				ldc_model->b_dcv_hashmap.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, ldc_ctx.m_pipeline_MakeDCVertex.get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, ldc_ctx.m_pipelinelayout_MakeDCCell.get(), 0, { ldc_model->m_DS.get() }, {});
+
+			cmd.dispatch(1, 64, 64);
+		}
+
+		{
 			
 			std::array<vk::DrawIndirectCommand, 1> data = { vk::DrawIndirectCommand(0,1,0,0)};
 			cmd.updateBuffer<vk::DrawIndirectCommand>(ldc_model->b_dcv_index_counter.getInfo().buffer, ldc_model->b_dcv_index_counter.getInfo().offset, data);
 			vk::BufferMemoryBarrier barrier[] =
 			{
 				ldc_model->b_dc_vertex.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-				ldc_model->b_ldc_cell.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+//				ldc_model->b_ldc_cell.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				ldc_model->b_dcv_index_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer| vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
@@ -1152,7 +1169,7 @@ struct Renderer
 		begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(rt.m_info.extent.width, rt.m_info.extent.height)));
 		begin_render_Info.setFramebuffer(m_TestRender_framebuffer.get());
 		begin_render_Info.setClearValueCount(1);
-		auto color = vk::ClearValue(vk::ClearColorValue(std::array<uint32_t, 4>{}));
+		auto color = vk::ClearValue(vk::ClearColorValue(std::array<uint32_t, 4>{55, 55, 55, 0}));
 		begin_render_Info.setPClearValues(&color);
 		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
@@ -1160,7 +1177,7 @@ struct Renderer
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline_Render.get());
-		cmd.drawIndirect(ldc_model.b_dcv_index_counter.getInfo().buffer, ldc_model.b_dcv_index_counter.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
+//		cmd.drawIndirect(ldc_model.b_dcv_index_counter.getInfo().buffer, ldc_model.b_dcv_index_counter.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
 
 		cmd.endRenderPass();
 

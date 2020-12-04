@@ -20,8 +20,10 @@ struct LDCPoint
 };
 struct LDCCell
 {
-	uint useaxis_xyz;
 	uvec3 normal;
+	uint useaxis_xyz;
+//	uvec4 useaxis_xyz;
+//	uvec3 normal;
 };
 
 struct VkDrawIndexedIndirectCommand 

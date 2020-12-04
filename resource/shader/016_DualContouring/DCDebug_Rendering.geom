@@ -19,7 +19,8 @@ layout(location=0)in gl_PerVertex
 
 layout(location=1) in InData
 {
-	flat uint vertex_index;
+	flat uint VertexIndex;
+	flat uvec3 CellID;
 } gs_in[];
 
 layout(location=0)out gl_PerVertex
@@ -37,13 +38,13 @@ layout(location=1)out OutData
 void main()
 {
 
-//	vec4 vertex = ((vec4(pos) + vec4(0.5)) / vec4(u_gi2d_info.m_resolution.xyxy)) * 2. - 1.;
+	gs_in[0].VertexIndex;
 
-	gl_Position = vec4(vertex.xy, 0., 1.);
+//	gl_Position = vec4(vertex.xy, 0., 1.);
 
 	EmitVertex();
 
-	gl_Position = vec4(vertex.zw, 0., 1.);
+//	gl_Position = vec4(vertex.zw, 0., 1.);
 
 	EmitVertex();
 	EndPrimitive();
