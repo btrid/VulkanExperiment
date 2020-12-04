@@ -25,8 +25,8 @@ void main()
 	gl_PointSize = 1.;
 	Out.CellID = uvec3(x, y, z);
 
-//	int hash = b_dcv_hashmap[gl_VertexIndex];
-	int hash = b_ldc_point_link_head[gl_VertexIndex];
+	int hash = b_dcv_hashmap[gl_VertexIndex];
+//	int hash = b_ldc_point_link_head[gl_VertexIndex];
 //	int hash = b_ldc_counter;
 //	int hash = b_dcv_counter;
 	if(hash <= 0)
