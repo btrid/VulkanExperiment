@@ -1177,7 +1177,7 @@ struct Renderer
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline_Render.get());
-//		cmd.drawIndirect(ldc_model.b_dcv_index_counter.getInfo().buffer, ldc_model.b_dcv_index_counter.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
+		cmd.drawIndirect(ldc_model.b_dcv_index_counter.getInfo().buffer, ldc_model.b_dcv_index_counter.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
 
 		cmd.endRenderPass();
 

@@ -102,7 +102,7 @@ void main()
 		LDCCell cell = b_ldc_cell[idx];
 		uint use_axis = (cell.useaxis_xyz&0xffu);
 		vec3 point = vec3((uvec3(cell.useaxis_xyz)>>uvec3(8, 16, 24)) & uvec3(0xffu))/ 255. * voxel_size;
-		point += _i*voxel_size;
+//		point += _i*voxel_size;
 
 		for(int i = 0; i < 3; i++)
 		{
@@ -118,6 +118,6 @@ void main()
 	if(normal_num == 0){ return; }
 
 	uint idx = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*reso.x + gl_GlobalInvocationID.z*reso.x*reso.y;
-	b_dcv_vertex[idx] = leastSquares(normal_num, plane_normal, d);
+	b_dcv_vertex[idx] = leastSquares(normal_num, plane_normal, d) + gl_GlobalInvocationID * voxel_size;
 
 }
