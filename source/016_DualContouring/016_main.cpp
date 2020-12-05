@@ -272,14 +272,16 @@ struct RTModel
 
 	static std::shared_ptr<RTModel> Construct(std::shared_ptr<btr::Context>& ctx, RT::Ctx& rt_ctx, Model& model)
 	{
+
 		auto cmd = ctx->m_cmd_pool->allocCmdTempolary(0);
 
-		AccelerationStructure bottomLevelAS;
+		auto rt_model = std::make_shared<RTModel>();
+		AccelerationStructure& bottomLevelAS = rt_model->m_bottomLevelAS;
 		{
 
 			vk::AccelerationStructureCreateGeometryTypeInfoKHR accelerationCreateGeometryInfo{};
 			accelerationCreateGeometryInfo.geometryType = vk::GeometryTypeKHR::eTriangles;
-			accelerationCreateGeometryInfo.maxPrimitiveCount = 1;
+			accelerationCreateGeometryInfo.maxPrimitiveCount = model.m_info.m_primitive_num;
 			accelerationCreateGeometryInfo.indexType = vk::IndexType::eUint32;
 			accelerationCreateGeometryInfo.maxVertexCount = model.m_info.m_vertex_num;
 			accelerationCreateGeometryInfo.vertexFormat = vk::Format::eR32G32B32Sfloat;
@@ -328,13 +330,14 @@ struct RTModel
 
 			vk::AccelerationStructureBuildOffsetInfoKHR accelerationBuildOffsetInfo{};
 			accelerationBuildOffsetInfo.primitiveCount = model.m_info.m_primitive_num;
-			accelerationBuildOffsetInfo.primitiveOffset = 0x0;
+			accelerationBuildOffsetInfo.primitiveOffset = 0;
 			accelerationBuildOffsetInfo.firstVertex = 0;
-			accelerationBuildOffsetInfo.transformOffset = 0x0;
+			accelerationBuildOffsetInfo.transformOffset = 0;
 
 			std::vector<const vk::AccelerationStructureBuildOffsetInfoKHR*> offset = { &accelerationBuildOffsetInfo };
-			// Acceleration structure needs to be build on the device
+
 			cmd.buildAccelerationStructureKHR({ accelerationBuildGeometryInfo }, offset);
+
 
 			vk::AccelerationStructureDeviceAddressInfoKHR accelerationDeviceAddressInfo{};
 			accelerationDeviceAddressInfo.accelerationStructure = bottomLevelAS.accelerationStructure.get();
@@ -343,7 +346,7 @@ struct RTModel
 			sDeleter::Order().enque(std::move(scratchBuffer));
 
 		}
-		AccelerationStructure topLevelAS;
+		AccelerationStructure& topLevelAS = rt_model->m_topLevelAS;
 		{
 			vk::AccelerationStructureCreateGeometryTypeInfoKHR accelerationCreateGeometryInfo;
 			accelerationCreateGeometryInfo.geometryType = vk::GeometryTypeKHR::eInstances;
@@ -417,10 +420,10 @@ struct RTModel
 			accelerationBuildGeometryInfo.scratchData.deviceAddress = scratchBuffer.deviceAddress;
 
 			vk::AccelerationStructureBuildOffsetInfoKHR accelerationBuildOffsetInfo;
-			accelerationBuildOffsetInfo.primitiveCount = model.m_info.m_primitive_num;
-			accelerationBuildOffsetInfo.primitiveOffset = 0x0;
+			accelerationBuildOffsetInfo.primitiveCount = 1;
+			accelerationBuildOffsetInfo.primitiveOffset = 0;
 			accelerationBuildOffsetInfo.firstVertex = 0;
-			accelerationBuildOffsetInfo.transformOffset = 0x0;
+			accelerationBuildOffsetInfo.transformOffset = 0;
 
 			std::vector<const vk::AccelerationStructureBuildOffsetInfoKHR*> offset = { &accelerationBuildOffsetInfo };
 			cmd.buildAccelerationStructureKHR({ accelerationBuildGeometryInfo }, offset);
@@ -433,9 +436,6 @@ struct RTModel
 			sDeleter::Order().enque(std::move(scratchBuffer), std::move(instance_buffer), std::move(instance_memory));
 		}
 
-		auto rt_model = std::make_shared<RTModel>();
-		rt_model->m_topLevelAS = std::move(topLevelAS);
-		rt_model->m_bottomLevelAS = std::move(bottomLevelAS);
 
 		{
 			vk::DescriptorSetLayout layouts[] =
@@ -724,7 +724,7 @@ struct LDCModel
 
 			ldc_model->b_ldc_counter = ctx->m_storage_memory.allocateMemory<int>(1);
 			ldc_model->b_ldc_point_link_head = ctx->m_storage_memory.allocateMemory<int>(64*64*3);
-			ldc_model->b_ldc_point = ctx->m_storage_memory.allocateMemory<LDCPoint>(64*64*3*64);
+			ldc_model->b_ldc_point = ctx->m_storage_memory.allocateMemory<LDCPoint>(64*64*3*128);
 			ldc_model->b_ldc_cell = ctx->m_storage_memory.allocateMemory<LDCCell>(64*64*64);
 
 			ldc_model->b_dc_vertex = ctx->m_storage_memory.allocateMemory<vec3>(64*64*64);
@@ -732,7 +732,7 @@ struct LDCModel
 			ldc_model->b_dcv_hashmap = ctx->m_storage_memory.allocateMemory<int32_t>(64 * 64 * 64);
 
 			ldc_model->b_dcv_index_counter = ctx->m_storage_memory.allocateMemory<vk::DrawIndirectCommand>(1);
-			ldc_model->b_dcv_index = ctx->m_storage_memory.allocateMemory<uvec3>(65000);
+			ldc_model->b_dcv_index = ctx->m_storage_memory.allocateMemory<uvec3>(365000);
 
 			vk::DescriptorBufferInfo uniforms[] =
 			{
@@ -826,6 +826,8 @@ struct LDCModel
 			cmd.fillBuffer(ldc_model->b_ldc_cell.getInfo().buffer, ldc_model->b_ldc_cell.getInfo().offset, ldc_model->b_ldc_cell.getInfo().range, 0);
 			cmd.fillBuffer(ldc_model->b_dcv_counter.getInfo().buffer, ldc_model->b_dcv_counter.getInfo().offset, ldc_model->b_dcv_counter.getInfo().range, 0);
 			cmd.fillBuffer(ldc_model->b_dcv_hashmap.getInfo().buffer, ldc_model->b_dcv_hashmap.getInfo().offset, ldc_model->b_dcv_hashmap.getInfo().range, -1);
+			std::array<vk::DrawIndirectCommand, 1> data = { vk::DrawIndirectCommand(0,1,0,0) };
+			cmd.updateBuffer<vk::DrawIndirectCommand>(ldc_model->b_dcv_index_counter.getInfo().buffer, ldc_model->b_dcv_index_counter.getInfo().offset, data);
 			vk::BufferMemoryBarrier barrier[] =
 			{
 				ldc_model->b_ldc_cell.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
@@ -855,8 +857,6 @@ struct LDCModel
 
 		{
 			
-			std::array<vk::DrawIndirectCommand, 1> data = { vk::DrawIndirectCommand(0,1,0,0)};
-			cmd.updateBuffer<vk::DrawIndirectCommand>(ldc_model->b_dcv_index_counter.getInfo().buffer, ldc_model->b_dcv_index_counter.getInfo().offset, data);
 			vk::BufferMemoryBarrier barrier[] =
 			{
 				ldc_model->b_dc_vertex.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
@@ -871,6 +871,12 @@ struct LDCModel
 			cmd.dispatch(1, 64, 64);
 
 		}
+
+		vk::BufferMemoryBarrier barrier[] =
+		{
+				ldc_model->b_dcv_index_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, { array_size(barrier), barrier }, {});
 		return ldc_model;
 	}
 
@@ -891,7 +897,7 @@ struct Renderer
 	vk::UniquePipeline m_pipeline_Render;
 	vk::UniquePipelineLayout m_pl;
 
-	Renderer(btr::Context& ctx, LDC::Ctx& ldc_ctx, LDCModel& ldc_model, RenderTarget& rt)
+	Renderer(btr::Context& ctx, LDC::Ctx& ldc_ctx, RenderTarget& rt)
 	{
 		// pipeline layout
 		{
@@ -1204,13 +1210,14 @@ int main()
 	auto context = app.m_context;
 
 	auto model = Model::LoadModel(context, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Box.dae");
-	
+//	auto model = Model::LoadModel(context, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Duck.dae");
+
 	std::shared_ptr<RT::Ctx> rt_ctx = std::make_shared<RT::Ctx>(context);
 	auto rt_model = RTModel::Construct(context, *rt_ctx, *model);
 
 	std::shared_ptr<LDC::Ctx> ldc_ctx = std::make_shared<LDC::Ctx>(context, *rt_ctx);
 	auto ldc_model = LDCModel::Construct(context, *rt_ctx, *ldc_ctx, *model, *rt_model);
-	Renderer renderer(*context, *ldc_ctx, *ldc_model, *app.m_window->getFrontBuffer());
+	Renderer renderer(*context, *ldc_ctx, *app.m_window->getFrontBuffer());
 
 	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
 	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchain());
