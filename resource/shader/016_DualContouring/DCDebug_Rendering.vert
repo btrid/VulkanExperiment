@@ -22,7 +22,7 @@ void main()
 	int z = gl_VertexIndex.x/64/64;
 	int y = (gl_VertexIndex.x/64) % 64;
 	int x = gl_VertexIndex.x % 64;
-	gl_PointSize = 1.;
+	gl_PointSize = 2.;
 	Out.CellID = uvec3(x, y, z);
 
 	int hash = b_dcv_hashmap[gl_VertexIndex];
@@ -35,7 +35,11 @@ void main()
 	}
 	else
 	{
-		gl_Position = u_camera[0].u_projection * u_camera[0].u_view * vec4(x, y, z, 1.0);
+		vec3 extent = u_info.m_aabb_max.xyz-u_info.m_aabb_min.xyz;
+		vec3 min = u_info.m_aabb_min.xyz;
+		vec3 p = min + extent * vec3(x, y, z) / Voxel_Reso;
+
+		gl_Position = u_camera[0].u_projection * u_camera[0].u_view * vec4(p, 1.0);
 	}
 
 

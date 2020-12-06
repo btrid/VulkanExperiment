@@ -50,6 +50,7 @@ layout(set=USE_LDC,binding=0, std140) uniform InfoUniform {Info u_info; };
 layout(set=USE_LDC,binding=1, scalar) buffer Vertices { vec3 b_vertex[]; };
 layout(set=USE_LDC,binding=2, scalar) buffer Normals { vec3 b_normal[]; };
 layout(set=USE_LDC,binding=3, scalar) buffer Indices { uvec3 b_index[]; };
+layout(set=USE_LDC,binding=4, scalar) buffer DrawCmd { VkDrawIndexedIndirectCommand b_draw_cmd[]; };
 layout(set=USE_LDC,binding=10, std430) buffer LDCCounter { int b_ldc_counter; };
 layout(set=USE_LDC,binding=11, std430) buffer LDCPointLinkHead { int b_ldc_point_link_head[]; };
 layout(set=USE_LDC,binding=12, scalar) buffer LDCPointBuffer { LDCPoint b_ldc_point[]; };
@@ -82,5 +83,8 @@ vec3 unpack_normal_octahedron(in uint packed_nrm)
 	v.xy = mix(v.xy, (float16_t(1.0) - abs(v.yx)) * sign_not_zero(v.xy), step(v.z, float16_t(0)));
 	return normalize(v);
 }
+
+// http://jcgt.org/published/0003/02/01/paper.pdf
+
 #endif // LDC_H_
 

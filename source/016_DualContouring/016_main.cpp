@@ -52,6 +52,7 @@ struct Model
 	btr::BufferMemory b_normal;
 	btr::BufferMemory b_index;
 	btr::BufferMemoryEx<Info> u_info;
+	btr::BufferMemoryEx<vk::DrawIndirectCommand> b_draw_cmd;
 
 	Info m_info;
 
@@ -102,7 +103,7 @@ struct Model
 
 			for (uint32_t v = 0; v < mesh->mNumVertices; v++)
 			{
-				mesh->mVertices[v] *= 100.f;
+//				mesh->mVertices[v] *= 100.f;
 				info.m_aabb_min.x = std::min(info.m_aabb_min.x, mesh->mVertices[v].x);
 				info.m_aabb_min.y = std::min(info.m_aabb_min.y, mesh->mVertices[v].y);
 				info.m_aabb_min.z = std::min(info.m_aabb_min.z, mesh->mVertices[v].z);
@@ -146,6 +147,9 @@ struct Model
 			model->u_info = context->m_uniform_memory.allocateMemory<Info>(1);
 
 			cmd.updateBuffer<Info>(model->u_info.getInfo().buffer, model->u_info.getInfo().offset, info);
+
+			model->b_draw_cmd = context->m_storage_memory.allocateMemory<vk::DrawIndirectCommand>(1);
+			cmd.updateBuffer<vk::DrawIndirectCommand>(model->b_draw_cmd.getInfo().buffer, model->b_draw_cmd.getInfo().offset, vk::DrawIndirectCommand(numIndex, 1, 0, 0));
 		}
 
 
@@ -514,6 +518,7 @@ struct Ctx
 				vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(10, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(11, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(12, vk::DescriptorType::eStorageBuffer, 1, stage),
@@ -743,6 +748,7 @@ struct LDCModel
 				model.b_vertex.getInfo(),
 				model.b_normal.getInfo(),
 				model.b_index.getInfo(),
+				model.b_draw_cmd.getInfo(),
 			};
 			vk::DescriptorBufferInfo ldc_storages[] =
 			{
@@ -820,7 +826,7 @@ struct LDCModel
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eRayTracingShaderKHR, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
 		}
 
-
+		// Make DC Cell
 		{
 
 			cmd.fillBuffer(ldc_model->b_ldc_cell.getInfo().buffer, ldc_model->b_ldc_cell.getInfo().offset, ldc_model->b_ldc_cell.getInfo().range, 0);
@@ -840,6 +846,8 @@ struct LDCModel
 			cmd.dispatch(1, 64, 3);
 		}
 
+
+		// Make DC Vertex
 		{
 
 			vk::BufferMemoryBarrier barrier[] =
@@ -855,6 +863,7 @@ struct LDCModel
 			cmd.dispatch(1, 64, 64);
 		}
 
+		// Make DC Face
 		{
 			
 			vk::BufferMemoryBarrier barrier[] =
@@ -895,6 +904,7 @@ struct Renderer
 	vk::UniqueFramebuffer m_TestRender_framebuffer;
 	vk::UniquePipeline m_pipeline_TestRender;
 	vk::UniquePipeline m_pipeline_Render;
+	vk::UniquePipeline m_pipeline_RenderModel;
 	vk::UniquePipelineLayout m_pl;
 
 	Renderer(btr::Context& ctx, LDC::Ctx& ldc_ctx, RenderTarget& rt)
@@ -1047,6 +1057,9 @@ struct Renderer
 				{
 					{"DC_Rendering.vert.spv", vk::ShaderStageFlagBits::eVertex},
 					{"DC_Rendering.frag.spv", vk::ShaderStageFlagBits::eFragment},
+					{"DC_RenderModel.vert.spv", vk::ShaderStageFlagBits::eVertex},
+					{"DC_RenderModel.frag.spv", vk::ShaderStageFlagBits::eFragment},
+
 				};
 				std::array<vk::UniqueShaderModule, array_length(shader_param)> shader;
 				std::array<vk::PipelineShaderStageCreateInfo, array_length(shader_param)> shaderStages;
@@ -1055,6 +1068,7 @@ struct Renderer
 					shader[i] = loadShaderUnique(ctx.m_device, btr::getResourceShaderPath() + shader_param[i].name);
 					shaderStages[i].setModule(shader[i].get()).setStage(shader_param[i].flag).setPName("main");
 				}
+
 				// assembly
 				vk::PipelineInputAssemblyStateCreateInfo assembly_info;
 				assembly_info.setPrimitiveRestartEnable(VK_FALSE);
@@ -1107,7 +1121,7 @@ struct Renderer
 
 				vk::GraphicsPipelineCreateInfo graphics_pipeline_info =
 					vk::GraphicsPipelineCreateInfo()
-					.setStageCount(array_length(shaderStages))
+					.setStageCount(2)
 					.setPStages(shaderStages.data())
 					.setPVertexInputState(&vertex_input_info)
 					.setPInputAssemblyState(&assembly_info)
@@ -1119,6 +1133,22 @@ struct Renderer
 					.setPDepthStencilState(&depth_stencil_info)
 					.setPColorBlendState(&blend_info);
 				m_pipeline_Render = ctx.m_device.createGraphicsPipelineUnique(vk::PipelineCache(), graphics_pipeline_info).value;
+
+				graphics_pipeline_info =
+					vk::GraphicsPipelineCreateInfo()
+					.setStageCount(2)
+					.setPStages(shaderStages.data()+2)
+					.setPVertexInputState(&vertex_input_info)
+					.setPInputAssemblyState(&assembly_info)
+					.setPViewportState(&viewportInfo)
+					.setPRasterizationState(&rasterization_info)
+					.setPMultisampleState(&sample_info)
+					.setLayout(m_pl.get())
+					.setRenderPass(m_TestRender_pass.get())
+					.setPDepthStencilState(&depth_stencil_info)
+					.setPColorBlendState(&blend_info);
+				m_pipeline_RenderModel = ctx.m_device.createGraphicsPipelineUnique(vk::PipelineCache(), graphics_pipeline_info).value;
+
 			}
 		}
 	}
@@ -1155,7 +1185,7 @@ struct Renderer
 		cmd.endRenderPass();
 
 	}
-	void ExecuteRender(vk::CommandBuffer cmd, LDC::Ctx& ldc_ctx, LDCModel& ldc_model, RenderTarget& rt)
+	void ExecuteRenderLDCModel(vk::CommandBuffer cmd, LDC::Ctx& ldc_ctx, LDCModel& ldc_model, RenderTarget& rt)
 	{
 		{
 			vk::ImageMemoryBarrier image_barrier;
@@ -1188,6 +1218,39 @@ struct Renderer
 		cmd.endRenderPass();
 
 	}
+	void ExecuteRenderModel(vk::CommandBuffer cmd, LDC::Ctx& ldc_ctx, LDCModel& ldc_model, Model& model, RenderTarget& rt)
+	{
+		{
+			vk::ImageMemoryBarrier image_barrier;
+			image_barrier.setImage(rt.m_image);
+			image_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+			image_barrier.setOldLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			image_barrier.setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+			image_barrier.setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			image_barrier.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eColorAttachmentOutput,
+				{}, {}, { /*array_size(to_read), to_read*/ }, { image_barrier });
+		}
+
+		vk::RenderPassBeginInfo begin_render_Info;
+		begin_render_Info.setRenderPass(m_TestRender_pass.get());
+		begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(rt.m_info.extent.width, rt.m_info.extent.height)));
+		begin_render_Info.setFramebuffer(m_TestRender_framebuffer.get());
+		begin_render_Info.setClearValueCount(1);
+		auto color = vk::ClearValue(vk::ClearColorValue(std::array<uint32_t, 4>{55, 55, 55, 0}));
+		begin_render_Info.setPClearValues(&color);
+		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
+
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl.get(), 0, ldc_model.m_DS.get(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline_RenderModel.get());
+		cmd.drawIndirect(model.b_draw_cmd.getInfo().buffer, model.b_draw_cmd.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
+
+		cmd.endRenderPass();
+
+	}
 };
 
 int main()
@@ -1196,7 +1259,7 @@ int main()
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(0.f, 100.f, -200.f);
-	camera->getData().m_target = glm::vec3(100.f, 0.f, 100.f);
+	camera->getData().m_target = glm::vec3(0.f, 100.f, 0.f);
 	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
 	camera->getData().m_width = 1024;
 	camera->getData().m_height = 1024;
@@ -1209,8 +1272,8 @@ int main()
 
 	auto context = app.m_context;
 
-	auto model = Model::LoadModel(context, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Box.dae");
-//	auto model = Model::LoadModel(context, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Duck.dae");
+//	auto model = Model::LoadModel(context, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Box.dae");
+	auto model = Model::LoadModel(context, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Duck.dae");
 
 	std::shared_ptr<RT::Ctx> rt_ctx = std::make_shared<RT::Ctx>(context);
 	auto rt_model = RTModel::Construct(context, *rt_ctx, *model);
@@ -1247,8 +1310,9 @@ int main()
 //				cCamera::sCamera::Order().getCameraList()[0]->control(app.m_window->getInput(), 0.016f);
 
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
-//				renderer.ExecuteTestRender(cmd, *ldc_ctx, *ldc_model, *app.m_window->getFrontBuffer());
-				renderer.ExecuteRender(cmd, *ldc_ctx, *ldc_model, *app.m_window->getFrontBuffer());
+				renderer.ExecuteTestRender(cmd, *ldc_ctx, *ldc_model, *app.m_window->getFrontBuffer());
+//				renderer.ExecuteRenderLDCModel(cmd, *ldc_ctx, *ldc_model, *app.m_window->getFrontBuffer());
+//				renderer.ExecuteRenderModel(cmd, *ldc_ctx, *ldc_model, *model, *app.m_window->getFrontBuffer());
 				cmd.end();
 				cmds[cmd_render] = cmd;
 

@@ -46,7 +46,7 @@ Solves A*x = b for over-determined systems.
 
 Solves using  At*A*x = At*b   trick where At is the transponate of A
 */
-vec3 leastSquares(in int N, in vec3[24] A, in float b[24])
+vec3 leastSquares(in int N, in vec3[27] A, in float b[27])
 {
 	float At_A[3][3];
 	float At_b[3];
@@ -87,8 +87,8 @@ void main()
 	vec3 extent = u_info.m_aabb_max.xyz-u_info.m_aabb_min.xyz;
 	vec3 voxel_size = extent / reso;
 
-	vec3 plane_normal[24];
-	float d[24];
+	vec3 plane_normal[24+3];
+	float d[24+3];
 	int normal_num = 0;
 
 	for(int z = 0; z < 2; z++)
@@ -96,13 +96,16 @@ void main()
 	for(int x = 0; x < 2; x++)
 	{
 		uvec3 _i = gl_GlobalInvocationID+uvec3(x, y, z);
+		if(any(greaterThanEqual(_i, reso))){ continue; }
+
 		uint idx = _i.x + _i.y*reso.x + _i.z*reso.x*reso.y;
 		if(b_dcv_hashmap[idx]<0){ continue; }
 
 		LDCCell cell = b_ldc_cell[idx];
 		uint use_axis = (cell.useaxis_xyz&0xffu);
-		vec3 point = vec3((uvec3(cell.useaxis_xyz)>>uvec3(8, 16, 24)) & uvec3(0xffu))/ 255. * voxel_size;
-//		point += _i*voxel_size;
+		vec3 point = vec3((uvec3(cell.useaxis_xyz)>>uvec3(8, 16, 24)) & uvec3(0xffu));
+		point = point / 255.;
+
 
 		for(int i = 0; i < 3; i++)
 		{
@@ -117,7 +120,16 @@ void main()
 	}
 	if(normal_num == 0){ return; }
 
+//	plane_normal[normal_num] = axis[0];
+//	plane_normal[normal_num+1] = axis[1];
+//	plane_normal[normal_num+2] = axis[2];
+//	d[normal_num] = dot(axis[0], voxel_size);
+//	d[normal_num+1] = dot(axis[1], voxel_size);
+//	d[normal_num+2] = dot(axis[2], voxel_size);
+//	normal_num+=3;
+
 	uint idx = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*reso.x + gl_GlobalInvocationID.z*reso.x*reso.y;
-	b_dcv_vertex[idx] = leastSquares(normal_num, plane_normal, d) + gl_GlobalInvocationID * voxel_size;
+//	b_dcv_vertex[idx] = leastSquares(normal_num, plane_normal, d) * voxel_size + gl_GlobalInvocationID*voxel_size;
+	b_dcv_vertex[idx] = gl_GlobalInvocationID*voxel_size;
 
 }
