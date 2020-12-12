@@ -32,7 +32,7 @@ void main()
 		{
 			b_dcv_hashmap[i] = atomicAdd(b_dcv_counter, 1);
 		}
-		b_ldc_cell[i].normal[gl_GlobalInvocationID.z] = point.normal;
+		b_ldc_cell[i].primitive_index[gl_GlobalInvocationID.z] = point.primitive_index;
 	}
 
 

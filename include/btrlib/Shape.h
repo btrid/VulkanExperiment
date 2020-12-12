@@ -414,11 +414,19 @@ struct Plane
 	{
 		glm::vec3 dir = b - a;
 		float dot = glm::dot(normal_, dir);
-		if (dot <= 0.f){
+		if (dot <= 0.f) {
 			return std::make_tuple(false, glm::vec3(0.f), -1.f);
 		}
 		float t = (dot_ - glm::dot(normal_, a)) / dot;
-		return std::make_tuple(true, a + t*dir, t);
+		return std::make_tuple(true, a + t * dir, t);
+	}
+
+	std::tuple<bool, vec3, vec3> intersect(const Plane& b)
+	{
+		vec3 d = cross(normal_, b.normal_);
+		if (dot(d, d) < 0.0001) { return std::make_tuple(false, vec3(), vec3()); }
+		auto p = cross(dot_ * b.normal_ - b.dot_ * normal_, d) / d;
+		return std::make_tuple(true, p, d);
 	}
 
 	glm::vec3 getNearest(const glm::vec3& p) const

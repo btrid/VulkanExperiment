@@ -309,7 +309,7 @@ struct RTModel
 			assert(isbind == vk::Result::eSuccess);
 
 			std::array<vk::AccelerationStructureGeometryKHR, 1> accelerationStructureGeometry;
-			accelerationStructureGeometry[0].flags = vk::GeometryFlagBitsKHR::eOpaque;
+			accelerationStructureGeometry[0].flags = vk::GeometryFlagBitsKHR::eNoDuplicateAnyHitInvocation;
 			accelerationStructureGeometry[0].geometryType = vk::GeometryTypeKHR::eTriangles;
 			accelerationStructureGeometry[0].geometry.triangles.vertexFormat = vk::Format::eR32G32B32Sfloat;
 			accelerationStructureGeometry[0].geometry.triangles.vertexData.deviceAddress = ctx->m_device.getBufferAddress(vk::BufferDeviceAddressInfoKHR().setBuffer(model.b_vertex.getInfo().buffer)) + model.b_vertex.getInfo().offset;
@@ -401,7 +401,7 @@ struct RTModel
 			instance_data_device_address.deviceAddress = ctx->m_device.getBufferAddress(vk::BufferDeviceAddressInfoKHR().setBuffer(instance_buffer.getInfo().buffer));
 
 			vk::AccelerationStructureGeometryKHR accelerationStructureGeometry;
-			accelerationStructureGeometry.flags = vk::GeometryFlagBitsKHR::eOpaque;
+			accelerationStructureGeometry.flags = vk::GeometryFlagBitsKHR::eNoDuplicateAnyHitInvocation;
 			accelerationStructureGeometry.geometryType = vk::GeometryTypeKHR::eInstances;
 			accelerationStructureGeometry.geometry.instances.arrayOfPointers = VK_FALSE;
 			accelerationStructureGeometry.geometry.instances.data.deviceAddress = instance_data_device_address.deviceAddress;
@@ -796,8 +796,6 @@ struct LDCModel
 				vk::BufferMemoryBarrier barrier[] =
 				{
 					ldc_model->b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-					ldc_model->b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-					ldc_model->b_ldc_point.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 				};
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eRayTracingShaderKHR, {}, {}, { array_size(barrier), barrier }, {});
 
@@ -1253,13 +1251,169 @@ struct Renderer
 	}
 };
 
+vec2 sign_not_zero(vec2 v)
+{
+	return glm::step(vec2(0.f), v) * vec2(2.0) + vec2(-1.0);
+}
+uint pack_normal_octahedron(vec3 _v)
+{
+	vec3 v = vec3(_v.xy() / dot(abs(_v), vec3(1)), _v.z);
+	return packHalf2x16(mix(v.xy(), (1.f - abs(v.yx())) * sign_not_zero(v.xy()), glm::step(v.z, 0.f)));
+
+}
+vec3 unpack_normal_octahedron(uint packed_nrm)
+{
+	vec2 nrm = glm::unpackHalf2x16(packed_nrm);
+	vec3 v = vec3(nrm.xy(), 1.f - abs(nrm.x) - abs(nrm.y));
+	v.xy = glm::mix(v.xy(), (1.f - abs(v.yx())) * sign_not_zero(v.xy()), glm::step(v.z, 0.f));
+	return normalize(v);
+}
+
+float determinant(
+	float a, float b, float c,
+	float d, float e, float f,
+	float g, float h, float i)
+{
+	return glm::determinant(mat3(a, b, c, d, e, f, g, h, i));
+}
+
+
+// Solves for x in  A*x = b.
+// 'A' contains the matrix row-wise.
+// 'b' and 'x' are column vectors.
+// Uses cramers rule.
+
+vec3 solve3x3(const float* A, const float b[3])
+{
+	auto det = determinant(
+		A[0 * 3 + 0], A[0 * 3 + 1], A[0 * 3 + 2],
+		A[1 * 3 + 0], A[1 * 3 + 1], A[1 * 3 + 2],
+		A[2 * 3 + 0], A[2 * 3 + 1], A[2 * 3 + 2]);
+
+	if (abs(det) <= 1e-12)
+	{
+		return vec3(NAN);
+	}
+
+	return vec3
+	{
+		determinant(
+			b[0],    A[0 * 3 + 1], A[0 * 3 + 2],
+			b[1],    A[1 * 3 + 1], A[1 * 3 + 2],
+			b[2],    A[2 * 3 + 1], A[2 * 3 + 2]),
+
+		determinant(
+			A[0 * 3 + 0], b[0],    A[0 * 3 + 2],
+			A[1 * 3 + 0], b[1],    A[1 * 3 + 2],
+			A[2 * 3 + 0], b[2],    A[2 * 3 + 2]),
+
+		determinant(
+			A[0 * 3 + 0], A[0 * 3 + 1], b[0]   ,
+			A[1 * 3 + 0], A[1 * 3 + 1], b[1]   ,
+			A[2 * 3 + 0], A[2 * 3 + 1], b[2])
+
+	};
+}
+
+
+// Solves A*x = b for over-determined systems.
+// Solves using  At*A*x = At*b   trick where At is the transponate of A
+vec3 leastSquares(size_t N, const vec3* A, const float* b)
+{
+	float At_A[3][3];
+	float At_b[3];
+
+	for (int i = 0; i < 3; ++i)
+	{
+		for (int j = 0; j < 3; ++j)
+		{
+			float sum = 0;
+			for (size_t k = 0; k < N; ++k)
+			{
+				sum += A[k][i] * A[k][j];
+			}
+			At_A[i][j] = sum;
+		}
+	}
+
+	for (int i = 0; i < 3; ++i)
+	{
+		float sum = 0;
+
+		for (size_t k = 0; k < N; ++k)
+		{
+			sum += A[k][i] * b[k];
+		}
+
+		At_b[i] = sum;
+	}
+
+	return solve3x3(&At_A[0][0], At_b);
+}
+
+vec3 IntersectPlanes(vec4 plane[3])
+{
+	vec3 u = cross(plane[1].xyz(), plane[2].xyz());
+	float denom = dot(plane[0].xyz(), u);
+	if (abs(denom) < 0.00001f) { return vec3(NAN); }
+	return (plane[0].w * u + cross(plane[0].xyz(), plane[2].w * plane[1].xyz() - plane[1].w * plane[2].xyz())) / denom;
+
+}
 int main()
 {
+	{
+// 		for ( int i = 0; i < 100; i++)
+// 		{
+// 			auto n1 = normalize(glm::ballRand(10.f));
+// 			auto n2 = unpack_normal_octahedron(pack_normal_octahedron(n1));
+// 			printf("%3d %8.3f, %8.3f, %8.3f\n    %8.3f, %8.3f, %8.3f\n", i, n1.x, n1.y, n1.z, n2.x, n2.y, n2.z);
+// 
+// 		}
 
+	}
+
+	{
+		vec3 normal[9] = {};
+		float d[9];
+		int count = 0;
+
+ 		vec3 plane_pos = vec3(0.1f, 0.6f, 0.1f);
+ 		vec3 plane_normal = normalize(vec3(1.f,0.0f, 1.f));
+		
+ 		vec3 v[3][3];
+		Plane plane[3];
+		for (int i = 0; i < 3; i++)
+		{
+			v[i][0] = glm::linearRand(vec3(0.f), vec3(1.f));
+			v[i][1] = glm::linearRand(vec3(0.f), vec3(1.f));
+			v[i][2] = glm::linearRand(vec3(0.f), vec3(1.f));
+			plane[i] = Plane(v[i][0], v[i][1], v[i][2]);
+		}
+		for (int i = 0; i < 3; i++)
+		{
+			normal[count] = plane[i].normal_;
+			d[count] = plane[i].dot_;
+			count++;
+		}
+
+//  		for (int i = 0; i < 3; i++) 
+//  		{
+//  			vec3 pp = vec3(0.01f);
+// 			vec3 n = vec3(i == 0, i == 1, i == 2)*pp;
+// 
+// 			normal[count] = n;
+//  			d[count] = dot(n, vec3(0.5f));
+// 			count++;
+//  		}
+
+		auto _ = leastSquares(count, normal, d);
+		int ___ = 0;
+		// {x=0.0914800987 y=0.939555883 z=-0.0373089425 ...}
+	}
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
-	camera->getData().m_position = glm::vec3(0.f, 100.f, -200.f);
-	camera->getData().m_target = glm::vec3(0.f, 100.f, 0.f);
+	camera->getData().m_position = glm::vec3(0.f, 0.f, -200.f);
+	camera->getData().m_target = glm::vec3(0.f, 0.f, 0.f);
 	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
 	camera->getData().m_width = 1024;
 	camera->getData().m_height = 1024;
@@ -1310,8 +1464,8 @@ int main()
 //				cCamera::sCamera::Order().getCameraList()[0]->control(app.m_window->getInput(), 0.016f);
 
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
-				renderer.ExecuteTestRender(cmd, *ldc_ctx, *ldc_model, *app.m_window->getFrontBuffer());
-//				renderer.ExecuteRenderLDCModel(cmd, *ldc_ctx, *ldc_model, *app.m_window->getFrontBuffer());
+//				renderer.ExecuteTestRender(cmd, *ldc_ctx, *ldc_model, *app.m_window->getFrontBuffer());
+				renderer.ExecuteRenderLDCModel(cmd, *ldc_ctx, *ldc_model, *app.m_window->getFrontBuffer());
 //				renderer.ExecuteRenderModel(cmd, *ldc_ctx, *ldc_model, *model, *app.m_window->getFrontBuffer());
 				cmd.end();
 				cmds[cmd_render] = cmd;

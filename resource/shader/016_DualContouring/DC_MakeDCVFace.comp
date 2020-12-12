@@ -18,14 +18,14 @@ void main()
 	if(b_dcv_hashmap[i0]<0){ return; }
 
 	uvec3 offset[3][3] = {
-		{{1,0,0}, {0, 1, 0}, {1, 1, 0}},
 		{{0,1,0}, {0, 0, 1}, {0, 1, 1}},
 		{{1,0,0}, {0, 0, 1}, {1, 0, 1}},
+		{{1,0,0}, {0, 1, 0}, {1, 1, 0}},
 	};
 
 	for(int i = 0; i < 3; i++)
 	{
-		if(any(greaterThanEqual(gl_GlobalInvocationID + uvec3(i!=1, i!=2, i!=0), reso))){ continue; }
+		if(any(greaterThanEqual(gl_GlobalInvocationID + offset[i][2], reso))){ continue; }
 		uvec3 i31 = gl_GlobalInvocationID + offset[i][0];
 		uint i1 = i31.x + i31.y*reso.x + i31.z*reso.x*reso.y;
 		uvec3 i32 = gl_GlobalInvocationID + offset[i][1];
