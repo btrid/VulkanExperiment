@@ -13,6 +13,7 @@ SET output=-o ../binary/
 %exe% %output%/DC_MakeDCVFace.comp.spv DC_MakeDCVFace.comp
 
 %exe% %output%/DC_Rendering.vert.spv DC_Rendering.vert
+%exe% %output%/DC_Rendering.geom.spv DC_Rendering.geom
 %exe% %output%/DC_Rendering.frag.spv DC_Rendering.frag
 %exe% %output%/DC_RenderModel.vert.spv DC_RenderModel.vert
 %exe% %output%/DC_RenderModel.frag.spv DC_RenderModel.frag

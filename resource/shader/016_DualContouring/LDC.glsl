@@ -15,7 +15,6 @@ struct Info
 struct LDCPoint
 {
 	float p;
-//	uint normal;
 	uint primitive_index;
 	int inout_next;
 };
@@ -60,7 +59,7 @@ layout(set=USE_LDC,binding=14, scalar) buffer DCVVertex { vec3 b_dcv_vertex[]; }
 layout(set=USE_LDC,binding=15, scalar) buffer DCVCounter { int b_dcv_counter; };
 layout(set=USE_LDC,binding=16, scalar) buffer DCVHashMap { int b_dcv_hashmap[]; };
 layout(set=USE_LDC,binding=17, scalar) buffer DCVIndexCounter { VkDrawIndirectCommand b_dcv_index_counter; };
-layout(set=USE_LDC,binding=18, scalar) buffer DCVIndexBuffer { uvec3 b_dcv_index[]; };
+layout(set=USE_LDC,binding=18, scalar) buffer DCVIndexBuffer { u8vec4 b_dcv_index[]; };
 #endif
 
 

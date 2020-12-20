@@ -14,14 +14,12 @@ layout(location=0) out gl_PerVertex
 
 layout(location=1) out VSVertex
 {
-	flat uvec3 CellID;
+	flat uint VertexIndex;
 }Out;
 
 void main()
 {
-	int face = gl_VertexIndex/3;
-	int component = gl_VertexIndex%3;
-	uint index = b_dcv_index[face][component];
-	gl_Position = u_camera[0].u_projection * u_camera[0].u_view * vec4(b_dcv_vertex[index], 1.0);
+	Out.VertexIndex = gl_VertexIndex;
+	gl_Position = vec4(1.);
 
 }

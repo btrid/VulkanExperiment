@@ -155,6 +155,5 @@ void main()
 
 	b_dcv_hashmap[idx] = 1;
 	b_dcv_vertex[idx] = leastSquares(normal_num, plane_normal, d);
-//	b_dcv_vertex[idx] = gl_GlobalInvocationID*voxel_size;
 
 }

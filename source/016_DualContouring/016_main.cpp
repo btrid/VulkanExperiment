@@ -512,7 +512,7 @@ struct Ctx
 		// descriptor set layout
 		{
 			vk::DescriptorSetLayoutBinding accelerationStructureLayoutBinding;
-			auto stage = vk::ShaderStageFlagBits::eRaygenKHR| vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eCompute| vk::ShaderStageFlagBits::eVertex;
+			auto stage = vk::ShaderStageFlagBits::eRaygenKHR| vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry| vk::ShaderStageFlagBits::eFragment;
 			vk::DescriptorSetLayoutBinding binding[] = {
 				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eUniformBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
@@ -709,7 +709,7 @@ struct LDCModel
 	btr::BufferMemoryEx<int32_t> b_dcv_counter;
 	btr::BufferMemoryEx<int32_t> b_dcv_hashmap;
 	btr::BufferMemoryEx<vk::DrawIndirectCommand> b_dcv_index_counter;
-	btr::BufferMemoryEx<uvec3> b_dcv_index;
+	btr::BufferMemoryEx<u16vec4> b_dcv_index;
 
 	static std::shared_ptr<LDCModel> Construct(std::shared_ptr<btr::Context>& ctx, RT::Ctx& rt_ctx, LDC::Ctx& ldc_ctx, Model& model, RTModel& rt_model)
 	{
@@ -737,7 +737,7 @@ struct LDCModel
 			ldc_model->b_dcv_hashmap = ctx->m_storage_memory.allocateMemory<int32_t>(64 * 64 * 64);
 
 			ldc_model->b_dcv_index_counter = ctx->m_storage_memory.allocateMemory<vk::DrawIndirectCommand>(1);
-			ldc_model->b_dcv_index = ctx->m_storage_memory.allocateMemory<uvec3>(365000);
+			ldc_model->b_dcv_index = ctx->m_storage_memory.allocateMemory<u16vec4>(64*64*64*3);
 
 			vk::DescriptorBufferInfo uniforms[] =
 			{
@@ -926,6 +926,9 @@ struct Renderer
 				vk::AttachmentReference color_ref[] = {
 					vk::AttachmentReference().setLayout(vk::ImageLayout::eColorAttachmentOptimal).setAttachment(0),
 				};
+				vk::AttachmentReference depth_ref;
+				depth_ref.setAttachment(1);
+				depth_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
 				// sub pass
 				vk::SubpassDescription subpass;
@@ -934,6 +937,7 @@ struct Renderer
 				subpass.setPInputAttachments(nullptr);
 				subpass.setColorAttachmentCount(array_length(color_ref));
 				subpass.setPColorAttachments(color_ref);
+				subpass.setPDepthStencilAttachment(&depth_ref);
 
 				vk::AttachmentDescription attach_desc[] =
 				{
@@ -945,6 +949,13 @@ struct Renderer
 					.setStoreOp(vk::AttachmentStoreOp::eStore)
 					.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
 					.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
+					vk::AttachmentDescription()
+					.setFormat(rt.m_depth_info.format)
+					.setSamples(vk::SampleCountFlagBits::e1)
+					.setLoadOp(vk::AttachmentLoadOp::eLoad)
+					.setStoreOp(vk::AttachmentStoreOp::eStore)
+					.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
+					.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
 				};
 				vk::RenderPassCreateInfo renderpass_info;
 				renderpass_info.setAttachmentCount(array_length(attach_desc));
@@ -957,6 +968,7 @@ struct Renderer
 				{
 					vk::ImageView view[] = {
 						rt.m_view,
+						rt.m_depth_view,
 					};
 					vk::FramebufferCreateInfo framebuffer_info;
 					framebuffer_info.setRenderPass(m_TestRender_pass.get());
@@ -1009,8 +1021,8 @@ struct Renderer
 				sample_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);
 
 				vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
-				depth_stencil_info.setDepthTestEnable(VK_FALSE);
-				depth_stencil_info.setDepthWriteEnable(VK_FALSE);
+				depth_stencil_info.setDepthTestEnable(VK_TRUE);
+				depth_stencil_info.setDepthWriteEnable(VK_TRUE);
 				depth_stencil_info.setDepthCompareOp(vk::CompareOp::eGreaterOrEqual);
 				depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
 				depth_stencil_info.setStencilTestEnable(VK_FALSE);
@@ -1054,6 +1066,7 @@ struct Renderer
 				struct { const char* name; vk::ShaderStageFlagBits flag; } shader_param[] =
 				{
 					{"DC_Rendering.vert.spv", vk::ShaderStageFlagBits::eVertex},
+					{"DC_Rendering.geom.spv", vk::ShaderStageFlagBits::eGeometry},
 					{"DC_Rendering.frag.spv", vk::ShaderStageFlagBits::eFragment},
 					{"DC_RenderModel.vert.spv", vk::ShaderStageFlagBits::eVertex},
 					{"DC_RenderModel.frag.spv", vk::ShaderStageFlagBits::eFragment},
@@ -1070,7 +1083,11 @@ struct Renderer
 				// assembly
 				vk::PipelineInputAssemblyStateCreateInfo assembly_info;
 				assembly_info.setPrimitiveRestartEnable(VK_FALSE);
-				assembly_info.setTopology(vk::PrimitiveTopology::eTriangleList);
+				assembly_info.setTopology(vk::PrimitiveTopology::ePointList);
+
+				vk::PipelineInputAssemblyStateCreateInfo model_assembly_info;
+				model_assembly_info.setPrimitiveRestartEnable(VK_FALSE);
+				model_assembly_info.setTopology(vk::PrimitiveTopology::eTriangleList);
 
 				// viewport
 				vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)rt.m_resolution.width, (float)rt.m_resolution.height, 0.f, 1.f);
@@ -1092,24 +1109,25 @@ struct Renderer
 				sample_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);
 
 				vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
-				depth_stencil_info.setDepthTestEnable(VK_FALSE);
-				depth_stencil_info.setDepthWriteEnable(VK_FALSE);
+				depth_stencil_info.setDepthTestEnable(VK_TRUE);
+				depth_stencil_info.setDepthWriteEnable(VK_TRUE);
 				depth_stencil_info.setDepthCompareOp(vk::CompareOp::eGreaterOrEqual);
 				depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
 				depth_stencil_info.setStencilTestEnable(VK_FALSE);
 
 
 				vk::PipelineColorBlendAttachmentState blend_state;
-				blend_state.setBlendEnable(VK_TRUE);
+				blend_state.setBlendEnable(VK_FALSE);
 				blend_state.setColorBlendOp(vk::BlendOp::eAdd);
 				blend_state.setSrcColorBlendFactor(vk::BlendFactor::eOne);
-				blend_state.setDstColorBlendFactor(vk::BlendFactor::eOne);
+				blend_state.setDstColorBlendFactor(vk::BlendFactor::eZero);
 				blend_state.setAlphaBlendOp(vk::BlendOp::eAdd);
 				blend_state.setSrcAlphaBlendFactor(vk::BlendFactor::eOne);
 				blend_state.setDstAlphaBlendFactor(vk::BlendFactor::eZero);
 				blend_state.setColorWriteMask(vk::ColorComponentFlagBits::eR
 					| vk::ColorComponentFlagBits::eG
-					| vk::ColorComponentFlagBits::eB);
+					| vk::ColorComponentFlagBits::eB
+					| vk::ColorComponentFlagBits::eA);
 
 				vk::PipelineColorBlendStateCreateInfo blend_info;
 				blend_info.setAttachmentCount(1);
@@ -1119,7 +1137,7 @@ struct Renderer
 
 				vk::GraphicsPipelineCreateInfo graphics_pipeline_info =
 					vk::GraphicsPipelineCreateInfo()
-					.setStageCount(2)
+					.setStageCount(3)
 					.setPStages(shaderStages.data())
 					.setPVertexInputState(&vertex_input_info)
 					.setPInputAssemblyState(&assembly_info)
@@ -1135,9 +1153,9 @@ struct Renderer
 				graphics_pipeline_info =
 					vk::GraphicsPipelineCreateInfo()
 					.setStageCount(2)
-					.setPStages(shaderStages.data()+2)
+					.setPStages(shaderStages.data()+3)
 					.setPVertexInputState(&vertex_input_info)
-					.setPInputAssemblyState(&assembly_info)
+					.setPInputAssemblyState(&model_assembly_info)
 					.setPViewportState(&viewportInfo)
 					.setPRasterizationState(&rasterization_info)
 					.setPMultisampleState(&sample_info)
@@ -1399,14 +1417,13 @@ int main()
 			if (!std::get<0>(hit)) { continue; }
 			if (std::get<2>(hit)<0.f|| std::get<2>(hit) >= 1.f) { continue; }
 
-// 			if (ishit[0])
-// 			{
-// 				continue;
-// 			}
-// 			ishit[0] = true;
+			if (ishit[0])
+			{
+				continue;
+			}
+			ishit[0] = true;
 
 			normal[count] = P.normal_;
-//			d[count] = dot(vec3(n), std::get<1>(hit)) - P.dot_;
 			d[count] = P.dot_;
 			Hit[count] = hit;
 			count++;
@@ -1438,7 +1455,6 @@ int main()
 		{
 			int ___ = 0;
 		}
-		// {x=0.0914800987 y=0.939555883 z=-0.0373089425 ...}
 	}
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
