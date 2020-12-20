@@ -61,7 +61,7 @@ layout(set=USE_LDC,binding=15, scalar) buffer DCVCounter { int b_dcv_counter; };
 layout(set=USE_LDC,binding=16, scalar) buffer DCVHashMap { int b_dcv_hashmap[]; };
 layout(set=USE_LDC,binding=17, scalar) buffer DCVIndexCounter { VkDrawIndirectCommand b_dcv_index_counter; };
 layout(set=USE_LDC,binding=18, scalar) buffer DCVIndexBuffer { u8vec4 b_dcv_index[]; };
-layout(set=USE_LDC,binding=19, scalar) buffer DCVVertexNormalBuffer { vec3 b_dcv_normal[]; };
+layout(set=USE_LDC,binding=19, scalar) buffer DCVVertexNormalBuffer { uint b_dcv_normal[]; };
 #endif
 
 

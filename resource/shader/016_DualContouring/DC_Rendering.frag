@@ -8,7 +8,7 @@
 #include "btrlib/Camera.glsl"
 
 layout(location=1) in Data{
-	flat vec3 Normal;
+	vec3 Normal;
 	flat uint VertexIndex;
 }fs_in;
 
@@ -21,7 +21,7 @@ void main()
 
 	FragColor = vec4(d, d, d, 1.);
 
-	FragColor = vec4(fs_in.Normal, 1.);
+	FragColor = vec4(normalize(fs_in.Normal), 1.);
 
 	vec3 g_color[3] = 
 	{
