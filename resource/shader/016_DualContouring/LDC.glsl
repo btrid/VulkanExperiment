@@ -51,6 +51,7 @@ layout(set=USE_LDC,binding=1, scalar) buffer Vertices { vec3 b_vertex[]; };
 layout(set=USE_LDC,binding=2, scalar) buffer Normals { vec3 b_normal[]; };
 layout(set=USE_LDC,binding=3, scalar) buffer Indices { uvec3 b_index[]; };
 layout(set=USE_LDC,binding=4, scalar) buffer DrawCmd { VkDrawIndexedIndirectCommand b_draw_cmd[]; };
+
 layout(set=USE_LDC,binding=10, std430) buffer LDCCounter { int b_ldc_counter; };
 layout(set=USE_LDC,binding=11, std430) buffer LDCPointLinkHead { int b_ldc_point_link_head[]; };
 layout(set=USE_LDC,binding=12, scalar) buffer LDCPointBuffer { LDCPoint b_ldc_point[]; };
@@ -60,6 +61,7 @@ layout(set=USE_LDC,binding=15, scalar) buffer DCVCounter { int b_dcv_counter; };
 layout(set=USE_LDC,binding=16, scalar) buffer DCVHashMap { int b_dcv_hashmap[]; };
 layout(set=USE_LDC,binding=17, scalar) buffer DCVIndexCounter { VkDrawIndirectCommand b_dcv_index_counter; };
 layout(set=USE_LDC,binding=18, scalar) buffer DCVIndexBuffer { u8vec4 b_dcv_index[]; };
+layout(set=USE_LDC,binding=19, scalar) buffer DCVVertexNormalBuffer { vec3 b_dcv_normal[]; };
 #endif
 
 

@@ -709,7 +709,7 @@ struct LDCModel
 	btr::BufferMemoryEx<int32_t> b_dcv_counter;
 	btr::BufferMemoryEx<int32_t> b_dcv_hashmap;
 	btr::BufferMemoryEx<vk::DrawIndirectCommand> b_dcv_index_counter;
-	btr::BufferMemoryEx<u16vec4> b_dcv_index;
+	btr::BufferMemoryEx<u8vec4> b_dcv_index;
 
 	static std::shared_ptr<LDCModel> Construct(std::shared_ptr<btr::Context>& ctx, RT::Ctx& rt_ctx, LDC::Ctx& ldc_ctx, Model& model, RTModel& rt_model)
 	{
@@ -734,10 +734,10 @@ struct LDCModel
 
 			ldc_model->b_dc_vertex = ctx->m_storage_memory.allocateMemory<vec3>(64*64*64);
 			ldc_model->b_dcv_counter = ctx->m_storage_memory.allocateMemory<int32_t>(1);
-			ldc_model->b_dcv_hashmap = ctx->m_storage_memory.allocateMemory<int32_t>(64 * 64 * 64);
+			ldc_model->b_dcv_hashmap = ctx->m_storage_memory.allocateMemory<int32_t>(64 * 64 * 64 / 32);
 
 			ldc_model->b_dcv_index_counter = ctx->m_storage_memory.allocateMemory<vk::DrawIndirectCommand>(1);
-			ldc_model->b_dcv_index = ctx->m_storage_memory.allocateMemory<u16vec4>(64*64*64*3);
+			ldc_model->b_dcv_index = ctx->m_storage_memory.allocateMemory<u8vec4>(64*64*64);
 
 			vk::DescriptorBufferInfo uniforms[] =
 			{
