@@ -6,8 +6,13 @@
 #define USE_LDC 1
 #include "LDC.glsl"
 
-layout(location = 0) rayPayloadEXT float RayMaxT;
-layout(location = 1) rayPayloadEXT uint PrimitiveID;
+struct Paylpad
+{
+	float HitT;
+	uint PrimitiveID;
+};
+layout(location = 0) rayPayloadEXT Paylpad payload;
+
 
 
 void main() 
@@ -15,9 +20,6 @@ void main()
 	uint grid = gl_LaunchIDEXT.x + gl_LaunchIDEXT.y*gl_LaunchSizeEXT.x + gl_LaunchIDEXT.z*gl_LaunchSizeEXT.x*gl_LaunchSizeEXT.y;
 	int head = -1;
 	b_ldc_point_link_head[grid] = head;
-
-//	if(gl_LaunchIDEXT.z == 0){ return; }
-//	if(gl_LaunchIDEXT.z == 1){ return; }
 
 	vec3 axis[3] = {vec3(1., 0., 0.), vec3(0., 1., 0.),vec3(0., 0., 1.)};
 	vec3 f = axis[(gl_LaunchIDEXT.z+0)%3];
@@ -30,29 +32,27 @@ void main()
 	vec3 rate = vec3(gl_LaunchIDEXT) / vec3(gl_LaunchSizeEXT);
 	vec3 origin = min + (s*rate.x*extent[(gl_LaunchIDEXT.z+1)%3]+u*rate.y*extent[(gl_LaunchIDEXT.z+2)%3]);
 
-	RayMaxT = 0.;
+	payload.HitT = 0.;
 	float tmax = extent[gl_LaunchIDEXT.z];
 
-	for (;;)
+	for (int i = 0; i<16; i++)
 	{
-		traceRayEXT(topLevelAS, gl_RayFlagsNoOpaqueEXT, 0xff, 0, 0, 0, origin.xyz, RayMaxT, f, tmax, 0);
-		if(RayMaxT < -1.)
+		traceRayEXT(topLevelAS, 0, 0xff, 0, 0, 0, origin.xyz, payload.HitT, f, tmax, 0);
+		if(payload.HitT < -1.)
 		{
 			break;
 		}
 
 		int index = atomicAdd(b_ldc_counter, 1);
 		LDCPoint point;
-		point.p = RayMaxT;
-		point.primitive_index = PrimitiveID;
+		point.p = payload.HitT;
+		point.primitive_index = payload.PrimitiveID;
 		point.inout_next = head;
 
 		b_ldc_point[index] = point;
 		b_ldc_point_link_head[grid] = index;
 
 		head = index;
-
-		RayMaxT += tmax * Voxel_Reso[gl_LaunchSizeEXT.z];
 	}
 
 }

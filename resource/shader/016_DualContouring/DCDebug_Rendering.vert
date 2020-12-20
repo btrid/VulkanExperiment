@@ -22,7 +22,7 @@ void main()
 	int z = gl_VertexIndex.x/64/64;
 	int y = (gl_VertexIndex.x/64) % 64;
 	int x = gl_VertexIndex.x % 64;
-	gl_PointSize = 2.;
+	gl_PointSize = 10.;
 	Out.CellID = uvec3(x, y, z);
 
 	int hash = b_dcv_hashmap[gl_VertexIndex];

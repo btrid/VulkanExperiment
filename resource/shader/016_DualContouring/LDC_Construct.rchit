@@ -6,14 +6,16 @@
 #define USE_LDC 1
 #include "LDC.glsl"
 
-layout(location = 0) rayPayloadInEXT float RayMaxT;
-layout(location = 1) rayPayloadInEXT uint PrimitiveID;
+struct Paylpad
+{
+	float HitT;
+	uint PrimitiveID;
+};
+layout(location = 0) rayPayloadInEXT Paylpad payload;
 
-hitAttributeEXT vec2 baryCoord;
+//hitAttributeEXT vec2 baryCoord;
 void main()
 {
-  RayMaxT = gl_RayTmaxEXT;
-  PrimitiveID = gl_PrimitiveID;
-
-
+	payload.HitT = gl_HitTEXT;
+	payload.PrimitiveID = gl_PrimitiveID;
 }

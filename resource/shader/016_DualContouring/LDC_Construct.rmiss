@@ -3,11 +3,15 @@
 #extension GL_GOOGLE_include_directive : require
 #include "LDC.glsl"
 
-layout(location = 0) rayPayloadInEXT float RayMaxT;
-layout(location = 1) rayPayloadInEXT uint PrimitiveID;
+struct Paylpad
+{
+	float HitT;
+	uint PrimitiveID;
+};
+layout(location = 0) rayPayloadInEXT Paylpad payload;
 
 
 void main()
 {
-  RayMaxT = -10.;
+  payload.HitT = -10.;
 }

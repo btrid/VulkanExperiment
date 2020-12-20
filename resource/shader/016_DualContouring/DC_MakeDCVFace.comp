@@ -9,32 +9,27 @@ layout (local_size_x = 64, local_size_y=1) in;
 
 void main() 
 {
-	vec3 axis[] = {vec3(1., 0., 0.),vec3(0., 1., 0.),vec3(0., 0., 1.),};
-	uvec3 reso = gl_NumWorkGroups * gl_WorkGroupSize;
-
-	vec3 extent = u_info.m_aabb_max.xyz-u_info.m_aabb_min.xyz;
-
-	uint i0 = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*reso.x + gl_GlobalInvocationID.z*reso.x*reso.y;
+	uint i0 = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*Voxel_Reso.x + gl_GlobalInvocationID.z*Voxel_Reso.x*Voxel_Reso.y;
 	if(b_dcv_hashmap[i0]<0){ return; }
 
 	uvec3 offset[3][3] = {
-		{{0,1,0}, {0, 0, 1}, {0, 1, 1}},
-		{{1,0,0}, {0, 0, 1}, {1, 0, 1}},
 		{{1,0,0}, {0, 1, 0}, {1, 1, 0}},
+		{{0,1,0}, {0, 0, 1}, {0, 1, 1}},
+		{{0,0,1}, {1, 0, 0}, {1, 0, 1}},
 	};
 
 	for(int i = 0; i < 3; i++)
 	{
-		if(any(greaterThanEqual(gl_GlobalInvocationID + offset[i][2], reso))){ continue; }
+		if(any(greaterThanEqual(gl_GlobalInvocationID + offset[i][2], Voxel_Reso))){ continue; }
 		uvec3 i31 = gl_GlobalInvocationID + offset[i][0];
-		uint i1 = i31.x + i31.y*reso.x + i31.z*reso.x*reso.y;
+		uint i1 = i31.x + i31.y*Voxel_Reso.x + i31.z*Voxel_Reso.x*Voxel_Reso.y;
 		uvec3 i32 = gl_GlobalInvocationID + offset[i][1];
-		uint i2 = i32.x + i32.y*reso.x + i32.z*reso.x*reso.y;
+		uint i2 = i32.x + i32.y*Voxel_Reso.x + i32.z*Voxel_Reso.x*Voxel_Reso.y;
 		uvec3 i33 = gl_GlobalInvocationID + offset[i][2];
-		uint i3 = i33.x + i33.y*reso.x + i33.z*reso.x*reso.y;
+		uint i3 = i33.x + i33.y*Voxel_Reso.x + i33.z*Voxel_Reso.x*Voxel_Reso.y;
 		if(b_dcv_hashmap[i1]<0||b_dcv_hashmap[i2]<0||b_dcv_hashmap[i3]<0){ continue; }
 
-		uint face_index =atomicAdd(b_dcv_index_counter.vertexCount, 6);
+		uint face_index = atomicAdd(b_dcv_index_counter.vertexCount, 6);
 		b_dcv_index[face_index/3] = uvec3(i0, i1, i2);
 		b_dcv_index[face_index/3+1] = uvec3(i1, i3, i2);
 	}

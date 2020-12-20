@@ -45,7 +45,7 @@ Solves A*x = b for over-determined systems.
 
 Solves using  At*A*x = At*b   trick where At is the transponate of A
 */
-vec3 leastSquares(in int N, in vec3[6] A, in float b[6])
+vec3 leastSquares(in int N, in vec3[16] A, in float b[16])
 {
 	float At_A[3][3];
 	float At_b[3];
@@ -81,43 +81,47 @@ layout (local_size_x = 64) in;
 void main() 
 {
 	vec3 axis[] = {vec3(1., 0., 0.),vec3(0., 1., 0.),vec3(0., 0., 1.),};
-	uvec3 reso = gl_NumWorkGroups * gl_WorkGroupSize;
+	uvec3 reso = Voxel_Reso;
 
 	vec3 extent = u_info.m_aabb_max.xyz-u_info.m_aabb_min.xyz;
 	vec3 voxel_size = extent / reso;
 
-	vec3 plane_normal[6];
-	float d[6];
-	uint bbb[3] = {0, 0, 0};
+	vec3 plane_normal[16];
+	float d[16];
+	int plane_id[16];
 	int normal_num = 0;
-
-	uvec3 _i = gl_GlobalInvocationID;
-	uint idx = _i.x + _i.y*reso.x + _i.z*reso.x*reso.y;
+	for (int z = 0; z < 2; z++)
+	for (int y = 0; y < 2; y++)
+	for (int x = 0; x < 2; x++)
 	{
-		if(b_dcv_hashmap[idx]<0){ return; }
+		ivec3 p = ivec3(x, y, z);
+
+		uvec3 _i = gl_GlobalInvocationID+p;
+		uint idx = _i.x + _i.y*reso.x + _i.z*reso.x*reso.y;
+//		if(b_dcv_hashmap[idx]<0){ continue; }
 
 		LDCCell cell = b_ldc_cell[idx];
 		uint use_axis = (cell.useaxis_xyz&0xffu);
-//		vec3 point = vec3((uvec3(cell.useaxis_xyz)>>uvec3(8, 16, 24)) & uvec3(0xffu));
-//		point = point / 255.;
 
-
-		for(int i = 0; i < 3; i++)
+		for (int i = 0; i < 3; i++)
 		{
 			if((use_axis&(1<<i)) == 0){ continue; }
+			ivec3 n = ivec3(i == 0, i == 1, i == 2);
+			if (any(equal(n&p, ivec3(1)))){continue;}
 
-
-			bool cancel = false;
-			for(int _i = 0; _i < normal_num; _i++)
+			bool is_pushed = false;
+			for(int p = 0; p < normal_num; p++)
 			{
-				if(bbb[_i] == cell.primitive_index[i])
-				{
-					cancel = true;
+				if(plane_id[p] == cell.primitive_index[i]){
+					is_pushed = true;
 					break;
 				}
 			}
+			if(is_pushed)
+			{
+				continue;
+			}
 
-			if(cancel){continue;}
 
 			uvec3 i0 = b_index[cell.primitive_index[i]];
 			vec3 a = b_vertex[i0.x];
@@ -125,31 +129,25 @@ void main()
 			vec3 c = b_vertex[i0.z];
 			vec3 nrm = normalize(cross(b - a, c - a));
 			plane_normal[normal_num] = nrm;
-			d[normal_num] = dot(nrm, a);
-			bbb[normal_num] = cell.primitive_index[i];
-
+			d[normal_num] = dot(nrm, a) - dot(nrm, vec3(gl_GlobalInvocationID));
 			normal_num++;
 		}
 
 	}
 
-	if(normal_num == 0){ b_dcv_hashmap[idx] = -1 ;return; }
-	if(normal_num == 1)
-	{
-
-	}
 
 	float n = 0.01;
 	plane_normal[normal_num] = axis[0]*n;
 	plane_normal[normal_num+1] = axis[1]*n;
 	plane_normal[normal_num+2] = axis[2]*n;
-	d[normal_num] = dot(axis[0], vec3(0.5));
-	d[normal_num+1] = dot(axis[1], vec3(0.5));
-	d[normal_num+2] = dot(axis[2], vec3(0.5));
-//	normal_num+=3;
+	d[normal_num] = dot(axis[0]*n, vec3(0.5));
+	d[normal_num+1] = dot(axis[1]*n, vec3(0.5));
+	d[normal_num+2] = dot(axis[2]*n, vec3(0.5));
+	normal_num+=3;
 
-	b_dcv_vertex[idx] = leastSquares(normal_num, plane_normal, d)*voxel_size + gl_GlobalInvocationID*voxel_size;
-//	b_dcv_vertex[idx] = plane_normal[0]*100.;
+	uvec3 _i = gl_GlobalInvocationID;
+	uint idx = _i.x + _i.y*reso.x + _i.z*reso.x*reso.y;
+	b_dcv_vertex[idx] = leastSquares(normal_num, plane_normal, d);
 //	b_dcv_vertex[idx] = gl_GlobalInvocationID*voxel_size;
 
 }
