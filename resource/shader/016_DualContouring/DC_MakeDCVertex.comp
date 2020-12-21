@@ -161,7 +161,7 @@ void main()
 		normal_num+=3;
 
 		b_dcv_vertex[idx] = leastSquares(normal_num, plane_normal, d);
-		b_dcv_normal[idx] = pack_normal_octahedron(plane_normal[0]);
+//		b_dcv_normal[idx] = pack_normal_octahedron(plane_normal[0]);
 
 		atomicOr(s_hashmap[gl_LocalInvocationIndex/32], 1<<(gl_LocalInvocationIndex%32));
 	}

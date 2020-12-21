@@ -64,23 +64,23 @@ void main()
 		vec3 v2 = b_dcv_vertex[i2];
 		vec3 v3 = b_dcv_vertex[i3];
 
-//		vec3 normal = normalize(cross(v1-v0, v3-v0));
+		vec3 normal = normalize(cross(v1-v0, v2-v0));
 
 
 		gl_Position = pv * vec4(v0, 1.0);
-		gs_out.Normal = unpack_normal_octahedron(b_dcv_normal[i0]);
+		gs_out.Normal = normal;
 		gs_out.VertexIndex = gs_in[0].VertexIndex;
 		EmitVertex();
 		gl_Position = pv * vec4(v1, 1.0);
-		gs_out.Normal = unpack_normal_octahedron(b_dcv_normal[i1]);
+		gs_out.Normal = normal;
 		gs_out.VertexIndex = gs_in[0].VertexIndex;
 		EmitVertex();
 		gl_Position = pv * vec4(v2, 1.0);
-		gs_out.Normal = unpack_normal_octahedron(b_dcv_normal[i2]);
+		gs_out.Normal = normal;
 		gs_out.VertexIndex = gs_in[0].VertexIndex;
 		EmitVertex();
 		gl_Position = pv * vec4(v3, 1.0);
-		gs_out.Normal = unpack_normal_octahedron(b_dcv_normal[i3]);
+		gs_out.Normal = normal;
 		gs_out.VertexIndex = gs_in[0].VertexIndex;
 		EmitVertex();
 		EndPrimitive();
