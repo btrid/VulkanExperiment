@@ -899,7 +899,7 @@ struct LDCModel
 	btr::BufferMemoryEx<int32_t> b_ldc_point_link_head;
 	btr::BufferMemoryEx<LDCPoint> b_ldc_point;
 	btr::BufferMemoryEx<LDCCell> b_ldc_cell;
-	btr::BufferMemoryEx<u8vec3> b_dc_vertex;
+	btr::BufferMemoryEx<u8vec4> b_dc_vertex;
 	btr::BufferMemoryEx<uint> b_dcv_normal;
 	btr::BufferMemoryEx<int32_t> b_dcv_hashmap;
 	btr::BufferMemoryEx<vk::DrawIndirectCommand> b_dcv_index_counter;
@@ -926,7 +926,7 @@ struct LDCModel
 			ldc_model->b_ldc_point = ctx->m_storage_memory.allocateMemory<LDCPoint>(64*64*3*128);
 			ldc_model->b_ldc_cell = ctx->m_storage_memory.allocateMemory<LDCCell>(64*64*64);
 
-			ldc_model->b_dc_vertex = ctx->m_storage_memory.allocateMemory<u8vec3>(64*64*64);
+			ldc_model->b_dc_vertex = ctx->m_storage_memory.allocateMemory<u8vec4>(64*64*64);
 			ldc_model->b_dcv_normal = ctx->m_storage_memory.allocateMemory<uint>(64 * 64 * 64);
 			ldc_model->b_dcv_hashmap = ctx->m_storage_memory.allocateMemory<int32_t>(64 * 64 * 64 / 32);
 

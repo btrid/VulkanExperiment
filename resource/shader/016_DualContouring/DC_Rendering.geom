@@ -63,10 +63,10 @@ void main()
 		uint i2 = i32.x + i32.y*Voxel_Reso.x + i32.z*Voxel_Reso.x*Voxel_Reso.y;
 		uint i3 = i33.x + i33.y*Voxel_Reso.x + i33.z*Voxel_Reso.x*Voxel_Reso.y;
 
-		vec3 v0 = (vec3(b_dcv_vertex[i0])/255. + vec3(i30.xyz)) * voxel_size;
-		vec3 v1 = (vec3(b_dcv_vertex[i1])/255. + vec3(i31.xyz)) * voxel_size;
-		vec3 v2 = (vec3(b_dcv_vertex[i2])/255. + vec3(i32.xyz)) * voxel_size;
-		vec3 v3 = (vec3(b_dcv_vertex[i3])/255. + vec3(i33.xyz)) * voxel_size;
+		vec3 v0 = (vec3(b_dcv_vertex[i0])/255. + vec3(i30.xyz)) * voxel_size + u_info.m_aabb_min.xyz;
+		vec3 v1 = (vec3(b_dcv_vertex[i1])/255. + vec3(i31.xyz)) * voxel_size + u_info.m_aabb_min.xyz;
+		vec3 v2 = (vec3(b_dcv_vertex[i2])/255. + vec3(i32.xyz)) * voxel_size + u_info.m_aabb_min.xyz;
+		vec3 v3 = (vec3(b_dcv_vertex[i3])/255. + vec3(i33.xyz)) * voxel_size + u_info.m_aabb_min.xyz;
 
 		vec3 normal = normalize(cross(v1-v0, v2-v0));
 
