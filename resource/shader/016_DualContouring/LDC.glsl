@@ -56,11 +56,12 @@ layout(set=USE_LDC,binding=10, std430) buffer LDCCounter { int b_ldc_counter; };
 layout(set=USE_LDC,binding=11, std430) buffer LDCPointLinkHead { int b_ldc_point_link_head[]; };
 layout(set=USE_LDC,binding=12, scalar) buffer LDCPointBuffer { LDCPoint b_ldc_point[]; };
 layout(set=USE_LDC,binding=13, scalar) buffer LDCCellBuffer { LDCCell b_ldc_cell[]; };
-layout(set=USE_LDC,binding=14, scalar) buffer DCVVertex { u8vec4 b_dcv_vertex[]; };
-layout(set=USE_LDC,binding=15, scalar) buffer DCVVertexNormal { uint b_dcv_normal[]; };
+layout(set=USE_LDC,binding=14, scalar) buffer DCVVertex { vec3 b_dcv_vertex[]; };
+layout(set=USE_LDC,binding=15, scalar) buffer DCVCounter { int b_dcv_counter; };
 layout(set=USE_LDC,binding=16, scalar) buffer DCVHashMap { int b_dcv_hashmap[]; };
 layout(set=USE_LDC,binding=17, scalar) buffer DCVIndexCounter { VkDrawIndirectCommand b_dcv_index_counter; };
 layout(set=USE_LDC,binding=18, scalar) buffer DCVIndexBuffer { u8vec4 b_dcv_index[]; };
+layout(set=USE_LDC,binding=19, scalar) buffer DCVVertexNormalBuffer { uint b_dcv_normal[]; };
 #endif
 
 #if defined(USE_Rendering)
