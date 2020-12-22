@@ -31,6 +31,7 @@ layout(location=1)out OutData
 {
 	vec3 Normal;
 	flat uint VertexIndex;
+	vec3 Position;
 }gs_out;
 
 
@@ -70,18 +71,22 @@ void main()
 		gl_Position = pv * vec4(v0, 1.0);
 		gs_out.Normal = normal;
 		gs_out.VertexIndex = gs_in[0].VertexIndex;
+		gs_out.Position = v0;
 		EmitVertex();
 		gl_Position = pv * vec4(v1, 1.0);
 		gs_out.Normal = normal;
 		gs_out.VertexIndex = gs_in[0].VertexIndex;
+		gs_out.Position = v1;
 		EmitVertex();
 		gl_Position = pv * vec4(v2, 1.0);
 		gs_out.Normal = normal;
 		gs_out.VertexIndex = gs_in[0].VertexIndex;
+		gs_out.Position = v2;
 		EmitVertex();
 		gl_Position = pv * vec4(v3, 1.0);
 		gs_out.Normal = normal;
 		gs_out.VertexIndex = gs_in[0].VertexIndex;
+		gs_out.Position = v3;
 		EmitVertex();
 		EndPrimitive();
 

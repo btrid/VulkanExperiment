@@ -64,6 +64,10 @@ layout(set=USE_LDC,binding=18, scalar) buffer DCVIndexBuffer { u8vec4 b_dcv_inde
 layout(set=USE_LDC,binding=19, scalar) buffer DCVVertexNormalBuffer { uint b_dcv_normal[]; };
 #endif
 
+#if defined(USE_Rendering)
+layout(set=USE_Rendering,binding=0) uniform sampler2D s_albedo[100];
+#endif
+
 
 // https://discourse.panda3d.org/t/glsl-octahedral-normal-packing/15233
 #if 0

@@ -2,10 +2,12 @@
 #extension GL_GOOGLE_include_directive : require
 
 #define USE_LDC 0
+#define USE_Rendering 2
 #include "LDC.glsl"
 
 #define SETPOINT_CAMERA 1
 #include "btrlib/Camera.glsl"
+
 
 layout(location=0) out gl_PerVertex
 {

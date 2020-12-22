@@ -114,9 +114,9 @@ struct sGraphicsResource : public Singleton<sGraphicsResource>
 		sampler_infos[0].magFilter = vk::Filter::eNearest;
 		sampler_infos[0].minFilter = vk::Filter::eNearest;
 		sampler_infos[0].mipmapMode = vk::SamplerMipmapMode::eNearest;
-		sampler_infos[0].addressModeU = vk::SamplerAddressMode::eClampToEdge;
-		sampler_infos[0].addressModeV = vk::SamplerAddressMode::eClampToEdge;
-		sampler_infos[0].addressModeW = vk::SamplerAddressMode::eClampToEdge;
+		sampler_infos[0].addressModeU = vk::SamplerAddressMode::eRepeat;
+		sampler_infos[0].addressModeV = vk::SamplerAddressMode::eRepeat;
+		sampler_infos[0].addressModeW = vk::SamplerAddressMode::eRepeat;
 		sampler_infos[0].mipLodBias = 0.0f;
 		sampler_infos[0].compareOp = vk::CompareOp::eNever;
 		sampler_infos[0].minLod = 0.0f;
@@ -127,9 +127,9 @@ struct sGraphicsResource : public Singleton<sGraphicsResource>
 		sampler_infos[1].magFilter = vk::Filter::eLinear;
 		sampler_infos[1].minFilter = vk::Filter::eLinear;
 		sampler_infos[1].mipmapMode = vk::SamplerMipmapMode::eLinear;
-		sampler_infos[1].addressModeU = vk::SamplerAddressMode::eClampToEdge;
-		sampler_infos[1].addressModeV = vk::SamplerAddressMode::eClampToEdge;
-		sampler_infos[1].addressModeW = vk::SamplerAddressMode::eClampToEdge;
+		sampler_infos[1].addressModeU = vk::SamplerAddressMode::eRepeat;
+		sampler_infos[1].addressModeV = vk::SamplerAddressMode::eRepeat;
+		sampler_infos[1].addressModeW = vk::SamplerAddressMode::eRepeat;
 		sampler_infos[1].mipLodBias = 0.0f;
 		sampler_infos[1].compareOp = vk::CompareOp::eNever;
 		sampler_infos[1].minLod = 0.0f;

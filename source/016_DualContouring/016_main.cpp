@@ -20,6 +20,7 @@
 #include <btrlib/GPU.h>
 #include <btrlib/cStopWatch.h>
 #include <btrlib/AllocatedMemory.h>
+#include <applib/GraphicsResource.h>
 
 #include <applib/App.h>
 #include <applib/AppPipeline.h>
@@ -1095,7 +1096,7 @@ struct DCModel
 
 struct Material
 {
-
+	TextureResource albedo_texture;
 };
 struct Renderer
 {
@@ -1106,10 +1107,66 @@ struct Renderer
 	vk::UniquePipeline m_pipeline_RenderModel;
 	vk::UniquePipelineLayout m_pl;
 
+	std::array<Material, 100> m_world_material;
+	vk::UniqueDescriptorSetLayout m_DSL;
+	std::array<vk::UniqueDescriptorSet, sGlobal::BUFFER_COUNT_MAX> m_DS;
+
 	Renderer(btr::Context& ctx, LDC::Ctx& ldc_ctx, RenderTarget& rt)
 	{
-		auto buf = read_png_file(ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\renga_pattern.png");
-		
+		// descriptor set layout
+		{
+			vk::DescriptorSetLayoutBinding accelerationStructureLayoutBinding;
+			auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment;
+			vk::DescriptorSetLayoutBinding binding[] = {
+				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eCombinedImageSampler, 100, stage),
+			};
+			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
+			desc_layout_info.setBindingCount(array_length(binding));
+			desc_layout_info.setPBindings(binding);
+			m_DSL = ctx.m_device.createDescriptorSetLayoutUnique(desc_layout_info);
+
+		}
+
+		{
+			vk::DescriptorSetLayout layouts[] =
+			{
+				m_DSL.get(),
+			};
+			vk::DescriptorSetAllocateInfo desc_info;
+			desc_info.setDescriptorPool(ctx.m_descriptor_pool.get());
+			desc_info.setDescriptorSetCount(array_length(layouts));
+			desc_info.setPSetLayouts(layouts);
+			for (auto& ds : m_DS)
+			{
+				ds = std::move(ctx.m_device.allocateDescriptorSetsUnique(desc_info)[0]);
+			}
+
+		}
+
+		{
+
+			auto tex = read_png_file(ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\renga_pattern.png");
+			m_world_material[0].albedo_texture = std::move(tex);
+
+			auto def = vk::DescriptorImageInfo(sGraphicsResource::Order().getSampler(sGraphicsResource::BASIC_SAMPLER_LINER), sGraphicsResource::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal);
+			std::array<vk::DescriptorImageInfo, 100> images;
+			images.fill(def);
+
+			images[0].setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal).setImageView(m_world_material[0].albedo_texture.m_image_view.get()).setSampler(m_world_material[0].albedo_texture.m_sampler.get());
+
+			std::array<vk::WriteDescriptorSet, 100> write;
+			for (int i=0;i<100;i++)
+			{
+				write[i] = vk::WriteDescriptorSet()
+					.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+					.setDescriptorCount(1)
+					.setPImageInfo(images.data() + i)
+					.setDstBinding(0)
+					.setDstArrayElement(i)
+					.setDstSet(m_DS[0].get());
+			};
+			ctx.m_device.updateDescriptorSets(array_length(write), write.data(), 0, nullptr);
+		}		
 
 		// pipeline layout
 		{
@@ -1117,6 +1174,7 @@ struct Renderer
 			{
 				ldc_ctx.m_descriptor_set_layout.get(),
 				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
+				m_DSL.get(),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
@@ -1431,6 +1489,7 @@ struct Renderer
 
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl.get(), 0, ldc_model.m_DS.get(), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl.get(), 2, m_DS[0].get(), {});
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline_Render.get());
 		cmd.drawIndirect(ldc_model.b_dcv_index_counter.getInfo().buffer, ldc_model.b_dcv_index_counter.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
