@@ -722,7 +722,6 @@ struct Ctx
 				vk::DescriptorSetLayoutBinding(16, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(17, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(18, vk::DescriptorType::eStorageBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(19, vk::DescriptorType::eStorageBuffer, 1, stage),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
@@ -900,12 +899,11 @@ struct LDCModel
 	btr::BufferMemoryEx<int32_t> b_ldc_point_link_head;
 	btr::BufferMemoryEx<LDCPoint> b_ldc_point;
 	btr::BufferMemoryEx<LDCCell> b_ldc_cell;
-	btr::BufferMemoryEx<vec3> b_dc_vertex;
-	btr::BufferMemoryEx<int32_t> b_dcv_counter;
+	btr::BufferMemoryEx<u8vec3> b_dc_vertex;
+	btr::BufferMemoryEx<uint> b_dcv_normal;
 	btr::BufferMemoryEx<int32_t> b_dcv_hashmap;
 	btr::BufferMemoryEx<vk::DrawIndirectCommand> b_dcv_index_counter;
 	btr::BufferMemoryEx<u8vec4> b_dcv_index;
-	btr::BufferMemoryEx<uint> b_dcv_normal;
 
 	static std::shared_ptr<LDCModel> Construct(std::shared_ptr<btr::Context>& ctx, RT::Ctx& rt_ctx, LDC::Ctx& ldc_ctx, Model& model, RTModel& rt_model)
 	{
@@ -928,13 +926,12 @@ struct LDCModel
 			ldc_model->b_ldc_point = ctx->m_storage_memory.allocateMemory<LDCPoint>(64*64*3*128);
 			ldc_model->b_ldc_cell = ctx->m_storage_memory.allocateMemory<LDCCell>(64*64*64);
 
-			ldc_model->b_dc_vertex = ctx->m_storage_memory.allocateMemory<vec3>(64*64*64);
-			ldc_model->b_dcv_counter = ctx->m_storage_memory.allocateMemory<int32_t>(1);
+			ldc_model->b_dc_vertex = ctx->m_storage_memory.allocateMemory<u8vec3>(64*64*64);
+			ldc_model->b_dcv_normal = ctx->m_storage_memory.allocateMemory<uint>(64 * 64 * 64);
 			ldc_model->b_dcv_hashmap = ctx->m_storage_memory.allocateMemory<int32_t>(64 * 64 * 64 / 32);
 
 			ldc_model->b_dcv_index_counter = ctx->m_storage_memory.allocateMemory<vk::DrawIndirectCommand>(1);
 			ldc_model->b_dcv_index = ctx->m_storage_memory.allocateMemory<u8vec4>(64*64*64);
-			ldc_model->b_dcv_normal = ctx->m_storage_memory.allocateMemory<uint>(64 * 64 * 64);
 
 			vk::DescriptorBufferInfo uniforms[] =
 			{
@@ -954,11 +951,10 @@ struct LDCModel
 				ldc_model->b_ldc_point.getInfo(),
 				ldc_model->b_ldc_cell.getInfo(),
 				ldc_model->b_dc_vertex.getInfo(),
-				ldc_model->b_dcv_counter.getInfo(),
+				ldc_model->b_dcv_normal.getInfo(),
 				ldc_model->b_dcv_hashmap.getInfo(),
 				ldc_model->b_dcv_index_counter.getInfo(),
 				ldc_model->b_dcv_index.getInfo(),
-				ldc_model->b_dcv_normal.getInfo(),
 			};
 
 			vk::WriteDescriptorSet write[] =
@@ -1026,7 +1022,6 @@ struct LDCModel
 		{
 
 			cmd.fillBuffer(ldc_model->b_ldc_cell.getInfo().buffer, ldc_model->b_ldc_cell.getInfo().offset, ldc_model->b_ldc_cell.getInfo().range, 0);
-			cmd.fillBuffer(ldc_model->b_dcv_counter.getInfo().buffer, ldc_model->b_dcv_counter.getInfo().offset, ldc_model->b_dcv_counter.getInfo().range, 0);
 			cmd.fillBuffer(ldc_model->b_dcv_hashmap.getInfo().buffer, ldc_model->b_dcv_hashmap.getInfo().offset, ldc_model->b_dcv_hashmap.getInfo().range, -1);
 			std::array<vk::DrawIndirectCommand, 1> data = { vk::DrawIndirectCommand(0,1,0,0) };
 			cmd.updateBuffer<vk::DrawIndirectCommand>(ldc_model->b_dcv_index_counter.getInfo().buffer, ldc_model->b_dcv_index_counter.getInfo().offset, data);
