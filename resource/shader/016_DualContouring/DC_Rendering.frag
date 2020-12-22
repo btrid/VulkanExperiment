@@ -25,9 +25,9 @@ void main()
 
 	vec3 normal = normalize(fs_in.Normal);
 	vec3 albedo = vec3(0.);
-	albedo += abs(dot(vec3(1.,0.,0.), normal)) * texture(s_albedo[0], fs_in.Position.yz*0.01).xyz;
-	albedo += abs(dot(vec3(0.,1.,0.), normal)) * texture(s_albedo[0], fs_in.Position.zx*0.01).xyz;
-	albedo += abs(dot(vec3(0.,0.,1.), normal)) * texture(s_albedo[0], fs_in.Position.xy*0.01).xyz;
+	albedo += abs(dot(vec3(1.,0.,0.), normal)) * texture(s_albedo[0], fs_in.Position.yz*0.1).xyz;
+	albedo += abs(dot(vec3(0.,1.,0.), normal)) * texture(s_albedo[0], fs_in.Position.zx*0.1).xyz;
+	albedo += abs(dot(vec3(0.,0.,1.), normal)) * texture(s_albedo[0], fs_in.Position.xy*0.1).xyz;
 
 	FragColor = vec4(albedo, 1.);
 

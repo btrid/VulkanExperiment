@@ -82,7 +82,7 @@ TextureResource read_png_file(btr::Context& ctx, const char* file_name)
 
 
 	int c = png_get_channels(Png, PngInfo);
- 	uint32_t w, h;
+	uint32_t w, h;
  	int d, ct, interlacetype;
  	png_get_IHDR(Png, PngInfo, &w, &h, &d, &ct, &interlacetype, NULL, NULL);
 
@@ -127,8 +127,9 @@ TextureResource read_png_file(btr::Context& ctx, const char* file_name)
 			{vk::Format::eR8G8B8Unorm, vk::Format::eR16G16B16Unorm, vk::Format::eR32G32B32Sfloat, vk::Format::eR32G32B32Sfloat},
 			{vk::Format::eR8G8B8A8Unorm, vk::Format::eR16G16B16A16Unorm, vk::Format::eR32G32B32A32Sfloat, vk::Format::eR32G32B32A32Sfloat},
 		};
-		d = d/c;
-		vk::Format format = formats[c-1][d-1];
+		d = d/8;
+		vk::Format format = formats[c - 1][d - 1];
+
 		auto cmd = ctx.m_cmd_pool->allocCmdTempolary(0);
 
 		vk::ImageCreateInfo image_info;
@@ -211,9 +212,9 @@ TextureResource read_png_file(btr::Context& ctx, const char* file_name)
 		sampler_info.magFilter = vk::Filter::eNearest;
 		sampler_info.minFilter = vk::Filter::eNearest;
 		sampler_info.mipmapMode = vk::SamplerMipmapMode::eLinear;
-		sampler_info.addressModeU = vk::SamplerAddressMode::eClampToEdge;
-		sampler_info.addressModeV = vk::SamplerAddressMode::eClampToEdge;
-		sampler_info.addressModeW = vk::SamplerAddressMode::eClampToEdge;
+		sampler_info.addressModeU = vk::SamplerAddressMode::eRepeat;
+		sampler_info.addressModeV = vk::SamplerAddressMode::eRepeat;
+		sampler_info.addressModeW = vk::SamplerAddressMode::eRepeat;
 		sampler_info.mipLodBias = 0.0f;
 		sampler_info.compareOp = vk::CompareOp::eNever;
 		sampler_info.minLod = 0.0f;
