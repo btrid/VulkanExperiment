@@ -1528,8 +1528,11 @@ struct Renderer
 	}
 };
 
+#include <016_DualContouring/test.h>
 int main()
 {
+	test();
+
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(50.f, 50.f, -200.f);

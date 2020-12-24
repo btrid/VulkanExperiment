@@ -15,15 +15,15 @@ struct Info
 struct LDCPoint
 {
 	float p;
-	uint primitive_index;
+	uint normal;
 	int inout_next;
 };
 struct LDCCell
 {
-	uvec3 primitive_index;
-	uint useaxis_xyz;
-//	uvec4 useaxis_xyz;
-//	uvec3 normal;
+	uvec3 normal;
+//	u8vec3 dist;
+//	uint8_t axis;
+	uint axis_dist;
 };
 
 struct VkDrawIndexedIndirectCommand 
@@ -95,10 +95,10 @@ vec2 sign_not_zero(in vec2 v)
 {
     return fma(step(vec2(0.0), v), vec2(2.0), vec2(-1.0));
 }
-uint pack_normal_octahedron(in vec3 _v)
+uint pack_normal_octahedron(in vec3 v)
 {
 //	v.xy /= dot(abs(v), vec3(1));
-	vec3 v = vec3(_v.xy / dot(abs(_v), vec3(1)), _v.z);
+	v = vec3(v.xy / dot(abs(v), vec3(1)), v.z);
 //	return mix(v.xy, (float16_t(1.0) - abs(v.yx)) * sign_not_zero(v.xy), step(v.z, float16_t(0.0)));
 	return packHalf2x16(mix(v.xy, (1.0 - abs(v.yx)) * sign_not_zero(v.xy), step(v.z, 0.0)));
 

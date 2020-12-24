@@ -108,7 +108,7 @@ vec3 IntersectPlanes(vec4 plane[3])
 	return (plane[0].w * u + cross(plane[0].xyz(), plane[2].w * plane[1].xyz() - plane[1].w * plane[2].xyz())) / denom;
 
 }
-int test()
+void test()
 {
 	{
 		// 		for ( int i = 0; i < 100; i++)
@@ -121,7 +121,7 @@ int test()
 
 	}
 
-	ivec3 cell = ivec3(100, 100, 100);
+	ivec3 cell = ivec3(0, 0, 0);
 	for (int a = 0; a < 1000; a++)
 	{
 		vec3 normal[30] = {};
@@ -135,30 +135,23 @@ int test()
 
 
 		for (int z = 0; z < 2; z++)
-			for (int y = 0; y < 2; y++)
-				for (int x = 0; x < 2; x++)
-					for (int i = 0; i < 3; i++)
-					{
-						ivec3 n = ivec3(i == 0, i == 1, i == 2);
-						ivec3 p = ivec3(x, y, z);
-						if (any(equal(n & p, ivec3(1)))) { continue; }
-						p += cell;
+		for (int y = 0; y < 2; y++)
+		for (int x = 0; x < 2; x++)
+		for (int i = 0; i < 3; i++)
+		{
+			ivec3 n = ivec3(i == 0, i == 1, i == 2);
+			ivec3 p = ivec3(x, y, z);
+			if (any(equal(n & p, ivec3(1)))) { continue; }
+			p += cell;
 
-						auto hit = P.intersect(p, p + n);
-						if (!std::get<0>(hit)) { continue; }
-						if (std::get<2>(hit) < 0.f || std::get<2>(hit) >= 1.f) { continue; }
-
-						if (ishit[0])
-						{
-							continue;
-						}
-						ishit[0] = true;
-
-						normal[count] = P.normal_;
-						d[count] = P.dot_;
-						Hit[count] = hit;
-						count++;
-					}
+			auto hit = P.intersect(p, p + n);
+			if (!std::get<0>(hit)) { continue; }
+			if (std::get<2>(hit) < 0.f || std::get<2>(hit) >= 1.f) { continue; }
+			normal[count] = P.normal_;
+			d[count] = dot(P.normal_, std::get<1>(hit));
+			Hit[count] = hit;
+			count++;
+		}
 
 		if (count == 0) { printf("no hit\n");  continue; }
 
@@ -187,3 +180,4 @@ int test()
 			int ___ = 0;
 		}
 	}
+}

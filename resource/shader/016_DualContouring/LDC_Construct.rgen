@@ -46,7 +46,14 @@ void main()
 		int index = atomicAdd(b_ldc_counter, 1);
 		LDCPoint point;
 		point.p = payload.HitT;
-		point.primitive_index = payload.PrimitiveID;
+
+		uvec3 i0 = b_index[payload.PrimitiveID];
+		vec3 a = b_vertex[i0.x];
+		vec3 b = b_vertex[i0.y];
+		vec3 c = b_vertex[i0.z];
+		vec3 normal = normalize(cross(b - a, c - a));
+		point.normal = pack_normal_octahedron(normal);
+
 		point.inout_next = head;
 
 		b_ldc_point[index] = point;
