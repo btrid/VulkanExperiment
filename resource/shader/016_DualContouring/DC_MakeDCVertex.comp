@@ -2,9 +2,8 @@
 
 #extension GL_GOOGLE_include_directive : require
 
-#define USE_LDC 0
-#include "LDC.glsl"
-
+#define USE_DC 0
+#include "DualContouring.glsl"
 
 /* Solves for x in  A*x = b.
 	'A' contains the matrix row-wise.
@@ -95,7 +94,7 @@ void main()
 	memoryBarrierShared();
 	barrier();
 
-	vec3 extent = u_info.m_aabb_max.xyz-u_info.m_aabb_min.xyz;
+	vec3 extent = vec3(500.);
 	vec3 voxel_size = extent / reso;
 
 	vec3 plane_normal[16];
@@ -114,7 +113,7 @@ void main()
 		if(any(greaterThanEqual(_i, reso))){continue;}
 		uint idx = _i.x + _i.y*reso.x + _i.z*reso.x*reso.y;
 
-		LDCCell cell = b_ldc_cell[idx];
+		LDCCell cell = b_dc_cell[idx];
 		for (int i = 0; i < 3; i++)
 		{
 			if((cell.axis_dist&(1<<i)) == 0){ continue; }
@@ -152,7 +151,7 @@ void main()
 		normal_num+=3;
 
 		vec3 v = clamp(leastSquares(normal_num, plane_normal, d), 0., 255.);
-		b_dcv_vertex[idx] = u8vec4(v, 0);
+		b_dc_vertex[idx] = u8vec4(v, 0);
 
 		atomicOr(s_hashmap[gl_LocalInvocationIndex/32], 1<<(gl_LocalInvocationIndex%32));
 	}
@@ -162,7 +161,7 @@ void main()
 
 	if(gl_LocalInvocationIndex<2)
 	{
-		b_dcv_hashmap[idx/32+gl_LocalInvocationIndex] = s_hashmap[gl_LocalInvocationIndex];
+		b_dc_hashmap[idx/32+gl_LocalInvocationIndex] = s_hashmap[gl_LocalInvocationIndex];
 	}
 
 }

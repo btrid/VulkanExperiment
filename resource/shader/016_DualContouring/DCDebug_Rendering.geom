@@ -1,8 +1,8 @@
 #version 460
 #extension GL_GOOGLE_include_directive : require
 
-#define USE_LDC 0
-#include "LDC.glsl"
+//#define USE_LDC 0
+//#include "LDC.glsl"
 
 #define SETPOINT_CAMERA 1
 #include "btrlib/Camera.glsl"

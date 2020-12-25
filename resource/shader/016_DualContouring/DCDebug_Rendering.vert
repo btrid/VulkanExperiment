@@ -1,8 +1,8 @@
 #version 460
 #extension GL_GOOGLE_include_directive : require
 
-#define USE_LDC 0
-#include "LDC.glsl"
+#define USE_Model 0
+#include "DualContouring.glsl"
 
 #define SETPOINT_CAMERA 1
 #include "btrlib/Camera.glsl"
@@ -19,7 +19,7 @@ layout(location=1) out VSVertex
 
 void main()
 {
-	int z = gl_VertexIndex.x/64/64;
+/*	int z = gl_VertexIndex.x/64/64;
 	int y = (gl_VertexIndex.x/64) % 64;
 	int x = gl_VertexIndex.x % 64;
 	gl_PointSize = 10.;
@@ -41,6 +41,6 @@ void main()
 
 		gl_Position = u_camera[0].u_projection * u_camera[0].u_view * vec4(p, 1.0);
 	}
-
+*/
 
 }

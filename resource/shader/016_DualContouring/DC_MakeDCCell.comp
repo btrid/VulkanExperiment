@@ -2,15 +2,15 @@
 
 #extension GL_GOOGLE_include_directive : require
 
-#define USE_LDC 0
-#include "LDC.glsl"
+#define USE_DC 0
+#include "DualContouring.glsl"
 
 layout (local_size_x = 64) in;
 
 void main() 
 {
 	vec3 axis[] = {vec3(1., 0., 0.),vec3(0., 1., 0.),vec3(0., 0., 1.)};
-	vec3 extent = u_info.m_aabb_max.xyz-u_info.m_aabb_min.xyz;
+	vec3 extent = vec3(500.);
 	vec3 voxel_size = extent / Voxel_Reso;
 
 	vec3 f = axis[gl_GlobalInvocationID.z];
@@ -23,12 +23,12 @@ void main()
 		LDCPoint point = b_ldc_point[index];
 		index = point.inout_next;
 
-		float voxel_p = (point.p/extent*Voxel_Reso)[gl_GlobalInvocationID.z];
+		float voxel_p = (point.p*Voxel_Reso)[gl_GlobalInvocationID.z];
 
 		uvec3 voxel_index = min(uvec3(s*gl_GlobalInvocationID.x + u*gl_GlobalInvocationID.y + f*voxel_p), Voxel_Reso-1);
 		uint i = voxel_index.x + voxel_index.y*Voxel_Reso.x + voxel_index.z*Voxel_Reso.x*Voxel_Reso.y;
-		atomicOr(b_ldc_cell[i].axis_dist, (1u<<gl_GlobalInvocationID.z)| (uint(fract(voxel_p)*255.)<<(8+gl_GlobalInvocationID.z*8)));
-		b_ldc_cell[i].normal[gl_GlobalInvocationID.z] = point.normal;
+		atomicOr(b_dc_cell[i].axis_dist, (1u<<gl_GlobalInvocationID.z)| (uint(fract(voxel_p)*255.)<<(8+gl_GlobalInvocationID.z*8)));
+		b_dc_cell[i].normal[gl_GlobalInvocationID.z] = point.normal;
 
 	}
 

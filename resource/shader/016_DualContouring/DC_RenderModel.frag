@@ -2,7 +2,8 @@
 #extension GL_GOOGLE_include_directive : require
 
 #define USE_DC 0
-#include "DC.glsl"
+#define USE_Rendering 2
+#include "DualContouring.glsl"
 
 layout(location=1) in Transform{
 	flat uvec3 CellID;

@@ -2,9 +2,9 @@
 
 #extension GL_GOOGLE_include_directive : require
 
-#define USE_AS 0
-#define USE_LDC 1
-#include "LDC.glsl"
+#define USE_Model 0
+#define USE_DC 1
+#include "DualContouring.glsl"
 
 struct Paylpad
 {

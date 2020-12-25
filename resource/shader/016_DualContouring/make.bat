@@ -8,7 +8,7 @@ SET output=-o ../binary/
 %exe% %output%/LDC_Construct.rmiss.spv LDC_Construct.rmiss
 %exe% %output%/LDC_Construct.rchit.spv LDC_Construct.rchit
 
-%exe% %output%/DC_MakeLDCCell.comp.spv DC_MakeLDCCell.comp
+%exe% %output%/DC_MakeDCCell.comp.spv DC_MakeDCCell.comp
 %exe% %output%/DC_MakeDCVertex.comp.spv DC_MakeDCVertex.comp
 %exe% %output%/DC_MakeDCVFace.comp.spv DC_MakeDCVFace.comp
 

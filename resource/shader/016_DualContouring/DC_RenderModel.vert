@@ -1,11 +1,13 @@
 #version 460
 #extension GL_GOOGLE_include_directive : require
 
-#define USE_LDC 0
-#include "LDC.glsl"
+#define USE_DC 0
+#define USE_Rendering 2
+#include "DualContouring.glsl"
 
 #define SETPOINT_CAMERA 1
 #include "btrlib/Camera.glsl"
+
 
 layout(location=0) out gl_PerVertex
 {
@@ -19,9 +21,9 @@ layout(location=1) out VSVertex
 
 void main()
 {
-	int face = gl_VertexIndex/3;
-	int component = gl_VertexIndex%3;
-	uint index = b_index[face][component];
-	gl_Position = u_camera[0].u_projection * u_camera[0].u_view * vec4(b_vertex[index], 1.0);
+//	int face = gl_VertexIndex/3;
+//	int component = gl_VertexIndex%3;
+//	uint index = b_index[face][component];
+//	gl_Position = u_camera[0].u_projection * u_camera[0].u_view * vec4(b_vertex[index], 1.0);
 
 }

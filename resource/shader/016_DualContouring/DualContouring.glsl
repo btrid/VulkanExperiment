@@ -42,25 +42,25 @@ struct VkDrawIndirectCommand {
 };
 
 
-#if defined(USE_AS)
-layout(set=USE_AS,binding=0) uniform accelerationStructureEXT topLevelAS;
+#if defined(USE_Model)
+layout(set=USE_Model,binding=0, std140) uniform InfoUniform {Info u_info; };
+layout(set=USE_Model,binding=1, scalar) buffer Vertices { vec3 b_vertex[]; };
+layout(set=USE_Model,binding=2, scalar) buffer Normals { vec3 b_normal[]; };
+layout(set=USE_Model,binding=3, scalar) buffer Indices { uvec3 b_index[]; };
+layout(set=USE_Model,binding=4, scalar) buffer DrawCmd { VkDrawIndexedIndirectCommand b_draw_cmd[]; };
+layout(set=USE_Model,binding=5) uniform accelerationStructureEXT topLevelAS;
 #endif
-#if defined(USE_LDC)
-layout(set=USE_LDC,binding=0, std140) uniform InfoUniform {Info u_info; };
-layout(set=USE_LDC,binding=1, scalar) buffer Vertices { vec3 b_vertex[]; };
-layout(set=USE_LDC,binding=2, scalar) buffer Normals { vec3 b_normal[]; };
-layout(set=USE_LDC,binding=3, scalar) buffer Indices { uvec3 b_index[]; };
-layout(set=USE_LDC,binding=4, scalar) buffer DrawCmd { VkDrawIndexedIndirectCommand b_draw_cmd[]; };
 
-layout(set=USE_LDC,binding=10, std430) buffer LDCCounter { int b_ldc_counter; };
-layout(set=USE_LDC,binding=11, std430) buffer LDCPointLinkHead { int b_ldc_point_link_head[]; };
-layout(set=USE_LDC,binding=12, scalar) buffer LDCPointBuffer { LDCPoint b_ldc_point[]; };
-layout(set=USE_LDC,binding=13, scalar) buffer LDCCellBuffer { LDCCell b_ldc_cell[]; };
-layout(set=USE_LDC,binding=14, scalar) buffer DCVVertex { u8vec4 b_dcv_vertex[]; };
-layout(set=USE_LDC,binding=15, scalar) buffer DCVVertexNormal { uint b_dcv_normal[]; };
-layout(set=USE_LDC,binding=16, scalar) buffer DCVHashMap { int b_dcv_hashmap[]; };
-layout(set=USE_LDC,binding=17, scalar) buffer DCVIndexCounter { VkDrawIndirectCommand b_dcv_index_counter; };
-layout(set=USE_LDC,binding=18, scalar) buffer DCVIndexBuffer { u8vec4 b_dcv_index[]; };
+#if defined(USE_DC)
+layout(set=USE_DC,binding=0, std430) buffer LDCCounter { int b_ldc_counter; };
+layout(set=USE_DC,binding=1, std430) buffer LDCPointLinkHead { int b_ldc_point_link_head[]; };
+layout(set=USE_DC,binding=2, scalar) buffer LDCPointBuffer { LDCPoint b_ldc_point[]; };
+layout(set=USE_DC,binding=3, scalar) buffer DCCellBuffer { LDCCell b_dc_cell[]; };
+layout(set=USE_DC,binding=4, scalar) buffer DCVertex { u8vec4 b_dc_vertex[]; };
+layout(set=USE_DC,binding=5, scalar) buffer DCVertexNormal { uint b_dc_normal[]; };
+layout(set=USE_DC,binding=6, scalar) buffer DCHashMap { int b_dc_hashmap[]; };
+layout(set=USE_DC,binding=7, scalar) buffer DCIndexCounter { VkDrawIndirectCommand b_dc_index_counter; };
+layout(set=USE_DC,binding=8, scalar) buffer DCIndexBuffer { u8vec4 b_dc_index[]; };
 #endif
 
 #if defined(USE_Rendering)

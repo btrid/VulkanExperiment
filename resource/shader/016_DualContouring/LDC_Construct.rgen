@@ -2,9 +2,9 @@
 
 #extension GL_GOOGLE_include_directive : require
 
-#define USE_AS 0
-#define USE_LDC 1
-#include "LDC.glsl"
+#define USE_Model 0
+#define USE_DC 1
+#include "DualContouring.glsl"
 
 struct Paylpad
 {
@@ -45,7 +45,7 @@ void main()
 
 		int index = atomicAdd(b_ldc_counter, 1);
 		LDCPoint point;
-		point.p = payload.HitT;
+		point.p = payload.HitT / tmax;
 
 		uvec3 i0 = b_index[payload.PrimitiveID];
 		vec3 a = b_vertex[i0.x];
