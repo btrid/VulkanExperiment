@@ -42,240 +42,6 @@
 
 #include <016_DualContouring/texture.h>
 
-// Holds data for a memory object bound to an acceleration structure
-struct RayTracingObjectMemory
-{
-	uint64_t deviceAddress;
-	vk::UniqueDeviceMemory memory;
-};
-
-// Ray tracing acceleration structure
-struct AccelerationStructure
-{
-	vk::UniqueAccelerationStructureKHR accelerationStructure;
-	RayTracingObjectMemory objectMemory;
-};
-namespace Helper
-{
-	static RayTracingObjectMemory createASMemory(btr::Context& ctx, vk::AccelerationStructureKHR& acceleration_structure)
-	{
-		RayTracingObjectMemory objectMemory{};
-
-		vk::AccelerationStructureMemoryRequirementsInfoKHR accelerationStructureMemoryRequirements{};
-		accelerationStructureMemoryRequirements.type = vk::AccelerationStructureMemoryRequirementsTypeKHR::eObject;
-		accelerationStructureMemoryRequirements.buildType = vk::AccelerationStructureBuildTypeKHR::eDevice;
-		accelerationStructureMemoryRequirements.accelerationStructure = acceleration_structure;
-		vk::MemoryRequirements2 memoryRequirements2 = ctx.m_device.getAccelerationStructureMemoryRequirementsKHR(accelerationStructureMemoryRequirements);
-
-		VkMemoryRequirements memoryRequirements = memoryRequirements2.memoryRequirements;
-
-		vk::MemoryAllocateInfo memoryAI;
-		memoryAI.allocationSize = memoryRequirements.size;
-		memoryAI.memoryTypeIndex = Helper::getMemoryTypeIndex(ctx.m_physical_device, memoryRequirements, vk::MemoryPropertyFlagBits::eDeviceLocal);
-		objectMemory.memory = ctx.m_device.allocateMemoryUnique(memoryAI);
-
-		return objectMemory;
-	}
-}
-
-struct Model
-{
-	struct Info
-	{
-		vec4 m_aabb_min;
-		vec4 m_aabb_max;
-		uint m_vertex_num;
-		uint m_primitive_num;
-	};
-	btr::BufferMemory b_vertex;
-	btr::BufferMemory b_normal;
-	btr::BufferMemory b_index;
-	btr::BufferMemoryEx<Info> u_info;
-	btr::BufferMemoryEx<vk::DrawIndirectCommand> b_draw_cmd;
-
-	AccelerationStructure m_BLAS;
-
-	Info m_info;
-
-
-	static std::shared_ptr<Model> LoadModel(const std::shared_ptr<btr::Context>& context, const std::string& filename)
-	{
-		int OREORE_PRESET = 0
-			| aiProcess_JoinIdenticalVertices
-			| aiProcess_ImproveCacheLocality
-			| aiProcess_LimitBoneWeights
-			| aiProcess_RemoveRedundantMaterials
-			| aiProcess_SplitLargeMeshes
-			| aiProcess_SortByPType
-			//		| aiProcess_OptimizeMeshes
-			| aiProcess_Triangulate
-			//		| aiProcess_MakeLeftHanded
-			;
-		cStopWatch timer;
-		Assimp::Importer importer;
-		const aiScene* scene = importer.ReadFile(filename, OREORE_PRESET);
-		if (!scene) { return nullptr; }
-
-		unsigned numIndex = 0;
-		unsigned numVertex = 0;
-		for (size_t i = 0; i < scene->mNumMeshes; i++)
-		{
-			numVertex += scene->mMeshes[i]->mNumVertices;
-			numIndex += scene->mMeshes[i]->mNumFaces * 3;
-		}
-
-
-		auto vertex = context->m_staging_memory.allocateMemory(numVertex * sizeof(aiVector3D), true);
-		auto normal = context->m_staging_memory.allocateMemory(numVertex * sizeof(aiVector3D), true);
-		auto index = context->m_staging_memory.allocateMemory(numIndex * sizeof(uint32_t), true);
-
-		uint32_t index_offset = 0;
-		uint32_t vertex_offset = 0;
-		Info info{ .m_aabb_min = vec4{999.f}, .m_aabb_max = vec4{-999.f} };
-
-		for (size_t i = 0; i < scene->mNumMeshes; i++)
-		{
-			aiMesh* mesh = scene->mMeshes[i];
-			for (u32 n = 0; n < mesh->mNumFaces; n++) 
-			{
-				std::copy(mesh->mFaces[n].mIndices, mesh->mFaces[n].mIndices + 3, index.getMappedPtr<uint32_t>(index_offset));
-				index_offset += 3;
-			}
-
-			for (uint32_t v = 0; v < mesh->mNumVertices; v++)
-			{
-//				mesh->mVertices[v] *= 100.f;
-				info.m_aabb_min.x = std::min(info.m_aabb_min.x, mesh->mVertices[v].x);
-				info.m_aabb_min.y = std::min(info.m_aabb_min.y, mesh->mVertices[v].y);
-				info.m_aabb_min.z = std::min(info.m_aabb_min.z, mesh->mVertices[v].z);
-				info.m_aabb_max.x = std::max(info.m_aabb_max.x, mesh->mVertices[v].x);
-				info.m_aabb_max.y = std::max(info.m_aabb_max.y, mesh->mVertices[v].y);
-				info.m_aabb_max.z = std::max(info.m_aabb_max.z, mesh->mVertices[v].z);
-			}
-
-			std::copy(mesh->mVertices, mesh->mVertices + mesh->mNumVertices, vertex.getMappedPtr<aiVector3D>(vertex_offset));
-			std::copy(mesh->mNormals, mesh->mNormals + mesh->mNumVertices, normal.getMappedPtr<aiVector3D>(vertex_offset));
-
-
-			vertex_offset += mesh->mNumVertices;
-		}
-		importer.FreeScene();
-
-		info.m_vertex_num = numVertex;
-		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-		std::shared_ptr<Model> model = std::make_shared<Model>();
-		{
-			model->b_vertex = context->m_vertex_memory.allocateMemory(numVertex * sizeof(aiVector3D));
-			model->b_normal = context->m_vertex_memory.allocateMemory(numVertex * sizeof(aiVector3D));
-			model->b_index = context->m_vertex_memory.allocateMemory(numIndex * sizeof(uint32_t));
-
-			std::array<vk::BufferCopy, 3> copy;
-			copy[0].srcOffset = vertex.getInfo().offset;
-			copy[0].dstOffset = model->b_vertex.getInfo().offset;
-			copy[0].size = vertex.getInfo().range;
-			copy[1].srcOffset = normal.getInfo().offset;
-			copy[1].dstOffset = model->b_normal.getInfo().offset;
-			copy[1].size = normal.getInfo().range;
-			copy[2].srcOffset = index.getInfo().offset;
-			copy[2].dstOffset = model->b_index.getInfo().offset;
-			copy[2].size = index.getInfo().range;
-			cmd.copyBuffer(vertex.getInfo().buffer, model->b_vertex.getInfo().buffer, copy);
-		}
-
-		{
-			info.m_primitive_num = numIndex / 3;
-			model->m_info = info;
-			model->u_info = context->m_uniform_memory.allocateMemory<Info>(1);
-
-			cmd.updateBuffer<Info>(model->u_info.getInfo().buffer, model->u_info.getInfo().offset, info);
-
-			model->b_draw_cmd = context->m_storage_memory.allocateMemory<vk::DrawIndirectCommand>(1);
-			cmd.updateBuffer<vk::DrawIndirectCommand>(model->b_draw_cmd.getInfo().buffer, model->b_draw_cmd.getInfo().offset, vk::DrawIndirectCommand(numIndex, 1, 0, 0));
-		}
-
-
-		vk::BufferMemoryBarrier barrier[] = {
-			model->b_vertex.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
-			model->b_normal.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
-			model->b_index.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
-			model->u_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR| vk::PipelineStageFlagBits::eRayTracingShaderKHR, {}, {}, { array_size(barrier), barrier }, {});
-
-
-		// build BLAS
-		{
-
-			vk::AccelerationStructureCreateGeometryTypeInfoKHR accelerationCreateGeometryInfo{};
-			accelerationCreateGeometryInfo.geometryType = vk::GeometryTypeKHR::eTriangles;
-			accelerationCreateGeometryInfo.maxPrimitiveCount = model->m_info.m_primitive_num;
-			accelerationCreateGeometryInfo.indexType = vk::IndexType::eUint32;
-			accelerationCreateGeometryInfo.maxVertexCount = model->m_info.m_vertex_num;
-			accelerationCreateGeometryInfo.vertexFormat = vk::Format::eR32G32B32Sfloat;
-			accelerationCreateGeometryInfo.allowsTransforms = VK_FALSE;
-
-			vk::AccelerationStructureCreateInfoKHR accelerationCI;
-			accelerationCI.type = vk::AccelerationStructureTypeKHR::eBottomLevel;
-			accelerationCI.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastBuild;
-			accelerationCI.maxGeometryCount = 1;
-			accelerationCI.pGeometryInfos = &accelerationCreateGeometryInfo;
-
-			model->m_BLAS.accelerationStructure = context->m_device.createAccelerationStructureKHRUnique(accelerationCI);
-
-			// Bind object memory to the top level acceleration structure
-			model->m_BLAS.objectMemory = Helper::createASMemory(*context, model->m_BLAS.accelerationStructure.get());
-
-			vk::BindAccelerationStructureMemoryInfoKHR bindAccelerationMemoryInfo;
-			bindAccelerationMemoryInfo.accelerationStructure = model->m_BLAS.accelerationStructure.get();
-			bindAccelerationMemoryInfo.memory = model->m_BLAS.objectMemory.memory.get();
-			auto isbind = context->m_device.bindAccelerationStructureMemoryKHR(1, &bindAccelerationMemoryInfo);
-			assert(isbind == vk::Result::eSuccess);
-
-			std::array<vk::AccelerationStructureGeometryKHR, 1> accelerationStructureGeometry;
-			accelerationStructureGeometry[0].flags = vk::GeometryFlagBitsKHR::eNoDuplicateAnyHitInvocation;
-			accelerationStructureGeometry[0].geometryType = vk::GeometryTypeKHR::eTriangles;
-			accelerationStructureGeometry[0].geometry.triangles.vertexFormat = vk::Format::eR32G32B32Sfloat;
-			accelerationStructureGeometry[0].geometry.triangles.vertexData.deviceAddress = context->m_device.getBufferAddress(vk::BufferDeviceAddressInfoKHR().setBuffer(model->b_vertex.getInfo().buffer)) + model->b_vertex.getInfo().offset;
-			accelerationStructureGeometry[0].geometry.triangles.vertexStride = sizeof(aiVector3D);
-			accelerationStructureGeometry[0].geometry.triangles.indexType = vk::IndexType::eUint32;
-			accelerationStructureGeometry[0].geometry.triangles.indexData.deviceAddress = context->m_device.getBufferAddress(vk::BufferDeviceAddressInfoKHR().setBuffer(model->b_index.getInfo().buffer)) + model->b_index.getInfo().offset;
-
-			vk::AccelerationStructureGeometryKHR* acceleration_structure_geometries = accelerationStructureGeometry.data();
-
-			vk::AccelerationStructureMemoryRequirementsInfoKHR accelerationStructureMemoryRequirements;
-			accelerationStructureMemoryRequirements.type = vk::AccelerationStructureMemoryRequirementsTypeKHR::eBuildScratch;
-			accelerationStructureMemoryRequirements.buildType = vk::AccelerationStructureBuildTypeKHR::eDevice;
-			accelerationStructureMemoryRequirements.accelerationStructure = model->m_BLAS.accelerationStructure.get();
-			VkMemoryRequirements2 memoryRequirements2 = context->m_device.getAccelerationStructureMemoryRequirementsKHR(accelerationStructureMemoryRequirements);
-			auto scratchBuffer = context->m_storage_memory.allocateMemory(memoryRequirements2.memoryRequirements.size, true);
-
-			vk::AccelerationStructureBuildGeometryInfoKHR accelerationBuildGeometryInfo;
-			accelerationBuildGeometryInfo.type = vk::AccelerationStructureTypeKHR::eBottomLevel;
-			accelerationBuildGeometryInfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastBuild;
-			accelerationBuildGeometryInfo.update = VK_FALSE;
-			accelerationBuildGeometryInfo.dstAccelerationStructure = model->m_BLAS.accelerationStructure.get();
-			accelerationBuildGeometryInfo.geometryArrayOfPointers = VK_FALSE;
-			accelerationBuildGeometryInfo.geometryCount = 1;
-			accelerationBuildGeometryInfo.ppGeometries = &acceleration_structure_geometries;
-			accelerationBuildGeometryInfo.scratchData.deviceAddress = context->m_device.getBufferAddress(vk::BufferDeviceAddressInfo(scratchBuffer.getInfo().buffer)) + scratchBuffer.getInfo().offset;
-
-			vk::AccelerationStructureBuildOffsetInfoKHR accelerationBuildOffsetInfo{};
-			accelerationBuildOffsetInfo.primitiveCount = model->m_info.m_primitive_num;
-			accelerationBuildOffsetInfo.primitiveOffset = 0;
-			accelerationBuildOffsetInfo.firstVertex = 0;
-			accelerationBuildOffsetInfo.transformOffset = 0;
-
-			std::vector<const vk::AccelerationStructureBuildOffsetInfoKHR*> offset = { &accelerationBuildOffsetInfo };
-
-			cmd.buildAccelerationStructureKHR({ accelerationBuildGeometryInfo }, offset);
-
-			sDeleter::Order().enque(std::move(scratchBuffer));
-		}
-
-		return model;
-	}
-
-};
 
 struct DCContext
 {
@@ -304,7 +70,7 @@ struct DCContext
 
 	DCContext(btr::Context& ctx)
 	{
-		m_ASinstance_memory.setup(ctx.m_physical_device, ctx.m_device, vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, sizeof(vk::AccelerationStructureInstanceKHR)*100);
+		m_ASinstance_memory.setup(ctx.m_physical_device, ctx.m_device, vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, sizeof(vk::AccelerationStructureInstanceKHR) * 100);
 
 		auto cmd = ctx.m_cmd_pool->allocCmdTempolary(0);
 
@@ -506,19 +272,237 @@ struct DCContext
 
 	}
 };
-
-struct RTModel
+// Holds data for a memory object bound to an acceleration structure
+struct RayTracingObjectMemory
 {
+	uint64_t deviceAddress;
+	vk::UniqueDeviceMemory memory;
+};
 
-	AccelerationStructure m_TLAS;
-	static std::shared_ptr<RTModel> Construct(btr::Context& ctx, DCContext& dc_ctx, Model& model)
+// Ray tracing acceleration structure
+struct AccelerationStructure
+{
+	vk::UniqueAccelerationStructureKHR accelerationStructure;
+	RayTracingObjectMemory objectMemory;
+};
+namespace Helper
+{
+	static RayTracingObjectMemory createASMemory(btr::Context& ctx, vk::AccelerationStructureKHR& acceleration_structure)
 	{
+		RayTracingObjectMemory objectMemory{};
 
+		vk::AccelerationStructureMemoryRequirementsInfoKHR accelerationStructureMemoryRequirements{};
+		accelerationStructureMemoryRequirements.type = vk::AccelerationStructureMemoryRequirementsTypeKHR::eObject;
+		accelerationStructureMemoryRequirements.buildType = vk::AccelerationStructureBuildTypeKHR::eDevice;
+		accelerationStructureMemoryRequirements.accelerationStructure = acceleration_structure;
+		vk::MemoryRequirements2 memoryRequirements2 = ctx.m_device.getAccelerationStructureMemoryRequirementsKHR(accelerationStructureMemoryRequirements);
+
+		VkMemoryRequirements memoryRequirements = memoryRequirements2.memoryRequirements;
+
+		vk::MemoryAllocateInfo memoryAI;
+		memoryAI.allocationSize = memoryRequirements.size;
+		memoryAI.memoryTypeIndex = Helper::getMemoryTypeIndex(ctx.m_physical_device, memoryRequirements, vk::MemoryPropertyFlagBits::eDeviceLocal);
+		objectMemory.memory = ctx.m_device.allocateMemoryUnique(memoryAI);
+
+		return objectMemory;
+	}
+}
+
+struct Model
+{
+	struct Info
+	{
+		vec4 m_aabb_min;
+		vec4 m_aabb_max;
+		uint m_vertex_num;
+		uint m_primitive_num;
+	};
+	btr::BufferMemory b_vertex;
+	btr::BufferMemory b_normal;
+	btr::BufferMemory b_index;
+	btr::BufferMemoryEx<Info> u_info;
+	btr::BufferMemoryEx<vk::DrawIndirectCommand> b_draw_cmd;
+
+	AccelerationStructure m_BLAS;
+	AccelerationStructure m_TLAS;
+
+	Info m_info;
+
+
+	static std::shared_ptr<Model> LoadModel(btr::Context& ctx, DCContext& dc_ctx, const std::string& filename)
+	{
+		int OREORE_PRESET = 0
+			| aiProcess_JoinIdenticalVertices
+			| aiProcess_ImproveCacheLocality
+			| aiProcess_LimitBoneWeights
+			| aiProcess_RemoveRedundantMaterials
+			| aiProcess_SplitLargeMeshes
+			| aiProcess_SortByPType
+			//		| aiProcess_OptimizeMeshes
+			| aiProcess_Triangulate
+			//		| aiProcess_MakeLeftHanded
+			;
+		cStopWatch timer;
+		Assimp::Importer importer;
+		const aiScene* scene = importer.ReadFile(filename, OREORE_PRESET);
+		if (!scene) { return nullptr; }
+
+		unsigned numIndex = 0;
+		unsigned numVertex = 0;
+		for (size_t i = 0; i < scene->mNumMeshes; i++)
+		{
+			numVertex += scene->mMeshes[i]->mNumVertices;
+			numIndex += scene->mMeshes[i]->mNumFaces * 3;
+		}
+
+
+		auto vertex = ctx.m_staging_memory.allocateMemory(numVertex * sizeof(aiVector3D), true);
+		auto normal = ctx.m_staging_memory.allocateMemory(numVertex * sizeof(aiVector3D), true);
+		auto index = ctx.m_staging_memory.allocateMemory(numIndex * sizeof(uint32_t), true);
+
+		uint32_t index_offset = 0;
+		uint32_t vertex_offset = 0;
+		Info info{ .m_aabb_min = vec4{999.f}, .m_aabb_max = vec4{-999.f} };
+
+		for (size_t i = 0; i < scene->mNumMeshes; i++)
+		{
+			aiMesh* mesh = scene->mMeshes[i];
+			for (u32 n = 0; n < mesh->mNumFaces; n++) 
+			{
+				std::copy(mesh->mFaces[n].mIndices, mesh->mFaces[n].mIndices + 3, index.getMappedPtr<uint32_t>(index_offset));
+				index_offset += 3;
+			}
+
+			for (uint32_t v = 0; v < mesh->mNumVertices; v++)
+			{
+//				mesh->mVertices[v] *= 100.f;
+				info.m_aabb_min.x = std::min(info.m_aabb_min.x, mesh->mVertices[v].x);
+				info.m_aabb_min.y = std::min(info.m_aabb_min.y, mesh->mVertices[v].y);
+				info.m_aabb_min.z = std::min(info.m_aabb_min.z, mesh->mVertices[v].z);
+				info.m_aabb_max.x = std::max(info.m_aabb_max.x, mesh->mVertices[v].x);
+				info.m_aabb_max.y = std::max(info.m_aabb_max.y, mesh->mVertices[v].y);
+				info.m_aabb_max.z = std::max(info.m_aabb_max.z, mesh->mVertices[v].z);
+			}
+
+			std::copy(mesh->mVertices, mesh->mVertices + mesh->mNumVertices, vertex.getMappedPtr<aiVector3D>(vertex_offset));
+			std::copy(mesh->mNormals, mesh->mNormals + mesh->mNumVertices, normal.getMappedPtr<aiVector3D>(vertex_offset));
+
+
+			vertex_offset += mesh->mNumVertices;
+		}
+		importer.FreeScene();
+
+		info.m_vertex_num = numVertex;
 		auto cmd = ctx.m_cmd_pool->allocCmdTempolary(0);
+		std::shared_ptr<Model> model = std::make_shared<Model>();
+		{
+			model->b_vertex = ctx.m_vertex_memory.allocateMemory(numVertex * sizeof(aiVector3D));
+			model->b_normal = ctx.m_vertex_memory.allocateMemory(numVertex * sizeof(aiVector3D));
+			model->b_index = ctx.m_vertex_memory.allocateMemory(numIndex * sizeof(uint32_t));
 
-		auto rt_model = std::make_shared<RTModel>();
+			std::array<vk::BufferCopy, 3> copy;
+			copy[0].srcOffset = vertex.getInfo().offset;
+			copy[0].dstOffset = model->b_vertex.getInfo().offset;
+			copy[0].size = vertex.getInfo().range;
+			copy[1].srcOffset = normal.getInfo().offset;
+			copy[1].dstOffset = model->b_normal.getInfo().offset;
+			copy[1].size = normal.getInfo().range;
+			copy[2].srcOffset = index.getInfo().offset;
+			copy[2].dstOffset = model->b_index.getInfo().offset;
+			copy[2].size = index.getInfo().range;
+			cmd.copyBuffer(vertex.getInfo().buffer, model->b_vertex.getInfo().buffer, copy);
+		}
 
-		auto& m_TLAS = rt_model->m_TLAS;
+		{
+			info.m_primitive_num = numIndex / 3;
+			model->m_info = info;
+			model->u_info = ctx.m_uniform_memory.allocateMemory<Info>(1);
+
+			cmd.updateBuffer<Info>(model->u_info.getInfo().buffer, model->u_info.getInfo().offset, info);
+
+			model->b_draw_cmd = ctx.m_storage_memory.allocateMemory<vk::DrawIndirectCommand>(1);
+			cmd.updateBuffer<vk::DrawIndirectCommand>(model->b_draw_cmd.getInfo().buffer, model->b_draw_cmd.getInfo().offset, vk::DrawIndirectCommand(numIndex, 1, 0, 0));
+		}
+
+
+		vk::BufferMemoryBarrier barrier[] = {
+			model->b_vertex.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
+			model->b_normal.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
+			model->b_index.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
+			model->u_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR| vk::PipelineStageFlagBits::eRayTracingShaderKHR, {}, {}, { array_size(barrier), barrier }, {});
+
+
+		// build BLAS
+		{
+
+			vk::AccelerationStructureCreateGeometryTypeInfoKHR accelerationCreateGeometryInfo{};
+			accelerationCreateGeometryInfo.geometryType = vk::GeometryTypeKHR::eTriangles;
+			accelerationCreateGeometryInfo.maxPrimitiveCount = model->m_info.m_primitive_num;
+			accelerationCreateGeometryInfo.indexType = vk::IndexType::eUint32;
+			accelerationCreateGeometryInfo.maxVertexCount = model->m_info.m_vertex_num;
+			accelerationCreateGeometryInfo.vertexFormat = vk::Format::eR32G32B32Sfloat;
+			accelerationCreateGeometryInfo.allowsTransforms = VK_FALSE;
+
+			vk::AccelerationStructureCreateInfoKHR accelerationCI;
+			accelerationCI.type = vk::AccelerationStructureTypeKHR::eBottomLevel;
+			accelerationCI.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastBuild;
+			accelerationCI.maxGeometryCount = 1;
+			accelerationCI.pGeometryInfos = &accelerationCreateGeometryInfo;
+
+			model->m_BLAS.accelerationStructure = ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
+
+			// Bind object memory to the top level acceleration structure
+			model->m_BLAS.objectMemory = Helper::createASMemory(ctx, model->m_BLAS.accelerationStructure.get());
+
+			vk::BindAccelerationStructureMemoryInfoKHR bindAccelerationMemoryInfo;
+			bindAccelerationMemoryInfo.accelerationStructure = model->m_BLAS.accelerationStructure.get();
+			bindAccelerationMemoryInfo.memory = model->m_BLAS.objectMemory.memory.get();
+			auto isbind = ctx.m_device.bindAccelerationStructureMemoryKHR(1, &bindAccelerationMemoryInfo);
+			assert(isbind == vk::Result::eSuccess);
+
+			std::array<vk::AccelerationStructureGeometryKHR, 1> accelerationStructureGeometry;
+			accelerationStructureGeometry[0].flags = vk::GeometryFlagBitsKHR::eNoDuplicateAnyHitInvocation;
+			accelerationStructureGeometry[0].geometryType = vk::GeometryTypeKHR::eTriangles;
+			accelerationStructureGeometry[0].geometry.triangles.vertexFormat = vk::Format::eR32G32B32Sfloat;
+			accelerationStructureGeometry[0].geometry.triangles.vertexData.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfoKHR().setBuffer(model->b_vertex.getInfo().buffer)) + model->b_vertex.getInfo().offset;
+			accelerationStructureGeometry[0].geometry.triangles.vertexStride = sizeof(aiVector3D);
+			accelerationStructureGeometry[0].geometry.triangles.indexType = vk::IndexType::eUint32;
+			accelerationStructureGeometry[0].geometry.triangles.indexData.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfoKHR().setBuffer(model->b_index.getInfo().buffer)) + model->b_index.getInfo().offset;
+
+			vk::AccelerationStructureGeometryKHR* acceleration_structure_geometries = accelerationStructureGeometry.data();
+
+			vk::AccelerationStructureMemoryRequirementsInfoKHR accelerationStructureMemoryRequirements;
+			accelerationStructureMemoryRequirements.type = vk::AccelerationStructureMemoryRequirementsTypeKHR::eBuildScratch;
+			accelerationStructureMemoryRequirements.buildType = vk::AccelerationStructureBuildTypeKHR::eDevice;
+			accelerationStructureMemoryRequirements.accelerationStructure = model->m_BLAS.accelerationStructure.get();
+			VkMemoryRequirements2 memoryRequirements2 = ctx.m_device.getAccelerationStructureMemoryRequirementsKHR(accelerationStructureMemoryRequirements);
+			auto scratchBuffer = ctx.m_storage_memory.allocateMemory(memoryRequirements2.memoryRequirements.size, true);
+
+			vk::AccelerationStructureBuildGeometryInfoKHR accelerationBuildGeometryInfo;
+			accelerationBuildGeometryInfo.type = vk::AccelerationStructureTypeKHR::eBottomLevel;
+			accelerationBuildGeometryInfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastBuild;
+			accelerationBuildGeometryInfo.update = VK_FALSE;
+			accelerationBuildGeometryInfo.dstAccelerationStructure = model->m_BLAS.accelerationStructure.get();
+			accelerationBuildGeometryInfo.geometryArrayOfPointers = VK_FALSE;
+			accelerationBuildGeometryInfo.geometryCount = 1;
+			accelerationBuildGeometryInfo.ppGeometries = &acceleration_structure_geometries;
+			accelerationBuildGeometryInfo.scratchData.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo(scratchBuffer.getInfo().buffer)) + scratchBuffer.getInfo().offset;
+
+			vk::AccelerationStructureBuildOffsetInfoKHR accelerationBuildOffsetInfo{};
+			accelerationBuildOffsetInfo.primitiveCount = model->m_info.m_primitive_num;
+			accelerationBuildOffsetInfo.primitiveOffset = 0;
+			accelerationBuildOffsetInfo.firstVertex = 0;
+			accelerationBuildOffsetInfo.transformOffset = 0;
+
+			std::vector<const vk::AccelerationStructureBuildOffsetInfoKHR*> offset = { &accelerationBuildOffsetInfo };
+
+			cmd.buildAccelerationStructureKHR({ accelerationBuildGeometryInfo }, offset);
+
+			sDeleter::Order().enque(std::move(scratchBuffer));
+		}
+		// build TLAS
 		{
 			vk::AccelerationStructureCreateGeometryTypeInfoKHR accelerationCreateGeometryInfo;
 			accelerationCreateGeometryInfo.geometryType = vk::GeometryTypeKHR::eInstances;
@@ -526,20 +510,20 @@ struct RTModel
 			accelerationCreateGeometryInfo.allowsTransforms = VK_TRUE;
 
 			vk::AccelerationStructureCreateInfoKHR accelerationCI;
-			accelerationCI.flags = vk::BuildAccelerationStructureFlagBitsKHR::eAllowUpdate|vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
+			accelerationCI.flags = vk::BuildAccelerationStructureFlagBitsKHR::eAllowUpdate | vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
 			accelerationCI.maxGeometryCount = 1;
 			accelerationCI.pGeometryInfos = &accelerationCreateGeometryInfo;
-			m_TLAS.accelerationStructure = ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
+			model->m_TLAS.accelerationStructure = ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
 
 			// Bind object memory to the top level acceleration structure
-			m_TLAS.objectMemory = Helper::createASMemory(ctx, m_TLAS.accelerationStructure.get());
+			model->m_TLAS.objectMemory = Helper::createASMemory(ctx, model->m_TLAS.accelerationStructure.get());
 
 			vk::BindAccelerationStructureMemoryInfoKHR bindAccelerationMemoryInfo;
-			bindAccelerationMemoryInfo.accelerationStructure = m_TLAS.accelerationStructure.get();
-			bindAccelerationMemoryInfo.memory = m_TLAS.objectMemory.memory.get();
+			bindAccelerationMemoryInfo.accelerationStructure = model->m_TLAS.accelerationStructure.get();
+			bindAccelerationMemoryInfo.memory = model->m_TLAS.objectMemory.memory.get();
 			ctx.m_device.bindAccelerationStructureMemoryKHR({ bindAccelerationMemoryInfo });
 
-			vk::TransformMatrixKHR transform_matrix = 
+			vk::TransformMatrixKHR transform_matrix =
 			{
 				std::array<std::array<float, 4>, 3>
 				{
@@ -555,11 +539,11 @@ struct RTModel
 			instance.mask = 0xFF;
 			instance.instanceShaderBindingTableRecordOffset = 0;
 			instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
-			instance.accelerationStructureReference = ctx.m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(model.m_BLAS.accelerationStructure.get()));
+			instance.accelerationStructureReference = ctx.m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(model->m_BLAS.accelerationStructure.get()));
 
 			auto instance_buffer = dc_ctx.m_ASinstance_memory.allocateMemory(sizeof(instance));
 
-			cmd.updateBuffer<vk::AccelerationStructureInstanceKHR>(instance_buffer.getInfo().buffer, instance_buffer.getInfo().offset, {instance});
+			cmd.updateBuffer<vk::AccelerationStructureInstanceKHR>(instance_buffer.getInfo().buffer, instance_buffer.getInfo().offset, { instance });
 
 
 			vk::DeviceOrHostAddressConstKHR instance_data_device_address;
@@ -578,7 +562,7 @@ struct RTModel
 			vk::AccelerationStructureMemoryRequirementsInfoKHR accelerationStructureMemoryRequirements;
 			accelerationStructureMemoryRequirements.type = vk::AccelerationStructureMemoryRequirementsTypeKHR::eBuildScratch;
 			accelerationStructureMemoryRequirements.buildType = vk::AccelerationStructureBuildTypeKHR::eDevice;
-			accelerationStructureMemoryRequirements.accelerationStructure = m_TLAS.accelerationStructure.get();
+			accelerationStructureMemoryRequirements.accelerationStructure = model->m_TLAS.accelerationStructure.get();
 			VkMemoryRequirements2 memoryRequirements2 = ctx.m_device.getAccelerationStructureMemoryRequirementsKHR(accelerationStructureMemoryRequirements);
 			auto scratchBuffer = ctx.m_storage_memory.allocateMemory(memoryRequirements2.memoryRequirements.size, true);
 
@@ -587,12 +571,12 @@ struct RTModel
 			accelerationBuildGeometryInfo.type = vk::AccelerationStructureTypeKHR::eTopLevel;
 			accelerationBuildGeometryInfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastBuild;
 			accelerationBuildGeometryInfo.update = VK_FALSE;
-//			accelerationBuildGeometryInfo.srcAccelerationStructure = VK_NULL_HANDLE;
-			accelerationBuildGeometryInfo.dstAccelerationStructure = m_TLAS.accelerationStructure.get();
+			//			accelerationBuildGeometryInfo.srcAccelerationStructure = VK_NULL_HANDLE;
+			accelerationBuildGeometryInfo.dstAccelerationStructure = model->m_TLAS.accelerationStructure.get();
 			accelerationBuildGeometryInfo.geometryArrayOfPointers = VK_FALSE;
 			accelerationBuildGeometryInfo.geometryCount = 1;
 			accelerationBuildGeometryInfo.ppGeometries = &acceleration_structure_geometries;
-			accelerationBuildGeometryInfo.scratchData.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo(scratchBuffer.getInfo().buffer))+scratchBuffer.getInfo().offset;
+			accelerationBuildGeometryInfo.scratchData.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo(scratchBuffer.getInfo().buffer)) + scratchBuffer.getInfo().offset;
 
 			vk::AccelerationStructureBuildOffsetInfoKHR accelerationBuildOffsetInfo;
 			accelerationBuildOffsetInfo.primitiveCount = 1;
@@ -607,8 +591,9 @@ struct RTModel
 		}
 
 
-		return rt_model;
+		return model;
 	}
+
 };
 
 struct LDCPoint
@@ -641,7 +626,7 @@ struct DCModel
 	btr::BufferMemoryEx<vk::DrawIndirectCommand> b_dc_index_counter;
 	btr::BufferMemoryEx<u8vec4> b_dc_index;
 
-	static std::shared_ptr<DCModel> Construct(btr::Context& ctx, DCContext& dc_ctx, Model& model, RTModel& rt_model)
+	static std::shared_ptr<DCModel> Construct(btr::Context& ctx, DCContext& dc_ctx, Model& model)
 	{
 		auto cmd = ctx.m_cmd_pool->allocCmdTempolary(0);
 
@@ -718,7 +703,7 @@ struct DCModel
 			};
 			vk::WriteDescriptorSetAccelerationStructureKHR acceleration;
 			acceleration.accelerationStructureCount = 1;
-			acceleration.pAccelerationStructures = &rt_model.m_TLAS.accelerationStructure.get();
+			acceleration.pAccelerationStructures = &model.m_TLAS.accelerationStructure.get();
 
 			vk::WriteDescriptorSet write[] =
 			{
@@ -1340,12 +1325,10 @@ int main()
 	auto context = app.m_context;
 	auto dc_ctx = std::make_shared<DCContext>(*context);
 
-	//	auto model = Model::LoadModel(context, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Box.dae");
-	auto model = Model::LoadModel(context, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Duck.dae");
+	//	auto model = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Box.dae");
+	auto model = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Duck.dae");
 
-	auto rt_model = RTModel::Construct(*context, *dc_ctx, *model);
-
-//	auto ldc_model = DCModel::Construct(*context, *dc_ctx, * model, * rt_model);
+	auto dc_model = DCModel::Construct(*context, *dc_ctx, *model);
 	Renderer renderer(*context, *dc_ctx, *app.m_window->getFrontBuffer());
 
 	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
@@ -1377,11 +1360,9 @@ int main()
 
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 //				renderer.ExecuteTestRender(cmd, *ldc_ctx, *ldc_model, *app.m_window->getFrontBuffer());
-//				renderer.ExecuteRenderLDCModel(cmd, *dc_ctx, *ldc_model, *app.m_window->getFrontBuffer());
+				renderer.ExecuteRenderLDCModel(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
 //				renderer.ExecuteRenderModel(cmd, *ldc_ctx, *ldc_model, *model, *app.m_window->getFrontBuffer());
 
-				auto a_model = RTModel::Construct(*context, *dc_ctx, *model);
-				sDeleter::Order().enque(std::move(a_model));
 				cmd.end();
 				cmds[cmd_render] = cmd;
 
