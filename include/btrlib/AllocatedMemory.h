@@ -211,7 +211,7 @@ struct BufferMemory
 			{
 				Zone zone;
 				zone.m_start = m_buffer_info.offset;
-				zone.m_end = m_buffer_info.offset + m_buffer_info.range;
+				zone.m_end = m_buffer_info.offset + btr::align(m_buffer_info.range, m_allocater->m_align);
 				m_allocater->delayedFree(zone);
 			}
 

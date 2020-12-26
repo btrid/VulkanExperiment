@@ -97,7 +97,7 @@ namespace Helper
 
 		vk::BufferCreateInfo bufferCI;
 		bufferCI.size = memoryRequirements2.memoryRequirements.size;
-		bufferCI.usage = vk::BufferUsageFlagBits::eRayTracingKHR | vk::BufferUsageFlagBits::eShaderDeviceAddress;
+		bufferCI.usage = vk::BufferUsageFlagBits::eShaderDeviceAddress;
 		bufferCI.sharingMode = vk::SharingMode::eExclusive;
 		scratchBuffer.buffer = ctx.m_device.createBufferUnique(bufferCI);
 
@@ -319,6 +319,8 @@ struct Model
 
 struct DCContext
 {
+	btr::AllocatedMemory m_ASinstance_memory;
+
 	enum DSL
 	{
 		DSL_Model,
@@ -342,6 +344,7 @@ struct DCContext
 
 	DCContext(btr::Context& ctx)
 	{
+		m_ASinstance_memory.setup(ctx.m_physical_device, ctx.m_device, vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, sizeof(vk::AccelerationStructureInstanceKHR)*100);
 
 		auto cmd = ctx.m_cmd_pool->allocCmdTempolary(0);
 
@@ -459,8 +462,6 @@ struct DCContext
 
 				// shader binding table
 				{
-					auto f = ctx.m_physical_device.getFeatures();
-					auto props = ctx.m_physical_device.getProperties();
 					auto props2 = ctx.m_physical_device.getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceRayTracingPropertiesKHR>();
 					auto rayTracingProperties = props2.get<vk::PhysicalDeviceRayTracingPropertiesKHR>();
 
@@ -549,8 +550,7 @@ struct DCContext
 struct RTModel
 {
 
-	AccelerationStructure m_topLevelAS;
-
+	AccelerationStructure m_TLAS;
 	static std::shared_ptr<RTModel> Construct(btr::Context& ctx, DCContext& dc_ctx, Model& model)
 	{
 
@@ -558,25 +558,25 @@ struct RTModel
 
 		auto rt_model = std::make_shared<RTModel>();
 
-		AccelerationStructure& topLevelAS = rt_model->m_topLevelAS;
+		auto& m_TLAS = rt_model->m_TLAS;
 		{
 			vk::AccelerationStructureCreateGeometryTypeInfoKHR accelerationCreateGeometryInfo;
 			accelerationCreateGeometryInfo.geometryType = vk::GeometryTypeKHR::eInstances;
 			accelerationCreateGeometryInfo.maxPrimitiveCount = 1;
-			accelerationCreateGeometryInfo.allowsTransforms = VK_FALSE;
+			accelerationCreateGeometryInfo.allowsTransforms = VK_TRUE;
 
 			vk::AccelerationStructureCreateInfoKHR accelerationCI;
-			accelerationCI.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
+			accelerationCI.flags = vk::BuildAccelerationStructureFlagBitsKHR::eAllowUpdate|vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
 			accelerationCI.maxGeometryCount = 1;
 			accelerationCI.pGeometryInfos = &accelerationCreateGeometryInfo;
-			topLevelAS.accelerationStructure = ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
+			m_TLAS.accelerationStructure = ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
 
 			// Bind object memory to the top level acceleration structure
-			topLevelAS.objectMemory = Helper::createASMemory(ctx, topLevelAS.accelerationStructure.get());
+			m_TLAS.objectMemory = Helper::createASMemory(ctx, m_TLAS.accelerationStructure.get());
 
 			vk::BindAccelerationStructureMemoryInfoKHR bindAccelerationMemoryInfo;
-			bindAccelerationMemoryInfo.accelerationStructure = topLevelAS.accelerationStructure.get();
-			bindAccelerationMemoryInfo.memory = topLevelAS.objectMemory.memory.get();
+			bindAccelerationMemoryInfo.accelerationStructure = m_TLAS.accelerationStructure.get();
+			bindAccelerationMemoryInfo.memory = m_TLAS.objectMemory.memory.get();
 			ctx.m_device.bindAccelerationStructureMemoryKHR({ bindAccelerationMemoryInfo });
 
 			vk::TransformMatrixKHR transform_matrix = 
@@ -597,10 +597,7 @@ struct RTModel
 			instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
 			instance.accelerationStructureReference = ctx.m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(model.m_BLAS.accelerationStructure.get()));
 
-			// Buffer for instance data
-			btr::AllocatedMemory instance_memory;
-			instance_memory.setup(ctx.m_physical_device, ctx.m_device, vk::BufferUsageFlagBits::eShaderDeviceAddress| vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, sizeof(instance));
-			auto instance_buffer = instance_memory.allocateMemory(sizeof(instance));
+			auto instance_buffer = dc_ctx.m_ASinstance_memory.allocateMemory(sizeof(instance));
 
 			cmd.updateBuffer<vk::AccelerationStructureInstanceKHR>(instance_buffer.getInfo().buffer, instance_buffer.getInfo().offset, {instance});
 
@@ -618,14 +615,14 @@ struct RTModel
 			vk::AccelerationStructureGeometryKHR* acceleration_structure_geometries = acceleration_geometries.data();
 
 			// Create a small scratch buffer used during build of the top level acceleration structure
-			RayTracingScratchBuffer scratchBuffer = Helper::createScratchBuffer(ctx, topLevelAS.accelerationStructure.get());
+			RayTracingScratchBuffer scratchBuffer = Helper::createScratchBuffer(ctx, m_TLAS.accelerationStructure.get());
 
 			vk::AccelerationStructureBuildGeometryInfoKHR accelerationBuildGeometryInfo;
 			accelerationBuildGeometryInfo.type = vk::AccelerationStructureTypeKHR::eTopLevel;
-			accelerationBuildGeometryInfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
+			accelerationBuildGeometryInfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastBuild;
 			accelerationBuildGeometryInfo.update = VK_FALSE;
 //			accelerationBuildGeometryInfo.srcAccelerationStructure = VK_NULL_HANDLE;
-			accelerationBuildGeometryInfo.dstAccelerationStructure = topLevelAS.accelerationStructure.get();
+			accelerationBuildGeometryInfo.dstAccelerationStructure = m_TLAS.accelerationStructure.get();
 			accelerationBuildGeometryInfo.geometryArrayOfPointers = VK_FALSE;
 			accelerationBuildGeometryInfo.geometryCount = 1;
 			accelerationBuildGeometryInfo.ppGeometries = &acceleration_structure_geometries;
@@ -640,7 +637,7 @@ struct RTModel
 			std::vector<const vk::AccelerationStructureBuildOffsetInfoKHR*> offset = { &accelerationBuildOffsetInfo };
 			cmd.buildAccelerationStructureKHR({ accelerationBuildGeometryInfo }, offset);
 
-			sDeleter::Order().enque(std::move(scratchBuffer), std::move(instance_buffer), std::move(instance_memory));
+			sDeleter::Order().enque(std::move(scratchBuffer), std::move(instance_buffer));
 		}
 
 
@@ -755,7 +752,7 @@ struct DCModel
 			};
 			vk::WriteDescriptorSetAccelerationStructureKHR acceleration;
 			acceleration.accelerationStructureCount = 1;
-			acceleration.pAccelerationStructures = &rt_model.m_topLevelAS.accelerationStructure.get();
+			acceleration.pAccelerationStructures = &rt_model.m_TLAS.accelerationStructure.get();
 
 			vk::WriteDescriptorSet write[] =
 			{
@@ -1393,7 +1390,7 @@ int main()
 	while (true)
 	{
 		cStopWatch time;
-
+		dc_ctx->m_ASinstance_memory.gc();
 		app.preUpdate();
 		{
 			enum
