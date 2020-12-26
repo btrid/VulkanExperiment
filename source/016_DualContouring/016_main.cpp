@@ -42,14 +42,6 @@
 
 #include <016_DualContouring/texture.h>
 
-
-struct RayTracingScratchBuffer
-{
-	uint64_t deviceAddress;
-	vk::UniqueBuffer buffer;
-	vk::UniqueDeviceMemory memory;
-};
-
 // Holds data for a memory object bound to an acceleration structure
 struct RayTracingObjectMemory
 {
@@ -84,42 +76,6 @@ namespace Helper
 
 		return objectMemory;
 	}
-	//	Create a scratch buffer to hold temporary data for a ray tracing acceleration structure
-	static RayTracingScratchBuffer createScratchBuffer(btr::Context& ctx, vk::AccelerationStructureKHR& AS)
-	{
-		RayTracingScratchBuffer scratchBuffer{};
-
-		vk::AccelerationStructureMemoryRequirementsInfoKHR accelerationStructureMemoryRequirements;
-		accelerationStructureMemoryRequirements.type = vk::AccelerationStructureMemoryRequirementsTypeKHR::eBuildScratch;
-		accelerationStructureMemoryRequirements.buildType = vk::AccelerationStructureBuildTypeKHR::eDevice;
-		accelerationStructureMemoryRequirements.accelerationStructure = AS;
-		VkMemoryRequirements2 memoryRequirements2 = ctx.m_device.getAccelerationStructureMemoryRequirementsKHR(accelerationStructureMemoryRequirements);
-
-		vk::BufferCreateInfo bufferCI;
-		bufferCI.size = memoryRequirements2.memoryRequirements.size;
-		bufferCI.usage = vk::BufferUsageFlagBits::eShaderDeviceAddress;
-		bufferCI.sharingMode = vk::SharingMode::eExclusive;
-		scratchBuffer.buffer = ctx.m_device.createBufferUnique(bufferCI);
-
-		vk::MemoryRequirements memoryRequirements = ctx.m_device.getBufferMemoryRequirements(scratchBuffer.buffer.get());
-
-		vk::MemoryAllocateFlagsInfo memoryAllocateFI;
-		memoryAllocateFI.flags = vk::MemoryAllocateFlagBits::eDeviceAddress;
-
-		vk::MemoryAllocateInfo memoryAI;
-		memoryAI.pNext = &memoryAllocateFI;
-		memoryAI.allocationSize = memoryRequirements.size;
-		memoryAI.memoryTypeIndex = Helper::getMemoryTypeIndex(ctx.m_physical_device, memoryRequirements, vk::MemoryPropertyFlagBits::eDeviceLocal);
-		scratchBuffer.memory = ctx.m_device.allocateMemoryUnique(memoryAI);
-		ctx.m_device.bindBufferMemory(scratchBuffer.buffer.get(), scratchBuffer.memory.get(), 0);
-
-		vk::BufferDeviceAddressInfoKHR buffer_device_address_info;
-		buffer_device_address_info.buffer = scratchBuffer.buffer.get();
-		scratchBuffer.deviceAddress = ctx.m_device.getBufferAddress(buffer_device_address_info);
-
-		return scratchBuffer;
-	}
-
 }
 
 struct Model
@@ -286,8 +242,12 @@ struct Model
 
 			vk::AccelerationStructureGeometryKHR* acceleration_structure_geometries = accelerationStructureGeometry.data();
 
-			// Create a small scratch buffer used during build of the bottom level acceleration structure
-			auto scratchBuffer = Helper::createScratchBuffer(*context, model->m_BLAS.accelerationStructure.get());
+			vk::AccelerationStructureMemoryRequirementsInfoKHR accelerationStructureMemoryRequirements;
+			accelerationStructureMemoryRequirements.type = vk::AccelerationStructureMemoryRequirementsTypeKHR::eBuildScratch;
+			accelerationStructureMemoryRequirements.buildType = vk::AccelerationStructureBuildTypeKHR::eDevice;
+			accelerationStructureMemoryRequirements.accelerationStructure = model->m_BLAS.accelerationStructure.get();
+			VkMemoryRequirements2 memoryRequirements2 = context->m_device.getAccelerationStructureMemoryRequirementsKHR(accelerationStructureMemoryRequirements);
+			auto scratchBuffer = context->m_storage_memory.allocateMemory(memoryRequirements2.memoryRequirements.size, true);
 
 			vk::AccelerationStructureBuildGeometryInfoKHR accelerationBuildGeometryInfo;
 			accelerationBuildGeometryInfo.type = vk::AccelerationStructureTypeKHR::eBottomLevel;
@@ -297,7 +257,7 @@ struct Model
 			accelerationBuildGeometryInfo.geometryArrayOfPointers = VK_FALSE;
 			accelerationBuildGeometryInfo.geometryCount = 1;
 			accelerationBuildGeometryInfo.ppGeometries = &acceleration_structure_geometries;
-			accelerationBuildGeometryInfo.scratchData.deviceAddress = scratchBuffer.deviceAddress;
+			accelerationBuildGeometryInfo.scratchData.deviceAddress = context->m_device.getBufferAddress(vk::BufferDeviceAddressInfo(scratchBuffer.getInfo().buffer)) + scratchBuffer.getInfo().offset;
 
 			vk::AccelerationStructureBuildOffsetInfoKHR accelerationBuildOffsetInfo{};
 			accelerationBuildOffsetInfo.primitiveCount = model->m_info.m_primitive_num;
@@ -603,7 +563,7 @@ struct RTModel
 
 
 			vk::DeviceOrHostAddressConstKHR instance_data_device_address;
-			instance_data_device_address.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfoKHR().setBuffer(instance_buffer.getInfo().buffer));
+			instance_data_device_address.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo().setBuffer(instance_buffer.getInfo().buffer));
 
 			vk::AccelerationStructureGeometryKHR accelerationStructureGeometry;
 			accelerationStructureGeometry.flags = vk::GeometryFlagBitsKHR::eNoDuplicateAnyHitInvocation;
@@ -615,7 +575,13 @@ struct RTModel
 			vk::AccelerationStructureGeometryKHR* acceleration_structure_geometries = acceleration_geometries.data();
 
 			// Create a small scratch buffer used during build of the top level acceleration structure
-			RayTracingScratchBuffer scratchBuffer = Helper::createScratchBuffer(ctx, m_TLAS.accelerationStructure.get());
+			vk::AccelerationStructureMemoryRequirementsInfoKHR accelerationStructureMemoryRequirements;
+			accelerationStructureMemoryRequirements.type = vk::AccelerationStructureMemoryRequirementsTypeKHR::eBuildScratch;
+			accelerationStructureMemoryRequirements.buildType = vk::AccelerationStructureBuildTypeKHR::eDevice;
+			accelerationStructureMemoryRequirements.accelerationStructure = m_TLAS.accelerationStructure.get();
+			VkMemoryRequirements2 memoryRequirements2 = ctx.m_device.getAccelerationStructureMemoryRequirementsKHR(accelerationStructureMemoryRequirements);
+			auto scratchBuffer = ctx.m_storage_memory.allocateMemory(memoryRequirements2.memoryRequirements.size, true);
+
 
 			vk::AccelerationStructureBuildGeometryInfoKHR accelerationBuildGeometryInfo;
 			accelerationBuildGeometryInfo.type = vk::AccelerationStructureTypeKHR::eTopLevel;
@@ -626,7 +592,7 @@ struct RTModel
 			accelerationBuildGeometryInfo.geometryArrayOfPointers = VK_FALSE;
 			accelerationBuildGeometryInfo.geometryCount = 1;
 			accelerationBuildGeometryInfo.ppGeometries = &acceleration_structure_geometries;
-			accelerationBuildGeometryInfo.scratchData.deviceAddress = scratchBuffer.deviceAddress;
+			accelerationBuildGeometryInfo.scratchData.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo(scratchBuffer.getInfo().buffer))+scratchBuffer.getInfo().offset;
 
 			vk::AccelerationStructureBuildOffsetInfoKHR accelerationBuildOffsetInfo;
 			accelerationBuildOffsetInfo.primitiveCount = 1;
@@ -637,7 +603,7 @@ struct RTModel
 			std::vector<const vk::AccelerationStructureBuildOffsetInfoKHR*> offset = { &accelerationBuildOffsetInfo };
 			cmd.buildAccelerationStructureKHR({ accelerationBuildGeometryInfo }, offset);
 
-			sDeleter::Order().enque(std::move(scratchBuffer), std::move(instance_buffer));
+			sDeleter::Order().enque(std::move(instance_buffer), std::move(scratchBuffer));
 		}
 
 
@@ -1423,6 +1389,6 @@ int main()
 			app.submit(std::move(cmds));
 		}
 		app.postUpdate();
-		printf("%-6.4fms\n", time.getElapsedTimeAsMilliSeconds());
+		printf("%-6.3fms\n", time.getElapsedTimeAsMilliSeconds());
 	}
 }
