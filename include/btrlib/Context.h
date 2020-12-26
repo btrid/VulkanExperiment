@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <vector>
 #include <btrlib/Define.h>
 #include <btrlib/AllocatedMemory.h>

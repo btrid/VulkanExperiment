@@ -40,197 +40,86 @@
 #include <assimp/scene.h>
 #include <assimp/material.h>
 
-#include <png.h>
-#pragma comment(lib, "libpng16_static.lib")
-#pragma comment(lib, "zlibstatic.lib")
+#include <016_DualContouring/texture.h>
 
 
-struct TextureResource
+struct RayTracingScratchBuffer
 {
-	vk::UniqueImage m_image;
-	vk::UniqueImageView m_image_view;
-	vk::UniqueDeviceMemory m_memory;
-	vk::UniqueSampler m_sampler;
+	uint64_t deviceAddress;
+	vk::UniqueBuffer buffer;
+	vk::UniqueDeviceMemory memory;
 };
-TextureResource read_png_file(btr::Context& ctx, const char* file_name)
+
+// Holds data for a memory object bound to an acceleration structure
+struct RayTracingObjectMemory
 {
+	uint64_t deviceAddress;
+	vk::UniqueDeviceMemory memory;
+};
 
-	FILE* fp;
-	fopen_s(&fp, file_name, "rb");
-	assert(fp);
-
-	png_byte sig[4];
-	if (fread(sig, 4, 1, fp) < 1)
+// Ray tracing acceleration structure
+struct AccelerationStructure
+{
+	vk::UniqueAccelerationStructureKHR accelerationStructure;
+	RayTracingObjectMemory objectMemory;
+};
+namespace Helper
+{
+	static RayTracingObjectMemory createASMemory(btr::Context& ctx, vk::AccelerationStructureKHR& acceleration_structure)
 	{
-		fclose(fp);
-		assert(false);
+		RayTracingObjectMemory objectMemory{};
+
+		vk::AccelerationStructureMemoryRequirementsInfoKHR accelerationStructureMemoryRequirements{};
+		accelerationStructureMemoryRequirements.type = vk::AccelerationStructureMemoryRequirementsTypeKHR::eObject;
+		accelerationStructureMemoryRequirements.buildType = vk::AccelerationStructureBuildTypeKHR::eDevice;
+		accelerationStructureMemoryRequirements.accelerationStructure = acceleration_structure;
+		vk::MemoryRequirements2 memoryRequirements2 = ctx.m_device.getAccelerationStructureMemoryRequirementsKHR(accelerationStructureMemoryRequirements);
+
+		VkMemoryRequirements memoryRequirements = memoryRequirements2.memoryRequirements;
+
+		vk::MemoryAllocateInfo memoryAI;
+		memoryAI.allocationSize = memoryRequirements.size;
+		memoryAI.memoryTypeIndex = Helper::getMemoryTypeIndex(ctx.m_physical_device, memoryRequirements, vk::MemoryPropertyFlagBits::eDeviceLocal);
+		objectMemory.memory = ctx.m_device.allocateMemoryUnique(memoryAI);
+
+		return objectMemory;
 	}
-	if (!png_check_sig(sig, 4))
+	//	Create a scratch buffer to hold temporary data for a ray tracing acceleration structure
+	static RayTracingScratchBuffer createScratchBuffer(btr::Context& ctx, vk::AccelerationStructureKHR& AS)
 	{
-		fclose(fp);
-		assert(false);
-	}
+		RayTracingScratchBuffer scratchBuffer{};
 
-	png_structp Png = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-	png_infop PngInfo = png_create_info_struct(Png);
+		vk::AccelerationStructureMemoryRequirementsInfoKHR accelerationStructureMemoryRequirements;
+		accelerationStructureMemoryRequirements.type = vk::AccelerationStructureMemoryRequirementsTypeKHR::eBuildScratch;
+		accelerationStructureMemoryRequirements.buildType = vk::AccelerationStructureBuildTypeKHR::eDevice;
+		accelerationStructureMemoryRequirements.accelerationStructure = AS;
+		VkMemoryRequirements2 memoryRequirements2 = ctx.m_device.getAccelerationStructureMemoryRequirementsKHR(accelerationStructureMemoryRequirements);
 
-	int offset = 8;
-	png_init_io(Png, fp);
-	png_set_sig_bytes(Png, 4);
-	png_read_info(Png, PngInfo);
-//	png_read_png(Png, PngInfo, PNG_TRANSFORM_STRIP_16 | PNG_TRANSFORM_PACKING | PNG_TRANSFORM_EXPAND, NULL);
+		vk::BufferCreateInfo bufferCI;
+		bufferCI.size = memoryRequirements2.memoryRequirements.size;
+		bufferCI.usage = vk::BufferUsageFlagBits::eRayTracingKHR | vk::BufferUsageFlagBits::eShaderDeviceAddress;
+		bufferCI.sharingMode = vk::SharingMode::eExclusive;
+		scratchBuffer.buffer = ctx.m_device.createBufferUnique(bufferCI);
 
+		vk::MemoryRequirements memoryRequirements = ctx.m_device.getBufferMemoryRequirements(scratchBuffer.buffer.get());
 
-	int c = png_get_channels(Png, PngInfo);
-	uint32_t w, h;
- 	int d, ct, interlacetype;
- 	png_get_IHDR(Png, PngInfo, &w, &h, &d, &ct, &interlacetype, NULL, NULL);
+		vk::MemoryAllocateFlagsInfo memoryAllocateFI;
+		memoryAllocateFI.flags = vk::MemoryAllocateFlagBits::eDeviceAddress;
 
-	switch (ct)
-	{
-	case PNG_COLOR_TYPE_PALETTE:
-		png_set_palette_to_rgb(Png);
-//		type = vk::Format::;
-		break;
+		vk::MemoryAllocateInfo memoryAI;
+		memoryAI.pNext = &memoryAllocateFI;
+		memoryAI.allocationSize = memoryRequirements.size;
+		memoryAI.memoryTypeIndex = Helper::getMemoryTypeIndex(ctx.m_physical_device, memoryRequirements, vk::MemoryPropertyFlagBits::eDeviceLocal);
+		scratchBuffer.memory = ctx.m_device.allocateMemoryUnique(memoryAI);
+		ctx.m_device.bindBufferMemory(scratchBuffer.buffer.get(), scratchBuffer.memory.get(), 0);
 
-	case PNG_COLOR_TYPE_RGB:
-//		type = GL_RGB;
-		break;
+		vk::BufferDeviceAddressInfoKHR buffer_device_address_info;
+		buffer_device_address_info.buffer = scratchBuffer.buffer.get();
+		scratchBuffer.deviceAddress = ctx.m_device.getBufferAddress(buffer_device_address_info);
 
-	case PNG_COLOR_TYPE_RGBA:
-//		gl_type = GL_RGBA;
-		break;
-
-	default:
-		// 対応していないタイプなので処理を終了
-		assert(false);
-		return {};
-	}
-
-	uint32_t row_bytes = png_get_rowbytes(Png, PngInfo);
-	std::vector<byte> buf(row_bytes * h);
-	for (int i = 0; i < h; i++)
-	{
-		png_read_row(Png, buf.data() + i*row_bytes, NULL);
-	}
-
-	png_read_end(Png, NULL);
-	png_destroy_read_struct(&Png, &PngInfo, (png_infopp)NULL);
-	fclose(fp);
-
-	TextureResource texture;
-	{
-		vk::Format formats[4][4] =
-		{
-			{vk::Format::eR8Unorm, vk::Format::eR16Unorm, vk::Format::eR32Sfloat, vk::Format::eR32Sfloat},
-			{vk::Format::eR8G8Unorm, vk::Format::eR16G16Unorm, vk::Format::eR32G32Sfloat, vk::Format::eR32G32Sfloat},
-			{vk::Format::eR8G8B8Unorm, vk::Format::eR16G16B16Unorm, vk::Format::eR32G32B32Sfloat, vk::Format::eR32G32B32Sfloat},
-			{vk::Format::eR8G8B8A8Unorm, vk::Format::eR16G16B16A16Unorm, vk::Format::eR32G32B32A32Sfloat, vk::Format::eR32G32B32A32Sfloat},
-		};
-		d = d/8;
-		vk::Format format = formats[c - 1][d - 1];
-
-		auto cmd = ctx.m_cmd_pool->allocCmdTempolary(0);
-
-		vk::ImageCreateInfo image_info;
-		image_info.imageType = vk::ImageType::e2D;
-		image_info.format = format;
-		image_info.mipLevels = 1;
-		image_info.arrayLayers = 1;
-		image_info.samples = vk::SampleCountFlagBits::e1;
-		image_info.tiling = vk::ImageTiling::eLinear;
-		image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
-		image_info.sharingMode = vk::SharingMode::eExclusive;
-		image_info.initialLayout = vk::ImageLayout::eUndefined;
-		image_info.extent = vk::Extent3D{ w, h, 1 };
-		//		image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
-		auto image = ctx.m_device.createImageUnique(image_info);
-
-		vk::MemoryRequirements memory_request = ctx.m_device.getImageMemoryRequirements(image.get());
-		vk::MemoryAllocateInfo memory_alloc_info;
-		memory_alloc_info.allocationSize = memory_request.size;
-		memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(ctx.m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
-
-		auto image_memory = ctx.m_device.allocateMemoryUnique(memory_alloc_info);
-		ctx.m_device.bindImageMemory(image.get(), image_memory.get(), 0);
-
-		btr::BufferMemoryDescriptor staging_desc;
-		auto staging_buffer = ctx.m_staging_memory.allocateMemory(buf.size(), true);
-		memcpy(staging_buffer.getMappedPtr<char*>(), buf.data(), buf.size());
-
-		vk::ImageSubresourceRange subresourceRange;
-		subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-		subresourceRange.baseArrayLayer = 0;
-		subresourceRange.baseMipLevel = 0;
-		subresourceRange.layerCount = 1;
-		subresourceRange.levelCount = 1;
-
-		{
-			// staging_bufferからimageへコピー
-
-			vk::BufferImageCopy copy;
-			copy.bufferOffset = staging_buffer.getInfo().offset;
-			copy.imageExtent = vk::Extent3D{ w, h, 1 };
-			copy.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
-			copy.imageSubresource.baseArrayLayer = 0;
-			copy.imageSubresource.layerCount = 1;
-			copy.imageSubresource.mipLevel = 0;
-
-			vk::ImageMemoryBarrier to_copy_barrier;
-			to_copy_barrier.image = image.get();
-			to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
-			to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
-			to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
-			to_copy_barrier.subresourceRange = subresourceRange;
-
-			vk::ImageMemoryBarrier to_shader_read_barrier;
-			to_shader_read_barrier.image = image.get();
-			to_shader_read_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
-			to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-			to_shader_read_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-			to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-			to_shader_read_barrier.subresourceRange = subresourceRange;
-
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
-			cmd.copyBufferToImage(staging_buffer.getInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, { copy });
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllGraphics, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
-
-		}
-
-		vk::ImageViewCreateInfo view_info;
-		view_info.viewType = vk::ImageViewType::e2D;
-		view_info.components.r = vk::ComponentSwizzle::eR;
-		view_info.components.g = vk::ComponentSwizzle::eG;
-		view_info.components.b = vk::ComponentSwizzle::eB;
-		view_info.components.a = vk::ComponentSwizzle::eA;
-		view_info.flags = vk::ImageViewCreateFlags();
-		view_info.format = format;
-		view_info.image = image.get();
-		view_info.subresourceRange = subresourceRange;
-
-		vk::SamplerCreateInfo sampler_info;
-		sampler_info.magFilter = vk::Filter::eNearest;
-		sampler_info.minFilter = vk::Filter::eNearest;
-		sampler_info.mipmapMode = vk::SamplerMipmapMode::eLinear;
-		sampler_info.addressModeU = vk::SamplerAddressMode::eRepeat;
-		sampler_info.addressModeV = vk::SamplerAddressMode::eRepeat;
-		sampler_info.addressModeW = vk::SamplerAddressMode::eRepeat;
-		sampler_info.mipLodBias = 0.0f;
-		sampler_info.compareOp = vk::CompareOp::eNever;
-		sampler_info.minLod = 0.0f;
-		sampler_info.maxLod = 0.f;
-		sampler_info.maxAnisotropy = 1.0;
-		sampler_info.anisotropyEnable = VK_FALSE;
-		sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
-
-		texture.m_image = std::move(image);
-		texture.m_memory = std::move(image_memory);
-		texture.m_image_view = ctx.m_device.createImageViewUnique(view_info);
-		texture.m_sampler = ctx.m_device.createSamplerUnique(sampler_info);
-
+		return scratchBuffer;
 	}
 
-	return texture;
 }
 
 struct Model
@@ -247,6 +136,8 @@ struct Model
 	btr::BufferMemory b_index;
 	btr::BufferMemoryEx<Info> u_info;
 	btr::BufferMemoryEx<vk::DrawIndirectCommand> b_draw_cmd;
+
+	AccelerationStructure m_BLAS;
 
 	Info m_info;
 
@@ -354,6 +245,72 @@ struct Model
 			model->u_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR| vk::PipelineStageFlagBits::eRayTracingShaderKHR, {}, {}, { array_size(barrier), barrier }, {});
+
+
+		// build BLAS
+		{
+
+			vk::AccelerationStructureCreateGeometryTypeInfoKHR accelerationCreateGeometryInfo{};
+			accelerationCreateGeometryInfo.geometryType = vk::GeometryTypeKHR::eTriangles;
+			accelerationCreateGeometryInfo.maxPrimitiveCount = model->m_info.m_primitive_num;
+			accelerationCreateGeometryInfo.indexType = vk::IndexType::eUint32;
+			accelerationCreateGeometryInfo.maxVertexCount = model->m_info.m_vertex_num;
+			accelerationCreateGeometryInfo.vertexFormat = vk::Format::eR32G32B32Sfloat;
+			accelerationCreateGeometryInfo.allowsTransforms = VK_FALSE;
+
+			vk::AccelerationStructureCreateInfoKHR accelerationCI;
+			accelerationCI.type = vk::AccelerationStructureTypeKHR::eBottomLevel;
+			accelerationCI.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastBuild;
+			accelerationCI.maxGeometryCount = 1;
+			accelerationCI.pGeometryInfos = &accelerationCreateGeometryInfo;
+
+			model->m_BLAS.accelerationStructure = context->m_device.createAccelerationStructureKHRUnique(accelerationCI);
+
+			// Bind object memory to the top level acceleration structure
+			model->m_BLAS.objectMemory = Helper::createASMemory(*context, model->m_BLAS.accelerationStructure.get());
+
+			vk::BindAccelerationStructureMemoryInfoKHR bindAccelerationMemoryInfo;
+			bindAccelerationMemoryInfo.accelerationStructure = model->m_BLAS.accelerationStructure.get();
+			bindAccelerationMemoryInfo.memory = model->m_BLAS.objectMemory.memory.get();
+			auto isbind = context->m_device.bindAccelerationStructureMemoryKHR(1, &bindAccelerationMemoryInfo);
+			assert(isbind == vk::Result::eSuccess);
+
+			std::array<vk::AccelerationStructureGeometryKHR, 1> accelerationStructureGeometry;
+			accelerationStructureGeometry[0].flags = vk::GeometryFlagBitsKHR::eNoDuplicateAnyHitInvocation;
+			accelerationStructureGeometry[0].geometryType = vk::GeometryTypeKHR::eTriangles;
+			accelerationStructureGeometry[0].geometry.triangles.vertexFormat = vk::Format::eR32G32B32Sfloat;
+			accelerationStructureGeometry[0].geometry.triangles.vertexData.deviceAddress = context->m_device.getBufferAddress(vk::BufferDeviceAddressInfoKHR().setBuffer(model->b_vertex.getInfo().buffer)) + model->b_vertex.getInfo().offset;
+			accelerationStructureGeometry[0].geometry.triangles.vertexStride = sizeof(aiVector3D);
+			accelerationStructureGeometry[0].geometry.triangles.indexType = vk::IndexType::eUint32;
+			accelerationStructureGeometry[0].geometry.triangles.indexData.deviceAddress = context->m_device.getBufferAddress(vk::BufferDeviceAddressInfoKHR().setBuffer(model->b_index.getInfo().buffer)) + model->b_index.getInfo().offset;
+
+			vk::AccelerationStructureGeometryKHR* acceleration_structure_geometries = accelerationStructureGeometry.data();
+
+			// Create a small scratch buffer used during build of the bottom level acceleration structure
+			auto scratchBuffer = Helper::createScratchBuffer(*context, model->m_BLAS.accelerationStructure.get());
+
+			vk::AccelerationStructureBuildGeometryInfoKHR accelerationBuildGeometryInfo;
+			accelerationBuildGeometryInfo.type = vk::AccelerationStructureTypeKHR::eBottomLevel;
+			accelerationBuildGeometryInfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastBuild;
+			accelerationBuildGeometryInfo.update = VK_FALSE;
+			accelerationBuildGeometryInfo.dstAccelerationStructure = model->m_BLAS.accelerationStructure.get();
+			accelerationBuildGeometryInfo.geometryArrayOfPointers = VK_FALSE;
+			accelerationBuildGeometryInfo.geometryCount = 1;
+			accelerationBuildGeometryInfo.ppGeometries = &acceleration_structure_geometries;
+			accelerationBuildGeometryInfo.scratchData.deviceAddress = scratchBuffer.deviceAddress;
+
+			vk::AccelerationStructureBuildOffsetInfoKHR accelerationBuildOffsetInfo{};
+			accelerationBuildOffsetInfo.primitiveCount = model->m_info.m_primitive_num;
+			accelerationBuildOffsetInfo.primitiveOffset = 0;
+			accelerationBuildOffsetInfo.firstVertex = 0;
+			accelerationBuildOffsetInfo.transformOffset = 0;
+
+			std::vector<const vk::AccelerationStructureBuildOffsetInfoKHR*> offset = { &accelerationBuildOffsetInfo };
+
+			cmd.buildAccelerationStructureKHR({ accelerationBuildGeometryInfo }, offset);
+
+			sDeleter::Order().enque(std::move(scratchBuffer));
+		}
 
 		return model;
 	}
@@ -502,6 +459,8 @@ struct DCContext
 
 				// shader binding table
 				{
+					auto f = ctx.m_physical_device.getFeatures();
+					auto props = ctx.m_physical_device.getProperties();
 					auto props2 = ctx.m_physical_device.getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceRayTracingPropertiesKHR>();
 					auto rayTracingProperties = props2.get<vk::PhysicalDeviceRayTracingPropertiesKHR>();
 
@@ -590,85 +549,7 @@ struct DCContext
 struct RTModel
 {
 
-	struct RayTracingScratchBuffer
-	{
-		uint64_t deviceAddress;
-		vk::UniqueBuffer buffer;
-		vk::UniqueDeviceMemory memory;
-	};
-
-	// Holds data for a memory object bound to an acceleration structure
-	struct RayTracingObjectMemory
-	{
-		uint64_t deviceAddress;
-		vk::UniqueDeviceMemory memory;
-	};
-
-	// Ray tracing acceleration structure
-	struct AccelerationStructure 
-	{
-		vk::UniqueAccelerationStructureKHR accelerationStructure;
-		uint64_t handle;
-		RayTracingObjectMemory objectMemory;
-	};
-
-	AccelerationStructure m_bottomLevelAS;
 	AccelerationStructure m_topLevelAS;
-
-	static RayTracingObjectMemory createObjectMemory(btr::Context& ctx, vk::AccelerationStructureKHR& acceleration_structure)
-	{
-		RayTracingObjectMemory objectMemory{};
-
-		vk::AccelerationStructureMemoryRequirementsInfoKHR accelerationStructureMemoryRequirements{};
-		accelerationStructureMemoryRequirements.type = vk::AccelerationStructureMemoryRequirementsTypeKHR::eObject;
-		accelerationStructureMemoryRequirements.buildType = vk::AccelerationStructureBuildTypeKHR::eDevice;
-		accelerationStructureMemoryRequirements.accelerationStructure = acceleration_structure;
-		vk::MemoryRequirements2 memoryRequirements2 = ctx.m_device.getAccelerationStructureMemoryRequirementsKHR(accelerationStructureMemoryRequirements);
-
-		VkMemoryRequirements memoryRequirements = memoryRequirements2.memoryRequirements;
-
-		vk::MemoryAllocateInfo memoryAI;
-		memoryAI.allocationSize = memoryRequirements.size;
-		memoryAI.memoryTypeIndex = Helper::getMemoryTypeIndex(ctx.m_physical_device, memoryRequirements, vk::MemoryPropertyFlagBits::eDeviceLocal);
-		objectMemory.memory = ctx.m_device.allocateMemoryUnique(memoryAI);
-
-		return objectMemory;
-	}
-	//	Create a scratch buffer to hold temporary data for a ray tracing acceleration structure
-	static RayTracingScratchBuffer createScratchBuffer(btr::Context& ctx, vk::AccelerationStructureKHR& AS)
-	{
-		RayTracingScratchBuffer scratchBuffer{};
-
-		vk::AccelerationStructureMemoryRequirementsInfoKHR accelerationStructureMemoryRequirements;
-		accelerationStructureMemoryRequirements.type = vk::AccelerationStructureMemoryRequirementsTypeKHR::eBuildScratch;
-		accelerationStructureMemoryRequirements.buildType = vk::AccelerationStructureBuildTypeKHR::eDevice;
-		accelerationStructureMemoryRequirements.accelerationStructure = AS;
-		VkMemoryRequirements2 memoryRequirements2 = ctx.m_device.getAccelerationStructureMemoryRequirementsKHR(accelerationStructureMemoryRequirements);
-
-		vk::BufferCreateInfo bufferCI;
-		bufferCI.size = memoryRequirements2.memoryRequirements.size;
-		bufferCI.usage = vk::BufferUsageFlagBits::eRayTracingKHR | vk::BufferUsageFlagBits::eShaderDeviceAddress;
-		bufferCI.sharingMode = vk::SharingMode::eExclusive;
-		scratchBuffer.buffer = ctx.m_device.createBufferUnique(bufferCI);
-
-		vk::MemoryRequirements memoryRequirements = ctx.m_device.getBufferMemoryRequirements(scratchBuffer.buffer.get());
-
-		vk::MemoryAllocateFlagsInfo memoryAllocateFI;
-		memoryAllocateFI.flags = vk::MemoryAllocateFlagBits::eDeviceAddress;
-
-		vk::MemoryAllocateInfo memoryAI;
-		memoryAI.pNext = &memoryAllocateFI;
-		memoryAI.allocationSize = memoryRequirements.size;
-		memoryAI.memoryTypeIndex = Helper::getMemoryTypeIndex(ctx.m_physical_device, memoryRequirements, vk::MemoryPropertyFlagBits::eDeviceLocal);
-		scratchBuffer.memory = ctx.m_device.allocateMemoryUnique(memoryAI);
-		ctx.m_device.bindBufferMemory(scratchBuffer.buffer.get(), scratchBuffer.memory.get(), 0);
-
-		vk::BufferDeviceAddressInfoKHR buffer_device_address_info;
-		buffer_device_address_info.buffer = scratchBuffer.buffer.get();
-		scratchBuffer.deviceAddress = ctx.m_device.getBufferAddress(buffer_device_address_info);
-
-		return scratchBuffer;
-	}
 
 	static std::shared_ptr<RTModel> Construct(btr::Context& ctx, DCContext& dc_ctx, Model& model)
 	{
@@ -676,76 +557,7 @@ struct RTModel
 		auto cmd = ctx.m_cmd_pool->allocCmdTempolary(0);
 
 		auto rt_model = std::make_shared<RTModel>();
-		AccelerationStructure& bottomLevelAS = rt_model->m_bottomLevelAS;
-		{
 
-			vk::AccelerationStructureCreateGeometryTypeInfoKHR accelerationCreateGeometryInfo{};
-			accelerationCreateGeometryInfo.geometryType = vk::GeometryTypeKHR::eTriangles;
-			accelerationCreateGeometryInfo.maxPrimitiveCount = model.m_info.m_primitive_num;
-			accelerationCreateGeometryInfo.indexType = vk::IndexType::eUint32;
-			accelerationCreateGeometryInfo.maxVertexCount = model.m_info.m_vertex_num;
-			accelerationCreateGeometryInfo.vertexFormat = vk::Format::eR32G32B32Sfloat;
-			accelerationCreateGeometryInfo.allowsTransforms = VK_FALSE;
-
-			vk::AccelerationStructureCreateInfoKHR accelerationCI;
-			accelerationCI.type = vk::AccelerationStructureTypeKHR::eBottomLevel;
-			accelerationCI.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
-			accelerationCI.maxGeometryCount = 1;
-			accelerationCI.pGeometryInfos = &accelerationCreateGeometryInfo;
-
-			bottomLevelAS.accelerationStructure = ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
-
-			// Bind object memory to the top level acceleration structure
-			bottomLevelAS.objectMemory = createObjectMemory(ctx, bottomLevelAS.accelerationStructure.get());
-
-			vk::BindAccelerationStructureMemoryInfoKHR bindAccelerationMemoryInfo;
-			bindAccelerationMemoryInfo.accelerationStructure = bottomLevelAS.accelerationStructure.get();
-			bindAccelerationMemoryInfo.memory = bottomLevelAS.objectMemory.memory.get();
-			auto isbind =  ctx.m_device.bindAccelerationStructureMemoryKHR(1, &bindAccelerationMemoryInfo);
-			assert(isbind == vk::Result::eSuccess);
-
-			std::array<vk::AccelerationStructureGeometryKHR, 1> accelerationStructureGeometry;
-			accelerationStructureGeometry[0].flags = vk::GeometryFlagBitsKHR::eNoDuplicateAnyHitInvocation;
-			accelerationStructureGeometry[0].geometryType = vk::GeometryTypeKHR::eTriangles;
-			accelerationStructureGeometry[0].geometry.triangles.vertexFormat = vk::Format::eR32G32B32Sfloat;
-			accelerationStructureGeometry[0].geometry.triangles.vertexData.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfoKHR().setBuffer(model.b_vertex.getInfo().buffer)) + model.b_vertex.getInfo().offset;
-			accelerationStructureGeometry[0].geometry.triangles.vertexStride = sizeof(aiVector3D);
-			accelerationStructureGeometry[0].geometry.triangles.indexType = vk::IndexType::eUint32;
-			accelerationStructureGeometry[0].geometry.triangles.indexData.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfoKHR().setBuffer(model.b_index.getInfo().buffer)) + model.b_index.getInfo().offset;
-
-			vk::AccelerationStructureGeometryKHR* acceleration_structure_geometries = accelerationStructureGeometry.data();
-
-			// Create a small scratch buffer used during build of the bottom level acceleration structure
-			auto scratchBuffer = createScratchBuffer(ctx, bottomLevelAS.accelerationStructure.get());
-
-			vk::AccelerationStructureBuildGeometryInfoKHR accelerationBuildGeometryInfo;
-			accelerationBuildGeometryInfo.type = vk::AccelerationStructureTypeKHR::eBottomLevel;
-			accelerationBuildGeometryInfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
-			accelerationBuildGeometryInfo.update = VK_FALSE;
-			accelerationBuildGeometryInfo.dstAccelerationStructure = bottomLevelAS.accelerationStructure.get();
-			accelerationBuildGeometryInfo.geometryArrayOfPointers = VK_FALSE;
-			accelerationBuildGeometryInfo.geometryCount = 1;
-			accelerationBuildGeometryInfo.ppGeometries = &acceleration_structure_geometries;
-			accelerationBuildGeometryInfo.scratchData.deviceAddress = scratchBuffer.deviceAddress;
-
-			vk::AccelerationStructureBuildOffsetInfoKHR accelerationBuildOffsetInfo{};
-			accelerationBuildOffsetInfo.primitiveCount = model.m_info.m_primitive_num;
-			accelerationBuildOffsetInfo.primitiveOffset = 0;
-			accelerationBuildOffsetInfo.firstVertex = 0;
-			accelerationBuildOffsetInfo.transformOffset = 0;
-
-			std::vector<const vk::AccelerationStructureBuildOffsetInfoKHR*> offset = { &accelerationBuildOffsetInfo };
-
-			cmd.buildAccelerationStructureKHR({ accelerationBuildGeometryInfo }, offset);
-
-
-			vk::AccelerationStructureDeviceAddressInfoKHR accelerationDeviceAddressInfo{};
-			accelerationDeviceAddressInfo.accelerationStructure = bottomLevelAS.accelerationStructure.get();
-
-			bottomLevelAS.handle = ctx.m_device.getAccelerationStructureAddressKHR(accelerationDeviceAddressInfo);
-			sDeleter::Order().enque(std::move(scratchBuffer));
-
-		}
 		AccelerationStructure& topLevelAS = rt_model->m_topLevelAS;
 		{
 			vk::AccelerationStructureCreateGeometryTypeInfoKHR accelerationCreateGeometryInfo;
@@ -760,7 +572,7 @@ struct RTModel
 			topLevelAS.accelerationStructure = ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
 
 			// Bind object memory to the top level acceleration structure
-			topLevelAS.objectMemory = createObjectMemory(ctx, topLevelAS.accelerationStructure.get());
+			topLevelAS.objectMemory = Helper::createASMemory(ctx, topLevelAS.accelerationStructure.get());
 
 			vk::BindAccelerationStructureMemoryInfoKHR bindAccelerationMemoryInfo;
 			bindAccelerationMemoryInfo.accelerationStructure = topLevelAS.accelerationStructure.get();
@@ -783,7 +595,7 @@ struct RTModel
 			instance.mask = 0xFF;
 			instance.instanceShaderBindingTableRecordOffset = 0;
 			instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
-			instance.accelerationStructureReference = bottomLevelAS.handle;
+			instance.accelerationStructureReference = ctx.m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(model.m_BLAS.accelerationStructure.get()));
 
 			// Buffer for instance data
 			btr::AllocatedMemory instance_memory;
@@ -806,7 +618,7 @@ struct RTModel
 			vk::AccelerationStructureGeometryKHR* acceleration_structure_geometries = acceleration_geometries.data();
 
 			// Create a small scratch buffer used during build of the top level acceleration structure
-			RayTracingScratchBuffer scratchBuffer = createScratchBuffer(ctx, topLevelAS.accelerationStructure.get());
+			RayTracingScratchBuffer scratchBuffer = Helper::createScratchBuffer(ctx, topLevelAS.accelerationStructure.get());
 
 			vk::AccelerationStructureBuildGeometryInfoKHR accelerationBuildGeometryInfo;
 			accelerationBuildGeometryInfo.type = vk::AccelerationStructureTypeKHR::eTopLevel;
@@ -827,11 +639,6 @@ struct RTModel
 
 			std::vector<const vk::AccelerationStructureBuildOffsetInfoKHR*> offset = { &accelerationBuildOffsetInfo };
 			cmd.buildAccelerationStructureKHR({ accelerationBuildGeometryInfo }, offset);
-
-			vk::AccelerationStructureDeviceAddressInfoKHR accelerationDeviceAddressInfo;
-			accelerationDeviceAddressInfo.accelerationStructure = topLevelAS.accelerationStructure.get();
-
-			topLevelAS.handle = ctx.m_device.getAccelerationStructureAddressKHR(accelerationDeviceAddressInfo);
 
 			sDeleter::Order().enque(std::move(scratchBuffer), std::move(instance_buffer), std::move(instance_memory));
 		}
@@ -1127,7 +934,7 @@ struct Renderer
 
 		{
 
-			auto tex = read_png_file(ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\renga_pattern.png");
+			auto tex = TextureResource::read_png_file(ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\renga_pattern.png");
 			m_world_material[0].albedo_texture = std::move(tex);
 
 			auto def = vk::DescriptorImageInfo(sGraphicsResource::Order().getSampler(sGraphicsResource::BASIC_SAMPLER_LINER), sGraphicsResource::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal);
@@ -1518,7 +1325,7 @@ struct Renderer
 #include <016_DualContouring/test.h>
 int main()
 {
-	test();
+//	test();
 
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
@@ -1534,6 +1341,39 @@ int main()
 	app_desc.m_window_size = uvec2(1024, 1024);
 	app::App app(app_desc);
 
+	vk::ApplicationInfo appInfo = { "Vulkan Test", 1, "EngineName", 0, VK_API_VERSION_1_2 };
+	std::vector<const char*> LayerName =
+	{
+#if _DEBUG
+			"VK_LAYER_KHRONOS_validation"
+#endif
+	};
+	std::vector<const char*> ExtensionName =
+	{
+		VK_KHR_SURFACE_EXTENSION_NAME,
+		VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
+#if USE_DEBUG_REPORT
+		VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+#endif
+	};
+
+	vk::DynamicLoader dl;
+	PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr = dl.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr");
+	VULKAN_HPP_DEFAULT_DISPATCHER.init(vkGetInstanceProcAddr);
+
+	vk::InstanceCreateInfo instanceInfo = {};
+	instanceInfo.setPApplicationInfo(&appInfo);
+	instanceInfo.setEnabledExtensionCount((uint32_t)ExtensionName.size());
+	instanceInfo.setPpEnabledExtensionNames(ExtensionName.data());
+	instanceInfo.setEnabledLayerCount((uint32_t)LayerName.size());
+	instanceInfo.setPpEnabledLayerNames(LayerName.data());
+	auto m_instance = vk::createInstanceUnique(instanceInfo);
+
+	VULKAN_HPP_DEFAULT_DISPATCHER.init(m_instance.get());
+
+	auto gpus = m_instance->enumeratePhysicalDevices();
+	auto ioo = gpus[0].getProperties();
+
 	auto context = app.m_context;
 	auto dc_ctx = std::make_shared<DCContext>(*context);
 
@@ -1542,7 +1382,7 @@ int main()
 
 	auto rt_model = RTModel::Construct(*context, *dc_ctx, *model);
 
-	auto ldc_model = DCModel::Construct(*context, *dc_ctx, * model, * rt_model);
+//	auto ldc_model = DCModel::Construct(*context, *dc_ctx, * model, * rt_model);
 	Renderer renderer(*context, *dc_ctx, *app.m_window->getFrontBuffer());
 
 	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
@@ -1574,8 +1414,11 @@ int main()
 
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 //				renderer.ExecuteTestRender(cmd, *ldc_ctx, *ldc_model, *app.m_window->getFrontBuffer());
-				renderer.ExecuteRenderLDCModel(cmd, *dc_ctx, *ldc_model, *app.m_window->getFrontBuffer());
+//				renderer.ExecuteRenderLDCModel(cmd, *dc_ctx, *ldc_model, *app.m_window->getFrontBuffer());
 //				renderer.ExecuteRenderModel(cmd, *ldc_ctx, *ldc_model, *model, *app.m_window->getFrontBuffer());
+
+				auto a_model = RTModel::Construct(*context, *dc_ctx, *model);
+				sDeleter::Order().enque(std::move(a_model));
 				cmd.end();
 				cmds[cmd_render] = cmd;
 
