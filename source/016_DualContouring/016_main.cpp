@@ -103,7 +103,6 @@ struct DCContext
 					vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(7, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(8, vk::DescriptorType::eStorageBuffer, 1, stage),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -375,13 +374,13 @@ struct Model
 
 			for (uint32_t v = 0; v < mesh->mNumVertices; v++)
 			{
-//				mesh->mVertices[v] *= 100.f;
-				info.m_aabb_min.x = std::min(info.m_aabb_min.x, mesh->mVertices[v].x);
-				info.m_aabb_min.y = std::min(info.m_aabb_min.y, mesh->mVertices[v].y);
-				info.m_aabb_min.z = std::min(info.m_aabb_min.z, mesh->mVertices[v].z);
-				info.m_aabb_max.x = std::max(info.m_aabb_max.x, mesh->mVertices[v].x);
-				info.m_aabb_max.y = std::max(info.m_aabb_max.y, mesh->mVertices[v].y);
-				info.m_aabb_max.z = std::max(info.m_aabb_max.z, mesh->mVertices[v].z);
+//				mesh->mVertices[v] *= 10.f;
+				info.m_aabb_min.x = std::min(info.m_aabb_min.x, mesh->mVertices[v].x-0.01f);
+				info.m_aabb_min.y = std::min(info.m_aabb_min.y, mesh->mVertices[v].y-0.01f);
+				info.m_aabb_min.z = std::min(info.m_aabb_min.z, mesh->mVertices[v].z-0.01f);
+				info.m_aabb_max.x = std::max(info.m_aabb_max.x, mesh->mVertices[v].x+0.01f);
+				info.m_aabb_max.y = std::max(info.m_aabb_max.y, mesh->mVertices[v].y+0.01f);
+				info.m_aabb_max.z = std::max(info.m_aabb_max.z, mesh->mVertices[v].z+0.01f);
 			}
 
 			std::copy(mesh->mVertices, mesh->mVertices + mesh->mNumVertices, vertex.getMappedPtr<aiVector3D>(vertex_offset));
@@ -600,7 +599,8 @@ struct LDCPoint
 {
 	float p;
 	uint normal;
-	uint inout_next;
+	int next;
+	uint flag;
 };
 struct LDCCell
 {
@@ -621,7 +621,6 @@ struct DCModel
 	btr::BufferMemoryEx<LDCPoint> b_ldc_point;
 	btr::BufferMemoryEx<LDCCell> b_dc_cell;
 	btr::BufferMemoryEx<u8vec4> b_dc_vertex;
-	btr::BufferMemoryEx<uint> b_dc_normal;
 	btr::BufferMemoryEx<int32_t> b_dc_hashmap;
 	btr::BufferMemoryEx<vk::DrawIndirectCommand> b_dc_index_counter;
 	btr::BufferMemoryEx<u8vec4> b_dc_index;
@@ -648,7 +647,6 @@ struct DCModel
 
 			dc_model->b_dc_cell = ctx.m_storage_memory.allocateMemory<LDCCell>(64*64*64);
 			dc_model->b_dc_vertex = ctx.m_storage_memory.allocateMemory<u8vec4>(64*64*64);
-			dc_model->b_dc_normal = ctx.m_storage_memory.allocateMemory<uint>(64 * 64 * 64);
 			dc_model->b_dc_hashmap = ctx.m_storage_memory.allocateMemory<int32_t>(64 * 64 * 64 / 32);
 
 			dc_model->b_dc_index_counter = ctx.m_storage_memory.allocateMemory<vk::DrawIndirectCommand>(1);
@@ -661,7 +659,6 @@ struct DCModel
 				dc_model->b_ldc_point.getInfo(),
 				dc_model->b_dc_cell.getInfo(),
 				dc_model->b_dc_vertex.getInfo(),
-				dc_model->b_dc_normal.getInfo(),
 				dc_model->b_dc_hashmap.getInfo(),
 				dc_model->b_dc_index_counter.getInfo(),
 				dc_model->b_dc_index.getInfo(),
@@ -1289,45 +1286,13 @@ int main()
 	app_desc.m_window_size = uvec2(1024, 1024);
 	app::App app(app_desc);
 
-	vk::ApplicationInfo appInfo = { "Vulkan Test", 1, "EngineName", 0, VK_API_VERSION_1_2 };
-	std::vector<const char*> LayerName =
-	{
-#if _DEBUG
-			"VK_LAYER_KHRONOS_validation"
-#endif
-	};
-	std::vector<const char*> ExtensionName =
-	{
-		VK_KHR_SURFACE_EXTENSION_NAME,
-		VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
-#if USE_DEBUG_REPORT
-		VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
-#endif
-	};
-
-	vk::DynamicLoader dl;
-	PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr = dl.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr");
-	VULKAN_HPP_DEFAULT_DISPATCHER.init(vkGetInstanceProcAddr);
-
-	vk::InstanceCreateInfo instanceInfo = {};
-	instanceInfo.setPApplicationInfo(&appInfo);
-	instanceInfo.setEnabledExtensionCount((uint32_t)ExtensionName.size());
-	instanceInfo.setPpEnabledExtensionNames(ExtensionName.data());
-	instanceInfo.setEnabledLayerCount((uint32_t)LayerName.size());
-	instanceInfo.setPpEnabledLayerNames(LayerName.data());
-	auto m_instance = vk::createInstanceUnique(instanceInfo);
-
-	VULKAN_HPP_DEFAULT_DISPATCHER.init(m_instance.get());
-
-	auto gpus = m_instance->enumeratePhysicalDevices();
-	auto ioo = gpus[0].getProperties();
-
 	auto context = app.m_context;
 	auto dc_ctx = std::make_shared<DCContext>(*context);
 
-	//	auto model = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Box.dae");
+	auto model_box = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Box.dae");
 	auto model = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Duck.dae");
 
+	auto dc_model_box = DCModel::Construct(*context, *dc_ctx, *model_box);
 	auto dc_model = DCModel::Construct(*context, *dc_ctx, *model);
 	Renderer renderer(*context, *dc_ctx, *app.m_window->getFrontBuffer());
 
@@ -1361,7 +1326,8 @@ int main()
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 //				renderer.ExecuteTestRender(cmd, *ldc_ctx, *ldc_model, *app.m_window->getFrontBuffer());
 				renderer.ExecuteRenderLDCModel(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
-//				renderer.ExecuteRenderModel(cmd, *ldc_ctx, *ldc_model, *model, *app.m_window->getFrontBuffer());
+//				renderer.ExecuteRenderLDCModel(cmd, *dc_ctx, *dc_model_box, *app.m_window->getFrontBuffer());
+				//				renderer.ExecuteRenderModel(cmd, *ldc_ctx, *ldc_model, *model, *app.m_window->getFrontBuffer());
 
 				cmd.end();
 				cmds[cmd_render] = cmd;

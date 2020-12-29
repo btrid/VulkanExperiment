@@ -6,6 +6,8 @@
 #extension GL_EXT_shader_explicit_arithmetic_types : require
 
 #define Voxel_Reso uvec3(64)
+#define Voxel_Block_Size vec3(16.);
+
 struct Info
 {
 	vec4 m_aabb_min;
@@ -16,8 +18,11 @@ struct LDCPoint
 {
 	float p;
 	uint normal;
-	int inout_next;
+	int next;
+	uint flag;
 };
+#define LDCFlag_Incident 1
+#define LDCFlag_Exit 2
 struct LDCCell
 {
 	uvec3 normal;
@@ -57,10 +62,20 @@ layout(set=USE_DC,binding=1, std430) buffer LDCPointLinkHead { int b_ldc_point_l
 layout(set=USE_DC,binding=2, scalar) buffer LDCPointBuffer { LDCPoint b_ldc_point[]; };
 layout(set=USE_DC,binding=3, scalar) buffer DCCellBuffer { LDCCell b_dc_cell[]; };
 layout(set=USE_DC,binding=4, scalar) buffer DCVertex { u8vec4 b_dc_vertex[]; };
-layout(set=USE_DC,binding=5, scalar) buffer DCVertexNormal { uint b_dc_normal[]; };
-layout(set=USE_DC,binding=6, scalar) buffer DCHashMap { int b_dc_hashmap[]; };
-layout(set=USE_DC,binding=7, scalar) buffer DCIndexCounter { VkDrawIndirectCommand b_dc_index_counter; };
-layout(set=USE_DC,binding=8, scalar) buffer DCIndexBuffer { u8vec4 b_dc_index[]; };
+layout(set=USE_DC,binding=5, scalar) buffer DCHashMap { int b_dc_hashmap[]; };
+layout(set=USE_DC,binding=6, scalar) buffer DCIndexCounter { VkDrawIndirectCommand b_dc_index_counter; };
+layout(set=USE_DC,binding=7, scalar) buffer DCIndexBuffer { u8vec4 b_dc_index[]; };
+#endif
+
+#if defined(USE_DC_Boolean)
+layout(set=USE_DC_Boolean,binding=0, std430) buffer LDCCounter_B { int b_ldc_counter_b; };
+layout(set=USE_DC_Boolean,binding=1, std430) buffer LDCPointLinkHead_B { int b_ldc_point_link_head_b[]; };
+layout(set=USE_DC_Boolean,binding=2, scalar) buffer LDCPointBuffer_B { LDCPoint b_ldc_point_b[]; };
+layout(set=USE_DC_Boolean,binding=3, scalar) buffer DCCellBuffer_B { LDCCell b_dc_cell_b[]; };
+layout(set=USE_DC_Boolean,binding=4, scalar) buffer DCVertex_B { u8vec4 b_dc_vertex_b[]; };
+layout(set=USE_DC_Boolean,binding=5, scalar) buffer DCHashMap_B { int b_dc_hashmap_b[]; };
+layout(set=USE_DC_Boolean,binding=6, scalar) buffer DCIndexCounter_B { VkDrawIndirectCommand b_dc_index_counter_b; };
+layout(set=USE_DC_Boolean,binding=7, scalar) buffer DCIndexBuffer_B { u8vec4 b_dc_index_b[]; };
 #endif
 
 #if defined(USE_Rendering)
@@ -68,28 +83,7 @@ layout(set=USE_Rendering,binding=0) uniform sampler2D s_albedo[100];
 #endif
 
 
-// https://discourse.panda3d.org/t/glsl-octahedral-normal-packing/15233
-#if 0
-f16vec2 sign_not_zero(in f16vec2 v) 
-{
-    return fma(step(f16vec2(0.0), v), f16vec2(2.0), f16vec2(-1.0));
-}
-uint pack_normal_octahedron(in vec3 _v)
-{
-//	v.xy /= dot(abs(v), vec3(1));
-	f16vec3 v = f16vec3(_v.xy / dot(abs(_v), vec3(1)), _v.z);
-//	return mix(v.xy, (float16_t(1.0) - abs(v.yx)) * sign_not_zero(v.xy), step(v.z, float16_t(0.0)));
-	return packHalf2x16(mix(v.xy, (float16_t(1.0) - abs(v.yx)) * sign_not_zero(v.xy), step(v.z, float16_t(0.0))));
-
-}
-vec3 unpack_normal_octahedron(in uint packed_nrm)
-{
-	vec2 nrm = unpackHalf2x16(packed_nrm);
-	f16vec3 v = f16vec3(nrm.xy, float16_t(1.0) - abs(nrm.x) - abs(nrm.y));
-	v.xy = mix(v.xy, (float16_t(1.0) - abs(v.yx)) * sign_not_zero(v.xy), step(v.z, float16_t(0)));
-	return normalize(v);
-}
-#else
+// http://jcgt.org/published/0003/02/01/paper.pdf
 // https://discourse.panda3d.org/t/glsl-octahedral-normal-packing/15233
 vec2 sign_not_zero(in vec2 v) 
 {
@@ -97,9 +91,7 @@ vec2 sign_not_zero(in vec2 v)
 }
 uint pack_normal_octahedron(in vec3 v)
 {
-//	v.xy /= dot(abs(v), vec3(1));
 	v = vec3(v.xy / dot(abs(v), vec3(1)), v.z);
-//	return mix(v.xy, (float16_t(1.0) - abs(v.yx)) * sign_not_zero(v.xy), step(v.z, float16_t(0.0)));
 	return packHalf2x16(mix(v.xy, (1.0 - abs(v.yx)) * sign_not_zero(v.xy), step(v.z, 0.0)));
 
 }
@@ -110,28 +102,6 @@ vec3 unpack_normal_octahedron(in uint packed_nrm)
 	v.xy = mix(v.xy, (1.0 - abs(v.yx)) * sign_not_zero(v.xy), step(v.z, 0.));
 	return normalize(v);
 }
-#endif
-/* The caller should store the return value into a GL_RGB8 texture
-or attribute without modification. */
-vec3 snorm12x2_to_unorm8x3(vec2 f) 
-{
-	vec2 u = vec2(round(clamp(f, -1.0, 1.0) * 2047 + 2047));
-	float t = floor(u.y / 256.0);
-	// If storing to GL_RGB8UI, omit the final division
-	return floor(vec3(u.x / 16.0,
-	fract(u.x / 16.0) * 256.0 + t,
-	u.y - t * 256.0)) / 255.0;
-}
-vec2 unorm8x3_to_snorm12x2(vec3 u) 
-{
-	u *= 255.0;
-	u.y *= (1.0 / 16.0);
-	vec2 s = vec2(u.x * 16.0 + floor(u.y),
-	fract(u.y) * (16.0 * 256.0) + u.z);
-	return clamp(s * (1.0 / 2047.0) - 1.0, vec2(-1.0), vec2(1.0));
-}
-
-// http://jcgt.org/published/0003/02/01/paper.pdf
 
 #endif // LDC_H_
 

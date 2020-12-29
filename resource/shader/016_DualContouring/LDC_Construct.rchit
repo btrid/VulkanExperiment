@@ -10,6 +10,7 @@ struct Paylpad
 {
 	float HitT;
 	uint PrimitiveID;
+	uint HitKind;
 };
 layout(location = 0) rayPayloadInEXT Paylpad payload;
 
@@ -18,4 +19,5 @@ void main()
 {
 	payload.HitT = gl_HitTEXT;
 	payload.PrimitiveID = gl_PrimitiveID;
+	payload.HitKind = gl_HitKindEXT==gl_HitKindFrontFacingTriangleEXT?1:0;
 }

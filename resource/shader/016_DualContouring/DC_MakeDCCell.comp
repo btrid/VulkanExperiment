@@ -21,7 +21,7 @@ void main()
 	for(index = b_ldc_point_link_head[index]; index>=0;)
 	{
 		LDCPoint point = b_ldc_point[index];
-		index = point.inout_next;
+		index = point.next;
 
 		float voxel_p = (point.p*Voxel_Reso)[gl_GlobalInvocationID.z];
 

@@ -1,8 +1,7 @@
 #version 460
 #extension GL_GOOGLE_include_directive : require
 
-#define USE_DC 0
-#include "DC.glsl"
+
 
 layout(location=1) in Transform{
 	flat uvec3 CellID;

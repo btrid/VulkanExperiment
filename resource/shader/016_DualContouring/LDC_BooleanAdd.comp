@@ -1,0 +1,68 @@
+#version 460
+
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_DC 0
+#define USE_DC_Boolean 1
+#include "DualContouring.glsl"
+
+layout (local_size_x = 64) in;
+
+
+void main() 
+{
+	vec3 axis[] = {vec3(1., 0., 0.),vec3(0., 1., 0.),vec3(0., 0., 1.)};
+	vec3 extent = vec3(500.);
+	vec3 voxel_size = extent / Voxel_Reso;
+
+	vec3 f = axis[gl_GlobalInvocationID.z];
+	vec3 s = axis[(gl_GlobalInvocationID.z+1)%3]; 
+	vec3 u = axis[(gl_GlobalInvocationID.z+2)%3]; 
+	
+	int grid = int(gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*Voxel_Reso.x + gl_GlobalInvocationID.z*Voxel_Reso.x*Voxel_Reso.y);
+	int index_a = b_ldc_point_link_head[grid];
+	int index_b = b_ldc_point_link_head_b[grid];
+	if(index_b <0){ return; }
+
+	LDCPoint invalid_point;
+	invalid_point.p = -1.;
+	invalid_point.next = -1;
+	LDCPoint point_a = index_a>=0? b_ldc_point[index_a] :invalid_point;
+	LDCPoint point_b = b_ldc_point_b[index_b];
+	bool is_incident_a = false;
+	bool is_incident_b = false;
+	int material_id_a = -1;
+	int material_id_b = -1;
+
+	int head = -1;
+	for(;(point_a.next>=0)&&(point_b.next>=0);)
+	{
+		if(point_a.p>point_b.p)
+		{
+			if(!is_incident_b)
+			{
+				int index = atomicAdd(b_ldc_counter, 1);
+				LDCPoint point = point_a;
+				point.next = head;
+				b_ldc_point[index] = point;
+				head = index;
+			}
+
+			is_incident_a = !is_incident_a;
+			point_a = point_a.next>=0? b_ldc_point[point_a.next] :invalid_point;
+		}
+		else if(point_b.p>point_a.p)
+		{
+			int index = atomicAdd(b_ldc_counter, 1);
+			LDCPoint point = point_b;
+			point.next = head;
+			b_ldc_point[index] = point;
+			head = index;
+
+			is_incident_b = !is_incident_b;
+
+			point_b = point_b.next>=0? b_ldc_point_b[point_b.next] :invalid_point;
+		}
+	}
+	b_ldc_point_link_head[grid] = head;
+}

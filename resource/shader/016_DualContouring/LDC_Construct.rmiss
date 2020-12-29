@@ -9,6 +9,7 @@ struct Paylpad
 {
 	float HitT;
 	uint PrimitiveID;
+	uint HitKind;
 };
 layout(location = 0) rayPayloadInEXT Paylpad payload;
 

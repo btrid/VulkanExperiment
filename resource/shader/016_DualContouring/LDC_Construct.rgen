@@ -10,10 +10,9 @@ struct Paylpad
 {
 	float HitT;
 	uint PrimitiveID;
+	uint HitKind;
 };
 layout(location = 0) rayPayloadEXT Paylpad payload;
-
-
 
 void main() 
 {
@@ -43,19 +42,20 @@ void main()
 			break;
 		}
 
-		int index = atomicAdd(b_ldc_counter, 1);
-		LDCPoint point;
-		point.p = payload.HitT / tmax;
 
 		uvec3 i0 = b_index[payload.PrimitiveID];
 		vec3 a = b_vertex[i0.x];
 		vec3 b = b_vertex[i0.y];
 		vec3 c = b_vertex[i0.z];
 		vec3 normal = normalize(cross(b - a, c - a));
+
+		LDCPoint point;
+		point.p = payload.HitT / tmax;
 		point.normal = pack_normal_octahedron(normal);
+		point.next = head;
+		point.flag = payload.HitKind;
 
-		point.inout_next = head;
-
+		int index = atomicAdd(b_ldc_counter, 1);
 		b_ldc_point[index] = point;
 		b_ldc_point_link_head[grid] = index;
 
