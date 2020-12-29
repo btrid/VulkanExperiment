@@ -5,7 +5,7 @@
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_EXT_shader_explicit_arithmetic_types : require
 
-#define Voxel_Reso uvec3(64)
+#define Voxel_Reso uvec3(256)
 #define Voxel_Block_Size vec3(512.)
 
 struct Info
@@ -102,6 +102,7 @@ vec3 unpack_normal_octahedron(in uint packed_nrm)
 	v.xy = mix(v.xy, (1.0 - abs(v.yx)) * sign_not_zero(v.xy), step(v.z, 0.));
 	return normalize(v);
 }
-
+#define pack_normal(_v) pack_normal_octahedron(_v)
+#define unpack_normal(_v) unpack_normal_octahedron(_v)
 #endif // LDC_H_
 

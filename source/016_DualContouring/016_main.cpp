@@ -68,6 +68,10 @@ struct DCContext
 
 	vk::UniquePipeline m_pipeline_makeDCV;
 
+// 	struct DCInfo
+// 	{
+// 		uvec3 m_voxel_reso;
+// 	};
 	DCContext(btr::Context& ctx)
 	{
 		m_ASinstance_memory.setup(ctx.m_physical_device, ctx.m_device, vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, sizeof(vk::AccelerationStructureInstanceKHR) * 100);
@@ -319,6 +323,7 @@ struct Model
 		vec4 m_aabb_max;
 		uint m_vertex_num;
 		uint m_primitive_num;
+		uvec3 m_voxel_reso;
 	};
 	btr::BufferMemory b_vertex;
 	btr::BufferMemory b_normal;
@@ -364,7 +369,7 @@ struct Model
 
 		uint32_t index_offset = 0;
 		uint32_t vertex_offset = 0;
-		Info info{ .m_aabb_min = vec4{999.f}, .m_aabb_max = vec4{-999.f} };
+		Info info{ .m_aabb_min = vec4{999.f}, .m_aabb_max = vec4{-999.f}, .m_voxel_reso=uvec3(256) };
 
 		for (size_t i = 0; i < scene->mNumMeshes; i++)
 		{
@@ -647,15 +652,15 @@ struct DCModel
 			dc_model->m_DS_DC = std::move(ctx.m_device.allocateDescriptorSetsUnique(desc_info)[0]);
 
 			dc_model->b_ldc_counter = ctx.m_storage_memory.allocateMemory<int>(1);
-			dc_model->b_ldc_point_link_head = ctx.m_storage_memory.allocateMemory<int>(64*64*3);
-			dc_model->b_ldc_point = ctx.m_storage_memory.allocateMemory<LDCPoint>(64*64*3*128);
+			dc_model->b_ldc_point_link_head = ctx.m_storage_memory.allocateMemory<int>(256 * 256 *3);
+			dc_model->b_ldc_point = ctx.m_storage_memory.allocateMemory<LDCPoint>(256 * 256 *3*4);
 
-			dc_model->b_dc_cell = ctx.m_storage_memory.allocateMemory<LDCCell>(64*64*64);
-			dc_model->b_dc_vertex = ctx.m_storage_memory.allocateMemory<u8vec4>(64*64*64);
-			dc_model->b_dc_hashmap = ctx.m_storage_memory.allocateMemory<int32_t>(64 * 64 * 64 / 32);
+			dc_model->b_dc_cell = ctx.m_storage_memory.allocateMemory<LDCCell>(256* 256 * 256);
+			dc_model->b_dc_vertex = ctx.m_storage_memory.allocateMemory<u8vec4>(256 * 256 * 256);
+			dc_model->b_dc_hashmap = ctx.m_storage_memory.allocateMemory<int32_t>(256 * 256 * 256 / 32);
 
 			dc_model->b_dc_index_counter = ctx.m_storage_memory.allocateMemory<vk::DrawIndirectCommand>(1);
-			dc_model->b_dc_index = ctx.m_storage_memory.allocateMemory<u8vec4>(64*64*64);
+			dc_model->b_dc_index = ctx.m_storage_memory.allocateMemory<u8vec4>(256 * 256 * 256);
 
 			vk::DescriptorBufferInfo storages[] =
 			{
@@ -754,8 +759,8 @@ struct DCModel
 				dc_ctx.m_shader_binding_table[1],
 				dc_ctx.m_shader_binding_table[2],
 				dc_ctx.m_shader_binding_table[3],
-				64,
-				64,
+				model.m_info.m_voxel_reso.x,
+				model.m_info.m_voxel_reso.y,
 				3);
 
 
@@ -794,7 +799,7 @@ void DCModel::createDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipeline_MakeDCCell.get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeDC.get(), 0, { dc_model.m_DS_DC.get() }, {});
 
-		cmd.dispatch(1, 64, 3);
+		cmd.dispatch(4, 256, 3);
 	}
 
 
@@ -811,7 +816,7 @@ void DCModel::createDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipeline_MakeDCVertex.get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeDC.get(), 0, { dc_model.m_DS_DC.get() }, {});
 
-		cmd.dispatch(1, 64, 64);
+		cmd.dispatch(4, 256, 256);
 	}
 
 	// Make DC Face
@@ -828,7 +833,7 @@ void DCModel::createDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipeline_MakeDCFace.get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeDC.get(), 0, { dc_model.m_DS_DC.get() }, {});
 
-		cmd.dispatch(1, 64, 64);
+		cmd.dispatch(4, 256, 256);
 
 	}
 

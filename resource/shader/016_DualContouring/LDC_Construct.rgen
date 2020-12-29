@@ -20,6 +20,10 @@ void main()
 	int head = -1;
 	b_ldc_point_link_head[grid] = head;
 
+//	if(gl_LaunchIDEXT.z == 0){ return; }
+//	if(gl_LaunchIDEXT.z == 1){ return; }
+//	if(gl_LaunchIDEXT.z == 2){ return; }
+
 	vec3 axis[3] = {vec3(1., 0., 0.), vec3(0., 1., 0.),vec3(0., 0., 1.)};
 	vec3 f = axis[(gl_LaunchIDEXT.z+0)%3];
 	vec3 s = axis[(gl_LaunchIDEXT.z+1)%3]; 
