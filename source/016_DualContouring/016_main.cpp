@@ -375,12 +375,12 @@ struct Model
 			for (uint32_t v = 0; v < mesh->mNumVertices; v++)
 			{
 //				mesh->mVertices[v] *= 10.f;
-				info.m_aabb_min.x = std::min(info.m_aabb_min.x, mesh->mVertices[v].x-0.01f);
-				info.m_aabb_min.y = std::min(info.m_aabb_min.y, mesh->mVertices[v].y-0.01f);
-				info.m_aabb_min.z = std::min(info.m_aabb_min.z, mesh->mVertices[v].z-0.01f);
-				info.m_aabb_max.x = std::max(info.m_aabb_max.x, mesh->mVertices[v].x+0.01f);
-				info.m_aabb_max.y = std::max(info.m_aabb_max.y, mesh->mVertices[v].y+0.01f);
-				info.m_aabb_max.z = std::max(info.m_aabb_max.z, mesh->mVertices[v].z+0.01f);
+				info.m_aabb_min.x = std::min(info.m_aabb_min.x, mesh->mVertices[v].x);
+				info.m_aabb_min.y = std::min(info.m_aabb_min.y, mesh->mVertices[v].y);
+				info.m_aabb_min.z = std::min(info.m_aabb_min.z, mesh->mVertices[v].z);
+				info.m_aabb_max.x = std::max(info.m_aabb_max.x, mesh->mVertices[v].x);
+				info.m_aabb_max.y = std::max(info.m_aabb_max.y, mesh->mVertices[v].y);
+				info.m_aabb_max.z = std::max(info.m_aabb_max.z, mesh->mVertices[v].z);
 			}
 
 			std::copy(mesh->mVertices, mesh->mVertices + mesh->mNumVertices, vertex.getMappedPtr<aiVector3D>(vertex_offset));
@@ -414,6 +414,8 @@ struct Model
 
 		{
 			info.m_primitive_num = numIndex / 3;
+			info.m_aabb_min -= 0.01f;
+			info.m_aabb_max += 0.01f;
 			model->m_info = info;
 			model->u_info = ctx.m_uniform_memory.allocateMemory<Info>(1);
 
@@ -543,6 +545,10 @@ struct Model
 			auto instance_buffer = dc_ctx.m_ASinstance_memory.allocateMemory(sizeof(instance));
 
 			cmd.updateBuffer<vk::AccelerationStructureInstanceKHR>(instance_buffer.getInfo().buffer, instance_buffer.getInfo().offset, { instance });
+			vk::BufferMemoryBarrier barrier[] = {
+				instance_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
 
 
 			vk::DeviceOrHostAddressConstKHR instance_data_device_address;
@@ -586,7 +592,7 @@ struct Model
 			std::vector<const vk::AccelerationStructureBuildOffsetInfoKHR*> offset = { &accelerationBuildOffsetInfo };
 			cmd.buildAccelerationStructureKHR({ accelerationBuildGeometryInfo }, offset);
 
-			sDeleter::Order().enque(std::move(instance_buffer), std::move(scratchBuffer));
+//			sDeleter::Order().enque(std::move(instance_buffer), std::move(scratchBuffer));
 		}
 
 
@@ -1325,8 +1331,8 @@ int main()
 
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 //				renderer.ExecuteTestRender(cmd, *ldc_ctx, *ldc_model, *app.m_window->getFrontBuffer());
-				renderer.ExecuteRenderLDCModel(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
-//				renderer.ExecuteRenderLDCModel(cmd, *dc_ctx, *dc_model_box, *app.m_window->getFrontBuffer());
+//				renderer.ExecuteRenderLDCModel(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
+				renderer.ExecuteRenderLDCModel(cmd, *dc_ctx, *dc_model_box, *app.m_window->getFrontBuffer());
 				//				renderer.ExecuteRenderModel(cmd, *ldc_ctx, *ldc_model, *model, *app.m_window->getFrontBuffer());
 
 				cmd.end();

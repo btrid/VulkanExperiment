@@ -25,7 +25,7 @@ void main()
 
 	vec3 normal = abs(normalize(fs_in.Normal));
 	vec3 albedo = vec3(0.);
-	albedo += normal.x * texture(s_albedo[0], fs_in.Position.yz*0.1).xyz;
+	albedo += normal.x * texture(s_albedo[0], fs_in.Position.zy*0.1).xyz;
 	albedo += normal.y * texture(s_albedo[0], fs_in.Position.zx*0.1).xyz;
 	albedo += normal.z * texture(s_albedo[0], fs_in.Position.xy*0.1).xyz;
 
