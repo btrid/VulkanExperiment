@@ -499,7 +499,7 @@ struct Model
 
 			cmd.buildAccelerationStructureKHR({ accelerationBuildGeometryInfo }, offset);
 
-			sDeleter::Order().enque(std::move(scratchBuffer));
+//			sDeleter::Order().enque(std::move(scratchBuffer));
 		}
 		// build TLAS
 		{
@@ -546,7 +546,7 @@ struct Model
 
 
 			vk::DeviceOrHostAddressConstKHR instance_data_device_address;
-			instance_data_device_address.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo().setBuffer(instance_buffer.getInfo().buffer));
+			instance_data_device_address.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo().setBuffer(instance_buffer.getInfo().buffer))+ instance_buffer.getInfo().offset;
 
 			vk::AccelerationStructureGeometryKHR accelerationStructureGeometry;
 			accelerationStructureGeometry.flags = vk::GeometryFlagBitsKHR::eNoDuplicateAnyHitInvocation;
