@@ -25,7 +25,7 @@ void main()
 	vec3 s = axis[(gl_LaunchIDEXT.z+1)%3]; 
 	vec3 u = axis[(gl_LaunchIDEXT.z+2)%3];
 
-	vec3 extent = u_info.m_aabb_max.xyz-u_info.m_aabb_min.xyz;
+	vec3 extent = Voxel_Block_Size;
 	vec3 min = u_info.m_aabb_min.xyz;
 
 	vec3 rate = vec3(gl_LaunchIDEXT) / vec3(gl_LaunchSizeEXT);

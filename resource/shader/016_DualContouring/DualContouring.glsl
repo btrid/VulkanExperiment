@@ -6,7 +6,7 @@
 #extension GL_EXT_shader_explicit_arithmetic_types : require
 
 #define Voxel_Reso uvec3(64)
-#define Voxel_Block_Size vec3(16.);
+#define Voxel_Block_Size vec3(512.)
 
 struct Info
 {

@@ -47,7 +47,7 @@ uvec3 g_offset[3][3] =
 void main()
 {
 	mat4 pv = u_camera[0].u_projection * u_camera[0].u_view;
-	vec3 voxel_size = vec3(500.) / Voxel_Reso;
+	vec3 voxel_size = Voxel_Block_Size / Voxel_Reso;
 
 	uvec4 i30 = uvec4(b_dc_index[gs_in[0].VertexIndex]);
 

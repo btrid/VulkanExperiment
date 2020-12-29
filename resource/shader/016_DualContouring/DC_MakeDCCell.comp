@@ -10,7 +10,7 @@ layout (local_size_x = 64) in;
 void main() 
 {
 	vec3 axis[] = {vec3(1., 0., 0.),vec3(0., 1., 0.),vec3(0., 0., 1.)};
-	vec3 extent = vec3(500.);
+	vec3 extent = Voxel_Block_Size;
 	vec3 voxel_size = extent / Voxel_Reso;
 
 	vec3 f = axis[gl_GlobalInvocationID.z];

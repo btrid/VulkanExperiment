@@ -11,11 +11,11 @@ layout (local_size_x = 64) in;
 
 void main() 
 {
-	
 	int grid = int(gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*Voxel_Reso.x + gl_GlobalInvocationID.z*Voxel_Reso.x*Voxel_Reso.y);
 	int index_a = b_ldc_point_link_head[grid];
 	int index_b = b_ldc_point_link_head_b[grid];
 	if(index_b <0){ return; }
+	if(index_a <0){ return; }
 
 	LDCPoint invalid_point;
 	invalid_point.p = -1.;
@@ -24,13 +24,14 @@ void main()
 	LDCPoint point_a = invalid_point;
 	if(index_a>=0) point_a = b_ldc_point[index_a];
 	LDCPoint point_b = b_ldc_point_b[index_b];
-//	bool is_incident_a = false;
-//	bool is_incident_b = false;
-//	int material_id_a = -1;
-//	int material_id_b = -1;
+
+	bool is_incident_a = false;
+	bool is_incident_b = false;
+	int material_id_a = -1;
+	int material_id_b = -1;
 
 	int head = -1;
-/*	for(;(point_a.next>=0)||(point_b.next>=0);)
+	for(;(point_a.next>=0)||(point_b.next>=0);)
 	{
 		if(point_a.p>point_b.p)
 		{
@@ -44,21 +45,40 @@ void main()
 			}
 
 			is_incident_a = !is_incident_a;
-			point_a = point_a.next>=0? b_ldc_point[point_a.next] :invalid_point;
+			if(point_a.next>=0) { point_a = b_ldc_point[point_a.next]; }
+			else { point_a = invalid_point;}
 		}
 		else// if(point_b.p>=point_a.p)
 		{
-			int index = atomicAdd(b_ldc_counter, 1);
-			LDCPoint point = point_b;
-			point.next = head;
-			b_ldc_point[index] = point;
-			head = index;
+			if(is_incident_a&&!is_incident_b)
+			{
+				int index = atomicAdd(b_ldc_counter, 1);
+				LDCPoint point = point_b;
+				point.next = head;
+				b_ldc_point[index] = point;
+				head = index;
 
-			is_incident_b = !is_incident_b;
+				is_incident_b = true;
+			}
+			else if(is_incident_b)
+			{
+				int index = atomicAdd(b_ldc_counter, 1);
+				LDCPoint point = point_b;
+				point.next = head;
+				b_ldc_point[index] = point;
+				head = index;
 
-			point_b = point_b.next>=0? b_ldc_point_b[point_b.next] :invalid_point;
+				is_incident_b = false;
+				if(is_incident_a)
+				{
+
+				}
+
+			}
+			if(point_b.next>=0) { point_b = b_ldc_point_b[point_b.next]; }
+			else { point_b = invalid_point;}
 		}
 	}
-*/
+
 	b_ldc_point_link_head[grid] = head;
 }
