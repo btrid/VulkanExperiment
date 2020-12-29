@@ -60,22 +60,23 @@ layout(set=USE_Model,binding=5) uniform accelerationStructureEXT topLevelAS;
 layout(set=USE_DC,binding=0, std430) buffer LDCCounter { int b_ldc_counter; };
 layout(set=USE_DC,binding=1, std430) buffer LDCPointLinkHead { int b_ldc_point_link_head[]; };
 layout(set=USE_DC,binding=2, scalar) buffer LDCPointBuffer { LDCPoint b_ldc_point[]; };
-layout(set=USE_DC,binding=3, scalar) buffer DCCellBuffer { LDCCell b_dc_cell[]; };
-layout(set=USE_DC,binding=4, scalar) buffer DCVertex { u8vec4 b_dc_vertex[]; };
-layout(set=USE_DC,binding=5, scalar) buffer DCHashMap { int b_dc_hashmap[]; };
-layout(set=USE_DC,binding=6, scalar) buffer DCIndexCounter { VkDrawIndirectCommand b_dc_index_counter; };
-layout(set=USE_DC,binding=7, scalar) buffer DCIndexBuffer { u8vec4 b_dc_index[]; };
+layout(set=USE_DC,binding=3, scalar) buffer DCVertex { u8vec4 b_dc_vertex[]; };
+layout(set=USE_DC,binding=4, scalar) buffer DCIndexCounter { VkDrawIndirectCommand b_dc_index_counter; };
+layout(set=USE_DC,binding=5, scalar) buffer DCIndexBuffer { u8vec4 b_dc_index[]; };
 #endif
 
 #if defined(USE_DC_Boolean)
 layout(set=USE_DC_Boolean,binding=0, std430) buffer LDCCounter_B { int b_ldc_counter_b; };
 layout(set=USE_DC_Boolean,binding=1, std430) buffer LDCPointLinkHead_B { int b_ldc_point_link_head_b[]; };
 layout(set=USE_DC_Boolean,binding=2, scalar) buffer LDCPointBuffer_B { LDCPoint b_ldc_point_b[]; };
-layout(set=USE_DC_Boolean,binding=3, scalar) buffer DCCellBuffer_B { LDCCell b_dc_cell_b[]; };
-layout(set=USE_DC_Boolean,binding=4, scalar) buffer DCVertex_B { u8vec4 b_dc_vertex_b[]; };
-layout(set=USE_DC_Boolean,binding=5, scalar) buffer DCHashMap_B { int b_dc_hashmap_b[]; };
-layout(set=USE_DC_Boolean,binding=6, scalar) buffer DCIndexCounter_B { VkDrawIndirectCommand b_dc_index_counter_b; };
-layout(set=USE_DC_Boolean,binding=7, scalar) buffer DCIndexBuffer_B { u8vec4 b_dc_index_b[]; };
+layout(set=USE_DC_Boolean,binding=3, scalar) buffer DCVertex_B { u8vec4 b_dc_vertex_b[]; };
+layout(set=USE_DC_Boolean,binding=4, scalar) buffer DCIndexCounter_B { VkDrawIndirectCommand b_dc_index_counter_b; };
+layout(set=USE_DC_Boolean,binding=5, scalar) buffer DCIndexBuffer_B { u8vec4 b_dc_index_b[]; };
+#endif
+
+#if defined(USE_DC_WorkBuffer)
+layout(set=USE_DC_WorkBuffer,binding=0, scalar) buffer DCCellBuffer { LDCCell b_dc_cell[]; };
+layout(set=USE_DC_WorkBuffer,binding=1, scalar) buffer DCCellHashmap { uint b_dc_cell_hashmap[]; };
 #endif
 
 #if defined(USE_Rendering)

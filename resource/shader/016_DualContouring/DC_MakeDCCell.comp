@@ -3,6 +3,7 @@
 #extension GL_GOOGLE_include_directive : require
 
 #define USE_DC 0
+#define USE_DC_WorkBuffer 1
 #include "DualContouring.glsl"
 
 layout (local_size_x = 64) in;

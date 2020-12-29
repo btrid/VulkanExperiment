@@ -20,14 +20,11 @@ void main()
 	LDCPoint invalid_point;
 	invalid_point.p = -1.;
 	invalid_point.next = -1;
-	invalid_point.normal = 0;
 	LDCPoint point_a = b_ldc_point[index_a];
 	LDCPoint point_b = b_ldc_point_b[index_b];
 
 	bool is_incident_a = false;
 	bool is_incident_b = false;
-	int material_id_a = -1;
-	int material_id_b = -1;
 
 	int head = -1;
 	for(;(point_a.next>=0)||(point_b.next>=0);)

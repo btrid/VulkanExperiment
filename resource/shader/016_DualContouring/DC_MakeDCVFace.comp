@@ -3,6 +3,7 @@
 #extension GL_GOOGLE_include_directive : require
 
 #define USE_DC 0
+#define USE_DC_WorkBuffer 1
 #include "DualContouring.glsl"
 
 layout (local_size_x = 64, local_size_y=1) in;
@@ -10,7 +11,7 @@ layout (local_size_x = 64, local_size_y=1) in;
 void main() 
 {
 	uint i0 = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*Voxel_Reso.x + gl_GlobalInvocationID.z*Voxel_Reso.x*Voxel_Reso.y;
-	if((b_dc_hashmap[i0/32]&(1<<(i0%32))) == 0){ return; }
+	if((b_dc_cell_hashmap[i0/32]&(1<<(i0%32))) == 0){ return; }
 
 	uvec3 offset[3][3] = {
 		{{1,0,0}, {0, 1, 0}, {1, 1, 0}},
@@ -24,13 +25,13 @@ void main()
 		if(any(greaterThanEqual(gl_GlobalInvocationID + offset[i][2], Voxel_Reso))){ continue; }
 		uvec3 i31 = gl_GlobalInvocationID + offset[i][0];
 		uint i1 = i31.x + i31.y*Voxel_Reso.x + i31.z*Voxel_Reso.x*Voxel_Reso.y;
-		if((b_dc_hashmap[i1/32]&(1<<(i1%32))) == 0){ continue; }
+		if((b_dc_cell_hashmap[i1/32]&(1<<(i1%32))) == 0){ continue; }
 		uvec3 i32 = gl_GlobalInvocationID + offset[i][1];
 		uint i2 = i32.x + i32.y*Voxel_Reso.x + i32.z*Voxel_Reso.x*Voxel_Reso.y;
-		if((b_dc_hashmap[i2/32]&(1<<(i2%32))) == 0){ continue; }
+		if((b_dc_cell_hashmap[i2/32]&(1<<(i2%32))) == 0){ continue; }
 		uvec3 i33 = gl_GlobalInvocationID + offset[i][2];
 		uint i3 = i33.x + i33.y*Voxel_Reso.x + i33.z*Voxel_Reso.x*Voxel_Reso.y;
-		if((b_dc_hashmap[i3/32]&(1<<(i3%32))) == 0){ continue; }
+		if((b_dc_cell_hashmap[i3/32]&(1<<(i3%32))) == 0){ continue; }
 
 		axis |= 1<<i;
 	}

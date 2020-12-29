@@ -42,6 +42,19 @@
 
 #include <016_DualContouring/texture.h>
 
+struct LDCPoint
+{
+	float p;
+	uint normal;
+	int next;
+	uint flag;
+};
+struct LDCCell
+{
+	uvec3 normal;
+	uint8_t usepoint;
+	u8vec3 xyz;
+};
 
 struct DCContext
 {
@@ -51,6 +64,7 @@ struct DCContext
 	{
 		DSL_Model,
 		DSL_DC,
+		DSL_Worker,
 		DSL_Num,
 	};
 	vk::UniqueDescriptorSetLayout m_DSL[DSL_Num];
@@ -68,6 +82,10 @@ struct DCContext
 
 	vk::UniquePipeline m_pipeline_makeDCV;
 
+	btr::BufferMemoryEx<LDCCell> b_dc_cell;
+	btr::BufferMemoryEx<uint32_t> b_dc_cell_hashmap;
+
+	vk::UniqueDescriptorSet m_DS_worker;
 // 	struct DCInfo
 // 	{
 // 		uvec3 m_voxel_reso;
@@ -105,14 +123,23 @@ struct DCContext
 					vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(7, vk::DescriptorType::eStorageBuffer, 1, stage),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
 				desc_layout_info.setPBindings(binding);
 				m_DSL[DSL_DC] = ctx.m_device.createDescriptorSetLayoutUnique(desc_layout_info);
+			}
 
+			{
+				auto stage = vk::ShaderStageFlagBits::eCompute;
+				vk::DescriptorSetLayoutBinding binding[] = {
+					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
+				};
+				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
+				desc_layout_info.setBindingCount(array_length(binding));
+				desc_layout_info.setPBindings(binding);
+				m_DSL[DSL_Worker] = ctx.m_device.createDescriptorSetLayoutUnique(desc_layout_info);
 			}
 
 		}
@@ -134,6 +161,7 @@ struct DCContext
 				vk::DescriptorSetLayout layouts[] =
 				{
 					m_DSL[DCContext::DSL_DC].get(),
+					m_DSL[DCContext::DSL_Worker].get(),
 				};
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
@@ -271,6 +299,39 @@ struct DCContext
 
 			}
 
+			// descriptor set
+			{
+				b_dc_cell = ctx.m_storage_memory.allocateMemory<LDCCell>(256 * 256 * 256);
+				b_dc_cell_hashmap = ctx.m_storage_memory.allocateMemory<uint32_t>(256 * 256 * 256 / 32);
+
+				vk::DescriptorSetLayout layouts[] =
+				{
+					m_DSL[DCContext::DSL_Worker].get(),
+				};
+				vk::DescriptorSetAllocateInfo desc_info;
+				desc_info.setDescriptorPool(ctx.m_descriptor_pool.get());
+				desc_info.setDescriptorSetCount(array_length(layouts));
+				desc_info.setPSetLayouts(layouts);
+				m_DS_worker = std::move(ctx.m_device.allocateDescriptorSetsUnique(desc_info)[0]);
+
+
+				vk::DescriptorBufferInfo storages[] =
+				{
+					b_dc_cell.getInfo(),
+					b_dc_cell_hashmap.getInfo(),
+				};
+
+				vk::WriteDescriptorSet write[] =
+				{
+					vk::WriteDescriptorSet()
+					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+					.setDescriptorCount(array_length(storages))
+					.setPBufferInfo(storages)
+					.setDstBinding(0)
+					.setDstSet(m_DS_worker.get()),
+				};
+				ctx.m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
+			}
 		}
 
 	}
@@ -605,19 +666,6 @@ struct Model
 
 };
 
-struct LDCPoint
-{
-	float p;
-	uint normal;
-	int next;
-	uint flag;
-};
-struct LDCCell
-{
-	uvec3 normal;
-	uint8_t usepoint;
-	u8vec3 xyz;
-};
 
 struct DCModel
 {
@@ -629,9 +677,7 @@ struct DCModel
 	btr::BufferMemoryEx<int32_t> b_ldc_counter;
 	btr::BufferMemoryEx<int32_t> b_ldc_point_link_head;
 	btr::BufferMemoryEx<LDCPoint> b_ldc_point;
-	btr::BufferMemoryEx<LDCCell> b_dc_cell;
 	btr::BufferMemoryEx<u8vec4> b_dc_vertex;
-	btr::BufferMemoryEx<int32_t> b_dc_hashmap;
 	btr::BufferMemoryEx<vk::DrawIndirectCommand> b_dc_index_counter;
 	btr::BufferMemoryEx<u8vec4> b_dc_index;
 
@@ -655,9 +701,7 @@ struct DCModel
 			dc_model->b_ldc_point_link_head = ctx.m_storage_memory.allocateMemory<int>(256 * 256 *3);
 			dc_model->b_ldc_point = ctx.m_storage_memory.allocateMemory<LDCPoint>(256 * 256 *3*4);
 
-			dc_model->b_dc_cell = ctx.m_storage_memory.allocateMemory<LDCCell>(256* 256 * 256);
 			dc_model->b_dc_vertex = ctx.m_storage_memory.allocateMemory<u8vec4>(256 * 256 * 256);
-			dc_model->b_dc_hashmap = ctx.m_storage_memory.allocateMemory<int32_t>(256 * 256 * 256 / 32);
 
 			dc_model->b_dc_index_counter = ctx.m_storage_memory.allocateMemory<vk::DrawIndirectCommand>(1);
 			dc_model->b_dc_index = ctx.m_storage_memory.allocateMemory<u8vec4>(256 * 256 * 256);
@@ -667,9 +711,7 @@ struct DCModel
 				dc_model->b_ldc_counter.getInfo(),
 				dc_model->b_ldc_point_link_head.getInfo(),
 				dc_model->b_ldc_point.getInfo(),
-				dc_model->b_dc_cell.getInfo(),
 				dc_model->b_dc_vertex.getInfo(),
-				dc_model->b_dc_hashmap.getInfo(),
 				dc_model->b_dc_index_counter.getInfo(),
 				dc_model->b_dc_index.getInfo(),
 			};
@@ -786,18 +828,19 @@ void DCModel::createDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& 
 	// Make DC Cell
 	{
 
-		cmd.fillBuffer(dc_model.b_dc_cell.getInfo().buffer, dc_model.b_dc_cell.getInfo().offset, dc_model.b_dc_cell.getInfo().range, 0);
-		cmd.fillBuffer(dc_model.b_dc_hashmap.getInfo().buffer, dc_model.b_dc_hashmap.getInfo().offset, dc_model.b_dc_hashmap.getInfo().range, -1);
+		cmd.fillBuffer(dc_ctx.b_dc_cell.getInfo().buffer, dc_ctx.b_dc_cell.getInfo().offset, dc_ctx.b_dc_cell.getInfo().range, 0);
+		cmd.fillBuffer(dc_ctx.b_dc_cell_hashmap.getInfo().buffer, dc_ctx.b_dc_cell_hashmap.getInfo().offset, dc_ctx.b_dc_cell_hashmap.getInfo().range, -1);
 		cmd.updateBuffer<vk::DrawIndirectCommand>(dc_model.b_dc_index_counter.getInfo().buffer, dc_model.b_dc_index_counter.getInfo().offset, { vk::DrawIndirectCommand(0,1,0,0) });
 
 		vk::BufferMemoryBarrier barrier[] =
 		{
-			dc_model.b_dc_cell.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			dc_ctx.b_dc_cell.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipeline_MakeDCCell.get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeDC.get(), 0, { dc_model.m_DS_DC.get() }, {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeDC.get(), 1, { dc_ctx.m_DS_worker.get() }, {});
 
 		cmd.dispatch(4, 256, 3);
 	}
@@ -808,13 +851,14 @@ void DCModel::createDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& 
 
 		vk::BufferMemoryBarrier barrier[] =
 		{
-			dc_model.b_dc_cell.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			dc_model.b_dc_hashmap.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			dc_ctx.b_dc_cell.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			dc_ctx.b_dc_cell_hashmap.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipeline_MakeDCVertex.get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeDC.get(), 0, { dc_model.m_DS_DC.get() }, {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeDC.get(), 1, { dc_ctx.m_DS_worker.get() }, {});
 
 		cmd.dispatch(4, 256, 256);
 	}
@@ -825,13 +869,13 @@ void DCModel::createDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& 
 		vk::BufferMemoryBarrier barrier[] =
 		{
 			dc_model.b_dc_vertex.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			//				ldc_model.b_dc_cell.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-							dc_model.b_dc_index_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			dc_model.b_dc_index_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipeline_MakeDCFace.get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeDC.get(), 0, { dc_model.m_DS_DC.get() }, {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeDC.get(), 1, { dc_ctx.m_DS_worker.get() }, {});
 
 		cmd.dispatch(4, 256, 256);
 

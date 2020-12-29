@@ -3,6 +3,7 @@
 #extension GL_GOOGLE_include_directive : require
 
 #define USE_DC 0
+#define USE_DC_WorkBuffer 1
 #include "DualContouring.glsl"
 
 /* Solves for x in  A*x = b.
@@ -161,7 +162,7 @@ void main()
 
 	if(gl_LocalInvocationIndex<2)
 	{
-		b_dc_hashmap[idx/32+gl_LocalInvocationIndex] = s_hashmap[gl_LocalInvocationIndex];
+		b_dc_cell_hashmap[idx/32+gl_LocalInvocationIndex] = s_hashmap[gl_LocalInvocationIndex];
 	}
 
 }
