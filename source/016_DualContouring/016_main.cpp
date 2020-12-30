@@ -341,40 +341,11 @@ struct DCContext
 
 	}
 };
-// Holds data for a memory object bound to an acceleration structure
-struct RayTracingObjectMemory
-{
-	uint64_t deviceAddress;
-	vk::UniqueDeviceMemory memory;
-};
-
 // Ray tracing acceleration structure
 struct AccelerationStructure
 {
 	vk::UniqueAccelerationStructureKHR accelerationStructure;
-	RayTracingObjectMemory objectMemory;
 };
-namespace Helper
-{
-	static RayTracingObjectMemory createASMemory(btr::Context& ctx, vk::AccelerationStructureKHR& acceleration_structure)
-	{
-		RayTracingObjectMemory objectMemory{};
-// 		vk::AccelerationStructureMemoryRequirementsInfoKHR accelerationStructureMemoryRequirements{};
-// 		accelerationStructureMemoryRequirements.type = vk::AccelerationStructureMemoryRequirementsTypeKHR::eObject;
-// 		accelerationStructureMemoryRequirements.buildType = vk::AccelerationStructureBuildTypeKHR::eDevice;
-// 		accelerationStructureMemoryRequirements.accelerationStructure = acceleration_structure;
-// 		vk::MemoryRequirements2 memoryRequirements2 = ctx.m_device.getAccelerationStructureMemoryRequirementsKHR(accelerationStructureMemoryRequirements);
-
-// 		VkMemoryRequirements memoryRequirements = memoryRequirements2.memoryRequirements;
-// 
-// 		vk::MemoryAllocateInfo memoryAI;
-// 		memoryAI.allocationSize = memoryRequirements.size;
-// 		memoryAI.memoryTypeIndex = Helper::getMemoryTypeIndex(ctx.m_physical_device, memoryRequirements, vk::MemoryPropertyFlagBits::eDeviceLocal);
-// 		objectMemory.memory = ctx.m_device.allocateMemoryUnique(memoryAI);
-
-		return objectMemory;
-	}
-}
 
 struct ModelParam
 {
