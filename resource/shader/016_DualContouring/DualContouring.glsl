@@ -23,7 +23,7 @@ struct LDCPoint
 };
 #define LDCFlag_Incident 1
 #define LDCFlag_Exit 2
-struct LDCCell
+struct DCCell
 {
 	uvec3 normal;
 //	u8vec3 dist;
@@ -75,7 +75,7 @@ layout(set=USE_DC_Boolean,binding=5, scalar) buffer DCIndexBuffer_B { u8vec4 b_d
 #endif
 
 #if defined(USE_DC_WorkBuffer)
-layout(set=USE_DC_WorkBuffer,binding=0, scalar) buffer DCCellBuffer { LDCCell b_dc_cell[]; };
+layout(set=USE_DC_WorkBuffer,binding=0, scalar) buffer DCCellBuffer { DCCell b_dc_cell[]; };
 layout(set=USE_DC_WorkBuffer,binding=1, scalar) buffer DCCellHashmap { uint b_dc_cell_hashmap[]; };
 #endif
 

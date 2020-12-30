@@ -27,7 +27,7 @@ void main()
 	bool is_incident_b = false;
 
 	int head = -1;
-	for(;(point_a.next>=0)||(point_b.next>=0);)
+	for(;(point_a.p>=0)||(point_b.p>=0);)
 	{
 		if(point_a.p>point_b.p)
 		{

@@ -49,7 +49,7 @@ struct LDCPoint
 	int next;
 	uint flag;
 };
-struct LDCCell
+struct DCCell
 {
 	uvec3 normal;
 	uint8_t usepoint;
@@ -82,7 +82,7 @@ struct DCContext
 
 	vk::UniquePipeline m_pipeline_makeDCV;
 
-	btr::BufferMemoryEx<LDCCell> b_dc_cell;
+	btr::BufferMemoryEx<DCCell> b_dc_cell;
 	btr::BufferMemoryEx<uint32_t> b_dc_cell_hashmap;
 
 	vk::UniqueDescriptorSet m_DS_worker;
@@ -301,7 +301,7 @@ struct DCContext
 
 			// descriptor set
 			{
-				b_dc_cell = ctx.m_storage_memory.allocateMemory<LDCCell>(256 * 256 * 256);
+				b_dc_cell = ctx.m_storage_memory.allocateMemory<DCCell>(256 * 256 * 256);
 				b_dc_cell_hashmap = ctx.m_storage_memory.allocateMemory<uint32_t>(256 * 256 * 256 / 32);
 
 				vk::DescriptorSetLayout layouts[] =
@@ -702,7 +702,6 @@ struct DCModel
 			dc_model->b_ldc_point = ctx.m_storage_memory.allocateMemory<LDCPoint>(256 * 256 *3*4);
 
 			dc_model->b_dc_vertex = ctx.m_storage_memory.allocateMemory<u8vec4>(256 * 256 * 256);
-
 			dc_model->b_dc_index_counter = ctx.m_storage_memory.allocateMemory<vk::DrawIndirectCommand>(1);
 			dc_model->b_dc_index = ctx.m_storage_memory.allocateMemory<u8vec4>(256 * 256 * 256);
 
@@ -954,8 +953,14 @@ struct DCFunctionLibrary
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL_boolean.get(), 0, { base.m_DS_DC.get() }, {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL_boolean.get(), 1, { boolean.m_DS_DC.get() }, {});
 
-		cmd.dispatch(1, 64, 3);
+		cmd.dispatch(4, 256, 3);
 
+		vk::BufferMemoryBarrier barrier[] =
+		{
+			base.b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			base.b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			base.b_ldc_point.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+		};
 		DCModel::createDCModel(cmd, dc_ctx, base);
 
 	}
@@ -970,7 +975,7 @@ struct DCFunctionLibrary
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL_boolean.get(), 0, { base.m_DS_DC.get() }, {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL_boolean.get(), 1, { boolean.m_DS_DC.get() }, {});
 
-		cmd.dispatch(1, 64, 3);
+		cmd.dispatch(4, 256, 3);
 
 		vk::BufferMemoryBarrier barrier[] =
 		{
@@ -1457,7 +1462,8 @@ int main()
 
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-		dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *dc_model_box);
+//		dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *dc_model_box);
+		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *dc_model_box);
 	}
 
 	app.setup();

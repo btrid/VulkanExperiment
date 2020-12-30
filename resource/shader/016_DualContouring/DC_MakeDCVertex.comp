@@ -114,7 +114,7 @@ void main()
 		if(any(greaterThanEqual(_i, reso))){continue;}
 		uint idx = _i.x + _i.y*reso.x + _i.z*reso.x*reso.y;
 
-		LDCCell cell = b_dc_cell[idx];
+		DCCell cell = b_dc_cell[idx];
 		for (int i = 0; i < 3; i++)
 		{
 			if((cell.axis_dist&(1<<i)) == 0){ continue; }
