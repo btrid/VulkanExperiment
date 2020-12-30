@@ -1,6 +1,7 @@
 #ifndef LDC_H_
 #define LDC_H_
 
+//#extension SPV_KHR_ray_tracing : enable
 #extension GL_EXT_ray_tracing : enable
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_EXT_shader_explicit_arithmetic_types : require

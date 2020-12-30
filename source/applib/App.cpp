@@ -162,9 +162,11 @@ App::App(const AppDescriptor& desc)
 			VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME,
 			VK_KHR_8BIT_STORAGE_EXTENSION_NAME,
 			VK_KHR_MAINTENANCE3_EXTENSION_NAME,
-			VK_KHR_RAY_TRACING_EXTENSION_NAME,
 			VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME,
 			VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
+			VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+			VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
+			VK_KHR_RAY_QUERY_EXTENSION_NAME,
 		};
 
 		auto gpu_propaty = m_physical_device.getProperties();
@@ -221,13 +223,21 @@ App::App(const AppDescriptor& desc)
 		BufferDeviceAddres_Feature.bufferDeviceAddress = VK_TRUE;
 		imageless_feature.setPNext(&BufferDeviceAddres_Feature);
 
-		vk::PhysicalDeviceRayTracingFeaturesKHR RayTracing_Feature;
-		RayTracing_Feature.rayTracing = VK_TRUE;
-		BufferDeviceAddres_Feature.setPNext(&RayTracing_Feature);
+		vk::PhysicalDeviceAccelerationStructureFeaturesKHR AS_Feature;
+		AS_Feature.accelerationStructure = VK_TRUE;
+		BufferDeviceAddres_Feature.setPNext(&AS_Feature);
+
+		vk::PhysicalDeviceRayTracingPipelineFeaturesKHR RT_Pipeline_Feature;
+		RT_Pipeline_Feature.rayTracingPipeline = VK_TRUE;
+		AS_Feature.setPNext(&RT_Pipeline_Feature);
+
+		vk::PhysicalDeviceRayQueryFeaturesKHR RayQuery_Feature;
+		RayQuery_Feature.rayQuery = VK_TRUE;
+		RT_Pipeline_Feature.setPNext(&RayQuery_Feature);
 
 		vk::PhysicalDeviceScalarBlockLayoutFeatures ScalarBlock_Feature;
 		ScalarBlock_Feature.scalarBlockLayout = VK_TRUE;
-		RayTracing_Feature.setPNext(&ScalarBlock_Feature);
+		RayQuery_Feature.setPNext(&ScalarBlock_Feature);
 
 		m_device = m_physical_device.createDeviceUnique(device_info, nullptr);
 	}
@@ -257,11 +267,11 @@ App::App(const AppDescriptor& desc)
 		vk::MemoryPropertyFlags host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
 		vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
 		vk::MemoryPropertyFlags transfer_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-//		device_memory = host_memory; // debug
-		m_context->m_vertex_memory.setup(m_physical_device, m_device.get(), vk::BufferUsageFlagBits::eVertexBuffer|vk::BufferUsageFlagBits::eIndexBuffer|vk::BufferUsageFlagBits::eIndirectBuffer| vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eRayTracingKHR|vk::BufferUsageFlagBits::eTransferDst|vk::BufferUsageFlagBits::eShaderDeviceAddress, device_memory, 1000 * 1000 * 100);
-		m_context->m_uniform_memory.setup(m_physical_device, m_device.get(), vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eRayTracingKHR | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000*1000 * 20);
-		m_context->m_storage_memory.setup(m_physical_device, m_device.get(), vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eRayTracingKHR | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eShaderDeviceAddress, device_memory, 1024 * 1024 * (1024+200));
-		m_context->m_staging_memory.setup(m_physical_device, m_device.get(), vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eRayTracingKHR | vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst, host_memory, 1000 * 1000 * 500);
+		device_memory = host_memory; // debug
+		m_context->m_vertex_memory.setup(m_physical_device, m_device.get(), vk::BufferUsageFlagBits::eVertexBuffer|vk::BufferUsageFlagBits::eIndexBuffer|vk::BufferUsageFlagBits::eIndirectBuffer| vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderBindingTableKHR |vk::BufferUsageFlagBits::eTransferDst|vk::BufferUsageFlagBits::eShaderDeviceAddress, device_memory, 1000 * 1000 * 100);
+		m_context->m_uniform_memory.setup(m_physical_device, m_device.get(), vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eShaderBindingTableKHR | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000*1000 * 20);
+		m_context->m_storage_memory.setup(m_physical_device, m_device.get(), vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eShaderBindingTableKHR | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eShaderDeviceAddress| vk::BufferUsageFlagBits::eAccelerationStructureStorageKHR, device_memory, 1024 * 1024 * (1024+200));
+		m_context->m_staging_memory.setup(m_physical_device, m_device.get(), vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderBindingTableKHR | vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst, host_memory, 1000 * 1000 * 500);
 		{
 			vk::DescriptorPoolSize pool_size[5];
 			pool_size[0].setType(vk::DescriptorType::eUniformBuffer);

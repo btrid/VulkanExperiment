@@ -1,0 +1,66 @@
+#version 460
+
+#extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_ray_query : require
+
+#define USE_Model 0
+#define USE_DC 1
+#include "DualContouring.glsl"
+
+layout (local_size_x = 64) in;
+
+
+void main() 
+{
+
+	int grid = int(gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*Voxel_Reso.x + gl_GlobalInvocationID.z*Voxel_Reso.x*Voxel_Reso.y);
+	int head = -1;
+	b_ldc_point_link_head[grid] = head;
+
+	vec3 axis[3] = {vec3(1., 0., 0.), vec3(0., 1., 0.),vec3(0., 0., 1.)};
+	vec3 f = axis[(gl_GlobalInvocationID.z+0)%3];
+	vec3 s = axis[(gl_GlobalInvocationID.z+1)%3]; 
+	vec3 u = axis[(gl_GlobalInvocationID.z+2)%3];
+
+	vec3 extent = Voxel_Block_Size;
+	vec3 min = u_info.m_aabb_min.xyz;
+
+	vec3 rate = vec3(gl_GlobalInvocationID) / vec3(gl_NumWorkGroups*gl_WorkGroupSize);
+	vec3 origin = min + (s*rate.x*extent[(gl_GlobalInvocationID.z+1)%3]+u*rate.y*extent[(gl_GlobalInvocationID.z+2)%3]);
+
+	float tmax = extent[gl_GlobalInvocationID.z];
+
+	float t = 0.;
+
+	rayQueryEXT rayQuery;
+	for (;;)
+	{
+
+		rayQueryInitializeEXT(rayQuery,	topLevelAS, 0, 0xFF, origin, t, f, tmax);
+
+		while(rayQueryProceedEXT(rayQuery)) {}
+		rayQueryProceedEXT(rayQuery);
+
+		t = rayQueryGetIntersectionTEXT(rayQuery, true);
+		if(t >= tmax){ break; }
+
+		uvec3 i0 = b_index[rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, true)];
+		vec3 a = b_vertex[i0.x];
+		vec3 b = b_vertex[i0.y];
+		vec3 c = b_vertex[i0.z];
+		vec3 normal = normalize(cross(b - a, c - a));
+
+		LDCPoint point;
+		point.p = t / tmax;
+		point.normal = pack_normal_octahedron(normal);
+		point.next = head;
+//		point.flag = payload.HitKind;
+
+		int index = atomicAdd(b_ldc_counter, 1);
+		b_ldc_point[index] = point;
+
+		head = index;
+	}
+	b_ldc_point_link_head[grid] = head;
+
+}

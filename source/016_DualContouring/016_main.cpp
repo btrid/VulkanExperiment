@@ -71,7 +71,7 @@ struct DCContext
 
 	btr::AllocatedMemory m_shader_binding_table_memory;
 	btr::BufferMemory b_shader_binding_table;
-	std::array<vk::StridedBufferRegionKHR, 4> m_shader_binding_table;
+	std::array<vk::StridedDeviceAddressRegionKHR, 4> m_shader_binding_table;
 
 	vk::UniquePipelineLayout m_pipelinelayout_MakeLDC;
 	vk::UniquePipeline m_pipeline_MakeLDC;
@@ -79,6 +79,8 @@ struct DCContext
 	vk::UniquePipeline m_pipeline_MakeDCCell;
 	vk::UniquePipeline m_pipeline_MakeDCVertex;
 	vk::UniquePipeline m_pipeline_MakeDCFace;
+
+	vk::UniquePipeline m_pipeline_LDC_boolean_add;
 
 	vk::UniquePipeline m_pipeline_makeDCV;
 
@@ -99,7 +101,7 @@ struct DCContext
 		// descriptor set layout
 		{
 			{
-				auto stage = vk::ShaderStageFlagBits::eRaygenKHR;
+				auto stage = vk::ShaderStageFlagBits::eRaygenKHR| vk::ShaderStageFlagBits::eCompute;
 				vk::DescriptorSetLayoutBinding binding[] =
 				{
 					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eUniformBuffer, 1, stage),
@@ -213,20 +215,20 @@ struct DCContext
 				rayTracingPipelineCI.pStages = shaderStages.data();
 				rayTracingPipelineCI.groupCount = static_cast<uint32_t>(shader_group.size());
 				rayTracingPipelineCI.pGroups = shader_group.data();
-				rayTracingPipelineCI.maxRecursionDepth = 16;
+				rayTracingPipelineCI.maxPipelineRayRecursionDepth = 16;
 				rayTracingPipelineCI.layout = m_pipelinelayout_MakeLDC.get();
-				m_pipeline_MakeLDC = ctx.m_device.createRayTracingPipelineKHRUnique(vk::PipelineCache(), rayTracingPipelineCI).value;
+				m_pipeline_MakeLDC = ctx.m_device.createRayTracingPipelineKHRUnique(vk::DeferredOperationKHR(), vk::PipelineCache(), rayTracingPipelineCI).value;
 
 				// shader binding table
 				{
-					auto props2 = ctx.m_physical_device.getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceRayTracingPropertiesKHR>();
-					auto rayTracingProperties = props2.get<vk::PhysicalDeviceRayTracingPropertiesKHR>();
+					auto props2 = ctx.m_physical_device.getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceRayTracingPipelinePropertiesKHR>();
+					auto rayTracingProperties = props2.get<vk::PhysicalDeviceRayTracingPipelinePropertiesKHR>();
 
 					const uint32_t groupCount = static_cast<uint32_t>(shader_group.size());
 
 					const uint32_t sbtSize = rayTracingProperties.shaderGroupBaseAlignment * groupCount;
 
-					m_shader_binding_table_memory.setup(ctx.m_physical_device, ctx.m_device, vk::BufferUsageFlagBits::eRayTracingKHR | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, sbtSize);
+					m_shader_binding_table_memory.setup(ctx.m_physical_device, ctx.m_device, vk::BufferUsageFlagBits::eShaderBindingTableKHR | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eShaderDeviceAddressKHR, vk::MemoryPropertyFlagBits::eDeviceLocal, sbtSize);
 					b_shader_binding_table = m_shader_binding_table_memory.allocateMemory(sbtSize);
 
 					auto shaderHandleStorage = ctx.m_device.getRayTracingShaderGroupHandlesKHR<uint8_t>(m_pipeline_MakeLDC.get(), 0, groupCount, rayTracingProperties.shaderGroupHandleSize * groupCount);
@@ -245,21 +247,19 @@ struct DCContext
 					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
 
 
-					m_shader_binding_table[0].buffer = b_shader_binding_table.getInfo().buffer;
-					m_shader_binding_table[0].offset = static_cast<VkDeviceSize>(b_shader_binding_table.getInfo().offset + rayTracingProperties.shaderGroupBaseAlignment * 0);
+//					m_shader_binding_table[0].buffer = b_shader_binding_table.getInfo().buffer;
+					auto device_address = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfoKHR().setBuffer(b_shader_binding_table.getInfo().buffer)) + b_shader_binding_table.getInfo().offset;
+					m_shader_binding_table[0].deviceAddress = device_address;
 					m_shader_binding_table[0].stride = rayTracingProperties.shaderGroupBaseAlignment;
-					m_shader_binding_table[0].size = sbtSize;
+					m_shader_binding_table[0].size = rayTracingProperties.shaderGroupBaseAlignment;
 
-					m_shader_binding_table[1].buffer = b_shader_binding_table.getInfo().buffer;
-					m_shader_binding_table[1].offset = static_cast<VkDeviceSize>(b_shader_binding_table.getInfo().offset + rayTracingProperties.shaderGroupBaseAlignment * 1);
+					m_shader_binding_table[1].deviceAddress = device_address + rayTracingProperties.shaderGroupBaseAlignment * 1;
 					m_shader_binding_table[1].stride = rayTracingProperties.shaderGroupBaseAlignment;
-					m_shader_binding_table[1].size = sbtSize;
+					m_shader_binding_table[1].size = rayTracingProperties.shaderGroupBaseAlignment;
 
-					vk::StridedBufferRegionKHR hitShaderSBTEntry;
-					m_shader_binding_table[2].buffer = b_shader_binding_table.getInfo().buffer;
-					m_shader_binding_table[2].offset = static_cast<VkDeviceSize>(b_shader_binding_table.getInfo().offset + rayTracingProperties.shaderGroupBaseAlignment * 2);
+					m_shader_binding_table[2].deviceAddress = device_address + + rayTracingProperties.shaderGroupBaseAlignment * 2;
 					m_shader_binding_table[2].stride = rayTracingProperties.shaderGroupBaseAlignment;
-					m_shader_binding_table[2].size = sbtSize;
+					m_shader_binding_table[2].size = rayTracingProperties.shaderGroupBaseAlignment;
 
 				}
 
@@ -271,7 +271,8 @@ struct DCContext
 				{
 					{"DC_MakeDCCell.comp.spv", vk::ShaderStageFlagBits::eCompute},
 					{"DC_MakeDCVertex.comp.spv", vk::ShaderStageFlagBits::eCompute},
-					{"DC_MakeDCVFace.comp.spv", vk::ShaderStageFlagBits::eCompute}
+					{"DC_MakeDCVFace.comp.spv", vk::ShaderStageFlagBits::eCompute},
+					{"LDC_BooleanAdd2.comp.spv", vk::ShaderStageFlagBits::eCompute},
 				};
 				std::array<vk::UniqueShaderModule, array_length(shader_param)> shader;
 				std::array<vk::PipelineShaderStageCreateInfo, array_length(shader_param)> shaderStages;
@@ -292,10 +293,14 @@ struct DCContext
 					vk::ComputePipelineCreateInfo()
 					.setStage(shaderStages[2])
 					.setLayout(m_pipelinelayout_MakeDC.get()),
+					vk::ComputePipelineCreateInfo()
+					.setStage(shaderStages[3])
+					.setLayout(m_pipelinelayout_MakeLDC.get()),
 				};
 				m_pipeline_MakeDCCell = ctx.m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[0]).value;
 				m_pipeline_MakeDCVertex = ctx.m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[1]).value;
 				m_pipeline_MakeDCFace = ctx.m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[2]).value;
+				m_pipeline_LDC_boolean_add = ctx.m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[3]).value;
 
 			}
 
@@ -354,19 +359,18 @@ namespace Helper
 	static RayTracingObjectMemory createASMemory(btr::Context& ctx, vk::AccelerationStructureKHR& acceleration_structure)
 	{
 		RayTracingObjectMemory objectMemory{};
+// 		vk::AccelerationStructureMemoryRequirementsInfoKHR accelerationStructureMemoryRequirements{};
+// 		accelerationStructureMemoryRequirements.type = vk::AccelerationStructureMemoryRequirementsTypeKHR::eObject;
+// 		accelerationStructureMemoryRequirements.buildType = vk::AccelerationStructureBuildTypeKHR::eDevice;
+// 		accelerationStructureMemoryRequirements.accelerationStructure = acceleration_structure;
+// 		vk::MemoryRequirements2 memoryRequirements2 = ctx.m_device.getAccelerationStructureMemoryRequirementsKHR(accelerationStructureMemoryRequirements);
 
-		vk::AccelerationStructureMemoryRequirementsInfoKHR accelerationStructureMemoryRequirements{};
-		accelerationStructureMemoryRequirements.type = vk::AccelerationStructureMemoryRequirementsTypeKHR::eObject;
-		accelerationStructureMemoryRequirements.buildType = vk::AccelerationStructureBuildTypeKHR::eDevice;
-		accelerationStructureMemoryRequirements.accelerationStructure = acceleration_structure;
-		vk::MemoryRequirements2 memoryRequirements2 = ctx.m_device.getAccelerationStructureMemoryRequirementsKHR(accelerationStructureMemoryRequirements);
-
-		VkMemoryRequirements memoryRequirements = memoryRequirements2.memoryRequirements;
-
-		vk::MemoryAllocateInfo memoryAI;
-		memoryAI.allocationSize = memoryRequirements.size;
-		memoryAI.memoryTypeIndex = Helper::getMemoryTypeIndex(ctx.m_physical_device, memoryRequirements, vk::MemoryPropertyFlagBits::eDeviceLocal);
-		objectMemory.memory = ctx.m_device.allocateMemoryUnique(memoryAI);
+// 		VkMemoryRequirements memoryRequirements = memoryRequirements2.memoryRequirements;
+// 
+// 		vk::MemoryAllocateInfo memoryAI;
+// 		memoryAI.allocationSize = memoryRequirements.size;
+// 		memoryAI.memoryTypeIndex = Helper::getMemoryTypeIndex(ctx.m_physical_device, memoryRequirements, vk::MemoryPropertyFlagBits::eDeviceLocal);
+// 		objectMemory.memory = ctx.m_device.allocateMemoryUnique(memoryAI);
 
 		return objectMemory;
 	}
@@ -391,9 +395,10 @@ struct Model
 	btr::BufferMemory b_index;
 	btr::BufferMemoryEx<Info> u_info;
 	btr::BufferMemoryEx<vk::DrawIndirectCommand> b_draw_cmd;
-
 	AccelerationStructure m_BLAS;
 	AccelerationStructure m_TLAS;
+
+	vk::UniqueDescriptorSet m_DS_Model;
 
 	Info m_info;
 
@@ -506,90 +511,52 @@ struct Model
 
 		// build BLAS
 		{
-
-			vk::AccelerationStructureCreateGeometryTypeInfoKHR accelerationCreateGeometryInfo{};
-			accelerationCreateGeometryInfo.geometryType = vk::GeometryTypeKHR::eTriangles;
-			accelerationCreateGeometryInfo.maxPrimitiveCount = model->m_info.m_primitive_num;
-			accelerationCreateGeometryInfo.indexType = vk::IndexType::eUint32;
-			accelerationCreateGeometryInfo.maxVertexCount = model->m_info.m_vertex_num;
-			accelerationCreateGeometryInfo.vertexFormat = vk::Format::eR32G32B32Sfloat;
-			accelerationCreateGeometryInfo.allowsTransforms = VK_FALSE;
-
-			vk::AccelerationStructureCreateInfoKHR accelerationCI;
-			accelerationCI.type = vk::AccelerationStructureTypeKHR::eBottomLevel;
-			accelerationCI.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastBuild;
-			accelerationCI.maxGeometryCount = 1;
-			accelerationCI.pGeometryInfos = &accelerationCreateGeometryInfo;
-
-			model->m_BLAS.accelerationStructure = ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
-
-			// Bind object memory to the top level acceleration structure
-			model->m_BLAS.objectMemory = Helper::createASMemory(ctx, model->m_BLAS.accelerationStructure.get());
-
-			vk::BindAccelerationStructureMemoryInfoKHR bindAccelerationMemoryInfo;
-			bindAccelerationMemoryInfo.accelerationStructure = model->m_BLAS.accelerationStructure.get();
-			bindAccelerationMemoryInfo.memory = model->m_BLAS.objectMemory.memory.get();
-			auto isbind = ctx.m_device.bindAccelerationStructureMemoryKHR(1, &bindAccelerationMemoryInfo);
-			assert(isbind == vk::Result::eSuccess);
-
 			std::array<vk::AccelerationStructureGeometryKHR, 1> accelerationStructureGeometry;
 			accelerationStructureGeometry[0].flags = vk::GeometryFlagBitsKHR::eNoDuplicateAnyHitInvocation;
 			accelerationStructureGeometry[0].geometryType = vk::GeometryTypeKHR::eTriangles;
+			accelerationStructureGeometry[0].geometry.triangles.maxVertex = model->m_info.m_vertex_num;
 			accelerationStructureGeometry[0].geometry.triangles.vertexFormat = vk::Format::eR32G32B32Sfloat;
 			accelerationStructureGeometry[0].geometry.triangles.vertexData.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfoKHR().setBuffer(model->b_vertex.getInfo().buffer)) + model->b_vertex.getInfo().offset;
+
 			accelerationStructureGeometry[0].geometry.triangles.vertexStride = sizeof(aiVector3D);
 			accelerationStructureGeometry[0].geometry.triangles.indexType = vk::IndexType::eUint32;
 			accelerationStructureGeometry[0].geometry.triangles.indexData.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfoKHR().setBuffer(model->b_index.getInfo().buffer)) + model->b_index.getInfo().offset;
 
-			vk::AccelerationStructureGeometryKHR* acceleration_structure_geometries = accelerationStructureGeometry.data();
+			vk::AccelerationStructureBuildGeometryInfoKHR AS_buildinfo;
+			AS_buildinfo.type = vk::AccelerationStructureTypeKHR::eBottomLevel;
+			AS_buildinfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastBuild;
+			AS_buildinfo.mode = vk::BuildAccelerationStructureModeKHR::eBuild;
+			AS_buildinfo.geometryCount = 1;
+			AS_buildinfo.pGeometries = accelerationStructureGeometry.data();
 
-			vk::AccelerationStructureMemoryRequirementsInfoKHR accelerationStructureMemoryRequirements;
-			accelerationStructureMemoryRequirements.type = vk::AccelerationStructureMemoryRequirementsTypeKHR::eBuildScratch;
-			accelerationStructureMemoryRequirements.buildType = vk::AccelerationStructureBuildTypeKHR::eDevice;
-			accelerationStructureMemoryRequirements.accelerationStructure = model->m_BLAS.accelerationStructure.get();
-			VkMemoryRequirements2 memoryRequirements2 = ctx.m_device.getAccelerationStructureMemoryRequirementsKHR(accelerationStructureMemoryRequirements);
-			auto scratchBuffer = ctx.m_storage_memory.allocateMemory(memoryRequirements2.memoryRequirements.size, true);
+			std::vector<uint32_t> primitives = { model->m_info.m_primitive_num };
+			auto size_info = ctx.m_device.getAccelerationStructureBuildSizesKHR(vk::AccelerationStructureBuildTypeKHR::eDevice, AS_buildinfo, primitives);
 
-			vk::AccelerationStructureBuildGeometryInfoKHR accelerationBuildGeometryInfo;
-			accelerationBuildGeometryInfo.type = vk::AccelerationStructureTypeKHR::eBottomLevel;
-			accelerationBuildGeometryInfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastBuild;
-			accelerationBuildGeometryInfo.update = VK_FALSE;
-			accelerationBuildGeometryInfo.dstAccelerationStructure = model->m_BLAS.accelerationStructure.get();
-			accelerationBuildGeometryInfo.geometryArrayOfPointers = VK_FALSE;
-			accelerationBuildGeometryInfo.geometryCount = 1;
-			accelerationBuildGeometryInfo.ppGeometries = &acceleration_structure_geometries;
-			accelerationBuildGeometryInfo.scratchData.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo(scratchBuffer.getInfo().buffer)) + scratchBuffer.getInfo().offset;
 
-			vk::AccelerationStructureBuildOffsetInfoKHR accelerationBuildOffsetInfo{};
-			accelerationBuildOffsetInfo.primitiveCount = model->m_info.m_primitive_num;
-			accelerationBuildOffsetInfo.primitiveOffset = 0;
-			accelerationBuildOffsetInfo.firstVertex = 0;
-			accelerationBuildOffsetInfo.transformOffset = 0;
+			auto AS_buffer = ctx.m_storage_memory.allocateMemory(size_info.accelerationStructureSize);
+			vk::AccelerationStructureCreateInfoKHR accelerationCI;
+			accelerationCI.type = vk::AccelerationStructureTypeKHR::eBottomLevel;
+			accelerationCI.buffer = AS_buffer.getInfo().buffer;
+			accelerationCI.offset = AS_buffer.getInfo().offset;
+			accelerationCI.size =AS_buffer.getInfo().range;
+			model->m_BLAS.accelerationStructure = ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
 
-			std::vector<const vk::AccelerationStructureBuildOffsetInfoKHR*> offset = { &accelerationBuildOffsetInfo };
+			auto scratch_buffer = ctx.m_storage_memory.allocateMemory(size_info.buildScratchSize, true);
 
-			cmd.buildAccelerationStructureKHR({ accelerationBuildGeometryInfo }, offset);
+			AS_buildinfo.dstAccelerationStructure = model->m_BLAS.accelerationStructure.get();
+			AS_buildinfo.scratchData.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo(scratch_buffer.getInfo().buffer)) + scratch_buffer.getInfo().offset;
+
+			vk::AccelerationStructureBuildRangeInfoKHR acceleration_buildrangeinfo;
+			acceleration_buildrangeinfo.primitiveCount = model->m_info.m_primitive_num;
+			acceleration_buildrangeinfo.primitiveOffset = 0;
+			acceleration_buildrangeinfo.firstVertex = 0;
+			acceleration_buildrangeinfo.transformOffset = 0;
+
+			std::vector<const vk::AccelerationStructureBuildRangeInfoKHR*> ranges = { &acceleration_buildrangeinfo };
+			cmd.buildAccelerationStructuresKHR({ AS_buildinfo }, ranges);
 		}
 		// build TLAS
 		{
-			vk::AccelerationStructureCreateGeometryTypeInfoKHR accelerationCreateGeometryInfo;
-			accelerationCreateGeometryInfo.geometryType = vk::GeometryTypeKHR::eInstances;
-			accelerationCreateGeometryInfo.maxPrimitiveCount = 1;
-			accelerationCreateGeometryInfo.allowsTransforms = VK_TRUE;
-
-			vk::AccelerationStructureCreateInfoKHR accelerationCI;
-			accelerationCI.flags = vk::BuildAccelerationStructureFlagBitsKHR::eAllowUpdate | vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
-			accelerationCI.maxGeometryCount = 1;
-			accelerationCI.pGeometryInfos = &accelerationCreateGeometryInfo;
-			model->m_TLAS.accelerationStructure = ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
-
-			// Bind object memory to the top level acceleration structure
-			model->m_TLAS.objectMemory = Helper::createASMemory(ctx, model->m_TLAS.accelerationStructure.get());
-
-			vk::BindAccelerationStructureMemoryInfoKHR bindAccelerationMemoryInfo;
-			bindAccelerationMemoryInfo.accelerationStructure = model->m_TLAS.accelerationStructure.get();
-			bindAccelerationMemoryInfo.memory = model->m_TLAS.objectMemory.memory.get();
-			ctx.m_device.bindAccelerationStructureMemoryKHR({ bindAccelerationMemoryInfo });
 
 			vk::TransformMatrixKHR transform_matrix =
 			{
@@ -618,48 +585,102 @@ struct Model
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
 
 
-			vk::DeviceOrHostAddressConstKHR instance_data_device_address;
-			instance_data_device_address.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo().setBuffer(instance_buffer.getInfo().buffer))+ instance_buffer.getInfo().offset;
+			auto device_address = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo().setBuffer(instance_buffer.getInfo().buffer))+ instance_buffer.getInfo().offset;
 
 			vk::AccelerationStructureGeometryKHR accelerationStructureGeometry;
 			accelerationStructureGeometry.flags = vk::GeometryFlagBitsKHR::eNoDuplicateAnyHitInvocation;
 			accelerationStructureGeometry.geometryType = vk::GeometryTypeKHR::eInstances;
-			accelerationStructureGeometry.geometry.instances.arrayOfPointers = VK_FALSE;
-			accelerationStructureGeometry.geometry.instances.data.deviceAddress = instance_data_device_address.deviceAddress;
+			vk::AccelerationStructureGeometryInstancesDataKHR instance_data;
+			instance_data.data.deviceAddress = device_address;
+			accelerationStructureGeometry.geometry.instances = instance_data;
 
 			std::vector<vk::AccelerationStructureGeometryKHR> acceleration_geometries = { accelerationStructureGeometry };
-			vk::AccelerationStructureGeometryKHR* acceleration_structure_geometries = acceleration_geometries.data();
-
-			// Create a small scratch buffer used during build of the top level acceleration structure
-			vk::AccelerationStructureMemoryRequirementsInfoKHR accelerationStructureMemoryRequirements;
-			accelerationStructureMemoryRequirements.type = vk::AccelerationStructureMemoryRequirementsTypeKHR::eBuildScratch;
-			accelerationStructureMemoryRequirements.buildType = vk::AccelerationStructureBuildTypeKHR::eDevice;
-			accelerationStructureMemoryRequirements.accelerationStructure = model->m_TLAS.accelerationStructure.get();
-			VkMemoryRequirements2 memoryRequirements2 = ctx.m_device.getAccelerationStructureMemoryRequirementsKHR(accelerationStructureMemoryRequirements);
-			auto scratchBuffer = ctx.m_storage_memory.allocateMemory(memoryRequirements2.memoryRequirements.size, true);
 
 
-			vk::AccelerationStructureBuildGeometryInfoKHR accelerationBuildGeometryInfo;
-			accelerationBuildGeometryInfo.type = vk::AccelerationStructureTypeKHR::eTopLevel;
-			accelerationBuildGeometryInfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastBuild;
-			accelerationBuildGeometryInfo.update = VK_FALSE;
-			//			accelerationBuildGeometryInfo.srcAccelerationStructure = VK_NULL_HANDLE;
-			accelerationBuildGeometryInfo.dstAccelerationStructure = model->m_TLAS.accelerationStructure.get();
-			accelerationBuildGeometryInfo.geometryArrayOfPointers = VK_FALSE;
-			accelerationBuildGeometryInfo.geometryCount = 1;
-			accelerationBuildGeometryInfo.ppGeometries = &acceleration_structure_geometries;
-			accelerationBuildGeometryInfo.scratchData.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo(scratchBuffer.getInfo().buffer)) + scratchBuffer.getInfo().offset;
+			vk::AccelerationStructureBuildGeometryInfoKHR AS_buildinfo;
+			AS_buildinfo.type = vk::AccelerationStructureTypeKHR::eTopLevel;
+			AS_buildinfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastBuild;
+			AS_buildinfo.mode = vk::BuildAccelerationStructureModeKHR::eBuild;
+	//			accelerationBuildGeometryInfo.srcAccelerationStructure = VK_NULL_HANDLE;
+//			AS_buildinfo.setGeometries({ accelerationStructureGeometry });
+			AS_buildinfo.geometryCount = 1;
+			AS_buildinfo.pGeometries = acceleration_geometries.data();
 
-			vk::AccelerationStructureBuildOffsetInfoKHR accelerationBuildOffsetInfo;
+			std::vector<uint32_t> primitives = { model->m_info.m_primitive_num };
+			auto size_info = ctx.m_device.getAccelerationStructureBuildSizesKHR(vk::AccelerationStructureBuildTypeKHR::eDevice, AS_buildinfo, primitives);
+			auto scratch_buffer = ctx.m_storage_memory.allocateMemory(size_info.buildScratchSize, true);
+
+			auto AS_buffer = ctx.m_storage_memory.allocateMemory(size_info.accelerationStructureSize);
+			vk::AccelerationStructureCreateInfoKHR accelerationCI;
+			accelerationCI.type = vk::AccelerationStructureTypeKHR::eTopLevel;
+			accelerationCI.buffer = AS_buffer.getInfo().buffer;
+			accelerationCI.offset = AS_buffer.getInfo().offset;
+			accelerationCI.size = AS_buffer.getInfo().range;
+			model->m_TLAS.accelerationStructure = ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
+
+			AS_buildinfo.dstAccelerationStructure = model->m_TLAS.accelerationStructure.get();
+			AS_buildinfo.scratchData.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo(scratch_buffer.getInfo().buffer)) + scratch_buffer.getInfo().offset;
+
+			vk::AccelerationStructureBuildRangeInfoKHR accelerationBuildOffsetInfo;
 			accelerationBuildOffsetInfo.primitiveCount = 1;
 			accelerationBuildOffsetInfo.primitiveOffset = 0;
 			accelerationBuildOffsetInfo.firstVertex = 0;
 			accelerationBuildOffsetInfo.transformOffset = 0;
 
-			std::vector<const vk::AccelerationStructureBuildOffsetInfoKHR*> offset = { &accelerationBuildOffsetInfo };
-			cmd.buildAccelerationStructureKHR({ accelerationBuildGeometryInfo }, offset);
+			std::vector<const vk::AccelerationStructureBuildRangeInfoKHR*> offset = { &accelerationBuildOffsetInfo };
+			cmd.buildAccelerationStructuresKHR({ AS_buildinfo }, offset);
 		}
 
+		{
+			vk::DescriptorSetLayout layouts[] =
+			{
+				dc_ctx.m_DSL[DCContext::DSL_Model].get(),
+			};
+			vk::DescriptorSetAllocateInfo desc_info;
+			desc_info.setDescriptorPool(ctx.m_descriptor_pool.get());
+			desc_info.setDescriptorSetCount(array_length(layouts));
+			desc_info.setPSetLayouts(layouts);
+			model->m_DS_Model = std::move(ctx.m_device.allocateDescriptorSetsUnique(desc_info)[0]);
+
+			vk::DescriptorBufferInfo uniforms[] =
+			{
+				model->u_info.getInfo(),
+			};
+			vk::DescriptorBufferInfo model_storages[] =
+			{
+				model->b_vertex.getInfo(),
+				model->b_normal.getInfo(),
+				model->b_index.getInfo(),
+				model->b_draw_cmd.getInfo(),
+			};
+			vk::WriteDescriptorSetAccelerationStructureKHR acceleration;
+			acceleration.accelerationStructureCount = 1;
+			acceleration.pAccelerationStructures = &model->m_TLAS.accelerationStructure.get();
+
+			vk::WriteDescriptorSet write[] =
+			{
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+				.setDescriptorCount(array_length(uniforms))
+				.setPBufferInfo(uniforms)
+				.setDstBinding(0)
+				.setDstSet(model->m_DS_Model.get()),
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(array_length(model_storages))
+				.setPBufferInfo(model_storages)
+				.setDstBinding(1)
+				.setDstSet(model->m_DS_Model.get()),
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eAccelerationStructureKHR)
+				.setDescriptorCount(1)
+				.setPNext(&acceleration)
+				.setDstBinding(5)
+				.setDstSet(model->m_DS_Model.get()),
+			};
+			ctx.m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
+
+		}
 
 		return model;
 	}
@@ -672,7 +693,6 @@ struct DCModel
 	// https://www.4gamer.net/games/269/G026934/20170406111/
 	// LDC = Layered Depth Cube
 	// DCV = Dual Contouring Vertex
-	vk::UniqueDescriptorSet m_DS_Model;
 	vk::UniqueDescriptorSet m_DS_DC;
 	btr::BufferMemoryEx<int32_t> b_ldc_counter;
 	btr::BufferMemoryEx<int32_t> b_ldc_point_link_head;
@@ -681,7 +701,7 @@ struct DCModel
 	btr::BufferMemoryEx<vk::DrawIndirectCommand> b_dc_index_counter;
 	btr::BufferMemoryEx<u8vec4> b_dc_index;
 
-	static std::shared_ptr<DCModel> Construct(btr::Context& ctx, DCContext& dc_ctx, Model& model)
+	static std::shared_ptr<DCModel> Construct(btr::Context& ctx, DCContext& dc_ctx)
 	{
 		auto cmd = ctx.m_cmd_pool->allocCmdTempolary(0);
 
@@ -728,102 +748,69 @@ struct DCModel
 		}
 
 		{
-			vk::DescriptorSetLayout layouts[] =
+			cmd.fillBuffer(dc_model->b_ldc_counter.getInfo().buffer, dc_model->b_ldc_counter.getInfo().offset, dc_model->b_ldc_counter.getInfo().range, 0);
+			vk::BufferMemoryBarrier barrier[] =
 			{
-				dc_ctx.m_DSL[DCContext::DSL_Model].get(),
+				dc_model->b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 			};
-			vk::DescriptorSetAllocateInfo desc_info;
-			desc_info.setDescriptorPool(ctx.m_descriptor_pool.get());
-			desc_info.setDescriptorSetCount(array_length(layouts));
-			desc_info.setPSetLayouts(layouts);
-			dc_model->m_DS_Model = std::move(ctx.m_device.allocateDescriptorSetsUnique(desc_info)[0]);
-
-			vk::DescriptorBufferInfo uniforms[] =
-			{
-				model.u_info.getInfo(),
-			};
-			vk::DescriptorBufferInfo model_storages[] =
-			{
-				model.b_vertex.getInfo(),
-				model.b_normal.getInfo(),
-				model.b_index.getInfo(),
-				model.b_draw_cmd.getInfo(),
-			};
-			vk::WriteDescriptorSetAccelerationStructureKHR acceleration;
-			acceleration.accelerationStructureCount = 1;
-			acceleration.pAccelerationStructures = &model.m_TLAS.accelerationStructure.get();
-
-			vk::WriteDescriptorSet write[] =
-			{
-				vk::WriteDescriptorSet()
-				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-				.setDescriptorCount(array_length(uniforms))
-				.setPBufferInfo(uniforms)
-				.setDstBinding(0)
-				.setDstSet(dc_model->m_DS_Model.get()),
-				vk::WriteDescriptorSet()
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(array_length(model_storages))
-				.setPBufferInfo(model_storages)
-				.setDstBinding(1)
-				.setDstSet(dc_model->m_DS_Model.get()),
-				vk::WriteDescriptorSet()
-				.setDescriptorType(vk::DescriptorType::eAccelerationStructureKHR)
-				.setDescriptorCount(1)
-				.setPNext(&acceleration)
-				.setDstBinding(5)
-				.setDstSet(dc_model->m_DS_Model.get()),
-			};
-			ctx.m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
-
-		}
-		// Dispatch the ray tracing commands
-		{
-			{
-
-				cmd.fillBuffer(dc_model->b_ldc_counter.getInfo().buffer, dc_model->b_ldc_counter.getInfo().offset, dc_model->b_ldc_counter.getInfo().range, 0);
-
-				vk::BufferMemoryBarrier barrier[] =
-				{
-					dc_model->b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eRayTracingShaderKHR, {}, {}, { array_size(barrier), barrier }, {});
-
-			}
-
-			cmd.bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, dc_ctx.m_pipeline_MakeLDC.get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, dc_ctx.m_pipelinelayout_MakeLDC.get(), 0, { dc_model->m_DS_Model.get() }, {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, dc_ctx.m_pipelinelayout_MakeLDC.get(), 1, { dc_model->m_DS_DC.get() }, {});
-
-			cmd.traceRaysKHR(
-				dc_ctx.m_shader_binding_table[0],
-				dc_ctx.m_shader_binding_table[1],
-				dc_ctx.m_shader_binding_table[2],
-				dc_ctx.m_shader_binding_table[3],
-				model.m_info.m_voxel_reso.x,
-				model.m_info.m_voxel_reso.y,
-				3);
-
-
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eRayTracingShaderKHR, {}, {}, { array_size(barrier), barrier }, {});
 		}
 
-		vk::BufferMemoryBarrier barrier[] =
-		{
-			dc_model->b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			dc_model->b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			dc_model->b_ldc_point.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eRayTracingShaderKHR, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
-		createDCModel(cmd, dc_ctx, *dc_model);
 		return dc_model;
 	}
 
-	static void createDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& dc_model);
+	static void CreateLDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& dc_model, Model& model);
+
+	static void CreateDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& dc_model);
 
 };
 
-void DCModel::createDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& dc_model)
+void DCModel::CreateLDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& dc_model, Model& model)
 {
+
+	cmd.bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, dc_ctx.m_pipeline_MakeLDC.get());
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, dc_ctx.m_pipelinelayout_MakeLDC.get(), 0, { model.m_DS_Model.get() }, {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, dc_ctx.m_pipelinelayout_MakeLDC.get(), 1, { dc_model.m_DS_DC.get() }, {});
+
+	cmd.traceRaysKHR(
+		dc_ctx.m_shader_binding_table[0],
+		dc_ctx.m_shader_binding_table[1],
+		dc_ctx.m_shader_binding_table[2],
+		dc_ctx.m_shader_binding_table[3],
+		model.m_info.m_voxel_reso.x,
+		model.m_info.m_voxel_reso.y,
+		3);
+
+// 	{
+// 		cmd.fillBuffer(dc_model.b_ldc_counter.getInfo().buffer, dc_model.b_ldc_counter.getInfo().offset, dc_model.b_ldc_counter.getInfo().range, 0);
+// 		vk::BufferMemoryBarrier barrier[] =
+// 		{
+// 			dc_model.b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+// 		};
+// 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
+// 	}
+// 
+// 	cmd.bindPipeline(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipeline_LDC_boolean_add.get());
+// 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeLDC.get(), 0, { model.m_DS_Model.get() }, {});
+// 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeLDC.get(), 1, { dc_model.m_DS_DC.get() }, {});
+// 
+// 	cmd.dispatch(4, 256, 3);
+
+}
+
+void DCModel::CreateDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& dc_model)
+{
+	{
+		vk::BufferMemoryBarrier barrier[] =
+		{
+			dc_model.b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			dc_model.b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			dc_model.b_ldc_point.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
+
+	}
+
 	// Make DC Cell
 	{
 
@@ -880,11 +867,14 @@ void DCModel::createDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& 
 
 	}
 
-	vk::BufferMemoryBarrier barrier[] =
 	{
-		dc_model.b_dc_index_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
-	};
-	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, { array_size(barrier), barrier }, {});
+		vk::BufferMemoryBarrier barrier[] =
+		{
+			dc_model.b_dc_index_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, { array_size(barrier), barrier }, {});
+
+	}
 }
 
 struct DCFunctionLibrary
@@ -905,7 +895,7 @@ struct DCFunctionLibrary
 			vk::DescriptorSetLayout layouts[] =
 			{
 				dc_ctx.m_DSL[DCContext::DSL_DC].get(),
-				dc_ctx.m_DSL[DCContext::DSL_DC].get(),
+				dc_ctx.m_DSL[DCContext::DSL_Model].get(),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
@@ -944,11 +934,6 @@ struct DCFunctionLibrary
 
 	void executeBooleanAdd(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& base, DCModel& boolean)
 	{
-	// 		vk::BufferMemoryBarrier barrier[] =
-	// 		{
-	// 		};
-	// 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
-
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Boolean_Add].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL_boolean.get(), 0, { base.m_DS_DC.get() }, {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL_boolean.get(), 1, { boolean.m_DS_DC.get() }, {});
@@ -961,16 +946,11 @@ struct DCFunctionLibrary
 			base.b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			base.b_ldc_point.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 		};
-		DCModel::createDCModel(cmd, dc_ctx, base);
+		DCModel::CreateDCModel(cmd, dc_ctx, base);
 
 	}
 	void executeBooleanSub(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& base, DCModel& boolean)
 	{
-// 		vk::BufferMemoryBarrier barrier[] =
-// 		{
-// 		};
-// 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
-
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Boolean_Sub].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL_boolean.get(), 0, { base.m_DS_DC.get() }, {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL_boolean.get(), 1, { boolean.m_DS_DC.get() }, {});
@@ -985,7 +965,7 @@ struct DCFunctionLibrary
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
 
-		DCModel::createDCModel(cmd, dc_ctx, base);
+		DCModel::CreateDCModel(cmd, dc_ctx, base);
 	}
 };
 struct Material
@@ -1448,13 +1428,12 @@ int main()
 
 	auto context = app.m_context;
 	auto dc_ctx = std::make_shared<DCContext>(*context);
-	DCFunctionLibrary dc_fl(*context, *dc_ctx);
+//	DCFunctionLibrary dc_fl(*context, *dc_ctx);
 
 	auto model_box = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Box.dae", {50.f});
 	auto model = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Duck.dae", {1.f});
 
-	auto dc_model_box = DCModel::Construct(*context, *dc_ctx, *model_box);
-	auto dc_model = DCModel::Construct(*context, *dc_ctx, *model);
+	auto dc_model = DCModel::Construct(*context, *dc_ctx);
 	Renderer renderer(*context, *dc_ctx, *app.m_window->getFrontBuffer());
 
 	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
@@ -1462,8 +1441,11 @@ int main()
 
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+		DCModel::CreateLDCModel(cmd, *dc_ctx, *dc_model, *model);
+		DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
 //		dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *dc_model_box);
-		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *dc_model_box);
+//		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model);
+//		dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model_box);
 	}
 
 	app.setup();

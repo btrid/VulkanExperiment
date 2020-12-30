@@ -9,6 +9,7 @@ SET output=-o ../binary/
 %exe% %output%/LDC_Construct.rchit.spv LDC_Construct.rchit
 
 %exe% %output%/LDC_BooleanAdd.comp.spv LDC_BooleanAdd.comp
+%exe% %output%/LDC_BooleanAdd2.comp.spv LDC_BooleanAdd2.comp
 %exe% %output%/LDC_BooleanSub.comp.spv LDC_BooleanSub.comp
 
 %exe% %output%/DC_MakeDCCell.comp.spv DC_MakeDCCell.comp
