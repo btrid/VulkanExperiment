@@ -28,18 +28,15 @@ void main()
 	vec3 rate = vec3(gl_GlobalInvocationID) / vec3(gl_NumWorkGroups*gl_WorkGroupSize);
 	vec3 origin = min + (s*rate.x*extent[(gl_GlobalInvocationID.z+1)%3]+u*rate.y*extent[(gl_GlobalInvocationID.z+2)%3]);
 
+	float t = 0.;
 	float tmax = extent[gl_GlobalInvocationID.z];
 
-	float t = 0.;
-
-	rayQueryEXT rayQuery;
 	for (;;)
 	{
 
-		rayQueryInitializeEXT(rayQuery,	topLevelAS, 0, 0xFF, origin, t, f, tmax);
-
+		rayQueryEXT rayQuery;
+		rayQueryInitializeEXT(rayQuery,	topLevelAS, gl_RayFlagsOpaqueEXT, 0xFF, origin, t, f, tmax);
 		while(rayQueryProceedEXT(rayQuery)) {}
-		rayQueryProceedEXT(rayQuery);
 
 		t = rayQueryGetIntersectionTEXT(rayQuery, true);
 		if(t >= tmax){ break; }

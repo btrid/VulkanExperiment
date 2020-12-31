@@ -341,11 +341,6 @@ struct DCContext
 
 	}
 };
-// Ray tracing acceleration structure
-struct AccelerationStructure
-{
-	vk::UniqueAccelerationStructureKHR accelerationStructure;
-};
 
 struct ModelParam
 {
@@ -366,8 +361,8 @@ struct Model
 	btr::BufferMemory b_index;
 	btr::BufferMemoryEx<Info> u_info;
 	btr::BufferMemoryEx<vk::DrawIndirectCommand> b_draw_cmd;
-	AccelerationStructure m_BLAS;
-	AccelerationStructure m_TLAS;
+	vk::UniqueAccelerationStructureKHR m_BLAS;
+	vk::UniqueAccelerationStructureKHR m_TLAS;
 
 	vk::UniqueDescriptorSet m_DS_Model;
 
@@ -510,11 +505,11 @@ struct Model
 			accelerationCI.buffer = AS_buffer.getInfo().buffer;
 			accelerationCI.offset = AS_buffer.getInfo().offset;
 			accelerationCI.size =AS_buffer.getInfo().range;
-			model->m_BLAS.accelerationStructure = ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
+			model->m_BLAS = ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
 
 			auto scratch_buffer = ctx.m_storage_memory.allocateMemory(size_info.buildScratchSize, true);
 
-			AS_buildinfo.dstAccelerationStructure = model->m_BLAS.accelerationStructure.get();
+			AS_buildinfo.dstAccelerationStructure = model->m_BLAS.get();
 			AS_buildinfo.scratchData.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo(scratch_buffer.getInfo().buffer)) + scratch_buffer.getInfo().offset;
 
 			vk::AccelerationStructureBuildRangeInfoKHR acceleration_buildrangeinfo;
@@ -545,7 +540,7 @@ struct Model
 			instance.mask = 0xFF;
 			instance.instanceShaderBindingTableRecordOffset = 0;
 			instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
-			instance.accelerationStructureReference = ctx.m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(model->m_BLAS.accelerationStructure.get()));
+			instance.accelerationStructureReference = ctx.m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(model->m_BLAS.get()));
 
 			auto instance_buffer = dc_ctx.m_ASinstance_memory.allocateMemory(sizeof(instance));
 
@@ -587,9 +582,9 @@ struct Model
 			accelerationCI.buffer = AS_buffer.getInfo().buffer;
 			accelerationCI.offset = AS_buffer.getInfo().offset;
 			accelerationCI.size = AS_buffer.getInfo().range;
-			model->m_TLAS.accelerationStructure = ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
+			model->m_TLAS = ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
 
-			AS_buildinfo.dstAccelerationStructure = model->m_TLAS.accelerationStructure.get();
+			AS_buildinfo.dstAccelerationStructure = model->m_TLAS.get();
 			AS_buildinfo.scratchData.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo(scratch_buffer.getInfo().buffer)) + scratch_buffer.getInfo().offset;
 
 			vk::AccelerationStructureBuildRangeInfoKHR accelerationBuildOffsetInfo;
@@ -626,7 +621,7 @@ struct Model
 			};
 			vk::WriteDescriptorSetAccelerationStructureKHR acceleration;
 			acceleration.accelerationStructureCount = 1;
-			acceleration.pAccelerationStructures = &model->m_TLAS.accelerationStructure.get();
+			acceleration.pAccelerationStructures = &model->m_TLAS.get();
 
 			vk::WriteDescriptorSet write[] =
 			{
@@ -739,18 +734,18 @@ struct DCModel
 void DCModel::CreateLDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& dc_model, Model& model)
 {
 
-	cmd.bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, dc_ctx.m_pipeline_MakeLDC.get());
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, dc_ctx.m_pipelinelayout_MakeLDC.get(), 0, { model.m_DS_Model.get() }, {});
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, dc_ctx.m_pipelinelayout_MakeLDC.get(), 1, { dc_model.m_DS_DC.get() }, {});
-
-	cmd.traceRaysKHR(
-		dc_ctx.m_shader_binding_table[0],
-		dc_ctx.m_shader_binding_table[1],
-		dc_ctx.m_shader_binding_table[2],
-		dc_ctx.m_shader_binding_table[3],
-		model.m_info.m_voxel_reso.x,
-		model.m_info.m_voxel_reso.y,
-		3);
+// 	cmd.bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, dc_ctx.m_pipeline_MakeLDC.get());
+// 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, dc_ctx.m_pipelinelayout_MakeLDC.get(), 0, { model.m_DS_Model.get() }, {});
+// 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, dc_ctx.m_pipelinelayout_MakeLDC.get(), 1, { dc_model.m_DS_DC.get() }, {});
+// 
+// 	cmd.traceRaysKHR(
+// 		dc_ctx.m_shader_binding_table[0],
+// 		dc_ctx.m_shader_binding_table[1],
+// 		dc_ctx.m_shader_binding_table[2],
+// 		dc_ctx.m_shader_binding_table[3],
+// 		model.m_info.m_voxel_reso.x,
+// 		model.m_info.m_voxel_reso.y,
+// 		3);
 
 // 	{
 // 		cmd.fillBuffer(dc_model.b_ldc_counter.getInfo().buffer, dc_model.b_ldc_counter.getInfo().offset, dc_model.b_ldc_counter.getInfo().range, 0);
@@ -760,12 +755,12 @@ void DCModel::CreateLDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel&
 // 		};
 // 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
 // 	}
-// 
-// 	cmd.bindPipeline(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipeline_LDC_boolean_add.get());
-// 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeLDC.get(), 0, { model.m_DS_Model.get() }, {});
-// 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeLDC.get(), 1, { dc_model.m_DS_DC.get() }, {});
-// 
-// 	cmd.dispatch(4, 256, 3);
+
+	cmd.bindPipeline(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipeline_LDC_boolean_add.get());
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeLDC.get(), 0, { model.m_DS_Model.get() }, {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeLDC.get(), 1, { dc_model.m_DS_DC.get() }, {});
+
+	cmd.dispatch(4, 256, 3);
 
 }
 
