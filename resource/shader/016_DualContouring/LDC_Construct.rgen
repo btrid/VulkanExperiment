@@ -54,7 +54,7 @@ void main()
 		vec3 normal = normalize(cross(b - a, c - a));
 
 		LDCPoint point;
-		point.p = payload.HitT / tmax;
+		point.p = payload.HitT;
 		point.normal = pack_normal_octahedron(normal);
 		point.next = head;
 		point.flag = payload.HitKind;

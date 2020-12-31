@@ -2,6 +2,7 @@
 #define LDC_H_
 
 #extension GL_EXT_ray_tracing : enable
+#extension GL_EXT_ray_query : require
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_EXT_shader_explicit_arithmetic_types : require
 
@@ -21,6 +22,8 @@ struct LDCPoint
 	int next;
 	uint flag;
 };
+const LDCPoint g_invalid_point = {-1., -1, 0, 0};
+
 #define LDCFlag_Incident 1
 #define LDCFlag_Exit 2
 struct DCCell

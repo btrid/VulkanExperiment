@@ -24,7 +24,7 @@ void main()
 		LDCPoint point = b_ldc_point[index];
 		index = point.next;
 
-		float voxel_p = (point.p*Voxel_Reso)[gl_GlobalInvocationID.z];
+		float voxel_p = (point.p/voxel_size)[gl_GlobalInvocationID.z];
 
 		uvec3 voxel_index = min(uvec3(s*gl_GlobalInvocationID.x + u*gl_GlobalInvocationID.y + f*voxel_p), Voxel_Reso-1);
 		uint i = voxel_index.x + voxel_index.y*Voxel_Reso.x + voxel_index.z*Voxel_Reso.x*Voxel_Reso.y;

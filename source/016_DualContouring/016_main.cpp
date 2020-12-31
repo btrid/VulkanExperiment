@@ -69,10 +69,6 @@ struct DCContext
 	};
 	vk::UniqueDescriptorSetLayout m_DSL[DSL_Num];
 
-	btr::AllocatedMemory m_shader_binding_table_memory;
-	btr::BufferMemory b_shader_binding_table;
-	std::array<vk::StridedDeviceAddressRegionKHR, 4> m_shader_binding_table;
-
 	vk::UniquePipelineLayout m_pipelinelayout_MakeLDC;
 	vk::UniquePipeline m_pipeline_MakeLDC;
 	vk::UniquePipelineLayout m_pipelinelayout_MakeDC;
@@ -171,100 +167,6 @@ struct DCContext
 				m_pipelinelayout_MakeDC = ctx.m_device.createPipelineLayoutUnique(pipeline_layout_info);
 			}
 
-			{
-				const uint32_t shaderIndexRaygen = 0;
-				const uint32_t shaderIndexMiss = 1;
-				const uint32_t shaderIndexClosestHit = 2;
-
-				struct { const char* name; vk::ShaderStageFlagBits flag; } shader_param[] =
-				{
-					{"LDC_Construct.rgen.spv", vk::ShaderStageFlagBits::eRaygenKHR},
-					{"LDC_Construct.rmiss.spv", vk::ShaderStageFlagBits::eMissKHR},
-					{"LDC_Construct.rchit.spv", vk::ShaderStageFlagBits::eClosestHitKHR},
-				};
-				std::array<vk::UniqueShaderModule, array_length(shader_param)> shader;
-				std::array<vk::PipelineShaderStageCreateInfo, array_length(shader_param)> shaderStages;
-				for (size_t i = 0; i < array_length(shader_param); i++)
-				{
-					shader[i] = loadShaderUnique(ctx.m_device, btr::getResourceShaderPath() + shader_param[i].name);
-					shaderStages[i].setModule(shader[i].get()).setStage(shader_param[i].flag).setPName("main");
-				}
-
-				//	Setup ray tracing shader groups
-				std::array<vk::RayTracingShaderGroupCreateInfoKHR, 3> shader_group;
-				shader_group[0].type = vk::RayTracingShaderGroupTypeKHR::eGeneral;
-				shader_group[0].generalShader = shaderIndexRaygen;
-				shader_group[0].closestHitShader = VK_SHADER_UNUSED_KHR;
-				shader_group[0].anyHitShader = VK_SHADER_UNUSED_KHR;
-				shader_group[0].intersectionShader = VK_SHADER_UNUSED_KHR;
-
-				shader_group[1].type = vk::RayTracingShaderGroupTypeKHR::eGeneral;
-				shader_group[1].generalShader = shaderIndexMiss;
-				shader_group[1].closestHitShader = VK_SHADER_UNUSED_KHR;
-				shader_group[1].anyHitShader = VK_SHADER_UNUSED_KHR;
-				shader_group[1].intersectionShader = VK_SHADER_UNUSED_KHR;
-
-				shader_group[2].type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup;
-				shader_group[2].generalShader = VK_SHADER_UNUSED_KHR;
-				shader_group[2].closestHitShader = shaderIndexClosestHit;
-				shader_group[2].anyHitShader = VK_SHADER_UNUSED_KHR;
-				shader_group[2].intersectionShader = VK_SHADER_UNUSED_KHR;
-
-				vk::RayTracingPipelineCreateInfoKHR rayTracingPipelineCI;
-				rayTracingPipelineCI.stageCount = static_cast<uint32_t>(shaderStages.size());
-				rayTracingPipelineCI.pStages = shaderStages.data();
-				rayTracingPipelineCI.groupCount = static_cast<uint32_t>(shader_group.size());
-				rayTracingPipelineCI.pGroups = shader_group.data();
-				rayTracingPipelineCI.maxPipelineRayRecursionDepth = 16;
-				rayTracingPipelineCI.layout = m_pipelinelayout_MakeLDC.get();
-				m_pipeline_MakeLDC = ctx.m_device.createRayTracingPipelineKHRUnique(vk::DeferredOperationKHR(), vk::PipelineCache(), rayTracingPipelineCI).value;
-
-				// shader binding table
-				{
-					auto props2 = ctx.m_physical_device.getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceRayTracingPipelinePropertiesKHR>();
-					auto rayTracingProperties = props2.get<vk::PhysicalDeviceRayTracingPipelinePropertiesKHR>();
-
-					const uint32_t groupCount = static_cast<uint32_t>(shader_group.size());
-
-					const uint32_t sbtSize = rayTracingProperties.shaderGroupBaseAlignment * groupCount;
-
-					m_shader_binding_table_memory.setup(ctx.m_physical_device, ctx.m_device, vk::BufferUsageFlagBits::eShaderBindingTableKHR | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eShaderDeviceAddressKHR, vk::MemoryPropertyFlagBits::eDeviceLocal, sbtSize);
-					b_shader_binding_table = m_shader_binding_table_memory.allocateMemory(sbtSize);
-
-					auto shaderHandleStorage = ctx.m_device.getRayTracingShaderGroupHandlesKHR<uint8_t>(m_pipeline_MakeLDC.get(), 0, groupCount, rayTracingProperties.shaderGroupHandleSize * groupCount);
-
-					std::vector<uint8_t> data(sbtSize);
-					for (uint32_t i = 0; i < groupCount; i++)
-					{
-						memcpy(data.data() + i * rayTracingProperties.shaderGroupBaseAlignment, shaderHandleStorage.data() + i * rayTracingProperties.shaderGroupHandleSize, rayTracingProperties.shaderGroupHandleSize);
-					}
-					cmd.updateBuffer<uint8_t>(b_shader_binding_table.getInfo().buffer, b_shader_binding_table.getInfo().offset, data);
-
-					vk::BufferMemoryBarrier barrier[] =
-					{
-						b_shader_binding_table.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
-					};
-					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
-
-
-//					m_shader_binding_table[0].buffer = b_shader_binding_table.getInfo().buffer;
-					auto device_address = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfoKHR().setBuffer(b_shader_binding_table.getInfo().buffer)) + b_shader_binding_table.getInfo().offset;
-					m_shader_binding_table[0].deviceAddress = device_address;
-					m_shader_binding_table[0].stride = rayTracingProperties.shaderGroupBaseAlignment;
-					m_shader_binding_table[0].size = rayTracingProperties.shaderGroupBaseAlignment;
-
-					m_shader_binding_table[1].deviceAddress = device_address + rayTracingProperties.shaderGroupBaseAlignment * 1;
-					m_shader_binding_table[1].stride = rayTracingProperties.shaderGroupBaseAlignment;
-					m_shader_binding_table[1].size = rayTracingProperties.shaderGroupBaseAlignment;
-
-					m_shader_binding_table[2].deviceAddress = device_address + + rayTracingProperties.shaderGroupBaseAlignment * 2;
-					m_shader_binding_table[2].stride = rayTracingProperties.shaderGroupBaseAlignment;
-					m_shader_binding_table[2].size = rayTracingProperties.shaderGroupBaseAlignment;
-
-				}
-
-			}
-
 			// compute pipeline
 			{
 				struct { const char* name; vk::ShaderStageFlagBits flag; } shader_param[] =
@@ -272,7 +174,7 @@ struct DCContext
 					{"DC_MakeDCCell.comp.spv", vk::ShaderStageFlagBits::eCompute},
 					{"DC_MakeDCVertex.comp.spv", vk::ShaderStageFlagBits::eCompute},
 					{"DC_MakeDCVFace.comp.spv", vk::ShaderStageFlagBits::eCompute},
-					{"LDC_BooleanAdd2.comp.spv", vk::ShaderStageFlagBits::eCompute},
+					{"LDC_Construct.comp.spv", vk::ShaderStageFlagBits::eCompute},
 				};
 				std::array<vk::UniqueShaderModule, array_length(shader_param)> shader;
 				std::array<vk::PipelineShaderStageCreateInfo, array_length(shader_param)> shaderStages;
@@ -713,15 +615,6 @@ struct DCModel
 			ctx.m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
 		}
 
-		{
-			cmd.fillBuffer(dc_model->b_ldc_counter.getInfo().buffer, dc_model->b_ldc_counter.getInfo().offset, dc_model->b_ldc_counter.getInfo().range, 0);
-			vk::BufferMemoryBarrier barrier[] =
-			{
-				dc_model->b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eRayTracingShaderKHR, {}, {}, { array_size(barrier), barrier }, {});
-		}
-
 		return dc_model;
 	}
 
@@ -733,28 +626,16 @@ struct DCModel
 
 void DCModel::CreateLDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& dc_model, Model& model)
 {
-
-// 	cmd.bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, dc_ctx.m_pipeline_MakeLDC.get());
-// 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, dc_ctx.m_pipelinelayout_MakeLDC.get(), 0, { model.m_DS_Model.get() }, {});
-// 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, dc_ctx.m_pipelinelayout_MakeLDC.get(), 1, { dc_model.m_DS_DC.get() }, {});
-// 
-// 	cmd.traceRaysKHR(
-// 		dc_ctx.m_shader_binding_table[0],
-// 		dc_ctx.m_shader_binding_table[1],
-// 		dc_ctx.m_shader_binding_table[2],
-// 		dc_ctx.m_shader_binding_table[3],
-// 		model.m_info.m_voxel_reso.x,
-// 		model.m_info.m_voxel_reso.y,
-// 		3);
-
-// 	{
-// 		cmd.fillBuffer(dc_model.b_ldc_counter.getInfo().buffer, dc_model.b_ldc_counter.getInfo().offset, dc_model.b_ldc_counter.getInfo().range, 0);
-// 		vk::BufferMemoryBarrier barrier[] =
-// 		{
-// 			dc_model.b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-// 		};
-// 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
-// 	}
+	{
+		cmd.fillBuffer(dc_model.b_ldc_counter.getInfo().buffer, dc_model.b_ldc_counter.getInfo().offset, dc_model.b_ldc_counter.getInfo().range, 0);
+		cmd.fillBuffer(dc_model.b_ldc_point_link_head.getInfo().buffer, dc_model.b_ldc_point_link_head.getInfo().offset, dc_model.b_ldc_point_link_head.getInfo().range, -1);
+		vk::BufferMemoryBarrier barrier[] =
+		{
+			dc_model.b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			dc_model.b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
+	}
 
 	cmd.bindPipeline(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipeline_LDC_boolean_add.get());
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeLDC.get(), 0, { model.m_DS_Model.get() }, {});
@@ -898,11 +779,11 @@ struct DCFunctionLibrary
 		}
 	}
 
-	void executeBooleanAdd(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& base, DCModel& boolean)
+	void executeBooleanAdd(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& base, Model& boolean)
 	{
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Boolean_Add].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL_boolean.get(), 0, { base.m_DS_DC.get() }, {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL_boolean.get(), 1, { boolean.m_DS_DC.get() }, {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL_boolean.get(), 1, { boolean.m_DS_Model.get() }, {});
 
 		cmd.dispatch(4, 256, 3);
 
@@ -915,23 +796,37 @@ struct DCFunctionLibrary
 		DCModel::CreateDCModel(cmd, dc_ctx, base);
 
 	}
-	void executeBooleanSub(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& base, DCModel& boolean)
+	void executeBooleanSub(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& base, Model& boolean)
 	{
+		{
+
+			vk::BufferMemoryBarrier barrier[] =
+			{
+				base.b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				base.b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				base.b_ldc_point.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
+
+		}
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Boolean_Sub].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL_boolean.get(), 0, { base.m_DS_DC.get() }, {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL_boolean.get(), 1, { boolean.m_DS_DC.get() }, {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL_boolean.get(), 1, { boolean.m_DS_Model.get() }, {});
 
 		cmd.dispatch(4, 256, 3);
 
-		vk::BufferMemoryBarrier barrier[] =
 		{
-			base.b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			base.b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			base.b_ldc_point.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
 
-		DCModel::CreateDCModel(cmd, dc_ctx, base);
+			vk::BufferMemoryBarrier barrier[] =
+			{
+				base.b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				base.b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				base.b_ldc_point.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
+
+			DCModel::CreateDCModel(cmd, dc_ctx, base);
+		}
 	}
 };
 struct Material
@@ -1394,7 +1289,7 @@ int main()
 
 	auto context = app.m_context;
 	auto dc_ctx = std::make_shared<DCContext>(*context);
-//	DCFunctionLibrary dc_fl(*context, *dc_ctx);
+	DCFunctionLibrary dc_fl(*context, *dc_ctx);
 
 	auto model_box = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Box.dae", {50.f});
 	auto model = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Duck.dae", {1.f});
@@ -1408,9 +1303,10 @@ int main()
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 		DCModel::CreateLDCModel(cmd, *dc_ctx, *dc_model, *model);
-		DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
-//		dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *dc_model_box);
-//		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model);
+//		DCModel::CreateLDCModel(cmd, *dc_ctx, *dc_model, *model_box);
+		//		DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
+//		dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model_box);
+		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box);
 //		dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model_box);
 	}
 
