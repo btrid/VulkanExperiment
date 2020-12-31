@@ -36,13 +36,6 @@ LDCPoint getLDCPoint(inout float t, in float tmax, in vec3 origin, in vec3 f)
 
 void main() 
 {
-	
-	int grid = int(gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*Voxel_Reso.x + gl_GlobalInvocationID.z*Voxel_Reso.x*Voxel_Reso.y);
-	int index_a = b_ldc_point_link_head[grid];
-
-	LDCPoint point_a = g_invalid_point;
-	if(index_a>=0) point_a = b_ldc_point[index_a];
-
 	vec3 axis[3] = {vec3(1., 0., 0.), vec3(0., 1., 0.),vec3(0., 0., 1.)};
 	vec3 f = axis[(gl_GlobalInvocationID.z+0)%3];
 	vec3 s = axis[(gl_GlobalInvocationID.z+1)%3]; 
@@ -62,6 +55,16 @@ void main()
 	LDCPoint point_b = getLDCPoint(t, tmax, origin, f);
 	if(point_b.p < 0.){ return; }
 
+	int grid = int(gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*Voxel_Reso.x + gl_GlobalInvocationID.z*Voxel_Reso.x*Voxel_Reso.y);
+	int index_a = b_ldc_point_link_head[grid];
+
+	LDCPoint point_a = g_invalid_point;
+	if(index_a>=0) 
+	{
+		free_ldc_point(index_a);
+		point_a = b_ldc_point[index_a];
+	}
+
 	bool is_incident_a = false;
 	bool is_incident_b = false;
 	int head = -1;
@@ -72,7 +75,7 @@ void main()
 			if(!is_incident_a && !is_incident_b)
 			{
 				// 開始
-				int index = atomicAdd(b_ldc_counter, 1);
+				int index = allocate_ldc_point();
 				LDCPoint point = point_a;
 				point.next = head;
 				b_ldc_point[index] = point;
@@ -81,7 +84,7 @@ void main()
 			else if(is_incident_a && !is_incident_b)
 			{
 				// 終了
-				int index = atomicAdd(b_ldc_counter, 1);
+				int index = allocate_ldc_point();
 				LDCPoint point = point_a;
 				point.next = head;
 				b_ldc_point[index] = point;
@@ -90,15 +93,22 @@ void main()
 
 			is_incident_a = !is_incident_a;
 
-			if(point_a.next>=0) { point_a = b_ldc_point[point_a.next]; }
-			else{ point_a = g_invalid_point;}
+			if(point_a.next>=0)
+			{
+				free_ldc_point(point_a.next);
+				point_a = b_ldc_point[point_a.next]; 
+			}
+			else
+			{
+				 point_a = g_invalid_point;
+			}
 		}
 		else
 		{
 			if(!is_incident_a && !is_incident_b)
 			{
 				// 開始
-				int index = atomicAdd(b_ldc_counter, 1);
+				int index = allocate_ldc_point();
 				LDCPoint point = point_b;
 				point.next = head;
 				b_ldc_point[index] = point;
@@ -107,7 +117,7 @@ void main()
 			else if(!is_incident_a && is_incident_b)
 			{
 				// 終了
-				int index = atomicAdd(b_ldc_counter, 1);
+				int index = allocate_ldc_point();
 				LDCPoint point = point_b;
 				point.next = head;
 				b_ldc_point[index] = point;

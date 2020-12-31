@@ -115,12 +115,14 @@ struct DCContext
 			{
 				auto stage = vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment;
 				vk::DescriptorSetLayoutBinding binding[] = {
-					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eUniformBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(7, vk::DescriptorType::eStorageBuffer, 1, stage),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -558,24 +560,37 @@ struct Model
 
 struct DCModel
 {
+	struct Info
+	{
+		uvec4 m_voxel_reso;
+		vec4 m_voxel_size;
+		int32_t m_ldc_point_num;
+	};
 	// https://www.4gamer.net/games/269/G026934/20170406111/
 	// LDC = Layered Depth Cube
 	// DCV = Dual Contouring Vertex
 	vk::UniqueDescriptorSet m_DS_DC;
-	btr::BufferMemoryEx<int32_t> b_ldc_counter;
+
+	btr::BufferMemoryEx<Info> u_DCModel_info;
+	btr::BufferMemoryEx<ivec2> b_ldc_counter;
 	btr::BufferMemoryEx<int32_t> b_ldc_point_link_head;
 	btr::BufferMemoryEx<LDCPoint> b_ldc_point;
+	btr::BufferMemoryEx<int32_t> b_ldc_point_free;
 	btr::BufferMemoryEx<u8vec4> b_dc_vertex;
 	btr::BufferMemoryEx<vk::DrawIndirectCommand> b_dc_index_counter;
 	btr::BufferMemoryEx<u8vec4> b_dc_index;
 
+	Info m_DCModel_info;
 	static std::shared_ptr<DCModel> Construct(btr::Context& ctx, DCContext& dc_ctx)
 	{
 		auto cmd = ctx.m_cmd_pool->allocCmdTempolary(0);
 
 		auto dc_model = std::make_shared<DCModel>();
 		{
-			vk::DescriptorSetLayout layouts[] = 
+			dc_model->m_DCModel_info.m_ldc_point_num = 256 * 256 * 3 * 4;
+			dc_model->m_DCModel_info.m_voxel_reso = uvec4(256);
+			dc_model->m_DCModel_info.m_voxel_size = vec4(512.f);
+			vk::DescriptorSetLayout layouts[] =
 			{
 				dc_ctx.m_DSL[DCContext::DSL_DC].get(),
 			};
@@ -585,19 +600,26 @@ struct DCModel
 			desc_info.setPSetLayouts(layouts);
 			dc_model->m_DS_DC = std::move(ctx.m_device.allocateDescriptorSetsUnique(desc_info)[0]);
 
-			dc_model->b_ldc_counter = ctx.m_storage_memory.allocateMemory<int>(1);
+			dc_model->u_DCModel_info = ctx.m_uniform_memory.allocateMemory<Info>(1);
+			dc_model->b_ldc_counter = ctx.m_storage_memory.allocateMemory<ivec2>(1);
 			dc_model->b_ldc_point_link_head = ctx.m_storage_memory.allocateMemory<int>(256 * 256 *3);
-			dc_model->b_ldc_point = ctx.m_storage_memory.allocateMemory<LDCPoint>(256 * 256 *3*4);
+			dc_model->b_ldc_point = ctx.m_storage_memory.allocateMemory<LDCPoint>(dc_model->m_DCModel_info.m_ldc_point_num);
+			dc_model->b_ldc_point_free = ctx.m_storage_memory.allocateMemory<int32_t>(dc_model->m_DCModel_info.m_ldc_point_num);
 
 			dc_model->b_dc_vertex = ctx.m_storage_memory.allocateMemory<u8vec4>(256 * 256 * 256);
 			dc_model->b_dc_index_counter = ctx.m_storage_memory.allocateMemory<vk::DrawIndirectCommand>(1);
 			dc_model->b_dc_index = ctx.m_storage_memory.allocateMemory<u8vec4>(256 * 256 * 256);
 
+			vk::DescriptorBufferInfo uniforms[] =
+			{
+				dc_model->u_DCModel_info.getInfo(),
+			};
 			vk::DescriptorBufferInfo storages[] =
 			{
 				dc_model->b_ldc_counter.getInfo(),
 				dc_model->b_ldc_point_link_head.getInfo(),
 				dc_model->b_ldc_point.getInfo(),
+				dc_model->b_ldc_point_free.getInfo(),
 				dc_model->b_dc_vertex.getInfo(),
 				dc_model->b_dc_index_counter.getInfo(),
 				dc_model->b_dc_index.getInfo(),
@@ -606,13 +628,34 @@ struct DCModel
 			vk::WriteDescriptorSet write[] =
 			{
 				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+				.setDescriptorCount(array_length(uniforms))
+				.setPBufferInfo(uniforms)
+				.setDstBinding(0)
+				.setDstSet(dc_model->m_DS_DC.get()),
+				vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 				.setDescriptorCount(array_length(storages))
 				.setPBufferInfo(storages)
-				.setDstBinding(0)
+				.setDstBinding(1)
 				.setDstSet(dc_model->m_DS_DC.get()),
 			};
 			ctx.m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
+		}
+
+		{
+			cmd.fillBuffer(dc_model->b_ldc_counter.getInfo().buffer, dc_model->b_ldc_counter.getInfo().offset, dc_model->b_ldc_counter.getInfo().range, 0);
+			cmd.fillBuffer(dc_model->b_ldc_point_link_head.getInfo().buffer, dc_model->b_ldc_point_link_head.getInfo().offset, dc_model->b_ldc_point_link_head.getInfo().range, -1);
+			cmd.fillBuffer(dc_model->b_ldc_point_free.getInfo().buffer, dc_model->b_ldc_point_free.getInfo().offset, dc_model->b_ldc_point_free.getInfo().range, -1);
+			cmd.updateBuffer<Info>(dc_model->u_DCModel_info.getInfo().buffer, dc_model->u_DCModel_info.getInfo().offset, dc_model->m_DCModel_info);
+			vk::BufferMemoryBarrier barrier[] =
+			{
+				dc_model->u_DCModel_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+				dc_model->b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+				dc_model->b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+				dc_model->b_ldc_point_free.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
 		}
 
 		return dc_model;
@@ -629,10 +672,12 @@ void DCModel::CreateLDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel&
 	{
 		cmd.fillBuffer(dc_model.b_ldc_counter.getInfo().buffer, dc_model.b_ldc_counter.getInfo().offset, dc_model.b_ldc_counter.getInfo().range, 0);
 		cmd.fillBuffer(dc_model.b_ldc_point_link_head.getInfo().buffer, dc_model.b_ldc_point_link_head.getInfo().offset, dc_model.b_ldc_point_link_head.getInfo().range, -1);
+		cmd.fillBuffer(dc_model.b_ldc_point_free.getInfo().buffer, dc_model.b_ldc_point_free.getInfo().offset, dc_model.b_ldc_point_free.getInfo().range, -1);
 		vk::BufferMemoryBarrier barrier[] =
 		{
 			dc_model.b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 			dc_model.b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			dc_model.b_ldc_point_free.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
 	}
@@ -650,7 +695,6 @@ void DCModel::CreateDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& 
 	{
 		vk::BufferMemoryBarrier barrier[] =
 		{
-			dc_model.b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			dc_model.b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			dc_model.b_ldc_point.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 		};

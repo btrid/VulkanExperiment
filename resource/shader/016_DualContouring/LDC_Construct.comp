@@ -51,7 +51,7 @@ void main()
 		point.next = head;
 //		point.flag = payload.HitKind;
 
-		int index = atomicAdd(b_ldc_counter, 1);
+		int index = allocate_ldc_point();
 		b_ldc_point[index] = point;
 
 		head = index;
