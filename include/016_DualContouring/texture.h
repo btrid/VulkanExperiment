@@ -66,9 +66,9 @@ struct TextureResource
 			return {};
 		}
 
-		uint32_t row_bytes = png_get_rowbytes(Png, PngInfo);
+		auto row_bytes = png_get_rowbytes(Png, PngInfo);
 		std::vector<byte> buf(row_bytes * h);
-		for (int i = 0; i < h; i++)
+		for (size_t i = 0; i < h; i++)
 		{
 			png_read_row(Png, buf.data() + i * row_bytes, NULL);
 		}
@@ -114,7 +114,7 @@ struct TextureResource
 			ctx.m_device.bindImageMemory(image.get(), image_memory.get(), 0);
 
 			btr::BufferMemoryDescriptor staging_desc;
-			auto staging_buffer = ctx.m_staging_memory.allocateMemory(buf.size(), true);
+			auto staging_buffer = ctx.m_staging_memory.allocateMemory((uint32_t)buf.size(), true);
 			memcpy(staging_buffer.getMappedPtr<char*>(), buf.data(), buf.size());
 
 			vk::ImageSubresourceRange subresourceRange;

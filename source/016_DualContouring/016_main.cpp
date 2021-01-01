@@ -46,7 +46,6 @@ struct LDCPoint
 {
 	float p;
 	uint normal;
-	int next;
 	uint flag;
 };
 struct DCCell
@@ -97,7 +96,7 @@ struct DCContext
 		// descriptor set layout
 		{
 			{
-				auto stage = vk::ShaderStageFlagBits::eRaygenKHR| vk::ShaderStageFlagBits::eCompute;
+				auto stage = vk::ShaderStageFlagBits::eCompute;
 				vk::DescriptorSetLayoutBinding binding[] =
 				{
 					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eUniformBuffer, 1, stage),
@@ -113,7 +112,7 @@ struct DCContext
 				m_DSL[DSL_Model] = ctx.m_device.createDescriptorSetLayoutUnique(desc_layout_info);
 			}
 			{
-				auto stage = vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment;
+				auto stage = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment;
 				vk::DescriptorSetLayoutBinding binding[] = {
 					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eUniformBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
@@ -123,6 +122,7 @@ struct DCContext
 					vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(7, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(8, vk::DescriptorType::eStorageBuffer, 1, stage),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -249,6 +249,12 @@ struct DCContext
 struct ModelParam
 {
 	float scale;
+};
+
+struct ModelInstance
+{
+	vec4 location;
+	mat4 rotate;
 };
 struct Model
 {
@@ -471,14 +477,13 @@ struct Model
 			AS_buildinfo.type = vk::AccelerationStructureTypeKHR::eTopLevel;
 			AS_buildinfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastBuild;
 			AS_buildinfo.mode = vk::BuildAccelerationStructureModeKHR::eBuild;
-	//			accelerationBuildGeometryInfo.srcAccelerationStructure = VK_NULL_HANDLE;
+			AS_buildinfo.srcAccelerationStructure = vk::AccelerationStructureKHR();
 //			AS_buildinfo.setGeometries({ accelerationStructureGeometry });
 			AS_buildinfo.geometryCount = 1;
 			AS_buildinfo.pGeometries = acceleration_geometries.data();
 
 			std::vector<uint32_t> primitives = { model->m_info.m_primitive_num };
 			auto size_info = ctx.m_device.getAccelerationStructureBuildSizesKHR(vk::AccelerationStructureBuildTypeKHR::eDevice, AS_buildinfo, primitives);
-			auto scratch_buffer = ctx.m_storage_memory.allocateMemory(size_info.buildScratchSize, true);
 
 			auto AS_buffer = ctx.m_storage_memory.allocateMemory(size_info.accelerationStructureSize);
 			vk::AccelerationStructureCreateInfoKHR accelerationCI;
@@ -487,18 +492,18 @@ struct Model
 			accelerationCI.offset = AS_buffer.getInfo().offset;
 			accelerationCI.size = AS_buffer.getInfo().range;
 			model->m_TLAS = ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
-
 			AS_buildinfo.dstAccelerationStructure = model->m_TLAS.get();
+
+			auto scratch_buffer = ctx.m_storage_memory.allocateMemory(size_info.buildScratchSize, true);
 			AS_buildinfo.scratchData.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo(scratch_buffer.getInfo().buffer)) + scratch_buffer.getInfo().offset;
 
-			vk::AccelerationStructureBuildRangeInfoKHR accelerationBuildOffsetInfo;
-			accelerationBuildOffsetInfo.primitiveCount = 1;
-			accelerationBuildOffsetInfo.primitiveOffset = 0;
-			accelerationBuildOffsetInfo.firstVertex = 0;
-			accelerationBuildOffsetInfo.transformOffset = 0;
+			vk::AccelerationStructureBuildRangeInfoKHR range;
+			range.primitiveCount = 1;
+			range.primitiveOffset = 0;
+			range.firstVertex = 0;
+			range.transformOffset = 0;
 
-			std::vector<const vk::AccelerationStructureBuildRangeInfoKHR*> offset = { &accelerationBuildOffsetInfo };
-			cmd.buildAccelerationStructuresKHR({ AS_buildinfo }, offset);
+			cmd.buildAccelerationStructuresKHR({ AS_buildinfo }, { &range });
 		}
 
 		{
@@ -574,6 +579,7 @@ struct DCModel
 	btr::BufferMemoryEx<Info> u_DCModel_info;
 	btr::BufferMemoryEx<ivec2> b_ldc_counter;
 	btr::BufferMemoryEx<int32_t> b_ldc_point_link_head;
+	btr::BufferMemoryEx<int32_t> b_ldc_point_link_next;
 	btr::BufferMemoryEx<LDCPoint> b_ldc_point;
 	btr::BufferMemoryEx<int32_t> b_ldc_point_free;
 	btr::BufferMemoryEx<u8vec4> b_dc_vertex;
@@ -602,7 +608,8 @@ struct DCModel
 
 			dc_model->u_DCModel_info = ctx.m_uniform_memory.allocateMemory<Info>(1);
 			dc_model->b_ldc_counter = ctx.m_storage_memory.allocateMemory<ivec2>(1);
-			dc_model->b_ldc_point_link_head = ctx.m_storage_memory.allocateMemory<int>(256 * 256 *3);
+			dc_model->b_ldc_point_link_head = ctx.m_storage_memory.allocateMemory<int>(256 * 256 * 3);
+			dc_model->b_ldc_point_link_next = ctx.m_storage_memory.allocateMemory<int>(dc_model->m_DCModel_info.m_ldc_point_num);
 			dc_model->b_ldc_point = ctx.m_storage_memory.allocateMemory<LDCPoint>(dc_model->m_DCModel_info.m_ldc_point_num);
 			dc_model->b_ldc_point_free = ctx.m_storage_memory.allocateMemory<int32_t>(dc_model->m_DCModel_info.m_ldc_point_num);
 
@@ -618,6 +625,7 @@ struct DCModel
 			{
 				dc_model->b_ldc_counter.getInfo(),
 				dc_model->b_ldc_point_link_head.getInfo(),
+				dc_model->b_ldc_point_link_next.getInfo(),
 				dc_model->b_ldc_point.getInfo(),
 				dc_model->b_ldc_point_free.getInfo(),
 				dc_model->b_dc_vertex.getInfo(),
@@ -825,19 +833,22 @@ struct DCFunctionLibrary
 
 	void executeBooleanAdd(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& base, Model& boolean)
 	{
+		{
+			vk::BufferMemoryBarrier barrier[] =
+			{
+				base.b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				base.b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				base.b_ldc_point.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
+
+		}
+
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Boolean_Add].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL_boolean.get(), 0, { base.m_DS_DC.get() }, {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL_boolean.get(), 1, { boolean.m_DS_Model.get() }, {});
 
 		cmd.dispatch(4, 256, 3);
-
-		vk::BufferMemoryBarrier barrier[] =
-		{
-			base.b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			base.b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			base.b_ldc_point.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-		};
-		DCModel::CreateDCModel(cmd, dc_ctx, base);
 
 	}
 	void executeBooleanSub(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& base, Model& boolean)
@@ -859,18 +870,6 @@ struct DCFunctionLibrary
 
 		cmd.dispatch(4, 256, 3);
 
-		{
-
-			vk::BufferMemoryBarrier barrier[] =
-			{
-				base.b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-				base.b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-				base.b_ldc_point.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
-
-			DCModel::CreateDCModel(cmd, dc_ctx, base);
-		}
 	}
 };
 struct Material
@@ -1346,12 +1345,17 @@ int main()
 
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-		DCModel::CreateLDCModel(cmd, *dc_ctx, *dc_model, *model);
+//		DCModel::CreateLDCModel(cmd, *dc_ctx, *dc_model, *model);
 //		DCModel::CreateLDCModel(cmd, *dc_ctx, *dc_model, *model_box);
 		//		DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
 //		dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model_box);
-		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box);
-//		dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model_box);
+		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model);
+//		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box);
+//		dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model);
+		dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model_box);
+
+		DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
+
 	}
 
 	app.setup();

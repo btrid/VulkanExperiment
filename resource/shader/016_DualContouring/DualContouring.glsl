@@ -19,11 +19,10 @@ struct LDCPoint
 {
 	float p;
 	uint normal;
-	int next;
 	uint flag;
 };
-const LDCPoint g_invalid_point = {-1., -1, 0, 0};
-
+const LDCPoint g_invalid_point = {999999., -1, 0xffffffff};
+bool is_valid(in LDCPoint p){ return p.flag!=g_invalid_point.flag; }
 #define LDCFlag_Incident 1
 #define LDCFlag_Exit 2
 struct DCCell
@@ -68,12 +67,13 @@ layout(set=USE_Model,binding=5) uniform accelerationStructureEXT topLevelAS;
 #if defined(USE_DC)
 layout(set=USE_DC,binding=0, std430) uniform LDCInfo_ { LDCInfo u_LDCModel_info; };
 layout(set=USE_DC,binding=1, std430) buffer LDCCounter { int b_ldc_active_counter; int b_ldc_free_counter; };
-layout(set=USE_DC,binding=2, std430) buffer LDCPointLinkHead { int b_ldc_point_link_head[]; };
-layout(set=USE_DC,binding=3, scalar) buffer LDCPointBuffer { LDCPoint b_ldc_point[]; };
-layout(set=USE_DC,binding=4, scalar) buffer LDCPointFreeBuffer { int b_ldc_point_free[]; };
-layout(set=USE_DC,binding=5, scalar) buffer DCVertex { u8vec4 b_dc_vertex[]; };
-layout(set=USE_DC,binding=6, scalar) buffer DCIndexCounter { VkDrawIndirectCommand b_dc_index_counter; };
-layout(set=USE_DC,binding=7, scalar) buffer DCIndexBuffer { u8vec4 b_dc_index[]; };
+layout(set=USE_DC,binding=2, scalar) buffer LDCPointLinkHead { int b_ldc_point_link_head[]; };
+layout(set=USE_DC,binding=3, scalar) buffer LDCPointLinkNext { int b_ldc_point_link_next[]; };
+layout(set=USE_DC,binding=4, scalar) buffer LDCPointBuffer { LDCPoint b_ldc_point[]; };
+layout(set=USE_DC,binding=5, scalar) buffer LDCPointFreeBuffer { int b_ldc_point_free[]; };
+layout(set=USE_DC,binding=6, scalar) buffer DCVertex { u8vec4 b_dc_vertex[]; };
+layout(set=USE_DC,binding=7, scalar) buffer DCIndexCounter { VkDrawIndirectCommand b_dc_index_counter; };
+layout(set=USE_DC,binding=8, scalar) buffer DCIndexBuffer { u8vec4 b_dc_index[]; };
 
 int allocate_ldc_point()
 {

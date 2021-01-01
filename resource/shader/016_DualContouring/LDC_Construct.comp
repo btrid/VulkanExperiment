@@ -48,14 +48,18 @@ void main()
 		LDCPoint point;
 		point.p = t;
 		point.normal = pack_normal_octahedron(normal);
-		point.next = head;
-//		point.flag = payload.HitKind;
 
 		int index = allocate_ldc_point();
+		if(head==-1)
+		{
+			b_ldc_point_link_head[grid] = index;
+		}
+		else
+		{
+			b_ldc_point_link_next[head] = index;
+		}
 		b_ldc_point[index] = point;
-
 		head = index;
 	}
-	b_ldc_point_link_head[grid] = head;
-
+	if(head!=-1) { b_ldc_point_link_next[head] = -1; }
 }

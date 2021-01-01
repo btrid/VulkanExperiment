@@ -19,10 +19,9 @@ void main()
 	vec3 u = axis[(gl_GlobalInvocationID.z+2)%3]; 
 	
 	int index = int(gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*Voxel_Reso.x + gl_GlobalInvocationID.z*Voxel_Reso.x*Voxel_Reso.y);
-	for(index = b_ldc_point_link_head[index]; index>=0;)
+	for(index = b_ldc_point_link_head[index]; index>=0; index = b_ldc_point_link_next[index])
 	{
 		LDCPoint point = b_ldc_point[index];
-		index = point.next;
 
 		float voxel_p = (point.p/voxel_size)[gl_GlobalInvocationID.z];
 
