@@ -45,11 +45,6 @@ LDCPoint getLDCPoint(inout float t, in float tmax, in vec3 origin, in vec3 f)
 
 void main() 
 {
-//	vec3 axis[3] = {vec3(1., 0., 0.), vec3(0., 1., 0.),vec3(0., 0., 1.)};
-//	vec3 f = axis[(gl_GlobalInvocationID.z+0)%3];
-//	vec3 s = axis[(gl_GlobalInvocationID.z+1)%3]; 
-//	vec3 u = axis[(gl_GlobalInvocationID.z+2)%3];
-
 	vec3 f = constants.axis[(gl_GlobalInvocationID.z+0)%3].xyz;
 	vec3 s = constants.axis[(gl_GlobalInvocationID.z+1)%3].xyz; 
 	vec3 u = constants.axis[(gl_GlobalInvocationID.z+2)%3].xyz;
@@ -57,12 +52,10 @@ void main()
 	g_rotate = transpose(mat3(constants.axis[0].xyz, constants.axis[1].xyz, constants.axis[2].xyz));
 
 	vec3 extent = Voxel_Block_Size;
-	vec3 min = u_info.m_aabb_min.xyz;
-	vec3 min2 = constants.min.xyz;
+	vec3 offset = constants.min.xyz;
 
 	vec3 rate = vec3(gl_GlobalInvocationID) / vec3(gl_NumWorkGroups*gl_WorkGroupSize);
-	vec3 origin = -constants.pos.xyz + min2 + (s*rate.x*extent[(gl_GlobalInvocationID.z+1)%3]+u*rate.y*extent[(gl_GlobalInvocationID.z+2)%3]);
-//	vec3 origin = min + (s*rate.x*extent[(gl_GlobalInvocationID.z+1)%3]+u*rate.y*extent[(gl_GlobalInvocationID.z+2)%3]);
+	vec3 origin = vec3(-30., -50., 40.) + (s*rate.x*extent[(gl_GlobalInvocationID.z+1)%3]+u*rate.y*extent[(gl_GlobalInvocationID.z+2)%3]);
 
 	float t = 0.;
 	float tmax = extent[gl_GlobalInvocationID.z];

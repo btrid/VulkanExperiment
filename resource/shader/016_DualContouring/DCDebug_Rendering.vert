@@ -97,8 +97,8 @@ vec3 _box[] =
 	s,
 };
 
-//	vec3 p = box[box_face[gl_VertexIndex]] + min;
-	vec3 p = _box[box_face[gl_VertexIndex]] + min2;
-	gl_Position = u_camera[0].u_projection * u_camera[0].u_view * vec4(p*100., 1.0);
+	vec3 p = box[box_face[gl_VertexIndex]] + min;
+//	vec3 p = _box[box_face[gl_VertexIndex]] + min2;
+	gl_Position = u_camera[0].u_projection * u_camera[0].u_view * vec4(p*Voxel_Block_Size, 1.0);
 
 }

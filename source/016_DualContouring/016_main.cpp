@@ -365,8 +365,8 @@ struct Model
 
 		{
 			info.m_primitive_num = numIndex / 3;
-			info.m_aabb_min -= 0.01f;
-			info.m_aabb_max += 0.01f;
+//  			info.m_aabb_min -= 0.01f;
+//  			info.m_aabb_max += 0.01f;
 			model->m_info = info;
 			model->u_info = ctx.m_uniform_memory.allocateMemory<Info>(1);
 
@@ -439,9 +439,9 @@ struct Model
 			{
 				std::array<std::array<float, 4>, 3>
 				{
-					std::array<float, 4>{1.f, 0.f, 0.f, 0.0f},
-					std::array<float, 4>{0.f, 1.f, 0.f, 0.0f},
-					std::array<float, 4>{0.f, 0.f, 1.f, 0.0f},
+					std::array<float, 4>{1.f, 0.f, 0.f, -(model->m_info.m_aabb_min.x-0.01f)},
+					std::array<float, 4>{0.f, 1.f, 0.f, -(model->m_info.m_aabb_min.y-0.01f)},
+					std::array<float, 4>{0.f, 0.f, 1.f, -(model->m_info.m_aabb_min.z-0.01f)},
 				}
 			};
 
@@ -933,23 +933,26 @@ struct DCFunctionLibrary
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL_boolean.get(), 0, { base.m_DS_DC.get() }, {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL_boolean.get(), 1, { boolean.m_DS_Model.get() }, {});
 		{
-			vec3 axis[3] = { vec3(1., 0., 0.), vec3(0., 1., 0.),vec3(0., 0., 1.) };
+			vec3 axis[] = { vec3(1., 0., 0.), vec3(0., 1., 0.),vec3(0., 0., 1.) };
 			vec3 dir = normalize(instance.dir.xyz());
 			auto rot = quat(axis[2], dir);
+
 			vec3 f = (rot * axis[2]);
 			vec3 s = (rot * axis[0]);
 			vec3 u = (rot * axis[1]);
 
 			vec3 extent = boolean.m_info.m_aabb_max - boolean.m_info.m_aabb_min;
 			vec3 min = boolean.m_info.m_aabb_min;
-			vec3 center = (extent - min) * 0.5;
-			vec3 min2 = rot * (min - center) + center;
+			vec3 max = boolean.m_info.m_aabb_max;
+			vec3 center = (extent - boolean.m_info.m_aabb_min.xyz) * 0.5;
+			vec3 min2 = rot * (min-center) + center;
+			vec3 max2 = rot * (max-center) + center;
 
 			ModelDrawParam param;
 			param.axis[0] = vec4(s, 0.f);
 			param.axis[1] = vec4(u, 0.f);
 			param.axis[2] = vec4(f, 0.f);
-			param.min = vec4(min2, 0.f);
+			param.min = vec4(min, 0.f);
 			param.pos = instance.pos;
 			cmd.pushConstants<ModelDrawParam>(m_PL_boolean.get(), vk::ShaderStageFlagBits::eCompute, 0, param);
 
@@ -1160,7 +1163,7 @@ struct Renderer
 
 
 				vk::PipelineRasterizationStateCreateInfo rasterization_info;
-				rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
+				rasterization_info.setPolygonMode(vk::PolygonMode::eLine);
 				rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
 				rasterization_info.setCullMode(vk::CullModeFlagBits::eNone);
 				rasterization_info.setLineWidth(1.f);
@@ -1432,7 +1435,7 @@ int main()
 		vec3 extent = vec3(512.f);
 		vec3 min = vec3(0.f);
 		vec3 center = (extent-min) * 0.5;
-		vec3 min2 = rot * (min - center) + center;
+		vec3 min2 = rot * center + center;
 
 		vec3 minmax[] = { min, extent };
 		vec3 v[8];
@@ -1485,7 +1488,7 @@ int main()
 	auto dc_ctx = std::make_shared<DCContext>(*context);
 	DCFunctionLibrary dc_fl(*context, *dc_ctx);
 
-	auto model_box = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Box.dae", {50.f});
+	auto model_box = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Box.dae", {100.f});
 	auto model = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Duck.dae", {1.f});
 
 	auto dc_model = DCModel::Construct(*context, *dc_ctx);
@@ -1501,8 +1504,11 @@ int main()
 		//		DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
 //		dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model_box);
 //		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, {vec4(100.f), normalize(vec4(1.f))});
-		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, { vec4(50.f), vec4(1.f) });
-//		dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model);
+
+//		Model::UpdateTLAS(cmd, *context, *dc_ctx, *model_box, transform_matrix);
+		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, { vec4(10.f), vec4(0.f, 0.f, 1.f, 0.f) });
+//		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, { vec4(10.f), vec4(0.f, 0.f, 1.f, 0.f) });
+		//		dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model);
 //		dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model_box);
 
 		DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
@@ -1534,21 +1540,11 @@ int main()
 //				cCamera::sCamera::Order().getCameraList()[0]->control(app.m_window->getInput(), 0.016f);
 
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
-//				renderer.ExecuteTestRender(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
+				renderer.ExecuteTestRender(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
 				renderer.ExecuteRenderLDCModel(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
 //				renderer.ExecuteRenderLDCModel(cmd, *dc_ctx, *dc_model_box, *app.m_window->getFrontBuffer());
 //				renderer.ExecuteRenderModel(cmd, *ldc_ctx, *ldc_model, *model, *app.m_window->getFrontBuffer());
 
-// 				vk::TransformMatrixKHR transform_matrix =
-// 				{
-// 					std::array<std::array<float, 4>, 3>
-// 					{
-// 						std::array<float, 4>{1.f, 0.f, 0.f, 0.0f},
-// 						std::array<float, 4>{0.f, 1.f, 0.f, 0.0f},
-// 						std::array<float, 4>{0.f, 0.f, 1.f, 0.0f},
-// 					}
-// 				};
-// 				Model::UpdateTLAS(cmd, *context, *dc_ctx, *model_box, transform_matrix);
 				cmd.end();
 				cmds[cmd_render] = cmd;
 
