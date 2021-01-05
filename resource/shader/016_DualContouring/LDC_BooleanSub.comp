@@ -6,6 +6,12 @@
 #define USE_Model 1
 #include "DualContouring.glsl"
 
+
+layout(push_constant) uniform pushConstants 
+{
+    vec4 pos;
+	vec4 dir;
+} constants;
 layout (local_size_x = 64) in;
 
 LDCPoint getLDCPoint(inout float t, in float tmax, in vec3 origin, in vec3 f)
@@ -73,14 +79,12 @@ void main()
 
 	for(;is_valid(point_a)||is_valid(point_b);)
 	{
-		bool is_add = false;
-		LDCPoint point;
+		LDCPoint point = g_invalid_point;
 
 		if(point_a.p<point_b.p)
 		{
 			if(!is_incident_b)
 			{
-				is_add = true;
 				point = point_a;
 			}
 			is_incident_a = !is_incident_a;
@@ -100,7 +104,6 @@ void main()
 		{
 			if(is_incident_a)
 			{
-				is_add = true;
 				point = point_b;
 			}
 			is_incident_b = !is_incident_b;
@@ -108,7 +111,7 @@ void main()
 			point_b = getLDCPoint(t, tmax, origin, f);
 		}
 
-		if(is_add)
+		if(is_valid(point))
 		{
 			int index = allocate_ldc_point();
 			if(head==-1) { b_ldc_point_link_head[grid] = index; }

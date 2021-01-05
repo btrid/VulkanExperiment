@@ -6,7 +6,16 @@
 #define USE_Model 1
 #include "DualContouring.glsl"
 
+
+layout(push_constant) uniform pushConstants 
+{
+	vec4 axis[3];
+	vec4 min;
+	vec4 pos;
+} constants;
+
 layout (local_size_x = 64) in;
+mat3 g_rotate;
 
 LDCPoint getLDCPoint(inout float t, in float tmax, in vec3 origin, in vec3 f)
 {
@@ -28,7 +37,7 @@ LDCPoint getLDCPoint(inout float t, in float tmax, in vec3 origin, in vec3 f)
 
 	LDCPoint point;
 	point.p = t;
-	point.normal = pack_normal_octahedron(normal);
+	point.normal = pack_normal_octahedron(g_rotate * normal);
 	point.flag = 0;
 	return point;
 
@@ -36,16 +45,24 @@ LDCPoint getLDCPoint(inout float t, in float tmax, in vec3 origin, in vec3 f)
 
 void main() 
 {
-	vec3 axis[3] = {vec3(1., 0., 0.), vec3(0., 1., 0.),vec3(0., 0., 1.)};
-	vec3 f = axis[(gl_GlobalInvocationID.z+0)%3];
-	vec3 s = axis[(gl_GlobalInvocationID.z+1)%3]; 
-	vec3 u = axis[(gl_GlobalInvocationID.z+2)%3];
+//	vec3 axis[3] = {vec3(1., 0., 0.), vec3(0., 1., 0.),vec3(0., 0., 1.)};
+//	vec3 f = axis[(gl_GlobalInvocationID.z+0)%3];
+//	vec3 s = axis[(gl_GlobalInvocationID.z+1)%3]; 
+//	vec3 u = axis[(gl_GlobalInvocationID.z+2)%3];
+
+	vec3 f = constants.axis[(gl_GlobalInvocationID.z+0)%3].xyz;
+	vec3 s = constants.axis[(gl_GlobalInvocationID.z+1)%3].xyz; 
+	vec3 u = constants.axis[(gl_GlobalInvocationID.z+2)%3].xyz;
+
+	g_rotate = transpose(mat3(constants.axis[0].xyz, constants.axis[1].xyz, constants.axis[2].xyz));
 
 	vec3 extent = Voxel_Block_Size;
 	vec3 min = u_info.m_aabb_min.xyz;
+	vec3 min2 = constants.min.xyz;
 
 	vec3 rate = vec3(gl_GlobalInvocationID) / vec3(gl_NumWorkGroups*gl_WorkGroupSize);
-	vec3 origin = min + (s*rate.x*extent[(gl_GlobalInvocationID.z+1)%3]+u*rate.y*extent[(gl_GlobalInvocationID.z+2)%3]);
+	vec3 origin = -constants.pos.xyz + min2 + (s*rate.x*extent[(gl_GlobalInvocationID.z+1)%3]+u*rate.y*extent[(gl_GlobalInvocationID.z+2)%3]);
+//	vec3 origin = min + (s*rate.x*extent[(gl_GlobalInvocationID.z+1)%3]+u*rate.y*extent[(gl_GlobalInvocationID.z+2)%3]);
 
 	float t = 0.;
 	float tmax = extent[gl_GlobalInvocationID.z];
@@ -71,20 +88,17 @@ void main()
 
 	for(;is_valid(point_a)||is_valid(point_b);)
 	{
-		bool is_add = false;
-		LDCPoint point;
+		LDCPoint point = g_invalid_point;
 		if(point_a.p<point_b.p)
 		{
 			if(!is_incident_a && !is_incident_b)
 			{
 				// 開始
-				is_add = true;
 				point = point_a;
 			}
 			else if(is_incident_a && !is_incident_b)
 			{
 				// 終了
-				is_add = true;
 				point = point_a;
 			}
 			is_incident_a = !is_incident_a;
@@ -106,13 +120,11 @@ void main()
 			if(!is_incident_a && !is_incident_b)
 			{
 				// 開始
-				is_add = true;
 				point = point_b;
 			}
 			else if(!is_incident_a && is_incident_b)
 			{
 				// 終了
-				is_add = true;
 				point = point_b;
 			}
 			is_incident_b = !is_incident_b;
@@ -120,7 +132,7 @@ void main()
 			point_b = getLDCPoint(t, tmax, origin, f);
 		}
 
-		if(is_add)
+		if(is_valid(point))
 		{
 			int index = allocate_ldc_point();
 			if(head==-1) { b_ldc_point_link_head[grid] = index; }

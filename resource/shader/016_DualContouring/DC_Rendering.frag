@@ -10,8 +10,9 @@
 
 layout(location=1) in Data{
 	vec3 Normal;
-	flat uint VertexIndex;
 	vec3 Position;
+	flat uint VertexIndex;
+	flat uint GeometryIndex;
 }fs_in;
 
 layout(location = 0) out vec4 FragColor;
@@ -29,8 +30,11 @@ void main()
 	albedo += normal.y * texture(s_albedo[0], fs_in.Position.zx*0.1).xyz;
 	albedo += normal.z * texture(s_albedo[0], fs_in.Position.xy*0.1).xyz;
 
-	FragColor = vec4(albedo, 1.);
+	vec3 n = vec3(0.);
+	n[fs_in.GeometryIndex] = 1.;
+	albedo *= n;
 
+	FragColor = vec4(albedo, 1.);
 
 	vec3 g_color[3] = 
 	{

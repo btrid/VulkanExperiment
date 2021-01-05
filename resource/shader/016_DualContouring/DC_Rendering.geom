@@ -32,8 +32,9 @@ layout(location=0)out gl_PerVertex
 layout(location=1)out OutData
 {
 	vec3 Normal;
-	flat uint VertexIndex;
 	vec3 Position;
+	flat uint VertexIndex;
+	flat uint GeometryIndex;
 }gs_out;
 
 
@@ -74,23 +75,27 @@ void main()
 
 		gl_Position = pv * vec4(v0, 1.0);
 		gs_out.Normal = normal;
-		gs_out.VertexIndex = gs_in[0].VertexIndex;
 		gs_out.Position = v0;
+		gs_out.VertexIndex = gs_in[0].VertexIndex;
+		gs_out.GeometryIndex = i;
 		EmitVertex();
 		gl_Position = pv * vec4(v1, 1.0);
 		gs_out.Normal = normal;
-		gs_out.VertexIndex = gs_in[0].VertexIndex;
 		gs_out.Position = v1;
+		gs_out.VertexIndex = gs_in[0].VertexIndex;
+		gs_out.GeometryIndex = i;
 		EmitVertex();
 		gl_Position = pv * vec4(v2, 1.0);
 		gs_out.Normal = normal;
-		gs_out.VertexIndex = gs_in[0].VertexIndex;
 		gs_out.Position = v2;
+		gs_out.VertexIndex = gs_in[0].VertexIndex;
+		gs_out.GeometryIndex = i;
 		EmitVertex();
 		gl_Position = pv * vec4(v3, 1.0);
 		gs_out.Normal = normal;
-		gs_out.VertexIndex = gs_in[0].VertexIndex;
 		gs_out.Position = v3;
+		gs_out.VertexIndex = gs_in[0].VertexIndex;
+		gs_out.GeometryIndex = i;
 		EmitVertex();
 		EndPrimitive();
 

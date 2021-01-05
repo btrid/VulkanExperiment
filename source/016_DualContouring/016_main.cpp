@@ -89,7 +89,7 @@ struct DCContext
 // 	};
 	DCContext(btr::Context& ctx)
 	{
-		m_ASinstance_memory.setup(ctx.m_physical_device, ctx.m_device, vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, sizeof(vk::AccelerationStructureInstanceKHR) * 100);
+		m_ASinstance_memory.setup(ctx.m_physical_device, ctx.m_device, vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, sizeof(vk::AccelerationStructureInstanceKHR) * 1000);
 
 		auto cmd = ctx.m_cmd_pool->allocCmdTempolary(0);
 
@@ -253,8 +253,8 @@ struct ModelParam
 
 struct ModelInstance
 {
-	vec4 location;
-	mat4 rotate;
+	vec4 pos;
+	vec4 dir;
 };
 struct Model
 {
@@ -324,6 +324,7 @@ struct Model
 
 			for (uint32_t v = 0; v < mesh->mNumVertices; v++)
 			{
+				mesh->mVertices[v] += aiVector3D(0.5f);
 				mesh->mVertices[v] *= param.scale;
 				info.m_aabb_min.x = std::min(info.m_aabb_min.x, mesh->mVertices[v].x);
 				info.m_aabb_min.y = std::min(info.m_aabb_min.y, mesh->mVertices[v].y);
@@ -438,9 +439,9 @@ struct Model
 			{
 				std::array<std::array<float, 4>, 3>
 				{
-					std::array<float, 4>{1.0f, 0.0f, 0.0f, 0.0f},
-					std::array<float, 4>{0.0f, 1.0f, 0.0f, 0.0f},
-					std::array<float, 4>{0.0f, 0.0f, 1.0f, 0.0f},
+					std::array<float, 4>{1.f, 0.f, 0.f, 0.0f},
+					std::array<float, 4>{0.f, 1.f, 0.f, 0.0f},
+					std::array<float, 4>{0.f, 0.f, 1.f, 0.0f},
 				}
 			};
 
@@ -452,7 +453,7 @@ struct Model
 			instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
 			instance.accelerationStructureReference = ctx.m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(model->m_BLAS.get()));
 
-			auto instance_buffer = dc_ctx.m_ASinstance_memory.allocateMemory(sizeof(instance));
+			auto instance_buffer = dc_ctx.m_ASinstance_memory.allocateMemory<vk::AccelerationStructureInstanceKHR>(1, true);
 
 			cmd.updateBuffer<vk::AccelerationStructureInstanceKHR>(instance_buffer.getInfo().buffer, instance_buffer.getInfo().offset, { instance });
 			vk::BufferMemoryBarrier barrier[] = {
@@ -475,7 +476,7 @@ struct Model
 
 			vk::AccelerationStructureBuildGeometryInfoKHR AS_buildinfo;
 			AS_buildinfo.type = vk::AccelerationStructureTypeKHR::eTopLevel;
-			AS_buildinfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastBuild;
+			AS_buildinfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastBuild | vk::BuildAccelerationStructureFlagBitsKHR::eAllowUpdate;
 			AS_buildinfo.mode = vk::BuildAccelerationStructureModeKHR::eBuild;
 			AS_buildinfo.srcAccelerationStructure = vk::AccelerationStructureKHR();
 //			AS_buildinfo.setGeometries({ accelerationStructureGeometry });
@@ -560,6 +561,77 @@ struct Model
 		return model;
 	}
 
+	static void UpdateTLAS(vk::CommandBuffer& cmd, btr::Context& ctx, DCContext& dc_ctx, Model& model, const vk::TransformMatrixKHR& transform_matrix)
+	{
+
+// 		vk::TransformMatrixKHR transform_matrix =
+// 		{
+// 			std::array<std::array<float, 4>, 3>
+// 			{
+// 				std::array<float, 4>{1.f, 0.f, 0.f, 0.0f},
+// 				std::array<float, 4>{0.f, 1.f, 0.f, 0.0f},
+// 				std::array<float, 4>{0.f, 0.f, 1.f, 0.0f},
+// 			}
+// 		};
+
+		vk::AccelerationStructureInstanceKHR instance;
+		instance.transform = transform_matrix;
+		instance.instanceCustomIndex = 0;
+		instance.mask = 0xFF;
+		instance.instanceShaderBindingTableRecordOffset = 0;
+		instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+		instance.accelerationStructureReference = ctx.m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(model.m_BLAS.get()));
+
+		auto instance_buffer = dc_ctx.m_ASinstance_memory.allocateMemory<vk::AccelerationStructureInstanceKHR>(1, true);
+
+		cmd.updateBuffer<vk::AccelerationStructureInstanceKHR>(instance_buffer.getInfo().buffer, instance_buffer.getInfo().offset, { instance });
+		vk::BufferMemoryBarrier barrier[] = {
+			instance_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
+
+		auto device_address = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo().setBuffer(instance_buffer.getInfo().buffer)) + instance_buffer.getInfo().offset;
+
+		vk::AccelerationStructureGeometryKHR accelerationStructureGeometry;
+		accelerationStructureGeometry.flags = vk::GeometryFlagBitsKHR::eNoDuplicateAnyHitInvocation;
+		accelerationStructureGeometry.geometryType = vk::GeometryTypeKHR::eInstances;
+		vk::AccelerationStructureGeometryInstancesDataKHR instance_data;
+		instance_data.data.deviceAddress = device_address;
+		accelerationStructureGeometry.geometry.instances = instance_data;
+
+		std::vector<vk::AccelerationStructureGeometryKHR> acceleration_geometries = { accelerationStructureGeometry };
+
+		vk::AccelerationStructureBuildGeometryInfoKHR AS_buildinfo;
+		AS_buildinfo.type = vk::AccelerationStructureTypeKHR::eTopLevel;
+		AS_buildinfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastBuild | vk::BuildAccelerationStructureFlagBitsKHR::eAllowUpdate;
+		AS_buildinfo.mode = vk::BuildAccelerationStructureModeKHR::eUpdate;
+		AS_buildinfo.srcAccelerationStructure = model.m_TLAS.get();
+		AS_buildinfo.dstAccelerationStructure = model.m_TLAS.get();
+		AS_buildinfo.geometryCount = 1;
+		AS_buildinfo.pGeometries = acceleration_geometries.data();
+
+		std::vector<uint32_t> primitives = { model.m_info.m_primitive_num };
+		auto size_info = ctx.m_device.getAccelerationStructureBuildSizesKHR(vk::AccelerationStructureBuildTypeKHR::eDevice, AS_buildinfo, primitives);
+
+		auto AS_buffer = ctx.m_storage_memory.allocateMemory(size_info.accelerationStructureSize);
+		vk::AccelerationStructureCreateInfoKHR accelerationCI;
+		accelerationCI.type = vk::AccelerationStructureTypeKHR::eTopLevel;
+		accelerationCI.buffer = AS_buffer.getInfo().buffer;
+		accelerationCI.offset = AS_buffer.getInfo().offset;
+		accelerationCI.size = AS_buffer.getInfo().range;
+
+		auto scratch_buffer = ctx.m_storage_memory.allocateMemory(size_info.buildScratchSize, true);
+		AS_buildinfo.scratchData.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo(scratch_buffer.getInfo().buffer)) + scratch_buffer.getInfo().offset;
+
+		vk::AccelerationStructureBuildRangeInfoKHR range;
+		range.primitiveCount = 1;
+		range.primitiveOffset = 0;
+		range.firstVertex = 0;
+		range.transformOffset = 0;
+
+		cmd.buildAccelerationStructuresKHR({ AS_buildinfo }, { &range });
+
+	}
 };
 
 
@@ -776,6 +848,13 @@ void DCModel::CreateDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& 
 	}
 }
 
+struct ModelDrawParam
+{
+	vec4 axis[3];
+	vec4 min;
+	vec4 pos;
+};
+
 struct DCFunctionLibrary
 {
 	enum
@@ -796,9 +875,15 @@ struct DCFunctionLibrary
 				dc_ctx.m_DSL[DCContext::DSL_DC].get(),
 				dc_ctx.m_DSL[DCContext::DSL_Model].get(),
 			};
+
+			vk::PushConstantRange constants[] = {
+				vk::PushConstantRange().setStageFlags(vk::ShaderStageFlagBits::eCompute).setOffset(0).setSize(sizeof(ModelDrawParam)),
+			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
+			pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
+			pipeline_layout_info.setPPushConstantRanges(constants);
 			m_PL_boolean = ctx.m_device.createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
@@ -831,7 +916,7 @@ struct DCFunctionLibrary
 		}
 	}
 
-	void executeBooleanAdd(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& base, Model& boolean)
+	void executeBooleanAdd(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& base, Model& boolean, const ModelInstance& instance)
 	{
 		{
 			vk::BufferMemoryBarrier barrier[] =
@@ -847,11 +932,33 @@ struct DCFunctionLibrary
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Boolean_Add].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL_boolean.get(), 0, { base.m_DS_DC.get() }, {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL_boolean.get(), 1, { boolean.m_DS_Model.get() }, {});
+		{
+			vec3 axis[3] = { vec3(1., 0., 0.), vec3(0., 1., 0.),vec3(0., 0., 1.) };
+			vec3 dir = normalize(instance.dir.xyz());
+			auto rot = quat(axis[2], dir);
+			vec3 f = (rot * axis[2]);
+			vec3 s = (rot * axis[0]);
+			vec3 u = (rot * axis[1]);
+
+			vec3 extent = boolean.m_info.m_aabb_max - boolean.m_info.m_aabb_min;
+			vec3 min = boolean.m_info.m_aabb_min;
+			vec3 center = (extent - min) * 0.5;
+			vec3 min2 = rot * (min - center) + center;
+
+			ModelDrawParam param;
+			param.axis[0] = vec4(s, 0.f);
+			param.axis[1] = vec4(u, 0.f);
+			param.axis[2] = vec4(f, 0.f);
+			param.min = vec4(min2, 0.f);
+			param.pos = instance.pos;
+			cmd.pushConstants<ModelDrawParam>(m_PL_boolean.get(), vk::ShaderStageFlagBits::eCompute, 0, param);
+
+		}
 
 		cmd.dispatch(4, 256, 3);
 
 	}
-	void executeBooleanSub(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& base, Model& boolean)
+	void executeBooleanSub(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& base, Model& boolean, const ModelInstance& instance)
 	{
 		{
 
@@ -867,6 +974,7 @@ struct DCFunctionLibrary
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Boolean_Sub].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL_boolean.get(), 0, { base.m_DS_DC.get() }, {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL_boolean.get(), 1, { boolean.m_DS_Model.get() }, {});
+		cmd.pushConstants<ModelInstance>(m_PL_boolean.get(), vk::ShaderStageFlagBits::eCompute, 0, instance);
 
 		cmd.dispatch(4, 256, 3);
 
@@ -1023,7 +1131,6 @@ struct Renderer
 			}
 
 			// graphics pipeline
-			if (0)
 			{
 				struct { const char* name; vk::ShaderStageFlagBits flag; } shader_param[] =
 				{
@@ -1040,7 +1147,7 @@ struct Renderer
 				// assembly
 				vk::PipelineInputAssemblyStateCreateInfo assembly_info;
 				assembly_info.setPrimitiveRestartEnable(VK_FALSE);
-				assembly_info.setTopology(vk::PrimitiveTopology::ePointList);
+				assembly_info.setTopology(vk::PrimitiveTopology::eTriangleList);
 
 				// viewport
 				vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)rt.m_resolution.width, (float)rt.m_resolution.height, 0.f, 1.f);
@@ -1237,7 +1344,7 @@ struct Renderer
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline_TestRender.get());
-		cmd.draw(64 * 64 * 64, 1, 0, 0);
+		cmd.draw(36, 1, 0, 0);
 
 		cmd.endRenderPass();
 
@@ -1314,6 +1421,50 @@ struct Renderer
 #include <016_DualContouring/test.h>
 int main()
 {
+	{
+ 		vec3 _axis[3] = { vec3(1., 0., 0.), vec3(0., 1., 0.),vec3(0., 0., 1.) };
+		vec3 dir = normalize(vec3(1.f));
+		auto rot = quat(_axis[2], dir);
+		vec3 f = (rot * _axis[2]);
+		vec3 s = (rot * _axis[0]);
+		vec3 u = (rot * _axis[1]);
+
+		vec3 extent = vec3(512.f);
+		vec3 min = vec3(0.f);
+		vec3 center = (extent-min) * 0.5;
+		vec3 min2 = rot * (min - center) + center;
+
+		vec3 minmax[] = { min, extent };
+		vec3 v[8];
+		for (int z = 0; z < 2; z++)
+		for (int y = 0; y < 2; y++)
+		for (int x = 0; x < 2; x++)
+		{
+			auto& _v = v[x + y * 2 + z * 4];
+			_v = vec3(minmax[x].x, minmax[y].y, minmax[z].z);
+			_v = rot * (_v - center);
+			_v = _v + center;
+		}
+
+
+		vec3 axis[3] = { s, u, f };
+		for (int z = 0; z < 3; z++)
+		for (int y = 0; y < 2; y++)
+		for (int x = 0; x < 2; x++)
+		{
+			uvec3 gl_GlobalInvocationID(x, y, z);
+
+			auto _f = axis[(gl_GlobalInvocationID.z + 0) % 3];
+			auto _s = axis[(gl_GlobalInvocationID.z + 1) % 3];
+			auto _u = axis[(gl_GlobalInvocationID.z + 2) % 3];
+
+
+			vec3 rate = vec3(gl_GlobalInvocationID) / vec3(1, 1, 3);
+			vec3 origin = min2 + (_s * rate.x * extent[(gl_GlobalInvocationID.z + 1) % 3] + _u * rate.y * extent[(gl_GlobalInvocationID.z + 2) % 3]);
+			vec3 target = origin + _f * extent[(gl_GlobalInvocationID.z + 0) % 3];
+			int a = 0;
+		}
+	}
 //	test();
 
 	btr::setResourceAppPath("../../resource/");
@@ -1349,10 +1500,10 @@ int main()
 //		DCModel::CreateLDCModel(cmd, *dc_ctx, *dc_model, *model_box);
 		//		DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
 //		dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model_box);
-		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model);
-//		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box);
+//		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, {vec4(100.f), normalize(vec4(1.f))});
+		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, { vec4(50.f), vec4(1.f) });
 //		dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model);
-		dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model_box);
+//		dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model_box);
 
 		DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
 
@@ -1383,11 +1534,21 @@ int main()
 //				cCamera::sCamera::Order().getCameraList()[0]->control(app.m_window->getInput(), 0.016f);
 
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
-//				renderer.ExecuteTestRender(cmd, *ldc_ctx, *ldc_model, *app.m_window->getFrontBuffer());
+//				renderer.ExecuteTestRender(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
 				renderer.ExecuteRenderLDCModel(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
 //				renderer.ExecuteRenderLDCModel(cmd, *dc_ctx, *dc_model_box, *app.m_window->getFrontBuffer());
-				//				renderer.ExecuteRenderModel(cmd, *ldc_ctx, *ldc_model, *model, *app.m_window->getFrontBuffer());
+//				renderer.ExecuteRenderModel(cmd, *ldc_ctx, *ldc_model, *model, *app.m_window->getFrontBuffer());
 
+// 				vk::TransformMatrixKHR transform_matrix =
+// 				{
+// 					std::array<std::array<float, 4>, 3>
+// 					{
+// 						std::array<float, 4>{1.f, 0.f, 0.f, 0.0f},
+// 						std::array<float, 4>{0.f, 1.f, 0.f, 0.0f},
+// 						std::array<float, 4>{0.f, 0.f, 1.f, 0.0f},
+// 					}
+// 				};
+// 				Model::UpdateTLAS(cmd, *context, *dc_ctx, *model_box, transform_matrix);
 				cmd.end();
 				cmds[cmd_render] = cmd;
 
