@@ -941,10 +941,11 @@ struct DCFunctionLibrary
 			vec3 s = (rot * axis[0]);
 			vec3 u = (rot * axis[1]);
 
-			vec3 extent = boolean.m_info.m_aabb_max - boolean.m_info.m_aabb_min;
 			vec3 min = boolean.m_info.m_aabb_min;
 			vec3 max = boolean.m_info.m_aabb_max;
-			vec3 center = (extent - boolean.m_info.m_aabb_min.xyz) * 0.5;
+
+			vec3 extent = max - min;
+			vec3 center = (extent - min) * 0.5;
 			vec3 min2 = rot * (min-center) + center;
 			vec3 max2 = rot * (max-center) + center;
 
@@ -952,8 +953,10 @@ struct DCFunctionLibrary
 			param.axis[0] = vec4(s, 0.f);
 			param.axis[1] = vec4(u, 0.f);
 			param.axis[2] = vec4(f, 0.f);
-			param.min = vec4(min, 0.f);
-			param.pos = instance.pos;
+			param.min = vec4(min2, 0.f);
+
+			param.pos = vec4(instance.pos.xyz(), 0.f);
+
 			cmd.pushConstants<ModelDrawParam>(m_PL_boolean.get(), vk::ShaderStageFlagBits::eCompute, 0, param);
 
 		}
@@ -1425,6 +1428,25 @@ struct Renderer
 int main()
 {
 	{
+		vec3 axis[] = { vec3(1., 0., 0.), vec3(0., 1., 0.),vec3(0., 0., 1.) };
+		vec3 dir = normalize(vec3(1.f));
+		auto rot = quat(axis[2], dir);
+
+		vec3 p(0.5f, 0.8f, 0.4f);
+
+		vec3 f = (rot * axis[2]);
+		vec3 s = (rot * axis[0]);
+		vec3 u = (rot * axis[1]);
+
+		float _f = dot(p, f);
+		float _s = dot(p, s);
+		float _u = dot(p, u);
+
+		auto p2 = f*_f + s * _s + u * _u;
+		int a = 0;
+
+	}
+	{
  		vec3 _axis[3] = { vec3(1., 0., 0.), vec3(0., 1., 0.),vec3(0., 0., 1.) };
 		vec3 dir = normalize(vec3(1.f));
 		auto rot = quat(_axis[2], dir);
@@ -1506,8 +1528,10 @@ int main()
 //		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, {vec4(100.f), normalize(vec4(1.f))});
 
 //		Model::UpdateTLAS(cmd, *context, *dc_ctx, *model_box, transform_matrix);
-		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, { vec4(10.f), vec4(0.f, 0.f, 1.f, 0.f) });
-//		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, { vec4(10.f), vec4(0.f, 0.f, 1.f, 0.f) });
+
+		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, { vec4(100.f), vec4(1.f, 1.f, 1.f, 0.f) });
+//		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, { vec4(0.f, 0.f, 100.f, 0.f), vec4(0.f, 0.f, 0.f, 0.f) });
+		//		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, { vec4(10.f), vec4(0.f, 0.f, 1.f, 0.f) });
 		//		dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model);
 //		dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model_box);
 
