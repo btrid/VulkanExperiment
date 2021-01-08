@@ -246,6 +246,9 @@ struct DCContext
 	}
 };
 
+#define Voxel_Reso uvec3(256)
+#define LDC_Reso uvec3(Voxel_Reso.xx(), 3)
+
 struct ModelParam
 {
 	float scale;
@@ -766,7 +769,8 @@ void DCModel::CreateLDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel&
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeLDC.get(), 0, { model.m_DS_Model.get() }, {});
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeLDC.get(), 1, { dc_model.m_DS_DC.get() }, {});
 
-	cmd.dispatch(4, 256, 3);
+	auto num = app::calcDipatchGroups(LDC_Reso, uvec3(64, 1, 1));
+	cmd.dispatch(num.x, num.y, num.z);
 
 }
 
@@ -799,7 +803,8 @@ void DCModel::CreateDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& 
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeDC.get(), 0, { dc_model.m_DS_DC.get() }, {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeDC.get(), 1, { dc_ctx.m_DS_worker.get() }, {});
 
-		cmd.dispatch(4, 256, 3);
+		auto num = app::calcDipatchGroups(LDC_Reso, uvec3(64, 1, 1));
+		cmd.dispatch(num.x, num.y, num.z);
 	}
 
 
@@ -817,7 +822,8 @@ void DCModel::CreateDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& 
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeDC.get(), 0, { dc_model.m_DS_DC.get() }, {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeDC.get(), 1, { dc_ctx.m_DS_worker.get() }, {});
 
-		cmd.dispatch(4, 256, 256);
+		auto num = app::calcDipatchGroups(Voxel_Reso, uvec3(64, 1, 1));
+		cmd.dispatch(num.x, num.y, num.z);
 	}
 
 	// Make DC Face
@@ -834,7 +840,8 @@ void DCModel::CreateDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& 
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeDC.get(), 0, { dc_model.m_DS_DC.get() }, {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeDC.get(), 1, { dc_ctx.m_DS_worker.get() }, {});
 
-		cmd.dispatch(4, 256, 256);
+		auto num = app::calcDipatchGroups(Voxel_Reso, uvec3(64, 1, 1));
+		cmd.dispatch(num.x, num.y, num.z);
 
 	}
 
@@ -916,6 +923,32 @@ struct DCFunctionLibrary
 		}
 	}
 
+	void executClear(vk::CommandBuffer& cmd, DCModel& dc_model)
+	{
+		{
+			vk::BufferMemoryBarrier barrier[] =
+			{
+				dc_model.b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+				dc_model.b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+				dc_model.b_ldc_point_free.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, { array_size(barrier), barrier }, {});
+
+		}
+		cmd.fillBuffer(dc_model.b_ldc_counter.getInfo().buffer, dc_model.b_ldc_counter.getInfo().offset, dc_model.b_ldc_counter.getInfo().range, 0);
+		cmd.fillBuffer(dc_model.b_ldc_point_link_head.getInfo().buffer, dc_model.b_ldc_point_link_head.getInfo().offset, dc_model.b_ldc_point_link_head.getInfo().range, -1);
+		cmd.fillBuffer(dc_model.b_ldc_point_free.getInfo().buffer, dc_model.b_ldc_point_free.getInfo().offset, dc_model.b_ldc_point_free.getInfo().range, -1);
+		vk::BufferMemoryBarrier barrier[] =
+		{
+			dc_model.b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			dc_model.b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			dc_model.b_ldc_point_free.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
+
+	}
+
+
 	void executeBooleanAdd(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& base, Model& boolean, const ModelInstance& instance)
 	{
 		{
@@ -961,7 +994,8 @@ struct DCFunctionLibrary
 
 		}
 
-		cmd.dispatch(4, 256, 3);
+		auto num = app::calcDipatchGroups(LDC_Reso, uvec3(64, 1, 1));
+		cmd.dispatch(num.x, num.y, num.z);
 
 	}
 	void executeBooleanSub(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& base, Model& boolean, const ModelInstance& instance)
@@ -982,7 +1016,8 @@ struct DCFunctionLibrary
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL_boolean.get(), 1, { boolean.m_DS_Model.get() }, {});
 		cmd.pushConstants<ModelInstance>(m_PL_boolean.get(), vk::ShaderStageFlagBits::eCompute, 0, instance);
 
-		cmd.dispatch(4, 256, 3);
+		auto num = app::calcDipatchGroups(LDC_Reso, uvec3(64, 1, 1));
+		cmd.dispatch(num.x, num.y, num.z);
 
 	}
 };
@@ -1528,14 +1563,30 @@ int main()
 //		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, {vec4(100.f), normalize(vec4(1.f))});
 
 //		Model::UpdateTLAS(cmd, *context, *dc_ctx, *model_box, transform_matrix);
+		struct I
+		{
+			float time;
+			vec3 rot[2];
+			vec3 pos[2];
+		}; 
+		static I i{ 0.f, {glm::ballRand(1.f), glm::ballRand(1.f) }, {glm::linearRand(vec3(0.f), vec3(500.f)), glm::linearRand(vec3(0.f), vec3(500.f))} };
+		i.time += 0.01f;
+		if (i.time >= 1.f)
+		{
+			i.time -= 1.f;
+			i.rot[0] = i.rot[1];
+			i.rot[1] = glm::ballRand(1.f);
+			i.pos[0] = i.pos[1];
+			i.pos[1] = glm::linearRand(vec3(0.f), vec3(500.f));
+		}
 
-		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, { vec4(100.f), vec4(1.f, 1.f, 1.f, 0.f) });
+		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, { vec4(mix(i.pos[0], i.pos[1], i.time), 100.f), vec4(mix(i.rot[0], i.rot[1], i.time), 0.f) });
 //		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, { vec4(0.f, 0.f, 100.f, 0.f), vec4(0.f, 0.f, 0.f, 0.f) });
 		//		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, { vec4(10.f), vec4(0.f, 0.f, 1.f, 0.f) });
 		//		dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model);
 //		dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model_box);
 
-		DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
+//		DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
 
 	}
 
@@ -1564,6 +1615,36 @@ int main()
 //				cCamera::sCamera::Order().getCameraList()[0]->control(app.m_window->getInput(), 0.016f);
 
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+
+				{
+					struct I
+					{
+						float time;
+						vec3 rot[2];
+						vec3 pos[2];
+					};
+					static I instance{ 0.f, {glm::ballRand(1.f), glm::ballRand(1.f) }, {glm::linearRand(vec3(0.f), vec3(500.f)), glm::linearRand(vec3(0.f), vec3(500.f))} };
+					instance.time += 0.01f;
+					if (instance.time >= 1.f)
+					{
+						instance.time -= 1.f;
+						instance.rot[0] = instance.rot[1];
+						instance.rot[1] = glm::ballRand(1.f);
+						instance.pos[0] = instance.pos[1];
+						instance.pos[1] = glm::linearRand(vec3(0.f), vec3(500.f));
+					}
+
+					for (int i = 0; i < 100; i++)
+					{
+						dc_fl.executClear(cmd, *dc_model);
+						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, { vec4(mix(instance.pos[0], instance.pos[1], instance.time), 100.f), vec4(mix(instance.rot[0], instance.rot[1], instance.time), 0.f) });
+					}
+
+// 					DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
+// 					DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
+// 					DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
+
+				}
 				renderer.ExecuteTestRender(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
 				renderer.ExecuteRenderLDCModel(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
 //				renderer.ExecuteRenderLDCModel(cmd, *dc_ctx, *dc_model_box, *app.m_window->getFrontBuffer());
