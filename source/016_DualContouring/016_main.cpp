@@ -1640,7 +1640,7 @@ int main()
 						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, { vec4(mix(instance.pos[0], instance.pos[1], instance.time), 100.f), vec4(mix(instance.rot[0], instance.rot[1], instance.time), 0.f) });
 					}
 
-// 					DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
+ 					DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
 // 					DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
 // 					DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
 

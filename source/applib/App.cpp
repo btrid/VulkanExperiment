@@ -267,7 +267,7 @@ App::App(const AppDescriptor& desc)
 		vk::MemoryPropertyFlags host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
 		vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
 		vk::MemoryPropertyFlags transfer_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-		device_memory = host_memory; // debug
+//		device_memory = host_memory; // debug
 		m_context->m_vertex_memory.setup(m_physical_device, m_device.get(), vk::BufferUsageFlagBits::eVertexBuffer|vk::BufferUsageFlagBits::eIndexBuffer|vk::BufferUsageFlagBits::eIndirectBuffer| vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderBindingTableKHR |vk::BufferUsageFlagBits::eTransferDst|vk::BufferUsageFlagBits::eShaderDeviceAddress, device_memory, 1000 * 1000 * 100);
 		m_context->m_uniform_memory.setup(m_physical_device, m_device.get(), vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eShaderBindingTableKHR | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000*1000 * 20);
 		m_context->m_storage_memory.setup(m_physical_device, m_device.get(), vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eShaderBindingTableKHR | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eShaderDeviceAddress| vk::BufferUsageFlagBits::eAccelerationStructureStorageKHR, device_memory, 1024 * 1024 * (1024+200));
