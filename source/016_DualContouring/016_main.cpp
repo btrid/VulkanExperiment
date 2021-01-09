@@ -1557,44 +1557,6 @@ int main()
 	}
 //	test();
 
-	vk::ApplicationInfo appInfo = { "Vulkan Test", 1, "EngineName", 0, VK_API_VERSION_1_2 };
-	std::vector<const char*> LayerName =
-	{
-#if _DEBUG
-			"VK_LAYER_KHRONOS_validation"
-#endif
-	};
-	std::vector<const char*> ExtensionName =
-	{
-		VK_KHR_SURFACE_EXTENSION_NAME,
-		VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
-#if USE_DEBUG_REPORT
-		VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
-#endif
-	};
-
-	vk::DynamicLoader dl;
-	PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr = dl.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr");
-	VULKAN_HPP_DEFAULT_DISPATCHER.init(vkGetInstanceProcAddr);
-
-	vk::InstanceCreateInfo instanceInfo = {};
-	instanceInfo.setPApplicationInfo(&appInfo);
-	instanceInfo.setEnabledExtensionCount((uint32_t)ExtensionName.size());
-	instanceInfo.setPpEnabledExtensionNames(ExtensionName.data());
-	instanceInfo.setEnabledLayerCount((uint32_t)LayerName.size());
-	instanceInfo.setPpEnabledLayerNames(LayerName.data());
-	auto m_instance = vk::createInstanceUnique(instanceInfo);
-
-	VULKAN_HPP_DEFAULT_DISPATCHER.init(m_instance.get());
-
-#if USE_DEBUG_REPORT
-// 	vk::DebugUtilsMessengerCreateInfoEXT debug_create_info;
-// 	debug_create_info.setMessageSeverity(vk::DebugUtilsMessageSeverityFlagBitsEXT::eError | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning/* | vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose*/);
-// 	debug_create_info.setMessageType(vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation);
-// 	debug_create_info.setPfnUserCallback(debug_messenger_callback);
-//	m_debug_messenger = m_instance->createDebugUtilsMessengerEXTUnique(debug_create_info);
-#endif
-
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(50.f, 50.f, -500.f);

@@ -100,6 +100,9 @@ struct AppDescriptor
 
 struct App
 {
+	vk::DynamicLoader m_dl;
+
+
 	vk::UniqueInstance m_instance;
 	vk::PhysicalDevice m_physical_device;
 	vk::UniqueDevice m_device;
