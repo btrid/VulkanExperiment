@@ -1001,14 +1001,14 @@ struct DCFunctionLibrary
 				vec3 rmin = center;
 				vec3 rmax = center;
 				for (int z = 0; z < 2; z++)
-					for (int y = 0; y < 2; y++)
-						for (int x = 0; x < 2; x++)
-						{
-							vec3 p = vec3(pminmax[x == 0].x, pminmax[y == 0].y, pminmax[z == 0].z);
-							vec3 new_p = rot * (p - center) + center;
-							rmin = glm::min(new_p, rmin);
-							rmax = glm::max(new_p, rmax);
-						}
+				for (int y = 0; y < 2; y++)
+				for (int x = 0; x < 2; x++)
+				{
+					vec3 p = vec3(pminmax[x == 0].x, pminmax[y == 0].y, pminmax[z == 0].z);
+					vec3 new_p = rot * (p - center) + center;
+					rmin = glm::min(new_p, rmin);
+					rmax = glm::max(new_p, rmax);
+				}
 
 				vec3 cell_size = (Voxel_Block_Size / vec3(LDC_Reso)) * 8;
 
