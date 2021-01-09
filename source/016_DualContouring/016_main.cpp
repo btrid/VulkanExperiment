@@ -248,6 +248,7 @@ struct DCContext
 
 #define Voxel_Reso uvec3(256)
 #define LDC_Reso uvec3(Voxel_Reso.xx(), 3)
+#define Voxel_Block_Size vec3(512.f)
 
 struct ModelParam
 {
@@ -979,23 +980,53 @@ struct DCFunctionLibrary
 
 			vec3 extent = max - min;
 			vec3 center = (extent - min) * 0.5;
-			vec3 min2 = rot * (min-center) + center;
-			vec3 max2 = rot * (max-center) + center;
-
+			vec3 new_min = rot * (min - center) + center;
+			vec3 new_max = rot * (max - center) + center;
 			ModelDrawParam param;
 			param.axis[0] = vec4(s, 0.f);
 			param.axis[1] = vec4(u, 0.f);
 			param.axis[2] = vec4(f, 0.f);
-			param.min = vec4(min2, 0.f);
+			param.min = vec4(new_min, 0.f);
 
 			param.pos = vec4(instance.pos.xyz(), 0.f);
 
 			cmd.pushConstants<ModelDrawParam>(m_PL_boolean.get(), vk::ShaderStageFlagBits::eCompute, 0, param);
 
+			auto num = app::calcDipatchGroups(LDC_Reso, uvec3(8, 8, 1));
+			cmd.dispatch(num.x, num.y, 3);
+
+			vec3 pminmax[] = {min, max};
+			vec3 rmin = center;
+			vec3 rmax = center;
+			for (int z = 0; z < 2; z++)
+			for (int y = 0; y < 2; y++)
+			for (int x = 0; x < 2; x++)
+			{
+				vec3 p = vec3(pminmax[x == 0].x, pminmax[y == 0].y, pminmax[z == 0].z);
+				vec3 new_p = rot * (p - center) + center;
+				rmin = glm::min(new_p, rmin);
+				rmax = glm::max(new_p, rmax);
+			}
+
+			vec3 cell_size = (Voxel_Block_Size / vec3(LDC_Reso)) * 8;
+
+			ivec3 base = floor((rmin+instance.pos.xyz()) / cell_size.xxx);
+			ivec3 count = ceil((rmax-rmin + instance.pos.xyz()) / cell_size.xxx);
+			count -= base;
+
+			base = clamp(base, 0, 32);
+			count = clamp(count, 0, 32);
+
+// 			cmd.dispatchBase(base.y, base.z, 0, count.y, count.z, 1);
+// 			cmd.dispatchBase(base.z, base.x, 1, count.z, count.x, 1);
+// 			cmd.dispatchBase(base.x, base.y, 2, count.x, count.y, 1);
+
+			printf("base=%4d,%4d count=%4d%4d\n", base.x, base.y, count.x, count.y);
+
+ 			int a = 0;
 		}
 
-		auto num = app::calcDipatchGroups(LDC_Reso, uvec3(64, 1, 1));
-		cmd.dispatch(num.x, num.y, num.z);
+
 
 	}
 	void executeBooleanSub(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& base, Model& boolean, const ModelInstance& instance)
@@ -1527,10 +1558,48 @@ int main()
 	}
 //	test();
 
+	vk::ApplicationInfo appInfo = { "Vulkan Test", 1, "EngineName", 0, VK_API_VERSION_1_2 };
+	std::vector<const char*> LayerName =
+	{
+#if _DEBUG
+			"VK_LAYER_KHRONOS_validation"
+#endif
+	};
+	std::vector<const char*> ExtensionName =
+	{
+		VK_KHR_SURFACE_EXTENSION_NAME,
+		VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
+#if USE_DEBUG_REPORT
+		VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+#endif
+	};
+
+	vk::DynamicLoader dl;
+	PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr = dl.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr");
+	VULKAN_HPP_DEFAULT_DISPATCHER.init(vkGetInstanceProcAddr);
+
+	vk::InstanceCreateInfo instanceInfo = {};
+	instanceInfo.setPApplicationInfo(&appInfo);
+	instanceInfo.setEnabledExtensionCount((uint32_t)ExtensionName.size());
+	instanceInfo.setPpEnabledExtensionNames(ExtensionName.data());
+	instanceInfo.setEnabledLayerCount((uint32_t)LayerName.size());
+	instanceInfo.setPpEnabledLayerNames(LayerName.data());
+	auto m_instance = vk::createInstanceUnique(instanceInfo);
+
+	VULKAN_HPP_DEFAULT_DISPATCHER.init(m_instance.get());
+
+#if USE_DEBUG_REPORT
+// 	vk::DebugUtilsMessengerCreateInfoEXT debug_create_info;
+// 	debug_create_info.setMessageSeverity(vk::DebugUtilsMessageSeverityFlagBitsEXT::eError | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning/* | vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose*/);
+// 	debug_create_info.setMessageType(vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation);
+// 	debug_create_info.setPfnUserCallback(debug_messenger_callback);
+//	m_debug_messenger = m_instance->createDebugUtilsMessengerEXTUnique(debug_create_info);
+#endif
+
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
-	camera->getData().m_position = glm::vec3(50.f, 50.f, -200.f);
-	camera->getData().m_target = glm::vec3(50.f, 50.f, 0.f);
+	camera->getData().m_position = glm::vec3(50.f, 50.f, -500.f);
+	camera->getData().m_target = glm::vec3(256.f);
 	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
 	camera->getData().m_width = 1024;
 	camera->getData().m_height = 1024;
@@ -1556,36 +1625,7 @@ int main()
 
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-//		DCModel::CreateLDCModel(cmd, *dc_ctx, *dc_model, *model);
-//		DCModel::CreateLDCModel(cmd, *dc_ctx, *dc_model, *model_box);
-		//		DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
-//		dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model_box);
-//		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, {vec4(100.f), normalize(vec4(1.f))});
-
-//		Model::UpdateTLAS(cmd, *context, *dc_ctx, *model_box, transform_matrix);
-		struct I
-		{
-			float time;
-			vec3 rot[2];
-			vec3 pos[2];
-		}; 
-		static I i{ 0.f, {glm::ballRand(1.f), glm::ballRand(1.f) }, {glm::linearRand(vec3(0.f), vec3(500.f)), glm::linearRand(vec3(0.f), vec3(500.f))} };
-		i.time += 0.01f;
-		if (i.time >= 1.f)
-		{
-			i.time -= 1.f;
-			i.rot[0] = i.rot[1];
-			i.rot[1] = glm::ballRand(1.f);
-			i.pos[0] = i.pos[1];
-			i.pos[1] = glm::linearRand(vec3(0.f), vec3(500.f));
-		}
-
-		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, { vec4(mix(i.pos[0], i.pos[1], i.time), 100.f), vec4(mix(i.rot[0], i.rot[1], i.time), 0.f) });
-//		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, { vec4(0.f, 0.f, 100.f, 0.f), vec4(0.f, 0.f, 0.f, 0.f) });
-		//		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, { vec4(10.f), vec4(0.f, 0.f, 1.f, 0.f) });
-		//		dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model);
-//		dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model_box);
-
+//		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, { vec4(100.f), vec4(0.f, 0.f, 1.f, 0.f) });
 //		DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
 
 	}
@@ -1624,7 +1664,7 @@ int main()
 						vec3 pos[2];
 					};
 					static I instance{ 0.f, {glm::ballRand(1.f), glm::ballRand(1.f) }, {glm::linearRand(vec3(0.f), vec3(500.f)), glm::linearRand(vec3(0.f), vec3(500.f))} };
-					instance.time += 0.01f;
+					instance.time += 0.002f;
 					if (instance.time >= 1.f)
 					{
 						instance.time -= 1.f;
@@ -1633,22 +1673,20 @@ int main()
 						instance.pos[0] = instance.pos[1];
 						instance.pos[1] = glm::linearRand(vec3(0.f), vec3(500.f));
 					}
-
-					for (int i = 0; i < 100; i++)
+//					ModelInstance model_instance{ vec4(mix(instance.pos[0], instance.pos[1], instance.time), 100.f), vec4(mix(instance.rot[0], instance.rot[1], instance.time), 0.f) };
+					ModelInstance model_instance{ vec4(100.f), vec4(mix(instance.rot[0], instance.rot[1], instance.time), 0.f) };
+					//					for (int i = 0; i < 100; i++)
 					{
 						dc_fl.executClear(cmd, *dc_model);
-						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, { vec4(mix(instance.pos[0], instance.pos[1], instance.time), 100.f), vec4(mix(instance.rot[0], instance.rot[1], instance.time), 0.f) });
+						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, model_instance);
+//						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, { vec4(100.f), vec4(0.f, 0.f, 1.f, 0.f) });
 					}
 
  					DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
-// 					DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
-// 					DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
 
 				}
 				renderer.ExecuteTestRender(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
 				renderer.ExecuteRenderLDCModel(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
-//				renderer.ExecuteRenderLDCModel(cmd, *dc_ctx, *dc_model_box, *app.m_window->getFrontBuffer());
-//				renderer.ExecuteRenderModel(cmd, *ldc_ctx, *ldc_model, *model, *app.m_window->getFrontBuffer());
 
 				cmd.end();
 				cmds[cmd_render] = cmd;
