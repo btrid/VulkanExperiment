@@ -992,32 +992,36 @@ struct DCFunctionLibrary
 
 			cmd.pushConstants<ModelDrawParam>(m_PL_boolean.get(), vk::ShaderStageFlagBits::eCompute, 0, param);
 
-			vec3 pminmax[] = {min, max};
-			vec3 rmin = center;
-			vec3 rmax = center;
-			for (int z = 0; z < 2; z++)
-			for (int y = 0; y < 2; y++)
-			for (int x = 0; x < 2; x++)
+
+			// –³‘Ê‚ÈƒŒƒC‚ð”ò‚Î‚³‚È‚¢‚æ‚¤‚ÉƒJƒŠƒ“ƒO
+//			auto num = app::calcDipatchGroups(LDC_Reso, uvec3(8, 8, 1));
+//			cmd.dispatch(num.x, num.y, 3);
 			{
-				vec3 p = vec3(pminmax[x == 0].x, pminmax[y == 0].y, pminmax[z == 0].z);
-				vec3 new_p = rot * (p - center) + center;
-				rmin = glm::min(new_p, rmin);
-				rmax = glm::max(new_p, rmax);
+				vec3 pminmax[] = { min, max };
+				vec3 rmin = center;
+				vec3 rmax = center;
+				for (int z = 0; z < 2; z++)
+					for (int y = 0; y < 2; y++)
+						for (int x = 0; x < 2; x++)
+						{
+							vec3 p = vec3(pminmax[x == 0].x, pminmax[y == 0].y, pminmax[z == 0].z);
+							vec3 new_p = rot * (p - center) + center;
+							rmin = glm::min(new_p, rmin);
+							rmax = glm::max(new_p, rmax);
+						}
+
+				vec3 cell_size = (Voxel_Block_Size / vec3(LDC_Reso)) * 8;
+
+				ivec3 base = floor((rmin + instance.pos.xyz()) / cell_size.xxx);
+				ivec3 count = ceil((rmax - rmin + instance.pos.xyz()) / cell_size.xxx);
+
+				count = clamp(clamp(count + base, 0, 32) - base, 0, 32);
+				base = clamp(base, 0, 32);
+
+				cmd.dispatchBase(base.y, base.z, 0, count.y, count.z, 1);
+				cmd.dispatchBase(base.z, base.x, 1, count.z, count.x, 1);
+				cmd.dispatchBase(base.x, base.y, 2, count.x, count.y, 1);
 			}
-
-			vec3 cell_size = (Voxel_Block_Size / vec3(LDC_Reso)) * 8;
-
-			ivec3 base = floor((rmin+instance.pos.xyz()) / cell_size.xxx);
-			ivec3 count = ceil((rmax-rmin + instance.pos.xyz()) / cell_size.xxx);
-
-			count = clamp(clamp(count+base, 0, 32)-base, 0, 32);
-			base = clamp(base, 0, 32);
-
-			cmd.dispatchBase(base.y, base.z, 0, count.y, count.z, 1);
-			cmd.dispatchBase(base.z, base.x, 1, count.z, count.x, 1);
-			cmd.dispatchBase(base.x, base.y, 2, count.x, count.y, 1);
-	
-//			printf("base=%4d,%4d,%4d count=%4d,%4d,%4d\n", base.x, base.y, base.z, count.x, count.y, count.z);
 
 		}
 
