@@ -79,8 +79,6 @@ struct DCContext
 
 	vk::UniquePipeline m_pipeline_makeDCV;
 
-	btr::BufferMemoryEx<uvec4> b_dc_cell_counter;
-	btr::BufferMemoryEx<u8vec4> b_dc_cell_list;
 	btr::BufferMemoryEx<DCCell> b_dc_cell;
 	btr::BufferMemoryEx<uint32_t> b_dc_cell_hashmap;
 
@@ -137,8 +135,6 @@ struct DCContext
 				vk::DescriptorSetLayoutBinding binding[] = {
 					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -214,8 +210,6 @@ struct DCContext
 
 			// descriptor set
 			{
-				b_dc_cell_counter = ctx.m_storage_memory.allocateMemory<uvec4>(1);
-				b_dc_cell_list = ctx.m_storage_memory.allocateMemory<u8vec4>(256 * 256 * 256);
 				b_dc_cell = ctx.m_storage_memory.allocateMemory<DCCell>(256 * 256 * 256);
 				b_dc_cell_hashmap = ctx.m_storage_memory.allocateMemory<uint32_t>(256 * 256 * 256 / 32);
 
@@ -234,8 +228,6 @@ struct DCContext
 				{
 					b_dc_cell.getInfo(),
 					b_dc_cell_hashmap.getInfo(),
-					b_dc_cell_counter.getInfo(),
-					b_dc_cell_list.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] =
@@ -798,25 +790,24 @@ void DCModel::CreateDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& 
 
 	}
 
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeDC.get(), 0, { dc_model.m_DS_DC.get() }, {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeDC.get(), 1, { dc_ctx.m_DS_worker.get() }, {});
+
 	_label.insert("Make DC Cell");
 	{
 
 		cmd.fillBuffer(dc_ctx.b_dc_cell.getInfo().buffer, dc_ctx.b_dc_cell.getInfo().offset, dc_ctx.b_dc_cell.getInfo().range, 0);
 		cmd.fillBuffer(dc_ctx.b_dc_cell_hashmap.getInfo().buffer, dc_ctx.b_dc_cell_hashmap.getInfo().offset, dc_ctx.b_dc_cell_hashmap.getInfo().range, 0);
-		cmd.updateBuffer<uvec4>(dc_ctx.b_dc_cell_counter.getInfo().buffer, dc_ctx.b_dc_cell_counter.getInfo().offset, uvec4(0, 1, 1, 0));
-		
+
 		cmd.updateBuffer<vk::DrawIndirectCommand>(dc_model.b_dc_index_counter.getInfo().buffer, dc_model.b_dc_index_counter.getInfo().offset, { vk::DrawIndirectCommand(0,1,0,0) });
 
 		vk::BufferMemoryBarrier barrier[] =
 		{
 			dc_ctx.b_dc_cell.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-			dc_ctx.b_dc_cell_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipeline_MakeDCCell.get());
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeDC.get(), 0, { dc_model.m_DS_DC.get() }, {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeDC.get(), 1, { dc_ctx.m_DS_worker.get() }, {});
 
 		auto num = app::calcDipatchGroups(LDC_Reso, uvec3(64, 1, 1));
 		cmd.dispatch(num.x, num.y, num.z);
@@ -825,21 +816,10 @@ void DCModel::CreateDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& 
 	_label.insert("Make DC Vertex");
 	{
 
-		vk::BufferMemoryBarrier barrier[] =
-		{
-//			dc_ctx.b_dc_cell.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-//			dc_ctx.b_dc_cell_hashmap.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			dc_ctx.b_dc_cell_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
-		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, { array_size(barrier), barrier }, {});
-
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipeline_MakeDCVertex.get());
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeDC.get(), 0, { dc_model.m_DS_DC.get() }, {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeDC.get(), 1, { dc_ctx.m_DS_worker.get() }, {});
 
 		auto num = app::calcDipatchGroups(Voxel_Reso, uvec3(64, 1, 1));
 		cmd.dispatch(num.x, num.y, num.z);
-//		cmd.dispatchIndirect(dc_ctx.b_dc_cell_counter.getInfo().buffer, dc_ctx.b_dc_cell_counter.getInfo().offset);
 	}
 
 	_label.insert("Make DC Face");
@@ -853,8 +833,6 @@ void DCModel::CreateDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& 
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipeline_MakeDCFace.get());
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeDC.get(), 0, { dc_model.m_DS_DC.get() }, {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeDC.get(), 1, { dc_ctx.m_DS_worker.get() }, {});
 
 		auto num = app::calcDipatchGroups(Voxel_Reso, uvec3(64, 1, 1));
 		cmd.dispatch(num.x, num.y, num.z);
@@ -941,6 +919,7 @@ struct DCFunctionLibrary
 
 	void executClear(vk::CommandBuffer& cmd, DCModel& dc_model)
 	{
+		DebugLabel _label(cmd, __FUNCTION__);
 		{
 			vk::BufferMemoryBarrier barrier[] =
 			{
@@ -967,6 +946,7 @@ struct DCFunctionLibrary
 
 	void executeBooleanAdd(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& base, Model& boolean, const ModelInstance& instance)
 	{
+		DebugLabel _label(cmd, __FUNCTION__);
 		{
 			vk::BufferMemoryBarrier barrier[] =
 			{
@@ -1045,6 +1025,7 @@ struct DCFunctionLibrary
 	}
 	void executeBooleanSub(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& base, Model& boolean, const ModelInstance& instance)
 	{
+		DebugLabel _label(cmd, __FUNCTION__);
 		{
 
 			vk::BufferMemoryBarrier barrier[] =
@@ -1404,6 +1385,7 @@ struct Renderer
 	}
 	void ExecuteTestRender(vk::CommandBuffer cmd, DCContext& dc_ctx, DCModel& ldc_model, RenderTarget& rt)
 	{
+		DebugLabel _label(cmd, __FUNCTION__);
 		{
 			vk::ImageMemoryBarrier image_barrier;
 			image_barrier.setImage(rt.m_image);
@@ -1435,8 +1417,9 @@ struct Renderer
 		cmd.endRenderPass();
 
 	}
-	void ExecuteRenderLDCModel(vk::CommandBuffer cmd, DCContext& dc_ctx, DCModel& ldc_model, RenderTarget& rt)
+	void ExecuteRenderDCModel(vk::CommandBuffer cmd, DCContext& dc_ctx, DCModel& ldc_model, RenderTarget& rt)
 	{
+		DebugLabel _label(cmd, __FUNCTION__);
 		{
 			vk::ImageMemoryBarrier image_barrier;
 			image_barrier.setImage(rt.m_image);
@@ -1471,6 +1454,7 @@ struct Renderer
 	}
 	void ExecuteRenderModel(vk::CommandBuffer cmd, DCContext& dc_ctx, DCModel& ldc_model, Model& model, RenderTarget& rt)
 	{
+		DebugLabel _label(cmd, __FUNCTION__);
 		{
 			vk::ImageMemoryBarrier image_barrier;
 			image_barrier.setImage(rt.m_image);
@@ -1588,18 +1572,18 @@ int main()
 					}
 					ModelInstance model_instance{ vec4(mix(instance.pos[0], instance.pos[1], instance.time), 100.f), vec4(mix(instance.rot[0], instance.rot[1], instance.time), 0.f) };
 //					ModelInstance model_instance{ vec4(100.f), vec4(mix(instance.rot[0], instance.rot[1], instance.time), 0.f) };
-					for (int i = 0; i < 100; i++)
+//					for (int i = 0; i < 1000; i++)
 					{
 						dc_fl.executClear(cmd, *dc_model);
-						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, model_instance);
-//						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, { vec4(100.f), vec4(0.f, 0.f, 1.f, 0.f) });
+//						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, model_instance);
+						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, { vec4(100.f), vec4(0.f, 0.f, 1.f, 0.f) });
 					}
 
 					DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
 
 				}
 				renderer.ExecuteTestRender(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
-				renderer.ExecuteRenderLDCModel(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
+				renderer.ExecuteRenderDCModel(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
 
 				cmd.end();
 				cmds[cmd_render] = cmd;
