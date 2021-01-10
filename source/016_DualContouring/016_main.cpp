@@ -79,6 +79,8 @@ struct DCContext
 
 	vk::UniquePipeline m_pipeline_makeDCV;
 
+	btr::BufferMemoryEx<uvec4> b_dc_cell_counter;
+	btr::BufferMemoryEx<u8vec4> b_dc_cell_list;
 	btr::BufferMemoryEx<DCCell> b_dc_cell;
 	btr::BufferMemoryEx<uint32_t> b_dc_cell_hashmap;
 
@@ -135,6 +137,8 @@ struct DCContext
 				vk::DescriptorSetLayoutBinding binding[] = {
 					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -210,6 +214,8 @@ struct DCContext
 
 			// descriptor set
 			{
+				b_dc_cell_counter = ctx.m_storage_memory.allocateMemory<uvec4>(1);
+				b_dc_cell_list = ctx.m_storage_memory.allocateMemory<u8vec4>(256 * 256 * 256);
 				b_dc_cell = ctx.m_storage_memory.allocateMemory<DCCell>(256 * 256 * 256);
 				b_dc_cell_hashmap = ctx.m_storage_memory.allocateMemory<uint32_t>(256 * 256 * 256 / 32);
 
@@ -228,6 +234,8 @@ struct DCContext
 				{
 					b_dc_cell.getInfo(),
 					b_dc_cell_hashmap.getInfo(),
+					b_dc_cell_counter.getInfo(),
+					b_dc_cell_list.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] =
@@ -777,9 +785,12 @@ void DCModel::CreateLDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel&
 
 void DCModel::CreateDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& dc_model)
 {
+	DebugLabel _label(cmd, __FUNCTION__);
+
 	{
 		vk::BufferMemoryBarrier barrier[] =
 		{
+//			dc_ctx.b_dc_cell_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 			dc_model.b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			dc_model.b_ldc_point.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 		};
@@ -787,16 +798,19 @@ void DCModel::CreateDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& 
 
 	}
 
-	// Make DC Cell
+	_label.insert("Make DC Cell");
 	{
 
 		cmd.fillBuffer(dc_ctx.b_dc_cell.getInfo().buffer, dc_ctx.b_dc_cell.getInfo().offset, dc_ctx.b_dc_cell.getInfo().range, 0);
-		cmd.fillBuffer(dc_ctx.b_dc_cell_hashmap.getInfo().buffer, dc_ctx.b_dc_cell_hashmap.getInfo().offset, dc_ctx.b_dc_cell_hashmap.getInfo().range, -1);
+		cmd.fillBuffer(dc_ctx.b_dc_cell_hashmap.getInfo().buffer, dc_ctx.b_dc_cell_hashmap.getInfo().offset, dc_ctx.b_dc_cell_hashmap.getInfo().range, 0);
+		cmd.updateBuffer<uvec4>(dc_ctx.b_dc_cell_counter.getInfo().buffer, dc_ctx.b_dc_cell_counter.getInfo().offset, uvec4(0, 1, 1, 0));
+		
 		cmd.updateBuffer<vk::DrawIndirectCommand>(dc_model.b_dc_index_counter.getInfo().buffer, dc_model.b_dc_index_counter.getInfo().offset, { vk::DrawIndirectCommand(0,1,0,0) });
 
 		vk::BufferMemoryBarrier barrier[] =
 		{
 			dc_ctx.b_dc_cell.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			dc_ctx.b_dc_cell_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
 
@@ -808,16 +822,16 @@ void DCModel::CreateDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& 
 		cmd.dispatch(num.x, num.y, num.z);
 	}
 
-
-	// Make DC Vertex
+	_label.insert("Make DC Vertex");
 	{
 
 		vk::BufferMemoryBarrier barrier[] =
 		{
-			dc_ctx.b_dc_cell.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			dc_ctx.b_dc_cell_hashmap.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+//			dc_ctx.b_dc_cell.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+//			dc_ctx.b_dc_cell_hashmap.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			dc_ctx.b_dc_cell_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
 		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, { array_size(barrier), barrier }, {});
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipeline_MakeDCVertex.get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeDC.get(), 0, { dc_model.m_DS_DC.get() }, {});
@@ -825,9 +839,10 @@ void DCModel::CreateDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& 
 
 		auto num = app::calcDipatchGroups(Voxel_Reso, uvec3(64, 1, 1));
 		cmd.dispatch(num.x, num.y, num.z);
+//		cmd.dispatchIndirect(dc_ctx.b_dc_cell_counter.getInfo().buffer, dc_ctx.b_dc_cell_counter.getInfo().offset);
 	}
 
-	// Make DC Face
+	_label.insert("Make DC Face");
 	{
 
 		vk::BufferMemoryBarrier barrier[] =
@@ -1492,70 +1507,6 @@ struct Renderer
 #include <016_DualContouring/test.h>
 int main()
 {
-	{
-		vec3 axis[] = { vec3(1., 0., 0.), vec3(0., 1., 0.),vec3(0., 0., 1.) };
-		vec3 dir = normalize(vec3(1.f));
-		auto rot = quat(axis[2], dir);
-
-		vec3 p(0.5f, 0.8f, 0.4f);
-
-		vec3 f = (rot * axis[2]);
-		vec3 s = (rot * axis[0]);
-		vec3 u = (rot * axis[1]);
-
-		float _f = dot(p, f);
-		float _s = dot(p, s);
-		float _u = dot(p, u);
-
-		auto p2 = f*_f + s * _s + u * _u;
-		int a = 0;
-
-	}
-	{
- 		vec3 _axis[3] = { vec3(1., 0., 0.), vec3(0., 1., 0.),vec3(0., 0., 1.) };
-		vec3 dir = normalize(vec3(1.f));
-		auto rot = quat(_axis[2], dir);
-		vec3 f = (rot * _axis[2]);
-		vec3 s = (rot * _axis[0]);
-		vec3 u = (rot * _axis[1]);
-
-		vec3 extent = vec3(512.f);
-		vec3 min = vec3(0.f);
-		vec3 center = (extent-min) * 0.5;
-		vec3 min2 = rot * center + center;
-
-		vec3 minmax[] = { min, extent };
-		vec3 v[8];
-		for (int z = 0; z < 2; z++)
-		for (int y = 0; y < 2; y++)
-		for (int x = 0; x < 2; x++)
-		{
-			auto& _v = v[x + y * 2 + z * 4];
-			_v = vec3(minmax[x].x, minmax[y].y, minmax[z].z);
-			_v = rot * (_v - center);
-			_v = _v + center;
-		}
-
-
-		vec3 axis[3] = { s, u, f };
-		for (int z = 0; z < 3; z++)
-		for (int y = 0; y < 2; y++)
-		for (int x = 0; x < 2; x++)
-		{
-			uvec3 gl_GlobalInvocationID(x, y, z);
-
-			auto _f = axis[(gl_GlobalInvocationID.z + 0) % 3];
-			auto _s = axis[(gl_GlobalInvocationID.z + 1) % 3];
-			auto _u = axis[(gl_GlobalInvocationID.z + 2) % 3];
-
-
-			vec3 rate = vec3(gl_GlobalInvocationID) / vec3(1, 1, 3);
-			vec3 origin = min2 + (_s * rate.x * extent[(gl_GlobalInvocationID.z + 1) % 3] + _u * rate.y * extent[(gl_GlobalInvocationID.z + 2) % 3]);
-			vec3 target = origin + _f * extent[(gl_GlobalInvocationID.z + 0) % 3];
-			int a = 0;
-		}
-	}
-//	test();
 
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
@@ -1575,8 +1526,9 @@ int main()
 	auto dc_ctx = std::make_shared<DCContext>(*context);
 	DCFunctionLibrary dc_fl(*context, *dc_ctx);
 
-	auto model_box = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Box.dae", {100.f});
-	auto model = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Duck.dae", {1.f});
+	auto model_box = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Box.dae", { 100.f });
+//	auto model = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Duck.dae", { 1.f });
+
 
 	auto dc_model = DCModel::Construct(*context, *dc_ctx);
 	Renderer renderer(*context, *dc_ctx, *app.m_window->getFrontBuffer());
@@ -1586,8 +1538,8 @@ int main()
 
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-//		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, { vec4(100.f), vec4(0.f, 0.f, 1.f, 0.f) });
-//		DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
+		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, { vec4(100.f), vec4(0.f, 0.f, 1.f, 0.f) });
+		DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
 
 	}
 
@@ -1643,7 +1595,7 @@ int main()
 //						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, { vec4(100.f), vec4(0.f, 0.f, 1.f, 0.f) });
 					}
 
- 					DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
+					DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
 
 				}
 				renderer.ExecuteTestRender(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());

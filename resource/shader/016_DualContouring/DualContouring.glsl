@@ -102,6 +102,8 @@ void free_ldc_point(in int i)
 #if defined(USE_DC_WorkBuffer)
 layout(set=USE_DC_WorkBuffer,binding=0, scalar) buffer DCCellBuffer { DCCell b_dc_cell[]; };
 layout(set=USE_DC_WorkBuffer,binding=1, scalar) buffer DCCellHashmap { uint b_dc_cell_hashmap[]; };
+layout(set=USE_DC_WorkBuffer,binding=2, scalar) buffer DCCellCounter { uvec4 b_dc_cell_counter; };
+layout(set=USE_DC_WorkBuffer,binding=3, scalar) buffer DCCellList { u8vec4 b_dc_cell_list[]; };
 #endif
 
 #if defined(USE_Rendering)
