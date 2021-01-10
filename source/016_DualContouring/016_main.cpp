@@ -1579,7 +1579,10 @@ int main()
 						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, { vec4(100.f), vec4(0.f, 0.f, 1.f, 0.f) });
 					}
 
-					DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
+					for (int i = 0; i < 100; i++)
+					{
+						DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
+					}
 
 				}
 				renderer.ExecuteTestRender(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
