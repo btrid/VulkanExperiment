@@ -974,8 +974,10 @@ struct DCFunctionLibrary
 			vec3 max = boolean.m_info.m_aabb_max;
 
 			vec3 extent = max - min;
-			vec3 center = (extent - min) * 0.5;
+			vec3 center = extent * 0.5f + min;
 			vec3 new_min = rot * (min - center) + center;
+			vec3 new_max = rot * (max - center) + center;
+			vec3 new_extent = (new_max-new_min);
 
 			ModelDrawParam param;
 			param.axis[0] = vec4(s, 0.f);
@@ -989,8 +991,7 @@ struct DCFunctionLibrary
 
 
 			// –³‘Ê‚ÈƒŒƒC‚ð”ò‚Î‚³‚È‚¢‚æ‚¤‚ÉƒJƒŠƒ“ƒO
-//			auto num = app::calcDipatchGroups(LDC_Reso, uvec3(8, 8, 1));
-//			cmd.dispatch(num.x, num.y, 3);
+			if (1)
 			{
 				vec3 pminmax[] = { min, max };
 				vec3 rmin = center;
@@ -1005,17 +1006,25 @@ struct DCFunctionLibrary
 					rmax = glm::max(new_p, rmax);
 				}
 
+
 				vec3 cell_size = (Voxel_Block_Size / vec3(LDC_Reso)) * 8;
+				vec3 base = (rmin + instance.pos.xyz()) / cell_size.xxx;
+				vec3 count = (rmax - rmin + instance.pos.xyz()) / cell_size.xxx;
 
-				ivec3 base = floor((rmin + instance.pos.xyz()) / cell_size.xxx);
-				ivec3 count = ceil((rmax - rmin + instance.pos.xyz()) / cell_size.xxx);
+				ivec3 _base = clamp(base, 0.f, 32.f);
+				ivec3 _count = clamp(ceil(count) - vec3(_base), 0.f, 32.f);
+				_count = clamp(_count + _base, 0, 32) - _base;
+				cmd.dispatchBase(_base.y, _base.z, 0, _count.y, _count.z, 1);
+				cmd.dispatchBase(_base.z, _base.x, 1, _count.z, _count.x, 1);
+				cmd.dispatchBase(_base.x, _base.y, 2, _count.x, _count.y, 1);
 
-				count = clamp(clamp(count + base, 0, 32) - base, 0, 32);
-				base = clamp(base, 0, 32);
-
-				cmd.dispatchBase(base.y, base.z, 0, count.y, count.z, 1);
-				cmd.dispatchBase(base.z, base.x, 1, count.z, count.x, 1);
-				cmd.dispatchBase(base.x, base.y, 2, count.x, count.y, 1);
+				printf("l=[%6.2f,%6.2f,%6.2f], r=[%6.2f,%6.2f,%6.2f]\n", base.x, base.y, base.z, count.x, count.y, count.z);
+				printf("b=[%4d,%4d,%4d], c=[%4d,%4d,%4d]\n", _base.x, _base.y, _base.z, _count.x, _count.y, _count.z);
+			}
+			else
+			{
+				auto num = app::calcDipatchGroups(Voxel_Reso, uvec3(8, 8, 1));
+				cmd.dispatch(num.x, num.y, 3);
 			}
 
 		}
@@ -1510,8 +1519,8 @@ int main()
 	auto dc_ctx = std::make_shared<DCContext>(*context);
 	DCFunctionLibrary dc_fl(*context, *dc_ctx);
 
-	auto model_box = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Box.dae", { 100.f });
-//	auto model = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Duck.dae", { 1.f });
+	auto model_box = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Box.dae", { 128.f });
+	auto model = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Duck.dae", { 2.f });
 
 
 	auto dc_model = DCModel::Construct(*context, *dc_ctx);
@@ -1522,8 +1531,8 @@ int main()
 
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, { vec4(100.f), vec4(0.f, 0.f, 1.f, 0.f) });
-		DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
+// 		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, { vec4(100.f), vec4(0.f, 0.f, 1.f, 0.f) });
+// 		DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
 
 	}
 
@@ -1560,26 +1569,28 @@ int main()
 						vec3 rot[2];
 						vec3 pos[2];
 					};
-					static I instance{ 0.f, {glm::ballRand(1.f), glm::ballRand(1.f) }, {glm::linearRand(vec3(0.f), vec3(500.f)), glm::linearRand(vec3(0.f), vec3(500.f))} };
-					instance.time += 0.005f;
+					static I instance{ 0.f, {{0.f, 0.f, 1.f}, {0.f, 0.f, 1.f}}, {} };
+					instance.time += 0.001f;
 					if (instance.time >= 1.f)
 					{
 						instance.time -= 1.f;
 						instance.rot[0] = instance.rot[1];
 						instance.rot[1] = glm::ballRand(1.f);
 						instance.pos[0] = instance.pos[1];
-						instance.pos[1] = glm::linearRand(vec3(0.f), vec3(500.f));
+						instance.pos[1] = glm::linearRand(vec3(100.f), vec3(400.f));
 					}
 					ModelInstance model_instance{ vec4(mix(instance.pos[0], instance.pos[1], instance.time), 100.f), vec4(mix(instance.rot[0], instance.rot[1], instance.time), 0.f) };
-//					ModelInstance model_instance{ vec4(100.f), vec4(mix(instance.rot[0], instance.rot[1], instance.time), 0.f) };
-//					for (int i = 0; i < 1000; i++)
+//					ModelInstance model_instance{ vec4(mix(instance.pos[0], instance.pos[1], instance.time), 100.f), vec4(0.f, 0.f, 1.f, 0.f) };
+//					ModelInstance model_instance{ vec4(mix(instance.pos[0], instance.pos[1], instance.time), 100.f), vec4(0.f, 0.f, 1.f, 0.f) };
+					//					for (int i = 0; i < 100; i++)
 					{
 						dc_fl.executClear(cmd, *dc_model);
-//						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, model_instance);
-						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, { vec4(100.f), vec4(0.f, 0.f, 1.f, 0.f) });
+						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, model_instance);
+//						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, model_instance);
+//						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, { vec4(100.f), vec4(0.f, 0.f, 1.f, 0.f) });
 					}
 
-					for (int i = 0; i < 100; i++)
+//					for (int i = 0; i < 100; i++)
 					{
 						DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
 					}

@@ -111,13 +111,14 @@ bool init()
 
 void main() 
 {
+	if(!init()){ return; }
+
 	vec3 axis[] = {vec3(1., 0., 0.),vec3(0., 1., 0.),vec3(0., 0., 1.),};
 	uvec3 reso = Voxel_Reso;
 
 	uvec3 cell_index = gl_GlobalInvocationID;
 	uint idx = cell_index.x + cell_index.y*reso.x + cell_index.z*reso.x*reso.y;
 	
-	if(!init()){ return; }
 
 	f16vec4 plane[16];
 	int plame_num = 0;
