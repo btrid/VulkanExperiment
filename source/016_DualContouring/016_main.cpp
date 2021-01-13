@@ -260,6 +260,7 @@ struct ModelInstance
 	vec4 pos;
 	vec4 dir;
 };
+
 struct Model
 {
 	struct Info
@@ -315,12 +316,12 @@ struct Model
 
 		uint32_t index_offset = 0;
 		uint32_t vertex_offset = 0;
-		Info info{ .m_aabb_min = vec4{999.f}, .m_aabb_max = vec4{-999.f}, .m_voxel_reso=uvec3(256) };
+		Info info{ .m_aabb_min = vec4{999.f}, .m_aabb_max = vec4{-999.f}, .m_voxel_reso = uvec3(256) };
 
 		for (size_t i = 0; i < scene->mNumMeshes; i++)
 		{
 			aiMesh* mesh = scene->mMeshes[i];
-			for (u32 n = 0; n < mesh->mNumFaces; n++) 
+			for (u32 n = 0; n < mesh->mNumFaces; n++)
 			{
 				std::copy(mesh->mFaces[n].mIndices, mesh->mFaces[n].mIndices + 3, index.getMappedPtr<uint32_t>(index_offset));
 				index_offset += 3;
@@ -328,7 +329,7 @@ struct Model
 
 			for (uint32_t v = 0; v < mesh->mNumVertices; v++)
 			{
-				mesh->mVertices[v] += aiVector3D(0.5f);
+//				mesh->mVertices[v] += aiVector3D(1.f);
 				mesh->mVertices[v] *= param.scale;
 				info.m_aabb_min.x = std::min(info.m_aabb_min.x, mesh->mVertices[v].x);
 				info.m_aabb_min.y = std::min(info.m_aabb_min.y, mesh->mVertices[v].y);
@@ -369,8 +370,8 @@ struct Model
 
 		{
 			info.m_primitive_num = numIndex / 3;
-//  			info.m_aabb_min -= 0.01f;
-//  			info.m_aabb_max += 0.01f;
+			//  			info.m_aabb_min -= 0.01f;
+			//  			info.m_aabb_max += 0.01f;
 			model->m_info = info;
 			model->u_info = ctx.m_uniform_memory.allocateMemory<Info>(1);
 
@@ -387,7 +388,7 @@ struct Model
 			model->b_index.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
 			model->u_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR| vk::PipelineStageFlagBits::eRayTracingShaderKHR, {}, {}, { array_size(barrier), barrier }, {});
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR | vk::PipelineStageFlagBits::eRayTracingShaderKHR, {}, {}, { array_size(barrier), barrier }, {});
 
 
 		// build BLAS
@@ -419,7 +420,7 @@ struct Model
 			accelerationCI.type = vk::AccelerationStructureTypeKHR::eBottomLevel;
 			accelerationCI.buffer = AS_buffer.getInfo().buffer;
 			accelerationCI.offset = AS_buffer.getInfo().offset;
-			accelerationCI.size =AS_buffer.getInfo().range;
+			accelerationCI.size = AS_buffer.getInfo().range;
 			model->m_BLAS = ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
 
 			auto scratch_buffer = ctx.m_storage_memory.allocateMemory(size_info.buildScratchSize, true);
@@ -443,10 +444,13 @@ struct Model
 			{
 				std::array<std::array<float, 4>, 3>
 				{
-					std::array<float, 4>{1.f, 0.f, 0.f, -(model->m_info.m_aabb_min.x-0.01f)},
-					std::array<float, 4>{0.f, 1.f, 0.f, -(model->m_info.m_aabb_min.y-0.01f)},
-					std::array<float, 4>{0.f, 0.f, 1.f, -(model->m_info.m_aabb_min.z-0.01f)},
-				}
+				// 					std::array<float, 4>{1.f, 0.f, 0.f, -(model->m_info.m_aabb_min.x - 0.01f)},
+				// 					std::array<float, 4>{0.f, 1.f, 0.f, -(model->m_info.m_aabb_min.y - 0.01f)},
+				// 					std::array<float, 4>{0.f, 0.f, 1.f, -(model->m_info.m_aabb_min.z - 0.01f)},
+									std::array<float, 4>{1.f, 0.f, 0.f, 0.f},
+									std::array<float, 4>{0.f, 1.f, 0.f, 0.f},
+									std::array<float, 4>{0.f, 0.f, 1.f, 0.f},
+								}
 			};
 
 			vk::AccelerationStructureInstanceKHR instance;
@@ -466,7 +470,7 @@ struct Model
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
 
 
-			auto device_address = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo().setBuffer(instance_buffer.getInfo().buffer))+ instance_buffer.getInfo().offset;
+			auto device_address = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo().setBuffer(instance_buffer.getInfo().buffer)) + instance_buffer.getInfo().offset;
 
 			vk::AccelerationStructureGeometryKHR accelerationStructureGeometry;
 			accelerationStructureGeometry.flags = vk::GeometryFlagBitsKHR::eNoDuplicateAnyHitInvocation;
@@ -483,7 +487,7 @@ struct Model
 			AS_buildinfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastBuild | vk::BuildAccelerationStructureFlagBitsKHR::eAllowUpdate;
 			AS_buildinfo.mode = vk::BuildAccelerationStructureModeKHR::eBuild;
 			AS_buildinfo.srcAccelerationStructure = vk::AccelerationStructureKHR();
-//			AS_buildinfo.setGeometries({ accelerationStructureGeometry });
+			//			AS_buildinfo.setGeometries({ accelerationStructureGeometry });
 			AS_buildinfo.geometryCount = 1;
 			AS_buildinfo.pGeometries = acceleration_geometries.data();
 
@@ -564,81 +568,7 @@ struct Model
 
 		return model;
 	}
-
-	static void UpdateTLAS(vk::CommandBuffer& cmd, btr::Context& ctx, DCContext& dc_ctx, Model& model, const vk::TransformMatrixKHR& transform_matrix)
-	{
-
-// 		vk::TransformMatrixKHR transform_matrix =
-// 		{
-// 			std::array<std::array<float, 4>, 3>
-// 			{
-// 				std::array<float, 4>{1.f, 0.f, 0.f, 0.0f},
-// 				std::array<float, 4>{0.f, 1.f, 0.f, 0.0f},
-// 				std::array<float, 4>{0.f, 0.f, 1.f, 0.0f},
-// 			}
-// 		};
-
-		vk::AccelerationStructureInstanceKHR instance;
-		instance.transform = transform_matrix;
-		instance.instanceCustomIndex = 0;
-		instance.mask = 0xFF;
-		instance.instanceShaderBindingTableRecordOffset = 0;
-		instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
-		instance.accelerationStructureReference = ctx.m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(model.m_BLAS.get()));
-
-		auto instance_buffer = dc_ctx.m_ASinstance_memory.allocateMemory<vk::AccelerationStructureInstanceKHR>(1, true);
-
-		cmd.updateBuffer<vk::AccelerationStructureInstanceKHR>(instance_buffer.getInfo().buffer, instance_buffer.getInfo().offset, { instance });
-		vk::BufferMemoryBarrier barrier[] = {
-			instance_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
-		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
-
-		auto device_address = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo().setBuffer(instance_buffer.getInfo().buffer)) + instance_buffer.getInfo().offset;
-
-		vk::AccelerationStructureGeometryKHR accelerationStructureGeometry;
-		accelerationStructureGeometry.flags = vk::GeometryFlagBitsKHR::eNoDuplicateAnyHitInvocation;
-		accelerationStructureGeometry.geometryType = vk::GeometryTypeKHR::eInstances;
-		vk::AccelerationStructureGeometryInstancesDataKHR instance_data;
-		instance_data.data.deviceAddress = device_address;
-		accelerationStructureGeometry.geometry.instances = instance_data;
-
-		std::vector<vk::AccelerationStructureGeometryKHR> acceleration_geometries = { accelerationStructureGeometry };
-
-		vk::AccelerationStructureBuildGeometryInfoKHR AS_buildinfo;
-		AS_buildinfo.type = vk::AccelerationStructureTypeKHR::eTopLevel;
-		AS_buildinfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastBuild | vk::BuildAccelerationStructureFlagBitsKHR::eAllowUpdate;
-		AS_buildinfo.mode = vk::BuildAccelerationStructureModeKHR::eUpdate;
-		AS_buildinfo.srcAccelerationStructure = model.m_TLAS.get();
-		AS_buildinfo.dstAccelerationStructure = model.m_TLAS.get();
-		AS_buildinfo.geometryCount = 1;
-		AS_buildinfo.pGeometries = acceleration_geometries.data();
-
-		std::vector<uint32_t> primitives = { model.m_info.m_primitive_num };
-		auto size_info = ctx.m_device.getAccelerationStructureBuildSizesKHR(vk::AccelerationStructureBuildTypeKHR::eDevice, AS_buildinfo, primitives);
-
-		auto AS_buffer = ctx.m_storage_memory.allocateMemory(size_info.accelerationStructureSize);
-		vk::AccelerationStructureCreateInfoKHR accelerationCI;
-		accelerationCI.type = vk::AccelerationStructureTypeKHR::eTopLevel;
-		accelerationCI.buffer = AS_buffer.getInfo().buffer;
-		accelerationCI.offset = AS_buffer.getInfo().offset;
-		accelerationCI.size = AS_buffer.getInfo().range;
-
-		auto scratch_buffer = ctx.m_storage_memory.allocateMemory(size_info.buildScratchSize, true);
-		AS_buildinfo.scratchData.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo(scratch_buffer.getInfo().buffer)) + scratch_buffer.getInfo().offset;
-
-		vk::AccelerationStructureBuildRangeInfoKHR range;
-		range.primitiveCount = 1;
-		range.primitiveOffset = 0;
-		range.firstVertex = 0;
-		range.transformOffset = 0;
-
-		cmd.buildAccelerationStructuresKHR({ AS_buildinfo }, { &range });
-
-	}
 };
-
-
 struct DCModel
 {
 	struct Info
@@ -852,7 +782,6 @@ void DCModel::CreateDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& 
 struct ModelDrawParam
 {
 	vec4 axis[3];
-	vec4 min;
 	vec4 pos;
 };
 
@@ -970,63 +899,55 @@ struct DCFunctionLibrary
 			vec3 s = (rot * axis[0]);
 			vec3 u = (rot * axis[1]);
 
-			vec3 min = boolean.m_info.m_aabb_min;
-			vec3 max = boolean.m_info.m_aabb_max;
-
-			vec3 extent = max - min;
-			vec3 center = extent * 0.5f + min;
-			vec3 new_min = rot * (min - center) + center;
-			vec3 new_max = rot * (max - center) + center;
-			vec3 new_extent = (new_max-new_min);
-
 			ModelDrawParam param;
 			param.axis[0] = vec4(s, 0.f);
 			param.axis[1] = vec4(u, 0.f);
 			param.axis[2] = vec4(f, 0.f);
-			param.min = vec4(new_min, 0.f);
-
 			param.pos = vec4(instance.pos.xyz(), 0.f);
 
 			cmd.pushConstants<ModelDrawParam>(m_PL_boolean.get(), vk::ShaderStageFlagBits::eCompute, 0, param);
 
 
 			// –³‘Ê‚ÈƒŒƒC‚ð”ò‚Î‚³‚È‚¢‚æ‚¤‚ÉƒJƒŠƒ“ƒO
-			if (1)
+			if (0)
 			{
+				vec3 min = boolean.m_info.m_aabb_min;
+				vec3 max = boolean.m_info.m_aabb_max;
+
 				vec3 pminmax[] = { min, max };
-				vec3 rmin = center;
-				vec3 rmax = center;
+				vec3 rmin = max;
+				vec3 rmax = min;
 				for (int z = 0; z < 2; z++)
 				for (int y = 0; y < 2; y++)
 				for (int x = 0; x < 2; x++)
 				{
-					vec3 p = vec3(pminmax[x == 0].x, pminmax[y == 0].y, pminmax[z == 0].z);
-					vec3 new_p = rot * (p - center) + center;
+					vec3 p = vec3(pminmax[x].x, pminmax[y].y, pminmax[z].z);
+					vec3 new_p = rot * p;
 					rmin = glm::min(new_p, rmin);
 					rmax = glm::max(new_p, rmax);
 				}
 
-
 				vec3 cell_size = (Voxel_Block_Size / vec3(LDC_Reso)) * 8;
-				vec3 base = (rmin + instance.pos.xyz()) / cell_size.xxx;
-				vec3 count = (rmax - rmin + instance.pos.xyz()) / cell_size.xxx;
+// 
+// 				vec3 b = (rmin + instance.pos.xyz()) / cell_size.xxx;
+// 				ivec3 base = floor(vec3(dot(s, b), dot(u, b), dot(f, b)));
+// 				vec3 e = (rmax - rmin) / cell_size.xxx;
+// 				ivec3 count = ivec3(ceil(vec3(dot(s, e), dot(u, e), dot(f, e))));
 
-				ivec3 _base = clamp(base, 0.f, 32.f);
-				ivec3 _count = clamp(ceil(count) - vec3(_base), 0.f, 32.f);
-				_count = clamp(_count + _base, 0, 32) - _base;
-				cmd.dispatchBase(_base.y, _base.z, 0, _count.y, _count.z, 1);
-				cmd.dispatchBase(_base.z, _base.x, 1, _count.z, _count.x, 1);
-				cmd.dispatchBase(_base.x, _base.y, 2, _count.x, _count.y, 1);
-
-				printf("l=[%6.2f,%6.2f,%6.2f], r=[%6.2f,%6.2f,%6.2f]\n", base.x, base.y, base.z, count.x, count.y, count.z);
-				printf("b=[%4d,%4d,%4d], c=[%4d,%4d,%4d]\n", _base.x, _base.y, _base.z, _count.x, _count.y, _count.z);
+ 				ivec3 base = floor((rmin + instance.pos.xyz()) / cell_size.xxx);
+ 				ivec3 count = ceil((rmax - rmin) / cell_size.xxx);
+				count = clamp(clamp(count + base, 0, 32) - base, 0, 32);
+ 				base = clamp(base, 0, 32);
+// 
+ 				cmd.dispatchBase(base.y, base.z, 0, count.y, count.z, 1);
+ 				cmd.dispatchBase(base.z, base.x, 1, count.z, count.x, 1);
+ 				cmd.dispatchBase(base.x, base.y, 2, count.x, count.y, 1);
 			}
 			else
 			{
-				auto num = app::calcDipatchGroups(Voxel_Reso, uvec3(8, 8, 1));
+				auto num = app::calcDipatchGroups(LDC_Reso, uvec3(8, 8, 1));
 				cmd.dispatch(num.x, num.y, 3);
 			}
-
 		}
 
 
@@ -1519,8 +1440,8 @@ int main()
 	auto dc_ctx = std::make_shared<DCContext>(*context);
 	DCFunctionLibrary dc_fl(*context, *dc_ctx);
 
-	auto model_box = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Box.dae", { 128.f });
-	auto model = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Duck.dae", { 2.f });
+	auto model_box = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Box.dae", { 100.f });
+	auto model = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Duck.dae", { 1.f });
 
 
 	auto dc_model = DCModel::Construct(*context, *dc_ctx);
@@ -1533,7 +1454,6 @@ int main()
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 // 		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, { vec4(100.f), vec4(0.f, 0.f, 1.f, 0.f) });
 // 		DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
-
 	}
 
 	app.setup();
@@ -1569,7 +1489,7 @@ int main()
 						vec3 rot[2];
 						vec3 pos[2];
 					};
-					static I instance{ 0.f, {{0.f, 0.f, 1.f}, {0.f, 0.f, 1.f}}, {} };
+					static I instance{ 0.f, {vec4(0.f, 0.f, 1.f, 0.f), vec4(0.f, 0.f, 1.f, 0.f) }, {vec4(200.f), vec4(200.f)} };
 					instance.time += 0.001f;
 					if (instance.time >= 1.f)
 					{
@@ -1577,17 +1497,15 @@ int main()
 						instance.rot[0] = instance.rot[1];
 						instance.rot[1] = glm::ballRand(1.f);
 						instance.pos[0] = instance.pos[1];
-						instance.pos[1] = glm::linearRand(vec3(100.f), vec3(400.f));
+						instance.pos[1] = glm::linearRand(vec3(0.f), vec3(500.f));
 					}
 					ModelInstance model_instance{ vec4(mix(instance.pos[0], instance.pos[1], instance.time), 100.f), vec4(mix(instance.rot[0], instance.rot[1], instance.time), 0.f) };
-//					ModelInstance model_instance{ vec4(mix(instance.pos[0], instance.pos[1], instance.time), 100.f), vec4(0.f, 0.f, 1.f, 0.f) };
-//					ModelInstance model_instance{ vec4(mix(instance.pos[0], instance.pos[1], instance.time), 100.f), vec4(0.f, 0.f, 1.f, 0.f) };
-					//					for (int i = 0; i < 100; i++)
+//					ModelInstance model_instance{ vec4(100.f), vec4(mix(instance.rot[0], instance.rot[1], instance.time), 0.f) };
+//					for (int i = 0; i < 1000; i++)
 					{
 						dc_fl.executClear(cmd, *dc_model);
 						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, model_instance);
 //						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, model_instance);
-//						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, { vec4(100.f), vec4(0.f, 0.f, 1.f, 0.f) });
 					}
 
 //					for (int i = 0; i < 100; i++)

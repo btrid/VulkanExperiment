@@ -10,7 +10,6 @@
 layout(push_constant) uniform pushConstants 
 {
 	vec4 axis[3];
-	vec4 min;
 	vec4 pos;
 } constants;
 
@@ -59,10 +58,8 @@ void main()
 	float t = 0.;
 	float tmax = extent[gl_GlobalInvocationID.z];
 
-	vec3 offset = constants.min.xyz;
-
 	vec3 rate = vec3(gl_GlobalInvocationID) / vec3(Voxel_Reso);
-	vec3 origin = offset + (s*rate.x*extent[(gl_GlobalInvocationID.z+1)%3]+u*rate.y*extent[(gl_GlobalInvocationID.z+2)%3]);
+	vec3 origin = (s*rate.x*extent[(gl_GlobalInvocationID.z+1)%3]+u*rate.y*extent[(gl_GlobalInvocationID.z+2)%3]);
 
 	vec3 pos = constants.pos.xyz;
 	origin -= f*pos[(gl_GlobalInvocationID.z+0)%3] + (s*pos[(gl_GlobalInvocationID.z+1)%3]+u*pos[(gl_GlobalInvocationID.z+2)%3]);
@@ -98,81 +95,85 @@ void main()
 	}
 */
 
-	LDCPoint point_b = getLDCPoint(t, tmax, origin, f);
-	if(!is_valid(point_b)){ return; }
-
-	int grid = int(gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*Voxel_Reso.x + gl_GlobalInvocationID.z*Voxel_Reso.x*Voxel_Reso.y);
-	int index_a = b_ldc_point_link_head[grid];
-
-	LDCPoint point_a = g_invalid_point;
-	if(index_a>=0) 
+	// loop
 	{
-		point_a = b_ldc_point[index_a];
-		int next_a = b_ldc_point_link_next[index_a];
-		free_ldc_point(index_a);
-		index_a = next_a;
-	}
+		LDCPoint point_b = getLDCPoint(t, tmax, origin, f);
+		if(!is_valid(point_b)){ return; }
 
-	bool is_incident_a = false;
-	bool is_incident_b = false;
-	int head = -1;
+		int grid = int(gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*Voxel_Reso.x + gl_GlobalInvocationID.z*Voxel_Reso.x*Voxel_Reso.y);
+		int index_a = b_ldc_point_link_head[grid];
 
-	for(;is_valid(point_a)||is_valid(point_b);)
-	{
-		LDCPoint point = g_invalid_point;
-		if(point_a.p<point_b.p)
+		LDCPoint point_a = g_invalid_point;
+		if(index_a>=0) 
 		{
-			if(!is_incident_a && !is_incident_b)
-			{
-				// 開始
-				point = point_a;
-			}
-			else if(is_incident_a && !is_incident_b)
-			{
-				// 終了
-				point = point_a;
-			}
-			is_incident_a = !is_incident_a;
+			point_a = b_ldc_point[index_a];
+			int next_a = b_ldc_point_link_next[index_a];
+			free_ldc_point(index_a);
+			index_a = next_a;
+		}
 
-			if(index_a>=0)
+		bool is_incident_a = false;
+		bool is_incident_b = false;
+		int head = -1;
+
+		for(;is_valid(point_a)||is_valid(point_b);)
+		{
+			LDCPoint point = g_invalid_point;
+			if(point_a.p<point_b.p)
 			{
-				point_a = b_ldc_point[index_a];
-				int next = b_ldc_point_link_next[index_a];
-				free_ldc_point(index_a);
-				index_a = next;
+				if(!is_incident_a && !is_incident_b)
+				{
+					// 開始
+					point = point_a;
+				}
+				else if(is_incident_a && !is_incident_b)
+				{
+					// 終了
+					point = point_a;
+				}
+				is_incident_a = !is_incident_a;
+
+				if(index_a>=0)
+				{
+					point_a = b_ldc_point[index_a];
+					int next = b_ldc_point_link_next[index_a];
+					free_ldc_point(index_a);
+					index_a = next;
+				}
+				else
+				{
+					point_a = g_invalid_point;
+				}
 			}
 			else
 			{
-				point_a = g_invalid_point;
-			}
-		}
-		else
-		{
-			if(!is_incident_a && !is_incident_b)
-			{
-				// 開始
-				point = point_b;
-			}
-			else if(!is_incident_a && is_incident_b)
-			{
-				// 終了
-				point = point_b;
-			}
-			is_incident_b = !is_incident_b;
+				if(!is_incident_a && !is_incident_b)
+				{
+					// 開始
+					point = point_b;
+				}
+				else if(!is_incident_a && is_incident_b)
+				{
+					// 終了
+					point = point_b;
+				}
+				is_incident_b = !is_incident_b;
 
-			point_b = getLDCPoint(t, tmax, origin, f);
-		}
+				point_b = getLDCPoint(t, tmax, origin, f);
+			}
 
-		if(is_valid(point))
-		{
-			int index = allocate_ldc_point();
-			if(head==-1) { b_ldc_point_link_head[grid] = index; }
-			else { b_ldc_point_link_next[head] = index; }
-			b_ldc_point[index] = point;
-			head = index;
+			if(is_valid(point))
+			{
+				int index = allocate_ldc_point();
+				if(head==-1) { b_ldc_point_link_head[grid] = index; }
+				else { b_ldc_point_link_next[head] = index; }
+				b_ldc_point[index] = point;
+				head = index;
+			}
 		}
+		if(head==-1) { b_ldc_point_link_head[grid] = -1; }
+		else { b_ldc_point_link_next[head] = -1; }
+
 	}
-	if(head==-1) { b_ldc_point_link_head[grid] = -1; }
-	else { b_ldc_point_link_next[head] = -1; }
 
 }
