@@ -37,7 +37,7 @@ LDCPoint getLDCPoint(inout float t, in float tmax, in vec3 origin, in vec3 f)
 	LDCPoint point;
 	point.p = t;
 	point.normal = pack_normal_octahedron(g_rotate * normal);
-	point.flag = 0;
+	point.flag = rayQueryGetIntersectionFrontFaceEXT(rayQuery, true) ? LDCFlag_Incident : LDCFlag_Exit;
 	return point;
 
 }
@@ -116,6 +116,18 @@ void main()
 		bool is_incident_b = false;
 		int head = -1;
 
+		if((point_b.flag & LDCFlag_Exit) == LDCFlag_Exit)
+		{
+			LDCPoint point = {0., pack_normal_octahedron(-f), LDCFlag_Incident};
+			int index = allocate_ldc_point();
+			if(head==-1) { b_ldc_point_link_head[grid] = index; }
+			else { b_ldc_point_link_next[head] = index; }
+			b_ldc_point[index] = point;
+
+			head = index;
+			is_incident_b = true;
+		}
+
 		for(;is_valid(point_a)||is_valid(point_b);)
 		{
 			LDCPoint point = g_invalid_point;
@@ -171,6 +183,19 @@ void main()
 				head = index;
 			}
 		}
+
+		if(is_incident_b)
+		{
+			LDCPoint point = {tmax, pack_normal_octahedron(f), LDCFlag_Exit};
+			int index = allocate_ldc_point();
+			if(head==-1) { b_ldc_point_link_head[grid] = index; }
+			else { b_ldc_point_link_next[head] = index; }
+			b_ldc_point[index] = point;
+
+			head = index;
+			is_incident_b = false;
+		}
+
 		if(head==-1) { b_ldc_point_link_head[grid] = -1; }
 		else { b_ldc_point_link_next[head] = -1; }
 

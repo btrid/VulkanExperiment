@@ -599,7 +599,7 @@ struct DCModel
 
 		auto dc_model = std::make_shared<DCModel>();
 		{
-			dc_model->m_DCModel_info.m_ldc_point_num = 256 * 256 * 3 * 4;
+			dc_model->m_DCModel_info.m_ldc_point_num = 256 * 256 * 3 * 8;
 			dc_model->m_DCModel_info.m_voxel_reso = uvec4(256);
 			dc_model->m_DCModel_info.m_voxel_size = vec4(512.f);
 			vk::DescriptorSetLayout layouts[] =
@@ -675,35 +675,9 @@ struct DCModel
 		return dc_model;
 	}
 
-	static void CreateLDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& dc_model, Model& model);
-
 	static void CreateDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& dc_model);
 
 };
-
-void DCModel::CreateLDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& dc_model, Model& model)
-{
-	{
-		cmd.fillBuffer(dc_model.b_ldc_counter.getInfo().buffer, dc_model.b_ldc_counter.getInfo().offset, dc_model.b_ldc_counter.getInfo().range, 0);
-		cmd.fillBuffer(dc_model.b_ldc_point_link_head.getInfo().buffer, dc_model.b_ldc_point_link_head.getInfo().offset, dc_model.b_ldc_point_link_head.getInfo().range, -1);
-		cmd.fillBuffer(dc_model.b_ldc_point_free.getInfo().buffer, dc_model.b_ldc_point_free.getInfo().offset, dc_model.b_ldc_point_free.getInfo().range, -1);
-		vk::BufferMemoryBarrier barrier[] =
-		{
-			dc_model.b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-			dc_model.b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-			dc_model.b_ldc_point_free.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
-	}
-
-	cmd.bindPipeline(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipeline_LDC_boolean_add.get());
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeLDC.get(), 0, { model.m_DS_Model.get() }, {});
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeLDC.get(), 1, { dc_model.m_DS_DC.get() }, {});
-
-	auto num = app::calcDipatchGroups(LDC_Reso, uvec3(64, 1, 1));
-	cmd.dispatch(num.x, num.y, num.z);
-
-}
 
 void DCModel::CreateDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& dc_model)
 {
@@ -1458,6 +1432,18 @@ int main()
 
 	app.setup();
 
+	struct I
+	{
+		float time;
+		vec3 rot[2];
+		vec3 pos[2];
+	};
+	ModelInstance instance_list[10];
+	for (auto& i : instance_list)
+	{
+		i = { vec4(glm::linearRand(vec3(0.f), vec3(500.f)), 0.f), vec4(glm::ballRand(1.f), 100.f)};
+	}
+
 	while (true)
 	{
 		cStopWatch time;
@@ -1489,11 +1475,11 @@ int main()
 						vec3 rot[2];
 						vec3 pos[2];
 					};
-					static I instance{ 0.f, {vec4(0.f, 0.f, 1.f, 0.f), vec4(0.f, 0.f, 1.f, 0.f) }, {vec4(200.f), vec4(200.f)} };
-					instance.time += 0.001f;
+					static I instance{ 0.f, {vec4(0.f, 0.f, 1.f, 0.f), vec4(0.f, 0.f, 1.f, 0.f) }, {vec4(444.f), vec4(444.f)} };
+					instance.time += 0.0003f;
 					if (instance.time >= 1.f)
 					{
-						instance.time -= 1.f;
+						instance.time = 0.f;
 						instance.rot[0] = instance.rot[1];
 						instance.rot[1] = glm::ballRand(1.f);
 						instance.pos[0] = instance.pos[1];
@@ -1506,6 +1492,11 @@ int main()
 						dc_fl.executClear(cmd, *dc_model);
 						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, model_instance);
 //						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, model_instance);
+					}
+
+					for (auto& i : instance_list)
+					{
+						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, i);
 					}
 
 //					for (int i = 0; i < 100; i++)
