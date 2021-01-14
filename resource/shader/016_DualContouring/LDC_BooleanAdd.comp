@@ -34,8 +34,10 @@ LDCPoint getLDCPoint(inout float t, in float tmax, in vec3 origin, in vec3 f)
 	vec3 c = b_vertex[i0.z];
 	vec3 normal = normalize(cross(b - a, c - a));
 
+	float voxel_p = (t/Voxel_Size)[gl_GlobalInvocationID.z];
+
 	LDCPoint point;
-	point.p = t;
+	point.p = u8vec2(floor(voxel_p), int(fract(voxel_p)*253.+1.));
 	point.normal = pack_normal_octahedron(g_rotate * normal);
 	point.flag = rayQueryGetIntersectionFrontFaceEXT(rayQuery, true) ? LDCFlag_Incident : LDCFlag_Exit;
 	return point;
@@ -118,7 +120,7 @@ void main()
 
 		if((point_b.flag & LDCFlag_Exit) == LDCFlag_Exit)
 		{
-			LDCPoint point = {0., pack_normal_octahedron(-f), LDCFlag_Incident};
+			LDCPoint point = {u8vec2(0, 1), LDCFlag_Incident, pack_normal_octahedron(-f)};
 			int index = allocate_ldc_point();
 			if(head==-1) { b_ldc_point_link_head[grid] = index; }
 			else { b_ldc_point_link_next[head] = index; }
@@ -130,8 +132,10 @@ void main()
 
 		for(;is_valid(point_a)||is_valid(point_b);)
 		{
+			bool is_a = false;
+			bool is_b = false;
 			LDCPoint point = g_invalid_point;
-			if(point_a.p<point_b.p)
+			if(point_a.p[0]<=point_b.p[0])
 			{
 				if(!is_incident_a && !is_incident_b)
 				{
@@ -143,8 +147,30 @@ void main()
 					// 終了
 					point = point_a;
 				}
+
+				is_a = true;
 				is_incident_a = !is_incident_a;
 
+			}
+			if(point_a.p[0]>=point_b.p[0])
+			{
+				if(!is_incident_a && !is_incident_b)
+				{
+					// 開始
+					point = point_b;
+				}
+				else if(!is_incident_a && is_incident_b)
+				{
+					// 終了
+					point = point_b;
+				}
+
+				is_b = true;
+				is_incident_b = !is_incident_b;
+
+			}
+			if(is_a)
+			{
 				if(index_a>=0)
 				{
 					point_a = b_ldc_point[index_a];
@@ -157,20 +183,8 @@ void main()
 					point_a = g_invalid_point;
 				}
 			}
-			else
+			if(is_b)
 			{
-				if(!is_incident_a && !is_incident_b)
-				{
-					// 開始
-					point = point_b;
-				}
-				else if(!is_incident_a && is_incident_b)
-				{
-					// 終了
-					point = point_b;
-				}
-				is_incident_b = !is_incident_b;
-
 				point_b = getLDCPoint(t, tmax, origin, f);
 			}
 
@@ -186,7 +200,7 @@ void main()
 
 		if(is_incident_b)
 		{
-			LDCPoint point = {tmax, pack_normal_octahedron(f), LDCFlag_Exit};
+			LDCPoint point = {u8vec2(255, 254), LDCFlag_Exit, pack_normal_octahedron(f)};
 			int index = allocate_ldc_point();
 			if(head==-1) { b_ldc_point_link_head[grid] = index; }
 			else { b_ldc_point_link_next[head] = index; }

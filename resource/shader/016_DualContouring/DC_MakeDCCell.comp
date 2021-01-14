@@ -23,13 +23,12 @@ void main()
 	{
 		LDCPoint point = b_ldc_point[index];
 
-		float voxel_p = (point.p/voxel_size)[gl_GlobalInvocationID.z];
-
-		uvec3 voxel_index = min(uvec3(s*gl_GlobalInvocationID.x + u*gl_GlobalInvocationID.y + f*voxel_p), Voxel_Reso-1);
+//		float voxel_p = (point.p/voxel_size)[gl_GlobalInvocationID.z];
+		uvec3 voxel_index = min(uvec3(s*gl_GlobalInvocationID.x + u*gl_GlobalInvocationID.y + f*point.p[0]), Voxel_Reso-1);
 		uint i = voxel_index.x + voxel_index.y*Voxel_Reso.x + voxel_index.z*Voxel_Reso.x*Voxel_Reso.y;
 		b_dc_cell[i].normal[gl_GlobalInvocationID.z] = point.normal;
 
-		uint data = atomicOr(b_dc_cell[i].axis_dist, (1u<<gl_GlobalInvocationID.z)|(uint(fract(voxel_p)*253.+1.)<<(8+gl_GlobalInvocationID.z*8)));
+		uint data = atomicOr(b_dc_cell[i].axis_dist, (1u<<gl_GlobalInvocationID.z)|(uint(point.p[1])<<(8+gl_GlobalInvocationID.z*8)));
 /*		if(data == 0)
 		{
 			uint count = atomicAdd(b_dc_cell_counter.w, 1);

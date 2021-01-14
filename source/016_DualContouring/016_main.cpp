@@ -681,6 +681,7 @@ struct DCModel
 
 void DCModel::CreateDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& dc_model)
 {
+	
 	DebugLabel _label(cmd, __FUNCTION__);
 
 	{

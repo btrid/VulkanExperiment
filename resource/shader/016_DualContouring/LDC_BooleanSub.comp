@@ -9,10 +9,12 @@
 
 layout(push_constant) uniform pushConstants 
 {
-    vec4 pos;
-	vec4 dir;
+	vec4 axis[3];
+	vec4 pos;
 } constants;
 layout (local_size_x = 64) in;
+
+mat3 g_rotate;
 
 LDCPoint getLDCPoint(inout float t, in float tmax, in vec3 origin, in vec3 f)
 {
@@ -25,37 +27,42 @@ LDCPoint getLDCPoint(inout float t, in float tmax, in vec3 origin, in vec3 f)
 	{ 
 		return g_invalid_point;
 	}
-	else
-	{
-		uvec3 i0 = b_index[rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, true)];
-		vec3 a = b_vertex[i0.x];
-		vec3 b = b_vertex[i0.y];
-		vec3 c = b_vertex[i0.z];
-		vec3 normal = normalize(cross(b - a, c - a));
 
-		LDCPoint point;
-		point.p = t;
-		point.normal = pack_normal_octahedron(normal);
-		return point;
-	}
+	uvec3 i0 = b_index[rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, true)];
+	vec3 a = b_vertex[i0.x];
+	vec3 b = b_vertex[i0.y];
+	vec3 c = b_vertex[i0.z];
+	vec3 normal = normalize(cross(b - a, c - a));
+
+	float voxel_p = (t/Voxel_Size)[gl_GlobalInvocationID.z];
+
+	LDCPoint point;
+	point.p = u8vec2(floor(voxel_p), int(fract(voxel_p)*253.+1.));
+	point.normal = pack_normal_octahedron(g_rotate * normal);
+	point.flag = rayQueryGetIntersectionFrontFaceEXT(rayQuery, true) ? LDCFlag_Incident : LDCFlag_Exit;
+	return point;
+
 }
 
 void main() 
 {
 
-	vec3 axis[3] = {vec3(1., 0., 0.), vec3(0., 1., 0.),vec3(0., 0., 1.)};
-	vec3 f = axis[(gl_GlobalInvocationID.z+0)%3];
-	vec3 s = axis[(gl_GlobalInvocationID.z+1)%3]; 
-	vec3 u = axis[(gl_GlobalInvocationID.z+2)%3];
+	vec3 f = constants.axis[(gl_GlobalInvocationID.z+0)%3].xyz;
+	vec3 s = constants.axis[(gl_GlobalInvocationID.z+1)%3].xyz; 
+	vec3 u = constants.axis[(gl_GlobalInvocationID.z+2)%3].xyz;
+
+	g_rotate = transpose(mat3(constants.axis[0].xyz, constants.axis[1].xyz, constants.axis[2].xyz));
 
 	vec3 extent = Voxel_Block_Size;
-	vec3 min = u_info.m_aabb_min.xyz;
-
-	vec3 rate = vec3(gl_GlobalInvocationID) / vec3(gl_NumWorkGroups*gl_WorkGroupSize);
-	vec3 origin = min + (s*rate.x*extent[(gl_GlobalInvocationID.z+1)%3]+u*rate.y*extent[(gl_GlobalInvocationID.z+2)%3]);
 
 	float t = 0.;
 	float tmax = extent[gl_GlobalInvocationID.z];
+
+	vec3 rate = vec3(gl_GlobalInvocationID) / vec3(Voxel_Reso);
+	vec3 origin = (s*rate.x*extent[(gl_GlobalInvocationID.z+1)%3]+u*rate.y*extent[(gl_GlobalInvocationID.z+2)%3]);
+
+	vec3 pos = constants.pos.xyz;
+	origin -= f*pos[(gl_GlobalInvocationID.z+0)%3] + (s*pos[(gl_GlobalInvocationID.z+1)%3]+u*pos[(gl_GlobalInvocationID.z+2)%3]);
 
 	LDCPoint point_b = getLDCPoint(t, tmax, origin, f);
 	if(!is_valid(point_b)){ return; }

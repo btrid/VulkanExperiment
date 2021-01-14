@@ -8,6 +8,7 @@
 
 #define Voxel_Reso uvec3(256)
 #define Voxel_Block_Size vec3(512.)
+#define Voxel_Size (Voxel_Block_Size/Voxel_Reso)
 
 struct Info
 {
@@ -17,14 +18,14 @@ struct Info
 };
 struct LDCPoint
 {
-	float p;
+	u8vec2 p;
+	uint16_t flag;
 	uint normal;
-	uint flag;
 };
-const LDCPoint g_invalid_point = {999999., -1, 0xffffffff};
+LDCPoint g_invalid_point = {u8vec2(255,255), uint16_t(0xffff), -1};
 bool is_valid(in LDCPoint p){ return p.flag!=g_invalid_point.flag; }
-#define LDCFlag_Incident 1
-#define LDCFlag_Exit 2
+#define LDCFlag_Incident 1s
+#define LDCFlag_Exit 2s
 struct DCCell
 {
 	uvec3 normal;

@@ -4,7 +4,6 @@ cd /d %~dp0
 SET exe=glslangValidator.exe --target-env vulkan1.2 -V -I./ -I../include 
 SET output=-o ../binary/
 
-%exe% %output%/LDC_Construct.comp.spv LDC_Construct.comp
 %exe% %output%/LDC_BooleanAdd.comp.spv LDC_BooleanAdd.comp
 %exe% %output%/LDC_BooleanSub.comp.spv LDC_BooleanSub.comp
 
