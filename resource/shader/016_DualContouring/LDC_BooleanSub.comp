@@ -12,7 +12,7 @@ layout(push_constant) uniform pushConstants
 	vec4 axis[3];
 	vec4 pos;
 } constants;
-layout (local_size_x = 64) in;
+layout (local_size_x = 8, local_size_y = 8) in;
 
 mat3 g_rotate;
 
@@ -87,14 +87,30 @@ void main()
 	for(;is_valid(point_a)||is_valid(point_b);)
 	{
 		LDCPoint point = g_invalid_point;
+		bool is_a = false;
+		bool is_b = false;
 
-		if(point_a.p<point_b.p)
+		if(point_a.p[0]<=point_b.p[0])
 		{
 			if(!is_incident_b)
 			{
 				point = point_a;
 			}
+			is_a = true;
+		}
+		if(point_a.p[0]>=point_b.p[0])
+		{
+			if(is_incident_a)
+			{
+				point = point_b;
+			}
+			is_b = true;
+		}
+
+		if(is_a)
+		{
 			is_incident_a = !is_incident_a;
+
 			if(index_a>=0)
 			{
 				point_a = b_ldc_point[index_a];
@@ -107,14 +123,9 @@ void main()
 				 point_a = g_invalid_point;
 			}
 		}
-		else
+		if(is_b)
 		{
-			if(is_incident_a)
-			{
-				point = point_b;
-			}
 			is_incident_b = !is_incident_b;
-
 			point_b = getLDCPoint(t, tmax, origin, f);
 		}
 

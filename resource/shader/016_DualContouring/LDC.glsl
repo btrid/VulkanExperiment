@@ -14,9 +14,44 @@ layout(push_constant) uniform pushConstants
 } constants;
 
 layout (local_size_x = 8, local_size_y = 8) in;
-mat3 g_rotate;
 
-LDCPoint getLDCPoint(inout float t, in float tmax, in vec3 origin, in vec3 f)
+
+struct LDCCtx
+{
+	vec3 f;
+	vec3 s;
+	vec3 u;
+	mat3 rotate;
+	float t;
+	float tmax;
+	vec3 origin;
+
+};
+
+void init()
+{
+	LDCCtx ldc_ctx;
+	ldc_ctx.f = constants.axis[(gl_GlobalInvocationID.z+0)%3].xyz;
+	ldc_ctx.s = constants.axis[(gl_GlobalInvocationID.z+1)%3].xyz; 
+	ldc_ctx.u = constants.axis[(gl_GlobalInvocationID.z+2)%3].xyz;
+
+	ldc_ctx.rotate = transpose(mat3(constants.axis[0].xyz, constants.axis[1].xyz, constants.axis[2].xyz));
+
+	vec3 extent = Voxel_Block_Size;
+
+	ldc_ctx.t = 0.;
+	ldc_ctx.tmax = extent[gl_GlobalInvocationID.z];
+
+	vec3 rate = vec3(gl_GlobalInvocationID) / vec3(Voxel_Reso);
+	ldc_ctx.origin = (s*rate.x*extent[(gl_GlobalInvocationID.z+1)%3]+u*rate.y*extent[(gl_GlobalInvocationID.z+2)%3]);
+
+	vec3 pos = constants.pos.xyz;
+	ldc_ctx.origin -= f*pos[(gl_GlobalInvocationID.z+0)%3] + (s*pos[(gl_GlobalInvocationID.z+1)%3]+u*pos[(gl_GlobalInvocationID.z+2)%3]);
+
+	return ldc_ctx;
+}
+
+LDCPoint getLDCPoint(inout LDCCtx ldc_ctx)
 {
 	rayQueryEXT rayQuery;
 	rayQueryInitializeEXT(rayQuery,	topLevelAS, gl_RayFlagsOpaqueEXT, 0xFF, origin, t, f, tmax);
@@ -46,57 +81,6 @@ LDCPoint getLDCPoint(inout float t, in float tmax, in vec3 origin, in vec3 f)
 
 void main() 
 {
-//	if(gl_GlobalInvocationID.z==0){ return;}
-//	if(gl_GlobalInvocationID.z==1){ return;}
-//	if(gl_GlobalInvocationID.z==2){ return;}
-	vec3 f = constants.axis[(gl_GlobalInvocationID.z+0)%3].xyz;
-	vec3 s = constants.axis[(gl_GlobalInvocationID.z+1)%3].xyz; 
-	vec3 u = constants.axis[(gl_GlobalInvocationID.z+2)%3].xyz;
-
-	g_rotate = transpose(mat3(constants.axis[0].xyz, constants.axis[1].xyz, constants.axis[2].xyz));
-
-	vec3 extent = Voxel_Block_Size;
-
-	float t = 0.;
-	float tmax = extent[gl_GlobalInvocationID.z];
-
-	vec3 rate = vec3(gl_GlobalInvocationID) / vec3(Voxel_Reso);
-	vec3 origin = (s*rate.x*extent[(gl_GlobalInvocationID.z+1)%3]+u*rate.y*extent[(gl_GlobalInvocationID.z+2)%3]);
-
-	vec3 pos = constants.pos.xyz;
-	origin -= f*pos[(gl_GlobalInvocationID.z+0)%3] + (s*pos[(gl_GlobalInvocationID.z+1)%3]+u*pos[(gl_GlobalInvocationID.z+2)%3]);
-
-/*
-	// 投影テスト
-	{
-		int head = -1;
-		int grid = int(gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*Voxel_Reso.x + gl_GlobalInvocationID.z*Voxel_Reso.x*Voxel_Reso.y);
-		{
-			LDCPoint point = {0., 0, 0xffffffff};
-			int index = allocate_ldc_point();
-			if(head==-1) { b_ldc_point_link_head[grid] = index; }
-			else { b_ldc_point_link_next[head] = index; }
-			b_ldc_point[index] = point;
-			head = index;
-
-		}
-		{
-			LDCPoint point = {tmax, 0, 0xffffffff};
-			int index = allocate_ldc_point();
-			if(head==-1) { b_ldc_point_link_head[grid] = index; }
-			else { b_ldc_point_link_next[head] = index; }
-			b_ldc_point[index] = point;
-			head = index;
-
-		}
-
-		if(head==-1) { b_ldc_point_link_head[grid] = -1; }
-		else { b_ldc_point_link_next[head] = -1; }
-		return;
-
-	}
-*/
-
 	// loop
 	{
 		LDCPoint point_b = getLDCPoint(t, tmax, origin, f);
@@ -149,6 +133,7 @@ void main()
 				}
 
 				is_a = true;
+				is_incident_a = !is_incident_a;
 
 			}
 			if(point_a.p[0]>=point_b.p[0])
@@ -165,11 +150,11 @@ void main()
 				}
 
 				is_b = true;
-			}
+				is_incident_b = !is_incident_b;
 
+			}
 			if(is_a)
 			{
-				is_incident_a = !is_incident_a;
 				if(index_a>=0)
 				{
 					point_a = b_ldc_point[index_a];
@@ -184,7 +169,6 @@ void main()
 			}
 			if(is_b)
 			{
-				is_incident_b = !is_incident_b;
 				point_b = getLDCPoint(t, tmax, origin, f);
 			}
 

@@ -942,13 +942,30 @@ struct DCFunctionLibrary
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
 
 		}
+
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Boolean_Sub].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL_boolean.get(), 0, { base.m_DS_DC.get() }, {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL_boolean.get(), 1, { boolean.m_DS_Model.get() }, {});
-		cmd.pushConstants<ModelInstance>(m_PL_boolean.get(), vk::ShaderStageFlagBits::eCompute, 0, instance);
 
-		auto num = app::calcDipatchGroups(LDC_Reso, uvec3(64, 1, 1));
-		cmd.dispatch(num.x, num.y, num.z);
+		vec3 axis[] = { vec3(1., 0., 0.), vec3(0., 1., 0.),vec3(0., 0., 1.) };
+		vec3 dir = normalize(instance.dir.xyz());
+		auto rot = quat(axis[2], dir);
+
+		vec3 f = (rot * axis[2]);
+		vec3 s = (rot * axis[0]);
+		vec3 u = (rot * axis[1]);
+
+		ModelDrawParam param;
+		param.axis[0] = vec4(s, 0.f);
+		param.axis[1] = vec4(u, 0.f);
+		param.axis[2] = vec4(f, 0.f);
+		param.pos = vec4(instance.pos.xyz(), 0.f);
+
+		cmd.pushConstants<ModelDrawParam>(m_PL_boolean.get(), vk::ShaderStageFlagBits::eCompute, 0, param);
+
+
+		auto num = app::calcDipatchGroups(LDC_Reso, uvec3(8, 8, 1));
+		cmd.dispatch(num.x, num.y, 3);
 
 	}
 };
@@ -1416,7 +1433,7 @@ int main()
 	DCFunctionLibrary dc_fl(*context, *dc_ctx);
 
 	auto model_box = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Box.dae", { 100.f });
-	auto model = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Duck.dae", { 1.f });
+	auto model = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Duck.dae", { 4.f });
 
 
 	auto dc_model = DCModel::Construct(*context, *dc_ctx);
@@ -1439,7 +1456,7 @@ int main()
 		vec3 rot[2];
 		vec3 pos[2];
 	};
-	ModelInstance instance_list[10];
+	ModelInstance instance_list[30];
 	for (auto& i : instance_list)
 	{
 		i = { vec4(glm::linearRand(vec3(0.f), vec3(500.f)), 0.f), vec4(glm::ballRand(1.f), 100.f)};
@@ -1477,7 +1494,7 @@ int main()
 						vec3 pos[2];
 					};
 					static I instance{ 0.f, {vec4(0.f, 0.f, 1.f, 0.f), vec4(0.f, 0.f, 1.f, 0.f) }, {vec4(444.f), vec4(444.f)} };
-					instance.time += 0.0003f;
+					instance.time += 0.003f;
 					if (instance.time >= 1.f)
 					{
 						instance.time = 0.f;
@@ -1491,14 +1508,15 @@ int main()
 //					for (int i = 0; i < 1000; i++)
 					{
 						dc_fl.executClear(cmd, *dc_model);
-						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, model_instance);
-//						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, model_instance);
+//						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, model_instance);
+						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, { .pos = vec4(250.f, 0.f, 250.f, 0.f), .dir=vec4(0.f, 0.f, 1.f, 0.f)});
 					}
 
 					for (auto& i : instance_list)
 					{
-						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, i);
+//						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, i);
 					}
+					dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model_box, model_instance);
 
 //					for (int i = 0; i < 100; i++)
 					{
