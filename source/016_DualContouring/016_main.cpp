@@ -1538,10 +1538,10 @@ int main()
 					if (instance.time >= 1.f)
 					{
 						instance.time = 0.f;
-						instance.rot[0] = instance.rot[1];
-						instance.rot[1] = glm::ballRand(1.f);
-						instance.pos[0] = instance.pos[1];
-						instance.pos[1] = glm::linearRand(vec3(0.f), vec3(500.f));
+//						instance.rot[0] = instance.rot[1];
+//						instance.rot[1] = glm::ballRand(1.f);
+//						instance.pos[0] = instance.pos[1];
+//						instance.pos[1] = glm::linearRand(vec3(0.f), vec3(500.f));
 					}
 					ModelInstance model_instance{ vec4(mix(instance.pos[0], instance.pos[1], instance.time), 100.f), vec4(mix(instance.rot[0], instance.rot[1], instance.time), 0.f) };
 //					ModelInstance model_instance{ vec4(100.f), vec4(mix(instance.rot[0], instance.rot[1], instance.time), 0.f) };
@@ -1563,11 +1563,11 @@ int main()
 					{
 						a -= 2000;
 					}
-					if (a >= 0)
+//					if (a >= 0)
 					{
-						renderer.ExecuteRenderModel(cmd, *model, model_instance, *app.m_window->getFrontBuffer());
+//						renderer.ExecuteRenderModel(cmd, *model, model_instance, *app.m_window->getFrontBuffer());
 					}
-					else
+//					else
 					{
 						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, model_instance);
 

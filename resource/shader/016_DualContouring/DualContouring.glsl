@@ -20,18 +20,25 @@ struct LDCPoint
 {
 	u8vec2 p;
 	uint16_t flag;
-	uint normal;
+	uint16_t normal;
 };
-LDCPoint g_invalid_point = {u8vec2(255,255), uint16_t(0xffff), -1};
+LDCPoint g_invalid_point = {u8vec2(255,255), uint16_t(0xffff), -1us};
 bool is_valid(in LDCPoint p){ return p.flag!=g_invalid_point.flag; }
 #define LDCFlag_Incident 1s
 #define LDCFlag_Exit 2s
 struct DCCell
 {
-	uvec3 normal;
+	u16vec4 normal;
 //	u8vec3 dist;
 //	uint8_t axis;
 	uint axis_dist;
+};
+
+struct DCCell2
+{
+	uint normal;
+	uint8_t p;
+	uint8_t flag;
 };
 
 struct VkDrawIndexedIndirectCommand 
@@ -118,15 +125,18 @@ vec2 sign_not_zero(in vec2 v)
 {
     return fma(step(vec2(0.0), v), vec2(2.0), vec2(-1.0));
 }
-uint pack_normal_octahedron(in vec3 v)
+uint16_t pack_normal_octahedron(in vec3 v)
 {
 	v = vec3(v.xy / dot(abs(v), vec3(1)), v.z);
-	return packHalf2x16(mix(v.xy, (1.0 - abs(v.yx)) * sign_not_zero(v.xy), step(v.z, 0.0)));
+	v.xy = mix(v.xy, (1.0 - abs(v.yx)) * sign_not_zero(v.xy), step(v.z, 0.0))*vec2(127.)+127.;
+	ivec2 i = ivec2(round(clamp(v.xy, 0., 255.)));
+	return uint16_t(i.x | (i.y<<8));
 
 }
-vec3 unpack_normal_octahedron(in uint packed_nrm)
+vec3 unpack_normal_octahedron(in uint16_t packed_nrm)
 {
-	vec2 nrm = unpackHalf2x16(packed_nrm);
+	vec2 nrm = vec2((packed_nrm.xx>>uvec2(0,8))&0xff) -127.;
+	nrm = clamp(nrm / 127.0, -1.0, 1.0);
 	vec3 v = vec3(nrm.xy, 1.0 - abs(nrm.x) - abs(nrm.y));
 	v.xy = mix(v.xy, (1.0 - abs(v.yx)) * sign_not_zero(v.xy), step(v.z, 0.));
 	return normalize(v);
