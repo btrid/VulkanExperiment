@@ -1,7 +1,7 @@
 #version 460
 #extension GL_GOOGLE_include_directive : require
 
-#define USE_DC 0
+#define USE_Model 0
 #define USE_Rendering 2
 #include "DualContouring.glsl"
 

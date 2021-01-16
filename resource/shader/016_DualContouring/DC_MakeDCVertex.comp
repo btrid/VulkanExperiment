@@ -155,7 +155,7 @@ void main()
 
 	if(plame_num != 0)
 	{
-		float n = 0.3;
+		float n = 0.1;
 		plane[plame_num++] = f16vec4(axis[0]*n, dot(axis[0]*n, vec3(127.5)));
 		plane[plame_num++] = f16vec4(axis[1]*n, dot(axis[1]*n, vec3(127.5)));
 		plane[plame_num++] = f16vec4(axis[2]*n, dot(axis[2]*n, vec3(127.5)));

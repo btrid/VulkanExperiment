@@ -44,9 +44,9 @@
 
 struct LDCPoint
 {
-	float p;
+	u8vec2 p;
+	uint16_t flag;
 	uint normal;
-	uint flag;
 };
 struct DCCell
 {
@@ -96,7 +96,7 @@ struct DCContext
 		// descriptor set layout
 		{
 			{
-				auto stage = vk::ShaderStageFlagBits::eCompute;
+				auto stage = vk::ShaderStageFlagBits::eCompute| vk::ShaderStageFlagBits::eVertex;
 				vk::DescriptorSetLayoutBinding binding[] =
 				{
 					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eUniformBuffer, 1, stage),
@@ -599,7 +599,7 @@ struct DCModel
 
 		auto dc_model = std::make_shared<DCModel>();
 		{
-			dc_model->m_DCModel_info.m_ldc_point_num = 256 * 256 * 3 * 8;
+			dc_model->m_DCModel_info.m_ldc_point_num = 256 * 256 * 3 * 16;
 			dc_model->m_DCModel_info.m_voxel_reso = uvec4(256);
 			dc_model->m_DCModel_info.m_voxel_size = vec4(512.f);
 			vk::DescriptorSetLayout layouts[] =
@@ -975,12 +975,19 @@ struct Material
 };
 struct Renderer
 {
-	vk::UniqueRenderPass m_TestRender_pass;
-	vk::UniqueFramebuffer m_TestRender_framebuffer;
-	vk::UniquePipeline m_pipeline_TestRender;
-	vk::UniquePipeline m_pipeline_Render;
-	vk::UniquePipeline m_pipeline_RenderModel;
+	enum 
+	{
+		Pipeline_RenderDC,
+		Pipeline_RenderModel,
+		Pipeline_RenderTest,
+		Pipeline_Num,
+	};
+	vk::UniqueRenderPass m_render_pass;
+	vk::UniqueFramebuffer m_render_framebuffer;
+
+	std::array<vk::UniquePipeline, Pipeline_Num> m_pipeline;
 	vk::UniquePipelineLayout m_pl;
+	vk::UniquePipelineLayout m_pl_model;
 
 	std::array<Material, 100> m_world_material;
 	vk::UniqueDescriptorSetLayout m_DSL_Rendering;
@@ -1045,16 +1052,33 @@ struct Renderer
 
 		// pipeline layout
 		{
-			vk::DescriptorSetLayout layouts[] =
+			// pipeline layout dc
 			{
-				dc_ctx.m_DSL[DCContext::DSL_DC].get(),
-				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
-				m_DSL_Rendering.get(),
-			};
-			vk::PipelineLayoutCreateInfo pipeline_layout_info;
-			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
-			pipeline_layout_info.setPSetLayouts(layouts);
-			m_pl = ctx.m_device.createPipelineLayoutUnique(pipeline_layout_info);
+				vk::DescriptorSetLayout layouts[] =
+				{
+					dc_ctx.m_DSL[DCContext::DSL_DC].get(),
+					sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
+					m_DSL_Rendering.get(),
+				};
+				vk::PipelineLayoutCreateInfo pipeline_layout_info;
+				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
+				pipeline_layout_info.setPSetLayouts(layouts);
+				m_pl = ctx.m_device.createPipelineLayoutUnique(pipeline_layout_info);
+			}
+
+			// pipeline layout model
+			{
+				vk::DescriptorSetLayout layouts[] =
+				{
+					dc_ctx.m_DSL[DCContext::DSL_Model].get(),
+					sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
+					m_DSL_Rendering.get(),
+				};
+				vk::PipelineLayoutCreateInfo pipeline_layout_info;
+				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
+				pipeline_layout_info.setPSetLayouts(layouts);
+				m_pl_model = ctx.m_device.createPipelineLayoutUnique(pipeline_layout_info);
+			}
 		}
 
 		{
@@ -1100,7 +1124,7 @@ struct Renderer
 				renderpass_info.setSubpassCount(1);
 				renderpass_info.setPSubpasses(&subpass);
 
-				m_TestRender_pass = ctx.m_device.createRenderPassUnique(renderpass_info);
+				m_render_pass = ctx.m_device.createRenderPassUnique(renderpass_info);
 
 				{
 					vk::ImageView view[] = {
@@ -1108,14 +1132,14 @@ struct Renderer
 						rt.m_depth_view,
 					};
 					vk::FramebufferCreateInfo framebuffer_info;
-					framebuffer_info.setRenderPass(m_TestRender_pass.get());
+					framebuffer_info.setRenderPass(m_render_pass.get());
 					framebuffer_info.setAttachmentCount(array_length(view));
 					framebuffer_info.setPAttachments(view);
 					framebuffer_info.setWidth(rt.m_info.extent.width);
 					framebuffer_info.setHeight(rt.m_info.extent.height);
 					framebuffer_info.setLayers(1);
 
-					m_TestRender_framebuffer = ctx.m_device.createFramebufferUnique(framebuffer_info);
+					m_render_framebuffer = ctx.m_device.createFramebufferUnique(framebuffer_info);
 				}
 			}
 
@@ -1193,10 +1217,10 @@ struct Renderer
 					.setPRasterizationState(&rasterization_info)
 					.setPMultisampleState(&sample_info)
 					.setLayout(m_pl.get())
-					.setRenderPass(m_TestRender_pass.get())
+					.setRenderPass(m_render_pass.get())
 					.setPDepthStencilState(&depth_stencil_info)
 					.setPColorBlendState(&blend_info);
-				m_pipeline_TestRender = ctx.m_device.createGraphicsPipelineUnique(vk::PipelineCache(), graphics_pipeline_info).value;
+				m_pipeline[Pipeline_RenderTest] = ctx.m_device.createGraphicsPipelineUnique(vk::PipelineCache(), graphics_pipeline_info).value;
 			}
 
 			{
@@ -1282,10 +1306,10 @@ struct Renderer
 					.setPRasterizationState(&rasterization_info)
 					.setPMultisampleState(&sample_info)
 					.setLayout(m_pl.get())
-					.setRenderPass(m_TestRender_pass.get())
+					.setRenderPass(m_render_pass.get())
 					.setPDepthStencilState(&depth_stencil_info)
 					.setPColorBlendState(&blend_info);
-				m_pipeline_Render = ctx.m_device.createGraphicsPipelineUnique(vk::PipelineCache(), graphics_pipeline_info).value;
+				m_pipeline[Pipeline_RenderDC] = ctx.m_device.createGraphicsPipelineUnique(vk::PipelineCache(), graphics_pipeline_info).value;
 
 				graphics_pipeline_info =
 					vk::GraphicsPipelineCreateInfo()
@@ -1296,11 +1320,11 @@ struct Renderer
 					.setPViewportState(&viewportInfo)
 					.setPRasterizationState(&rasterization_info)
 					.setPMultisampleState(&sample_info)
-					.setLayout(m_pl.get())
-					.setRenderPass(m_TestRender_pass.get())
+					.setLayout(m_pl_model.get())
+					.setRenderPass(m_render_pass.get())
 					.setPDepthStencilState(&depth_stencil_info)
 					.setPColorBlendState(&blend_info);
-				m_pipeline_RenderModel = ctx.m_device.createGraphicsPipelineUnique(vk::PipelineCache(), graphics_pipeline_info).value;
+				m_pipeline[Pipeline_RenderModel] = ctx.m_device.createGraphicsPipelineUnique(vk::PipelineCache(), graphics_pipeline_info).value;
 
 			}
 		}
@@ -1322,9 +1346,9 @@ struct Renderer
 		}
 
 		vk::RenderPassBeginInfo begin_render_Info;
-		begin_render_Info.setRenderPass(m_TestRender_pass.get());
+		begin_render_Info.setRenderPass(m_render_pass.get());
 		begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(rt.m_info.extent.width, rt.m_info.extent.height)));
-		begin_render_Info.setFramebuffer(m_TestRender_framebuffer.get());
+		begin_render_Info.setFramebuffer(m_render_framebuffer.get());
 		begin_render_Info.setClearValueCount(1);
 		auto color = vk::ClearValue(vk::ClearColorValue(std::array<uint32_t, 4>{}));
 		begin_render_Info.setPClearValues(&color);
@@ -1333,7 +1357,7 @@ struct Renderer
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl.get(), 0, ldc_model.m_DS_DC.get(), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 
-		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline_TestRender.get());
+		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_RenderTest].get());
 		cmd.draw(36, 1, 0, 0);
 
 		cmd.endRenderPass();
@@ -1356,9 +1380,9 @@ struct Renderer
 		}
 
 		vk::RenderPassBeginInfo begin_render_Info;
-		begin_render_Info.setRenderPass(m_TestRender_pass.get());
+		begin_render_Info.setRenderPass(m_render_pass.get());
 		begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(rt.m_info.extent.width, rt.m_info.extent.height)));
-		begin_render_Info.setFramebuffer(m_TestRender_framebuffer.get());
+		begin_render_Info.setFramebuffer(m_render_framebuffer.get());
 		begin_render_Info.setClearValueCount(1);
 		auto color = vk::ClearValue(vk::ClearColorValue(std::array<uint32_t, 4>{55, 55, 55, 0}));
 		begin_render_Info.setPClearValues(&color);
@@ -1368,13 +1392,13 @@ struct Renderer
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl.get(), 2, m_DS_Rendering[0].get(), {});
 
-		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline_Render.get());
+		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_RenderDC].get());
 		cmd.drawIndirect(ldc_model.b_dc_index_counter.getInfo().buffer, ldc_model.b_dc_index_counter.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
 
 		cmd.endRenderPass();
 
 	}
-	void ExecuteRenderModel(vk::CommandBuffer cmd, DCContext& dc_ctx, DCModel& ldc_model, Model& model, RenderTarget& rt)
+	void ExecuteRenderModel(vk::CommandBuffer cmd, Model& model, RenderTarget& rt)
 	{
 		DebugLabel _label(cmd, __FUNCTION__);
 		{
@@ -1391,18 +1415,19 @@ struct Renderer
 		}
 
 		vk::RenderPassBeginInfo begin_render_Info;
-		begin_render_Info.setRenderPass(m_TestRender_pass.get());
+		begin_render_Info.setRenderPass(m_render_pass.get());
 		begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(rt.m_info.extent.width, rt.m_info.extent.height)));
-		begin_render_Info.setFramebuffer(m_TestRender_framebuffer.get());
+		begin_render_Info.setFramebuffer(m_render_framebuffer.get());
 		begin_render_Info.setClearValueCount(1);
 		auto color = vk::ClearValue(vk::ClearColorValue(std::array<uint32_t, 4>{55, 55, 55, 0}));
 		begin_render_Info.setPClearValues(&color);
 		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl.get(), 0, ldc_model.m_DS_DC.get(), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl_model.get(), 0, model.m_DS_Model.get(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl_model.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl_model.get(), 2, m_DS_Rendering[0].get(), {});
 
-		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline_RenderModel.get());
+		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_RenderModel].get());
 		cmd.drawIndirect(model.b_draw_cmd.getInfo().buffer, model.b_draw_cmd.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
 
 		cmd.endRenderPass();
@@ -1433,7 +1458,7 @@ int main()
 	DCFunctionLibrary dc_fl(*context, *dc_ctx);
 
 	auto model_box = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Box.dae", { 100.f });
-	auto model = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Duck.dae", { 4.f });
+	auto model = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Duck.dae", { 2.f });
 
 
 	auto dc_model = DCModel::Construct(*context, *dc_ctx);
@@ -1493,13 +1518,13 @@ int main()
 						vec3 rot[2];
 						vec3 pos[2];
 					};
-					static I instance{ 0.f, {vec4(0.f, 0.f, 1.f, 0.f), vec4(0.f, 0.f, 1.f, 0.f) }, {vec4(444.f), vec4(444.f)} };
-					instance.time += 0.003f;
+					static I instance{ 0.5f, {vec4(1.f, 1.f, 1.f, 0.f), vec4(1.f, 1.f, 1.f, 0.f) }, {vec4(444.f), vec4(444.f)} };
+					instance.time += 0.001f;
 					if (instance.time >= 1.f)
 					{
 						instance.time = 0.f;
-						instance.rot[0] = instance.rot[1];
-						instance.rot[1] = glm::ballRand(1.f);
+//						instance.rot[0] = instance.rot[1];
+//						instance.rot[1] = glm::ballRand(1.f);
 						instance.pos[0] = instance.pos[1];
 						instance.pos[1] = glm::linearRand(vec3(0.f), vec3(500.f));
 					}
@@ -1509,14 +1534,14 @@ int main()
 					{
 						dc_fl.executClear(cmd, *dc_model);
 //						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, model_instance);
-						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, { .pos = vec4(250.f, 0.f, 250.f, 0.f), .dir=vec4(0.f, 0.f, 1.f, 0.f)});
+//						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, { .pos = vec4(250.f, 0.f, 250.f, 0.f), .dir=vec4(0.f, 0.f, 1.f, 0.f)});						
 					}
 
 					for (auto& i : instance_list)
 					{
-//						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, i);
+						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, i);
 					}
-					dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model_box, model_instance);
+//					dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model_box, model_instance);
 
 //					for (int i = 0; i < 100; i++)
 					{
@@ -1526,6 +1551,7 @@ int main()
 				}
 				renderer.ExecuteTestRender(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
 				renderer.ExecuteRenderDCModel(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
+				renderer.ExecuteRenderModel(cmd, *model_box, *app.m_window->getFrontBuffer());
 
 				cmd.end();
 				cmds[cmd_render] = cmd;
