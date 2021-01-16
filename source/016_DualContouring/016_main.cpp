@@ -1074,9 +1074,17 @@ struct Renderer
 					sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
 					m_DSL_Rendering.get(),
 				};
+
+				vk::PushConstantRange constants[] =
+				{
+					vk::PushConstantRange().setStageFlags(vk::ShaderStageFlagBits::eVertex).setSize(sizeof(mat4)),
+				};
+
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 				pipeline_layout_info.setPSetLayouts(layouts);
+				pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
+				pipeline_layout_info.setPPushConstantRanges(constants);
 				m_pl_model = ctx.m_device.createPipelineLayoutUnique(pipeline_layout_info);
 			}
 		}
@@ -1398,7 +1406,7 @@ struct Renderer
 		cmd.endRenderPass();
 
 	}
-	void ExecuteRenderModel(vk::CommandBuffer cmd, Model& model, RenderTarget& rt)
+	void ExecuteRenderModel(vk::CommandBuffer cmd, Model& model, const ModelInstance& instance, RenderTarget& rt)
 	{
 		DebugLabel _label(cmd, __FUNCTION__);
 		{
@@ -1427,6 +1435,13 @@ struct Renderer
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl_model.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl_model.get(), 2, m_DS_Rendering[0].get(), {});
 
+
+		vec3 dir = normalize(instance.dir.xyz());
+		auto rot = quat(vec3(0.f, 0.f, 1.f), dir);
+
+		mat4 world = translate(instance.pos.xyz()) * mat4(rot);
+		cmd.pushConstants<mat4>(m_pl_model.get(), vk::ShaderStageFlagBits::eVertex, 0, world);
+
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_RenderModel].get());
 		cmd.drawIndirect(model.b_draw_cmd.getInfo().buffer, model.b_draw_cmd.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
 
@@ -1441,9 +1456,9 @@ int main()
 
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
-	camera->getData().m_position = glm::vec3(50.f, 50.f, -500.f);
-	camera->getData().m_target = glm::vec3(256.f);
-	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
+	camera->getData().m_position = vec3(50.f, 50.f, -500.f);
+	camera->getData().m_target = vec3(256.f);
+	camera->getData().m_up = vec3(0.f, -1.f, 0.f);
 	camera->getData().m_width = 1024;
 	camera->getData().m_height = 1024;
 	camera->getData().m_far = 5000.f;
@@ -1539,9 +1554,24 @@ int main()
 
 					for (auto& i : instance_list)
 					{
-						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, i);
+//						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, i);
 					}
 //					dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model_box, model_instance);
+					static int a = 0;
+					a++;
+					if (a >= 1000)
+					{
+						a -= 2000;
+					}
+					if (a >= 0)
+					{
+						renderer.ExecuteRenderModel(cmd, *model_box, model_instance, *app.m_window->getFrontBuffer());
+					}
+					else
+					{
+						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, model_instance);
+
+					}
 
 //					for (int i = 0; i < 100; i++)
 					{
@@ -1551,7 +1581,6 @@ int main()
 				}
 				renderer.ExecuteTestRender(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
 				renderer.ExecuteRenderDCModel(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
-				renderer.ExecuteRenderModel(cmd, *model_box, *app.m_window->getFrontBuffer());
 
 				cmd.end();
 				cmds[cmd_render] = cmd;
