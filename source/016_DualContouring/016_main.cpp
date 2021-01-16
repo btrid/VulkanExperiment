@@ -868,7 +868,7 @@ struct DCFunctionLibrary
 		{
 			vec3 axis[] = { vec3(1., 0., 0.), vec3(0., 1., 0.),vec3(0., 0., 1.) };
 			vec3 dir = normalize(instance.dir.xyz());
-			auto rot = quat(axis[2], dir);
+			auto rot = quat(dir, axis[2]);
 
 			vec3 f = (rot * axis[2]);
 			vec3 s = (rot * axis[0]);
@@ -949,7 +949,7 @@ struct DCFunctionLibrary
 
 		vec3 axis[] = { vec3(1., 0., 0.), vec3(0., 1., 0.),vec3(0., 0., 1.) };
 		vec3 dir = normalize(instance.dir.xyz());
-		auto rot = quat(axis[2], dir);
+		auto rot = quat(dir, axis[2]);
 
 		vec3 f = (rot * axis[2]);
 		vec3 s = (rot * axis[0]);
@@ -1538,8 +1538,8 @@ int main()
 					if (instance.time >= 1.f)
 					{
 						instance.time = 0.f;
-//						instance.rot[0] = instance.rot[1];
-//						instance.rot[1] = glm::ballRand(1.f);
+						instance.rot[0] = instance.rot[1];
+						instance.rot[1] = glm::ballRand(1.f);
 						instance.pos[0] = instance.pos[1];
 						instance.pos[1] = glm::linearRand(vec3(0.f), vec3(500.f));
 					}
@@ -1565,11 +1565,11 @@ int main()
 					}
 					if (a >= 0)
 					{
-						renderer.ExecuteRenderModel(cmd, *model_box, model_instance, *app.m_window->getFrontBuffer());
+						renderer.ExecuteRenderModel(cmd, *model, model_instance, *app.m_window->getFrontBuffer());
 					}
 					else
 					{
-						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, model_instance);
+						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, model_instance);
 
 					}
 
