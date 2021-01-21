@@ -28,10 +28,9 @@ bool is_valid(in LDCPoint p){ return p.flag!=g_invalid_point.flag; }
 #define LDCFlag_Exit 2s
 struct DCCell
 {
-	u16vec4 normal;
-//	u8vec3 dist;
-//	uint8_t axis;
 	uint axis_dist;
+	u16vec3 normal;
+	uint16_t flag;
 };
 
 struct DCCell2

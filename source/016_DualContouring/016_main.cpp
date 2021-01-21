@@ -870,9 +870,9 @@ struct DCFunctionLibrary
 			vec3 dir = normalize(instance.dir.xyz());
 			auto rot = quat(dir, axis[2]);
 
-			vec3 f = (rot * axis[2]);
 			vec3 s = (rot * axis[0]);
 			vec3 u = (rot * axis[1]);
+			vec3 f = (rot * axis[2]);
 
 			ModelDrawParam param;
 			param.axis[0] = vec4(s, 0.f);
@@ -886,37 +886,7 @@ struct DCFunctionLibrary
 			// 無駄なレイを飛ばさないようにカリング
 			if (0)
 			{
-				vec3 min = boolean.m_info.m_aabb_min;
-				vec3 max = boolean.m_info.m_aabb_max;
-
-				vec3 pminmax[] = { min, max };
-				vec3 rmin = max;
-				vec3 rmax = min;
-				for (int z = 0; z < 2; z++)
-				for (int y = 0; y < 2; y++)
-				for (int x = 0; x < 2; x++)
-				{
-					vec3 p = vec3(pminmax[x].x, pminmax[y].y, pminmax[z].z);
-					vec3 new_p = rot * p;
-					rmin = glm::min(new_p, rmin);
-					rmax = glm::max(new_p, rmax);
-				}
-
-				vec3 cell_size = (Voxel_Block_Size / vec3(LDC_Reso)) * 8;
-// 
-// 				vec3 b = (rmin + instance.pos.xyz()) / cell_size.xxx;
-// 				ivec3 base = floor(vec3(dot(s, b), dot(u, b), dot(f, b)));
-// 				vec3 e = (rmax - rmin) / cell_size.xxx;
-// 				ivec3 count = ivec3(ceil(vec3(dot(s, e), dot(u, e), dot(f, e))));
-
- 				ivec3 base = floor((rmin + instance.pos.xyz()) / cell_size.xxx);
- 				ivec3 count = ceil((rmax - rmin) / cell_size.xxx);
-				count = clamp(clamp(count + base, 0, 32) - base, 0, 32);
- 				base = clamp(base, 0, 32);
-// 
- 				cmd.dispatchBase(base.y, base.z, 0, count.y, count.z, 1);
- 				cmd.dispatchBase(base.z, base.x, 1, count.z, count.x, 1);
- 				cmd.dispatchBase(base.x, base.y, 2, count.x, count.y, 1);
+				// 実装できてない、効果薄そう
 			}
 			else
 			{
@@ -1496,7 +1466,7 @@ int main()
 		vec3 rot[2];
 		vec3 pos[2];
 	};
-	ModelInstance instance_list[30];
+	ModelInstance instance_list[300];
 	for (auto& i : instance_list)
 	{
 		i = { vec4(glm::linearRand(vec3(0.f), vec3(500.f)), 0.f), vec4(glm::ballRand(1.f), 100.f)};
@@ -1533,15 +1503,15 @@ int main()
 						vec3 rot[2];
 						vec3 pos[2];
 					};
-					static I instance{ 0.5f, {vec4(1.f, 1.f, 1.f, 0.f), vec4(1.f, 1.f, 1.f, 0.f) }, {vec4(444.f), vec4(444.f)} };
+					static I instance{ 1.f, {vec4(0.f, 1.f, 1.f, 0.f), vec4(0.f, 1.f, 1.f, 0.f) }, {vec4(256.f), vec4(256.f)} };
 					instance.time += 0.001f;
 					if (instance.time >= 1.f)
 					{
 						instance.time = 0.f;
-//						instance.rot[0] = instance.rot[1];
-//						instance.rot[1] = glm::ballRand(1.f);
-//						instance.pos[0] = instance.pos[1];
-//						instance.pos[1] = glm::linearRand(vec3(0.f), vec3(500.f));
+						instance.rot[0] = instance.rot[1];
+						instance.rot[1] = glm::ballRand(1.f);
+						instance.pos[0] = instance.pos[1];
+						instance.pos[1] = glm::linearRand(vec3(0.f), vec3(500.f));
 					}
 					ModelInstance model_instance{ vec4(mix(instance.pos[0], instance.pos[1], instance.time), 100.f), vec4(mix(instance.rot[0], instance.rot[1], instance.time), 0.f) };
 //					ModelInstance model_instance{ vec4(100.f), vec4(mix(instance.rot[0], instance.rot[1], instance.time), 0.f) };
@@ -1554,20 +1524,20 @@ int main()
 
 					for (auto& i : instance_list)
 					{
-//						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, i);
+						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, i);
 					}
-//					dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model_box, model_instance);
+					dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model_box, model_instance);
 					static int a = 0;
 					a++;
 					if (a >= 1000)
 					{
 						a -= 2000;
 					}
-//					if (a >= 0)
+					if (a >= 0)
 					{
-//						renderer.ExecuteRenderModel(cmd, *model, model_instance, *app.m_window->getFrontBuffer());
+						renderer.ExecuteRenderModel(cmd, *model, model_instance, *app.m_window->getFrontBuffer());
 					}
-//					else
+					else
 					{
 						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, model_instance);
 

@@ -28,16 +28,18 @@ void main()
 		b_dc_cell[i].normal[gl_GlobalInvocationID.z] = point.normal;
 
 		uint data = atomicOr(b_dc_cell[i].axis_dist, (1u<<gl_GlobalInvocationID.z)|(uint(point.p[1])<<(8+gl_GlobalInvocationID.z*8)));
-/*		if(data == 0)
+
+		if(data == 0)
 		{
-			uint count = atomicAdd(b_dc_cell_counter.w, 1);
+			b_dc_cell[i].flag = point.flag;
+/*			uint count = atomicAdd(b_dc_cell_counter.w, 1);
 			if((count%64)==0)
 			{
 				atomicAdd(b_dc_cell_counter.x, 1);
 			}
 			b_dc_cell_list[count] = u8vec4(voxel_index, 0);
-		}
 */
+		}
 
 
 		atomicOr(b_dc_cell_hashmap[i/32], 1u<<(i%32));

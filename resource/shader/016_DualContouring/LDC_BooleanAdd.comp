@@ -63,13 +63,17 @@ void main()
 	vec3 pos = constants.pos.xyz;
 	origin -= f*pos[(gl_GlobalInvocationID.z+0)%3] + (s*pos[(gl_GlobalInvocationID.z+1)%3]+u*pos[(gl_GlobalInvocationID.z+2)%3]);
 
-/*
+	LDCPoint point_b = getLDCPoint(t, tmax*99., origin, f);
+	if(!is_valid(point_b)){ return; }
+
+	int grid = int(gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*Voxel_Reso.x + gl_GlobalInvocationID.z*Voxel_Reso.x*Voxel_Reso.y);
+	int head = -1;
+
+#if 0
 	// 投影テスト
 	{
-		int head = -1;
-		int grid = int(gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*Voxel_Reso.x + gl_GlobalInvocationID.z*Voxel_Reso.x*Voxel_Reso.y);
 		{
-			LDCPoint point = {0., 0, 0xffffffff};
+			LDCPoint point = {u8vec2(0, 1), 0us, 0us};
 			int index = allocate_ldc_point();
 			if(head==-1) { b_ldc_point_link_head[grid] = index; }
 			else { b_ldc_point_link_next[head] = index; }
@@ -78,7 +82,7 @@ void main()
 
 		}
 		{
-			LDCPoint point = {tmax, 0, 0xffffffff};
+			LDCPoint point = {u8vec2(255, 254), 0us, 0us};
 			int index = allocate_ldc_point();
 			if(head==-1) { b_ldc_point_link_head[grid] = index; }
 			else { b_ldc_point_link_next[head] = index; }
@@ -90,16 +94,13 @@ void main()
 		if(head==-1) { b_ldc_point_link_head[grid] = -1; }
 		else { b_ldc_point_link_next[head] = -1; }
 		return;
-
 	}
-*/
+#endif
+
 
 	// loop
 	{
-		LDCPoint point_b = getLDCPoint(t, tmax*99., origin, f);
-		if(!is_valid(point_b)){ return; }
 
-		int grid = int(gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*Voxel_Reso.x + gl_GlobalInvocationID.z*Voxel_Reso.x*Voxel_Reso.y);
 		int index_a = b_ldc_point_link_head[grid];
 
 		LDCPoint point_a = g_invalid_point;
@@ -113,7 +114,6 @@ void main()
 
 		bool is_incident_a = false;
 		bool is_incident_b = false;
-		int head = -1;
 
 		if((point_b.flag & LDCFlag_Exit) == LDCFlag_Exit)
 		{
