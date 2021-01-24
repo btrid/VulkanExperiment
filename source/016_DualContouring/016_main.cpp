@@ -1499,6 +1499,11 @@ struct Context
 
 };
 
+struct Instance 
+{
+	mat3x4 world;
+	::Model& model;
+};
 struct Model
 {
 	enum MyEnum
@@ -1511,7 +1516,6 @@ struct Model
 	vk::UniqueDescriptorSet m_DS;
 
 	std::vector<vk::AccelerationStructureInstanceKHR> m_instance;
-	std::vector<uint32_t> m_primitive_num;
 
 	btr::BufferMemoryEx<vk::AccelerationStructureInstanceKHR> m_instance_buffer;
 
@@ -1521,106 +1525,102 @@ struct Model
 // 	}
 	static void Add(vk::CommandBuffer& cmd, btr::Context& ctx, Context& boolean_ctx, Model& base, ::Model& model, const mat3x4& world)
 	{
-		// build TLAS
+		vk::AccelerationStructureInstanceKHR instance;
+		memcpy(&instance.transform, &world, sizeof(world));
+		instance.instanceCustomIndex = 0;
+		instance.mask = ObjectMask_Add;
+		instance.instanceShaderBindingTableRecordOffset = 0;
+		instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+		instance.accelerationStructureReference = ctx.m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(model.m_BLAS.get()));
+
+		base.m_instance.push_back(instance);
+	}
+
+	static void BuildTLAS(vk::CommandBuffer& cmd, btr::Context& ctx, Context& boolean_ctx, Model& base)
+	{
+
+		auto instance_buffer = ctx.m_storage_memory.allocateMemory<vk::AccelerationStructureInstanceKHR>(base.m_instance.size());
+		cmd.updateBuffer<vk::AccelerationStructureInstanceKHR>(instance_buffer.getInfo().buffer, instance_buffer.getInfo().offset, base.m_instance);
+		vk::BufferMemoryBarrier barrier[] =
 		{
+			instance_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
+
+
+		vk::AccelerationStructureGeometryKHR as_geometry;
+		as_geometry.flags = vk::GeometryFlagBitsKHR::eNoDuplicateAnyHitInvocation;
+		as_geometry.geometryType = vk::GeometryTypeKHR::eInstances;
+		vk::AccelerationStructureGeometryInstancesDataKHR instance_data;
+		instance_data.data.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo().setBuffer(instance_buffer.getInfo().buffer)) + instance_buffer.getInfo().offset;
+		as_geometry.geometry.instances = instance_data;
+
+		vk::AccelerationStructureBuildGeometryInfoKHR AS_buildinfo;
+		AS_buildinfo.type = vk::AccelerationStructureTypeKHR::eTopLevel;
+		AS_buildinfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastBuild | vk::BuildAccelerationStructureFlagBitsKHR::eAllowUpdate;
+		AS_buildinfo.mode = base.m_TLAS.get() ? vk::BuildAccelerationStructureModeKHR::eUpdate : vk::BuildAccelerationStructureModeKHR::eBuild;
+		AS_buildinfo.geometryCount = 1;
+		AS_buildinfo.pGeometries = &as_geometry;
+
+		uint32_t maxCount = base.m_instance.size();
+		auto size_info = ctx.m_device.getAccelerationStructureBuildSizesKHR(vk::AccelerationStructureBuildTypeKHR::eDevice, AS_buildinfo, {maxCount});
+
+		auto AS_buffer = ctx.m_storage_memory.allocateMemory(size_info.accelerationStructureSize, true);
+		if (!base.m_TLAS.get())
+		{
+			vk::AccelerationStructureCreateInfoKHR accelerationCI;
+			accelerationCI.type = vk::AccelerationStructureTypeKHR::eTopLevel;
+			accelerationCI.buffer = AS_buffer.getInfo().buffer;
+			accelerationCI.offset = AS_buffer.getInfo().offset;
+			accelerationCI.size = AS_buffer.getInfo().range;
+			base.m_TLAS = ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
+		}
+		else
+		{
+			AS_buildinfo.srcAccelerationStructure = base.m_TLAS.get();
+		}
+		AS_buildinfo.dstAccelerationStructure = base.m_TLAS.get();
+
+		auto scratch_buffer = ctx.m_storage_memory.allocateMemory(AS_buildinfo.mode == vk::BuildAccelerationStructureModeKHR::eBuild ? size_info.buildScratchSize : size_info.updateScratchSize, true);
+		AS_buildinfo.scratchData.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo(scratch_buffer.getInfo().buffer)) + scratch_buffer.getInfo().offset;
+
+		vk::AccelerationStructureBuildRangeInfoKHR range;
+		range.primitiveCount = base.m_instance.size();
+		range.primitiveOffset = 0;
+		range.firstVertex = 0;
+		range.transformOffset = 0;
+
+		cmd.buildAccelerationStructuresKHR({ AS_buildinfo }, { &range });
+
+
+		// descriptor set
+		if (AS_buildinfo.mode == vk::BuildAccelerationStructureModeKHR::eBuild)
+		{
+			vk::DescriptorSetLayout layouts[] =
 			{
-				vk::AccelerationStructureInstanceKHR instance;
-				memcpy(&instance.transform, &world, sizeof(world));
-				instance.instanceCustomIndex = 0;
-				instance.mask = ObjectMask_Add;
-				instance.instanceShaderBindingTableRecordOffset = 0;
-				instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
-				instance.accelerationStructureReference = ctx.m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(model.m_BLAS.get()));
-
-				base.m_instance.push_back(instance);
-				base.m_primitive_num.push_back(model.m_info.m_primitive_num);
-
-			}
-
-			auto instance_buffer = ctx.m_storage_memory.allocateMemory<vk::AccelerationStructureInstanceKHR>(base.m_instance.size());
-			cmd.updateBuffer<vk::AccelerationStructureInstanceKHR>(instance_buffer.getInfo().buffer, instance_buffer.getInfo().offset, base.m_instance);
-			vk::BufferMemoryBarrier barrier[] =
-			{
-				instance_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
+				boolean_ctx.m_DSL[Context::DSL_TLAS].get(),
 			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
+			vk::DescriptorSetAllocateInfo desc_info;
+			desc_info.setDescriptorPool(ctx.m_descriptor_pool.get());
+			desc_info.setDescriptorSetCount(array_length(layouts));
+			desc_info.setPSetLayouts(layouts);
+			base.m_DS = std::move(ctx.m_device.allocateDescriptorSetsUnique(desc_info)[0]);
 
 
-			vk::AccelerationStructureGeometryKHR as_geometry;
-			as_geometry.flags = vk::GeometryFlagBitsKHR::eNoDuplicateAnyHitInvocation;
-			as_geometry.geometryType = vk::GeometryTypeKHR::eInstances;
-			vk::AccelerationStructureGeometryInstancesDataKHR instance_data;
-			instance_data.data.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo().setBuffer(instance_buffer.getInfo().buffer)) + instance_buffer.getInfo().offset;
-			as_geometry.geometry.instances = instance_data;
+			vk::WriteDescriptorSetAccelerationStructureKHR as;
+			as.accelerationStructureCount = 1;
+			as.pAccelerationStructures = &base.m_TLAS.get();
 
-			vk::AccelerationStructureBuildGeometryInfoKHR AS_buildinfo;
-			AS_buildinfo.type = vk::AccelerationStructureTypeKHR::eTopLevel;
-			AS_buildinfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastBuild | vk::BuildAccelerationStructureFlagBitsKHR::eAllowUpdate;
-			AS_buildinfo.mode = base.m_TLAS.get() ? vk::BuildAccelerationStructureModeKHR::eUpdate : vk::BuildAccelerationStructureModeKHR::eBuild;
-			AS_buildinfo.geometryCount = 1;
-			AS_buildinfo.pGeometries = &as_geometry;
-
-			uint32_t maxCount = base.m_primitive_num.size();
-			auto size_info = ctx.m_device.getAccelerationStructureBuildSizesKHR(vk::AccelerationStructureBuildTypeKHR::eDevice, AS_buildinfo, {maxCount});
-
-			auto AS_buffer = ctx.m_storage_memory.allocateMemory(size_info.accelerationStructureSize, true);
-			if (!base.m_TLAS.get())
+			vk::WriteDescriptorSet write[] =
 			{
-				vk::AccelerationStructureCreateInfoKHR accelerationCI;
-				accelerationCI.type = vk::AccelerationStructureTypeKHR::eTopLevel;
-				accelerationCI.buffer = AS_buffer.getInfo().buffer;
-				accelerationCI.offset = AS_buffer.getInfo().offset;
-				accelerationCI.size = AS_buffer.getInfo().range;
-				base.m_TLAS = ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
-			}
-			else
-			{
-				AS_buildinfo.srcAccelerationStructure = base.m_TLAS.get();
-			}
-			AS_buildinfo.dstAccelerationStructure = base.m_TLAS.get();
-
-			auto scratch_buffer = ctx.m_storage_memory.allocateMemory(AS_buildinfo.mode == vk::BuildAccelerationStructureModeKHR::eBuild ? size_info.buildScratchSize : size_info.updateScratchSize, true);
-			AS_buildinfo.scratchData.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo(scratch_buffer.getInfo().buffer)) + scratch_buffer.getInfo().offset;
-
-			vk::AccelerationStructureBuildRangeInfoKHR range;
-			range.primitiveCount = base.m_primitive_num.size();
-			range.primitiveOffset = 0;
-			range.firstVertex = 0;
-			range.transformOffset = 0;
-
-			cmd.buildAccelerationStructuresKHR({ AS_buildinfo }, { &range });
-
-
-			// descriptor set
-			if (AS_buildinfo.mode == vk::BuildAccelerationStructureModeKHR::eBuild)
-			{
-				vk::DescriptorSetLayout layouts[] =
-				{
-					boolean_ctx.m_DSL[Context::DSL_TLAS].get(),
-				};
-				vk::DescriptorSetAllocateInfo desc_info;
-				desc_info.setDescriptorPool(ctx.m_descriptor_pool.get());
-				desc_info.setDescriptorSetCount(array_length(layouts));
-				desc_info.setPSetLayouts(layouts);
-				base.m_DS = std::move(ctx.m_device.allocateDescriptorSetsUnique(desc_info)[0]);
-
-
-				vk::WriteDescriptorSetAccelerationStructureKHR as;
-				as.accelerationStructureCount = 1;
-				as.pAccelerationStructures = &base.m_TLAS.get();
-
-				vk::WriteDescriptorSet write[] =
-				{
-					vk::WriteDescriptorSet()
-					.setDescriptorType(vk::DescriptorType::eAccelerationStructureKHR)
-					.setDescriptorCount(1)
-					.setPNext(&as)
-					.setDstBinding(0)
-					.setDstSet(base.m_DS.get()),
-				};
-				ctx.m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
-			}
-
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eAccelerationStructureKHR)
+				.setDescriptorCount(1)
+				.setPNext(&as)
+				.setDstBinding(0)
+				.setDstSet(base.m_DS.get()),
+			};
+			ctx.m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
 		}
 
 	}
@@ -1715,6 +1715,11 @@ int main()
 		auto world = glm::translate(i.pos.xyz()) * glm::toMat4(rot);
 		mat3x4 world3x4 = glm::make_mat3x4(glm::value_ptr(glm::transpose(world)));
 		booleanOp::Model::Add(cmd, *context, *boolean_ctx, *boolean_model, *model_box, world3x4);
+
+	}
+	{
+		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+		booleanOp::Model::BuildTLAS(cmd, *context, *boolean_ctx, *boolean_model);
 
 	}
 
