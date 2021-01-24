@@ -261,6 +261,7 @@ struct ModelInstance
 	vec4 dir;
 };
 
+
 struct Model
 {
 	struct Info
@@ -370,8 +371,6 @@ struct Model
 
 		{
 			info.m_primitive_num = numIndex / 3;
-			//  			info.m_aabb_min -= 0.01f;
-			//  			info.m_aabb_max += 0.01f;
 			model->m_info = info;
 			model->u_info = ctx.m_uniform_memory.allocateMemory<Info>(1);
 
@@ -444,13 +443,10 @@ struct Model
 			{
 				std::array<std::array<float, 4>, 3>
 				{
-				// 					std::array<float, 4>{1.f, 0.f, 0.f, -(model->m_info.m_aabb_min.x - 0.01f)},
-				// 					std::array<float, 4>{0.f, 1.f, 0.f, -(model->m_info.m_aabb_min.y - 0.01f)},
-				// 					std::array<float, 4>{0.f, 0.f, 1.f, -(model->m_info.m_aabb_min.z - 0.01f)},
-									std::array<float, 4>{1.f, 0.f, 0.f, 0.f},
-									std::array<float, 4>{0.f, 1.f, 0.f, 0.f},
-									std::array<float, 4>{0.f, 0.f, 1.f, 0.f},
-								}
+					std::array<float, 4>{1.f, 0.f, 0.f, 0.f},
+					std::array<float, 4>{0.f, 1.f, 0.f, 0.f},
+					std::array<float, 4>{0.f, 0.f, 1.f, 0.f},
+				}
 			};
 
 			vk::AccelerationStructureInstanceKHR instance;
@@ -675,84 +671,84 @@ struct DCModel
 		return dc_model;
 	}
 
-	static void CreateDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& dc_model);
+	static void CreateDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& dc_model)
+	{
+
+		DebugLabel _label(cmd, __FUNCTION__);
+
+		{
+			vk::BufferMemoryBarrier barrier[] =
+			{
+				//			dc_ctx.b_dc_cell_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+							dc_model.b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+							dc_model.b_ldc_point.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
+
+		}
+
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeDC.get(), 0, { dc_model.m_DS_DC.get() }, {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeDC.get(), 1, { dc_ctx.m_DS_worker.get() }, {});
+
+		_label.insert("Make DC Cell");
+		{
+
+			cmd.fillBuffer(dc_ctx.b_dc_cell.getInfo().buffer, dc_ctx.b_dc_cell.getInfo().offset, dc_ctx.b_dc_cell.getInfo().range, 0);
+			cmd.fillBuffer(dc_ctx.b_dc_cell_hashmap.getInfo().buffer, dc_ctx.b_dc_cell_hashmap.getInfo().offset, dc_ctx.b_dc_cell_hashmap.getInfo().range, 0);
+
+			cmd.updateBuffer<vk::DrawIndirectCommand>(dc_model.b_dc_index_counter.getInfo().buffer, dc_model.b_dc_index_counter.getInfo().offset, { vk::DrawIndirectCommand(0,1,0,0) });
+
+			vk::BufferMemoryBarrier barrier[] =
+			{
+				dc_ctx.b_dc_cell.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipeline_MakeDCCell.get());
+
+			auto num = app::calcDipatchGroups(LDC_Reso, uvec3(64, 1, 1));
+			cmd.dispatch(num.x, num.y, num.z);
+		}
+
+		_label.insert("Make DC Vertex");
+		{
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipeline_MakeDCVertex.get());
+
+			auto num = app::calcDipatchGroups(Voxel_Reso, uvec3(64, 1, 1));
+			cmd.dispatch(num.x, num.y, num.z);
+		}
+
+		_label.insert("Make DC Face");
+		{
+
+			vk::BufferMemoryBarrier barrier[] =
+			{
+				dc_model.b_dc_vertex.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				dc_model.b_dc_index_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipeline_MakeDCFace.get());
+
+			auto num = app::calcDipatchGroups(Voxel_Reso, uvec3(64, 1, 1));
+			cmd.dispatch(num.x, num.y, num.z);
+
+		}
+
+		{
+			vk::BufferMemoryBarrier barrier[] =
+			{
+				dc_model.b_dc_index_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, { array_size(barrier), barrier }, {});
+
+		}
+	}
 
 };
 
-void DCModel::CreateDCModel(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& dc_model)
-{
-	
-	DebugLabel _label(cmd, __FUNCTION__);
 
-	{
-		vk::BufferMemoryBarrier barrier[] =
-		{
-//			dc_ctx.b_dc_cell_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-			dc_model.b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			dc_model.b_ldc_point.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
-
-	}
-
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeDC.get(), 0, { dc_model.m_DS_DC.get() }, {});
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipelinelayout_MakeDC.get(), 1, { dc_ctx.m_DS_worker.get() }, {});
-
-	_label.insert("Make DC Cell");
-	{
-
-		cmd.fillBuffer(dc_ctx.b_dc_cell.getInfo().buffer, dc_ctx.b_dc_cell.getInfo().offset, dc_ctx.b_dc_cell.getInfo().range, 0);
-		cmd.fillBuffer(dc_ctx.b_dc_cell_hashmap.getInfo().buffer, dc_ctx.b_dc_cell_hashmap.getInfo().offset, dc_ctx.b_dc_cell_hashmap.getInfo().range, 0);
-
-		cmd.updateBuffer<vk::DrawIndirectCommand>(dc_model.b_dc_index_counter.getInfo().buffer, dc_model.b_dc_index_counter.getInfo().offset, { vk::DrawIndirectCommand(0,1,0,0) });
-
-		vk::BufferMemoryBarrier barrier[] =
-		{
-			dc_ctx.b_dc_cell.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
-
-		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipeline_MakeDCCell.get());
-
-		auto num = app::calcDipatchGroups(LDC_Reso, uvec3(64, 1, 1));
-		cmd.dispatch(num.x, num.y, num.z);
-	}
-
-	_label.insert("Make DC Vertex");
-	{
-
-		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipeline_MakeDCVertex.get());
-
-		auto num = app::calcDipatchGroups(Voxel_Reso, uvec3(64, 1, 1));
-		cmd.dispatch(num.x, num.y, num.z);
-	}
-
-	_label.insert("Make DC Face");
-	{
-
-		vk::BufferMemoryBarrier barrier[] =
-		{
-			dc_model.b_dc_vertex.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			dc_model.b_dc_index_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
-
-		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, dc_ctx.m_pipeline_MakeDCFace.get());
-
-		auto num = app::calcDipatchGroups(Voxel_Reso, uvec3(64, 1, 1));
-		cmd.dispatch(num.x, num.y, num.z);
-
-	}
-
-	{
-		vk::BufferMemoryBarrier barrier[] =
-		{
-			dc_model.b_dc_index_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
-		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, { array_size(barrier), barrier }, {});
-
-	}
-}
 
 struct ModelDrawParam
 {
@@ -760,7 +756,7 @@ struct ModelDrawParam
 	vec4 pos;
 };
 
-struct DCFunctionLibrary
+struct FunctionLibrary
 {
 	enum
 	{
@@ -771,7 +767,7 @@ struct DCFunctionLibrary
 	vk::UniquePipelineLayout m_PL_boolean;
 	std::array<vk::UniquePipeline, Pipeline_Num> m_pipeline;
 
-	DCFunctionLibrary(btr::Context& ctx, DCContext& dc_ctx)
+	FunctionLibrary(btr::Context& ctx, DCContext& dc_ctx)
 	{
 		// pipeline layout
 		{
@@ -894,10 +890,8 @@ struct DCFunctionLibrary
 				cmd.dispatch(num.x, num.y, 3);
 			}
 		}
-
-
-
 	}
+
 	void executeBooleanSub(vk::CommandBuffer& cmd, DCContext& dc_ctx, DCModel& base, Model& boolean, const ModelInstance& instance)
 	{
 		DebugLabel _label(cmd, __FUNCTION__);
@@ -939,13 +933,14 @@ struct DCFunctionLibrary
 
 	}
 };
-struct Material
-{
-	TextureResource albedo_texture;
-};
+
 struct Renderer
 {
-	enum 
+	struct Material
+	{
+		TextureResource albedo_texture;
+	};
+	enum
 	{
 		Pipeline_RenderDC,
 		Pipeline_RenderModel,
@@ -1420,6 +1415,251 @@ struct Renderer
 	}
 };
 
+namespace booleanOp
+{
+struct Context
+{
+	enum
+	{
+		DSL_TLAS,
+		DSL_Num,
+	};
+	enum
+	{
+		Pipeline_Rendering,
+		Pipeline_Num,
+	};
+
+	std::array<vk::UniqueDescriptorSetLayout, DSL_Num> m_DSL;
+	std::array<vk::UniquePipeline, Pipeline_Num> m_pipeline;
+	vk::UniquePipelineLayout m_PL;
+
+	vk::UniqueDescriptorSetLayout m_DSL_Rendering;
+	std::array<vk::UniqueDescriptorSet, sGlobal::BUFFER_COUNT_MAX> m_DS_Rendering;
+
+	Context(btr::Context& ctx)
+	{
+		// descriptor set layout
+		{
+			auto stage = vk::ShaderStageFlagBits::eCompute;
+			vk::DescriptorSetLayoutBinding binding[] =
+			{
+				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eAccelerationStructureKHR, 1, stage),
+			};
+			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
+			desc_layout_info.setBindingCount(array_length(binding));
+			desc_layout_info.setPBindings(binding);
+			m_DSL[DSL_TLAS] = ctx.m_device.createDescriptorSetLayoutUnique(desc_layout_info);
+
+		}
+		// pipeline layout
+		{
+			vk::DescriptorSetLayout layouts[] =
+			{
+				m_DSL[DSL_TLAS].get(),
+				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
+				RenderTarget::s_descriptor_set_layout.get(),
+			};
+
+// 			vk::PushConstantRange constants[] = {
+// 				vk::PushConstantRange().setStageFlags(vk::ShaderStageFlagBits::eCompute).setOffset(0).setSize(sizeof(ModelDrawParam)),
+// 			};
+			vk::PipelineLayoutCreateInfo pipeline_layout_info;
+			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
+			pipeline_layout_info.setPSetLayouts(layouts);
+// 			pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
+// 			pipeline_layout_info.setPPushConstantRanges(constants);
+			m_PL = ctx.m_device.createPipelineLayoutUnique(pipeline_layout_info);
+		}
+
+		// compute pipeline
+		{
+			struct { const char* name; vk::ShaderStageFlagBits flag; } shader_param[] =
+			{
+				{"Boolean_Rendering.comp.spv", vk::ShaderStageFlagBits::eCompute},
+			};
+			std::array<vk::UniqueShaderModule, array_length(shader_param)> shader;
+			std::array<vk::PipelineShaderStageCreateInfo, array_length(shader_param)> shaderStages;
+			for (size_t i = 0; i < array_length(shader_param); i++)
+			{
+				shader[i] = loadShaderUnique(ctx.m_device, btr::getResourceShaderPath() + shader_param[i].name);
+				shaderStages[i].setModule(shader[i].get()).setStage(shader_param[i].flag).setPName("main");
+			}
+
+			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
+			{
+				vk::ComputePipelineCreateInfo()
+				.setStage(shaderStages[0])
+				.setLayout(m_PL.get()),
+			};
+			m_pipeline[Pipeline_Rendering] = ctx.m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[0]).value;
+		}
+
+	}
+
+};
+
+struct Model
+{
+	enum MyEnum
+	{
+		ObjectMask_Add = 0x1,
+		ObjectMask_Sub = 0x2,
+	};
+	vk::UniqueAccelerationStructureKHR m_TLAS;
+
+	vk::UniqueDescriptorSet m_DS;
+
+	std::vector<vk::AccelerationStructureInstanceKHR> m_instance;
+	std::vector<uint32_t> m_primitive_num;
+
+	btr::BufferMemoryEx<vk::AccelerationStructureInstanceKHR> m_instance_buffer;
+
+// 	Model(vk::CommandBuffer& cmd, btr::Context& ctx, Context& boolean_ctx)
+// 	{
+// 
+// 	}
+	static void Add(vk::CommandBuffer& cmd, btr::Context& ctx, Context& boolean_ctx, Model& base, ::Model& model, const mat3x4& world)
+	{
+		// build TLAS
+		{
+			{
+				vk::AccelerationStructureInstanceKHR instance;
+				memcpy(&instance.transform, &world, sizeof(world));
+				instance.instanceCustomIndex = 0;
+				instance.mask = ObjectMask_Add;
+				instance.instanceShaderBindingTableRecordOffset = 0;
+				instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+				instance.accelerationStructureReference = ctx.m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(model.m_BLAS.get()));
+
+				base.m_instance.push_back(instance);
+				base.m_primitive_num.push_back(model.m_info.m_primitive_num);
+
+			}
+
+			auto instance_buffer = ctx.m_storage_memory.allocateMemory<vk::AccelerationStructureInstanceKHR>(base.m_instance.size());
+			cmd.updateBuffer<vk::AccelerationStructureInstanceKHR>(instance_buffer.getInfo().buffer, instance_buffer.getInfo().offset, base.m_instance);
+			vk::BufferMemoryBarrier barrier[] =
+			{
+				instance_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
+
+
+			vk::AccelerationStructureGeometryKHR as_geometry;
+			as_geometry.flags = vk::GeometryFlagBitsKHR::eNoDuplicateAnyHitInvocation;
+			as_geometry.geometryType = vk::GeometryTypeKHR::eInstances;
+			vk::AccelerationStructureGeometryInstancesDataKHR instance_data;
+			instance_data.data.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo().setBuffer(instance_buffer.getInfo().buffer)) + instance_buffer.getInfo().offset;
+			as_geometry.geometry.instances = instance_data;
+
+			vk::AccelerationStructureBuildGeometryInfoKHR AS_buildinfo;
+			AS_buildinfo.type = vk::AccelerationStructureTypeKHR::eTopLevel;
+			AS_buildinfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastBuild | vk::BuildAccelerationStructureFlagBitsKHR::eAllowUpdate;
+			AS_buildinfo.mode = base.m_TLAS.get() ? vk::BuildAccelerationStructureModeKHR::eUpdate : vk::BuildAccelerationStructureModeKHR::eBuild;
+			AS_buildinfo.geometryCount = 1;
+			AS_buildinfo.pGeometries = &as_geometry;
+
+			uint32_t maxCount = base.m_primitive_num.size();
+			auto size_info = ctx.m_device.getAccelerationStructureBuildSizesKHR(vk::AccelerationStructureBuildTypeKHR::eDevice, AS_buildinfo, {maxCount});
+
+			auto AS_buffer = ctx.m_storage_memory.allocateMemory(size_info.accelerationStructureSize, true);
+			if (!base.m_TLAS.get())
+			{
+				vk::AccelerationStructureCreateInfoKHR accelerationCI;
+				accelerationCI.type = vk::AccelerationStructureTypeKHR::eTopLevel;
+				accelerationCI.buffer = AS_buffer.getInfo().buffer;
+				accelerationCI.offset = AS_buffer.getInfo().offset;
+				accelerationCI.size = AS_buffer.getInfo().range;
+				base.m_TLAS = ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
+			}
+			else
+			{
+				AS_buildinfo.srcAccelerationStructure = base.m_TLAS.get();
+			}
+			AS_buildinfo.dstAccelerationStructure = base.m_TLAS.get();
+
+			auto scratch_buffer = ctx.m_storage_memory.allocateMemory(AS_buildinfo.mode == vk::BuildAccelerationStructureModeKHR::eBuild ? size_info.buildScratchSize : size_info.updateScratchSize, true);
+			AS_buildinfo.scratchData.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo(scratch_buffer.getInfo().buffer)) + scratch_buffer.getInfo().offset;
+
+			vk::AccelerationStructureBuildRangeInfoKHR range;
+			range.primitiveCount = base.m_primitive_num.size();
+			range.primitiveOffset = 0;
+			range.firstVertex = 0;
+			range.transformOffset = 0;
+
+			cmd.buildAccelerationStructuresKHR({ AS_buildinfo }, { &range });
+
+
+			// descriptor set
+			if (AS_buildinfo.mode == vk::BuildAccelerationStructureModeKHR::eBuild)
+			{
+				vk::DescriptorSetLayout layouts[] =
+				{
+					boolean_ctx.m_DSL[Context::DSL_TLAS].get(),
+				};
+				vk::DescriptorSetAllocateInfo desc_info;
+				desc_info.setDescriptorPool(ctx.m_descriptor_pool.get());
+				desc_info.setDescriptorSetCount(array_length(layouts));
+				desc_info.setPSetLayouts(layouts);
+				base.m_DS = std::move(ctx.m_device.allocateDescriptorSetsUnique(desc_info)[0]);
+
+
+				vk::WriteDescriptorSetAccelerationStructureKHR as;
+				as.accelerationStructureCount = 1;
+				as.pAccelerationStructures = &base.m_TLAS.get();
+
+				vk::WriteDescriptorSet write[] =
+				{
+					vk::WriteDescriptorSet()
+					.setDescriptorType(vk::DescriptorType::eAccelerationStructureKHR)
+					.setDescriptorCount(1)
+					.setPNext(&as)
+					.setDstBinding(0)
+					.setDstSet(base.m_DS.get()),
+				};
+				ctx.m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
+			}
+
+		}
+
+	}
+
+	static void executeRendering(vk::CommandBuffer& cmd, btr::Context& ctx, Context& boolean_ctx, Model& model, RenderTarget& rt)
+	{
+		DebugLabel _label(cmd,  __FUNCTION__);
+
+		// render_targetÇ…èëÇ≠
+		{
+
+			std::array<vk::ImageMemoryBarrier, 1> image_barrier;
+			image_barrier[0].setImage(rt.m_image);
+			image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+			image_barrier[0].setNewLayout(vk::ImageLayout::eGeneral);
+			image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
+
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
+		}
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, boolean_ctx.m_pipeline[Context::Pipeline_Rendering].get());
+		vk::DescriptorSet descs[] =
+		{
+			model.m_DS.get(),
+			sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA),
+			rt.m_descriptor.get(),
+		};
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, boolean_ctx.m_PL.get(), 0, array_length(descs), descs, 0, nullptr);
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, boolean_ctx.m_pipeline[Context::Pipeline_Rendering].get());
+
+		uvec3 num = app::calcDipatchGroups(uvec3(rt.m_info.extent.width, rt.m_info.extent.height, 1), uvec3(8, 8, 1));
+		cmd.dispatch(num.x, num.y, num.z);
+
+	}
+
+};
+
+}
 #include <016_DualContouring/test.h>
 int main()
 {
@@ -1440,7 +1680,7 @@ int main()
 
 	auto context = app.m_context;
 	auto dc_ctx = std::make_shared<DCContext>(*context);
-	DCFunctionLibrary dc_fl(*context, *dc_ctx);
+	FunctionLibrary dc_fl(*context, *dc_ctx);
 
 	auto model_box = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Box.dae", { 100.f });
 	auto model = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Duck.dae", { 2.f });
@@ -1458,19 +1698,28 @@ int main()
 // 		DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
 	}
 
-	app.setup();
-
-	struct I
+	auto boolean_ctx = std::make_shared<booleanOp::Context>(*context);
+	auto boolean_model = std::make_shared<booleanOp::Model>();
 	{
-		float time;
-		vec3 rot[2];
-		vec3 pos[2];
-	};
-	ModelInstance instance_list[300];
+// 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+// 		booleanOp::Model::Add(cmd, *context, *boolean_ctx, *boolean_model, *model_box, mat3x4(1.f));
+	}
+	ModelInstance instance_list[3];
 	for (auto& i : instance_list)
 	{
-		i = { vec4(glm::linearRand(vec3(0.f), vec3(500.f)), 0.f), vec4(glm::ballRand(1.f), 100.f)};
+		i = { vec4(glm::linearRand(vec3(0.f), vec3(500.f)), 0.f), vec4(glm::ballRand(1.f), 100.f) };
+
+		auto rot = glm::rotation(vec3(0.f, 0.f, 1.f), i.dir.xyz());
+
+ 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+		auto world = glm::translate(i.pos.xyz()) * glm::toMat4(rot);
+		mat3x4 world3x4 = glm::make_mat3x4(glm::value_ptr(glm::transpose(world)));
+		booleanOp::Model::Add(cmd, *context, *boolean_ctx, *boolean_model, *model_box, world3x4);
+
 	}
+
+	app.setup();
+
 
 	while (true)
 	{
@@ -1496,15 +1745,19 @@ int main()
 
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 
+				if(0)
 				{
+
+					dc_fl.executClear(cmd, *dc_model);
+
 					struct I
 					{
 						float time;
 						vec3 rot[2];
 						vec3 pos[2];
 					};
-					static I instance{ 1.f, {vec4(0.f, 1.f, 1.f, 0.f), vec4(0.f, 1.f, 1.f, 0.f) }, {vec4(256.f), vec4(256.f)} };
-					instance.time += 0.001f;
+					static I instance{ 1.f, {vec4(0.f, 1.f, 1.f, 0.f), vec4(0.f, 1.f, 1.f, 0.f) }, {vec4(200.f), vec4(200.f)} };
+					instance.time += 0.00001f;
 					if (instance.time >= 1.f)
 					{
 						instance.time = 0.f;
@@ -1514,43 +1767,29 @@ int main()
 						instance.pos[1] = glm::linearRand(vec3(0.f), vec3(500.f));
 					}
 					ModelInstance model_instance{ vec4(mix(instance.pos[0], instance.pos[1], instance.time), 100.f), vec4(mix(instance.rot[0], instance.rot[1], instance.time), 0.f) };
-//					ModelInstance model_instance{ vec4(100.f), vec4(mix(instance.rot[0], instance.rot[1], instance.time), 0.f) };
-//					for (int i = 0; i < 1000; i++)
-					{
-						dc_fl.executClear(cmd, *dc_model);
-//						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, model_instance);
-//						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, { .pos = vec4(250.f, 0.f, 250.f, 0.f), .dir=vec4(0.f, 0.f, 1.f, 0.f)});						
-					}
+					dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, model_instance);
+//					dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, { .pos = vec4(250.f, 0.f, 250.f, 0.f), .dir=vec4(0.f, 0.f, 1.f, 0.f)});						
 
-					for (auto& i : instance_list)
-					{
-						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, i);
-					}
-					dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model_box, model_instance);
-					static int a = 0;
-					a++;
-					if (a >= 1000)
-					{
-						a -= 2000;
-					}
-					if (a >= 0)
-					{
-						renderer.ExecuteRenderModel(cmd, *model, model_instance, *app.m_window->getFrontBuffer());
-					}
-					else
-					{
-						dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, model_instance);
+//					for (auto& i : instance_list) dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, i);
+//					dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model_box, model_instance);
 
-					}
+// 					static int a = 0;
+// 					if (a++ >= 1000) a -= 2000;
+// 					if (a >= 0) {dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, model_instance);}
+// 					else {renderer.ExecuteRenderModel(cmd, *model, model_instance, *app.m_window->getFrontBuffer());}
 
 //					for (int i = 0; i < 100; i++)
 					{
 						DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
 					}
 
+					renderer.ExecuteRenderDCModel(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
+					renderer.ExecuteTestRender(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
 				}
-				renderer.ExecuteTestRender(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
-				renderer.ExecuteRenderDCModel(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
+
+				{
+					booleanOp::Model::executeRendering(cmd, *context, *boolean_ctx, *boolean_model, *app.m_window->getFrontBuffer());
+				}
 
 				cmd.end();
 				cmds[cmd_render] = cmd;

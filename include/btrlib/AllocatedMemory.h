@@ -254,7 +254,9 @@ struct BufferMemoryEx
 		vk::DescriptorBufferInfo m_buffer_info;
 		btr::BufferMemoryDescriptorEx<T> m_buffer_descriptor;
 		std::shared_ptr<GPUMemoryAllocater> m_allocater;
+
 		T* m_mapped_memory;
+		vk::DeviceAddress m_device_address;
 
 		~Resource()
 		{
@@ -272,6 +274,7 @@ struct BufferMemoryEx
 public:
 	bool isValid()const { return !!m_resource; }
 	vk::DescriptorBufferInfo getInfo()const { return m_resource->m_buffer_info; }
+	vk::DeviceAddress getDeviceAddress()const { return  m_resource->m_device_address; }
 	const btr::BufferMemoryDescriptorEx<T>& getDescriptor()const { return m_resource->m_buffer_descriptor; }
 	T* getMappedPtr(size_t offset_num = 0)const { assert(offset_num < m_resource->m_buffer_descriptor.element_num); return m_resource->m_mapped_memory + offset_num; }
 	uint32_t getDataSizeof()const { return sizeof(T); }
@@ -344,6 +347,7 @@ struct AllocatedMemory
 
 		vk::BufferCreateInfo m_buffer_info;
 		void* m_mapped_memory;
+		vk::DeviceAddress m_device_address;
 
 		std::string m_name;
 		~Resource()
@@ -393,6 +397,14 @@ struct AllocatedMemory
 		if (btr::isOn(resource->m_memory_type.propertyFlags, vk::MemoryPropertyFlagBits::eHostCoherent) )
 		{
 			resource->m_mapped_memory = device.mapMemory(resource->m_memory.get(), 0, size);
+		}
+		if ((flag & vk::BufferUsageFlagBits::eShaderDeviceAddress) != vk::BufferUsageFlags())
+		{
+			resource->m_device_address = device.getBufferAddress(vk::BufferDeviceAddressInfo(resource->m_buffer.get()));
+		}
+		else
+		{
+			resource->m_device_address = 0;
 		}
 		m_resource = std::move(resource);
 	}
@@ -475,6 +487,7 @@ struct AllocatedMemory
 		{
 			alloc.m_resource->m_mapped_memory = (T*)((char*)m_resource->m_mapped_memory + zone.m_start);
 		}
+		alloc.m_resource->m_device_address = m_resource->m_device_address + zone.m_start;
 		return alloc;
 
 	}
@@ -499,6 +512,7 @@ struct AllocatedMemory
 		{
 			alloc.m_resource->m_mapped_memory = (T*)((char*)m_resource->m_mapped_memory + zone.m_start);
 		}
+		alloc.m_resource->m_device_address = m_resource->m_device_address + zone.m_start;
 		return alloc;
 
 	}

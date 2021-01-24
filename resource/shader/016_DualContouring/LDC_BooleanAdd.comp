@@ -6,7 +6,6 @@
 #define USE_Model 1
 #include "DualContouring.glsl"
 
-
 layout(push_constant) uniform pushConstants 
 {
 	vec4 axis[3];
