@@ -166,6 +166,7 @@ App::App(const AppDescriptor& desc)
 			VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
 			VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
 			VK_KHR_RAY_QUERY_EXTENSION_NAME,
+			VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
 		};
 
 		auto gpu_propaty = m_physical_device.getProperties();
@@ -224,6 +225,7 @@ App::App(const AppDescriptor& desc)
 
 		vk::PhysicalDeviceAccelerationStructureFeaturesKHR AS_Feature;
 		AS_Feature.accelerationStructure = VK_TRUE;
+		AS_Feature.descriptorBindingAccelerationStructureUpdateAfterBind = VK_TRUE;
 		BufferDeviceAddres_Feature.setPNext(&AS_Feature);
 
 		vk::PhysicalDeviceRayTracingPipelineFeaturesKHR RT_Pipeline_Feature;
@@ -237,6 +239,12 @@ App::App(const AppDescriptor& desc)
 		vk::PhysicalDeviceScalarBlockLayoutFeatures ScalarBlock_Feature;
 		ScalarBlock_Feature.scalarBlockLayout = VK_TRUE;
 		RayQuery_Feature.setPNext(&ScalarBlock_Feature);
+
+		vk::PhysicalDeviceDescriptorIndexingFeatures DescriptorIndexing_Feature;
+ 		DescriptorIndexing_Feature.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
+ 		DescriptorIndexing_Feature.descriptorBindingVariableDescriptorCount = VK_TRUE;
+ 		ScalarBlock_Feature.setPNext(&DescriptorIndexing_Feature);
+
 
 		m_device = m_physical_device.createDeviceUnique(device_info, nullptr);
 	}

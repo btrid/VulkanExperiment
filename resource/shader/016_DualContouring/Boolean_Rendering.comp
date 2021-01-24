@@ -50,7 +50,7 @@ void main()
 		}
 
 		vec3 normal = rayQueryGetIntersectionObjectRayDirectionEXT(q, true);
-		color = normal;
+		color = abs(normal);
 		break;
 	}
 	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1.));
