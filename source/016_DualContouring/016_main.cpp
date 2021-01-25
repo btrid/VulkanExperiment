@@ -407,7 +407,7 @@ struct Model
 
 			vk::AccelerationStructureBuildGeometryInfoKHR AS_buildinfo;
 			AS_buildinfo.type = vk::AccelerationStructureTypeKHR::eBottomLevel;
-			AS_buildinfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
+			AS_buildinfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace /*| vk::BuildAccelerationStructureFlagBitsKHR::eAllowCompaction*/;
 			AS_buildinfo.mode = vk::BuildAccelerationStructureModeKHR::eBuild;
 			AS_buildinfo.geometryCount = 1;
 			AS_buildinfo.pGeometries = accelerationStructureGeometry.data();
@@ -422,8 +422,8 @@ struct Model
 			accelerationCI.buffer = AS_buffer.getInfo().buffer;
 			accelerationCI.offset = AS_buffer.getInfo().offset;
 			accelerationCI.size = AS_buffer.getInfo().range;
-			model->m_BLAS = ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
-			AS_buildinfo.dstAccelerationStructure = model->m_BLAS.get();
+			auto AS = ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
+			AS_buildinfo.dstAccelerationStructure = AS.get();
 
 			auto scratch_buffer = ctx.m_storage_memory.allocateMemory(size_info.buildScratchSize, true);
 			AS_buildinfo.scratchData.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo(scratch_buffer.getInfo().buffer)) + scratch_buffer.getInfo().offset;
@@ -437,12 +437,55 @@ struct Model
 			std::vector<const vk::AccelerationStructureBuildRangeInfoKHR*> ranges = { &acceleration_buildrangeinfo };
 			cmd.buildAccelerationStructuresKHR({ AS_buildinfo }, ranges);
 
-			model->m_BLAS_buffer = std::move(AS_buffer);
-
-			vk::BufferMemoryBarrier barrier[] = {model->m_BLAS_buffer.makeMemoryBarrier(vk::AccessFlagBits::eAccelerationStructureWriteKHR, vk::AccessFlagBits::eAccelerationStructureReadKHR),};
+			vk::BufferMemoryBarrier barrier[] = { AS_buffer.makeMemoryBarrier(vk::AccessFlagBits::eAccelerationStructureWriteKHR, vk::AccessFlagBits::eAccelerationStructureReadKHR), };
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
 
-			sDeleter::Order().enque(std::move(scratch_buffer));
+			// Compacting BLAS #todo queryÇ™cpuë§èàóùÇ»ÇÃÇ≈é¿ëïÇ™ìÔÇµÇ¢
+			if(0)
+			{
+				vk::QueryPoolCreateInfo qp_ci;
+				qp_ci.queryCount = 1;
+				qp_ci.queryType = vk::QueryType::eAccelerationStructureCompactedSizeKHR;
+				auto qp = ctx.m_device.createQueryPoolUnique(qp_ci);
+
+				cmd.writeAccelerationStructuresPropertiesKHR(AS.get(), vk::QueryType::eAccelerationStructureCompactedSizeKHR, qp.get(), 0);
+
+
+				vk::DeviceSize compactSize = ctx.m_device.getQueryPoolResult<vk::DeviceSize>(qp.get(), 0, 1, sizeof(vk::DeviceSize), vk::QueryResultFlagBits::eWait).value;
+
+				// Creating a compact version of the AS
+				auto AS_compact_buffer = ctx.m_storage_memory.allocateMemory(compactSize);
+				vk::AccelerationStructureCreateInfoKHR as_ci;
+				as_ci.size = compactSize;
+				as_ci.type = vk::AccelerationStructureTypeKHR::eBottomLevel;
+				accelerationCI.buffer = AS_compact_buffer.getInfo().buffer;
+				accelerationCI.offset = AS_compact_buffer.getInfo().offset;
+				accelerationCI.size = AS_compact_buffer.getInfo().range;
+				auto AS_compact = ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
+
+				vk::CopyAccelerationStructureInfoKHR copy_info;
+				copy_info.src = AS.get();
+				copy_info.dst = AS_compact.get();
+				copy_info.mode = vk::CopyAccelerationStructureModeKHR::eCompact;
+				cmd.copyAccelerationStructureKHR(copy_info);
+
+				model->m_BLAS = std::move(AS_compact);
+				model->m_BLAS_buffer = std::move(AS_compact_buffer);
+
+				vk::BufferMemoryBarrier barrier[] = { model->m_BLAS_buffer.makeMemoryBarrier(vk::AccessFlagBits::eAccelerationStructureWriteKHR, vk::AccessFlagBits::eAccelerationStructureReadKHR), };
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
+
+				sDeleter::Order().enque(std::move(AS), std::move(AS_buffer), std::move(scratch_buffer));
+			}
+			else
+			{
+				model->m_BLAS = std::move(AS);
+				model->m_BLAS_buffer = std::move(AS_buffer);
+				sDeleter::Order().enque(std::move(scratch_buffer));
+
+			}
+
+
 
 		}
 		// build TLAS
@@ -1630,6 +1673,7 @@ struct Model
 
 		// descriptor set
 		{
+			//#todo bindafterÇ™ìÆÇ©Ç»Ç¢ÇΩÇﬂçƒÉZÉbÉg
 			sDeleter::Order().enque(std::move(base.m_DS));
 
 			vk::DescriptorSetLayout layouts[] =
