@@ -1584,33 +1584,18 @@ struct Model
 		}
 
 
-		vk::WriteDescriptorSetAccelerationStructureKHR as;
-		as.accelerationStructureCount = 1;
-		as.pAccelerationStructures = &base.m_TLAS.get();
-
-		vk::WriteDescriptorSet write[] =
-		{
-			vk::WriteDescriptorSet()
-			.setDescriptorType(vk::DescriptorType::eAccelerationStructureKHR)
-			.setDescriptorCount(1)
-			.setPNext(&as)
-			.setDstBinding(0)
-			.setDstSet(base.m_DS.get()),
-		};
-		ctx.m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
-
-
 		auto instance_buffer = ctx.m_storage_memory.allocateMemory<vk::AccelerationStructureInstanceKHR>(base.m_instance.size());
 		{
-			cmd.updateBuffer<vk::AccelerationStructureInstanceKHR>(instance_buffer.getInfo().buffer, instance_buffer.getInfo().offset, base.m_instance);
-			vk::BufferMemoryBarrier barrier[] =
+			for (size_t copyed = 0; copyed < vector_sizeof(base.m_instance); )
 			{
-				instance_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
-			};
+				size_t size = glm::min(size_t(65536), vector_sizeof(base.m_instance)-copyed);
+				cmd.updateBuffer(instance_buffer.getInfo().buffer, instance_buffer.getInfo().offset+copyed, size, ((char*)base.m_instance.data())+copyed);
+				copyed += size;
+			}
+			vk::BufferMemoryBarrier barrier[] = { instance_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
 
 		}
-
 
 		vk::AccelerationStructureGeometryKHR as_geometry;
 		as_geometry.flags = vk::GeometryFlagBitsKHR::eNoDuplicateAnyHitInvocation;
@@ -1621,8 +1606,8 @@ struct Model
 
 		vk::AccelerationStructureBuildGeometryInfoKHR AS_buildinfo;
 		AS_buildinfo.type = vk::AccelerationStructureTypeKHR::eTopLevel;
-		AS_buildinfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastBuild;// | vk::BuildAccelerationStructureFlagBitsKHR::eAllowUpdate;
-		AS_buildinfo.mode = vk::BuildAccelerationStructureModeKHR::eBuild;// : vk::BuildAccelerationStructureModeKHR::eUpdate;
+		AS_buildinfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastBuild;
+		AS_buildinfo.mode = vk::BuildAccelerationStructureModeKHR::eBuild;
 		AS_buildinfo.geometryCount = 1;
 		AS_buildinfo.pGeometries = &as_geometry;
 
@@ -1657,11 +1642,31 @@ struct Model
 
 		sDeleter::Order().enque(std::move(instance_buffer), std::move(scratch_buffer), std::move(old_as), std::move(old_buffer));
 
+
 		vk::BufferMemoryBarrier to_read[] =
 		{
 			base.m_TLAS_buffer.makeMemoryBarrier(vk::AccessFlagBits::eAccelerationStructureWriteKHR, vk::AccessFlagBits::eShaderRead),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(to_read), to_read }, {});
+
+
+		// descriptor set
+		{
+			vk::WriteDescriptorSetAccelerationStructureKHR as;
+			as.accelerationStructureCount = 1;
+			as.pAccelerationStructures = &base.m_TLAS.get();
+			vk::WriteDescriptorSet write[] =
+			{
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eAccelerationStructureKHR)
+				.setDescriptorCount(1)
+				.setPNext(&as)
+				.setDstBinding(0)
+				.setDstSet(base.m_DS.get()),
+			};
+			ctx.m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
+
+		}
 
 
 	}
