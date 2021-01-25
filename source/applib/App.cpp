@@ -116,9 +116,9 @@ App::App(const AppDescriptor& desc)
 	vk::ApplicationInfo appInfo = { "Vulkan Test", 1, "EngineName", 0, VK_API_VERSION_1_2 };
 	std::vector<const char*> LayerName =
 	{
-#if _DEBUG
-			"VK_LAYER_KHRONOS_validation"
-#endif
+ #if _DEBUG
+ 			"VK_LAYER_KHRONOS_validation"
+ #endif
 	};
 	std::vector<const char*> ExtensionName =
 	{

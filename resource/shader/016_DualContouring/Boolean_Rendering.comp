@@ -21,12 +21,14 @@ void MakeRayFromScreen(in vec3 eye, in vec3 target, in vec3 up, in vec2 screen, 
 	// イメージセンサー上の位置
 	float tan_fov_y = tan(fov_y / 2.);
 
-	dir = normalize(foward + side * -screen.x * tan_fov_y * aspect + up * screen.y * tan_fov_y);
+	dir = normalize(foward + side * screen.x * tan_fov_y * aspect + up * screen.y * tan_fov_y);
 	p = eye.xyz;
 }
 
 void main() 
 {
+//	return;
+
 	float t = 0.;
 	float tmax = 99999.;
 
@@ -37,9 +39,9 @@ void main()
 	MakeRayFromScreen(cam.u_eye.xyz, cam.u_target.xyz, cam.u_up.xyz, screen, cam.u_aspect, cam.u_fov_y, origin, ray);
 
 	vec3 color = vec3(0., 0., 0.);
-	rayQueryEXT q;
 	for(;;)
 	{
+		rayQueryEXT q;
 		rayQueryInitializeEXT(q, u_Boolean_TLAS, gl_RayFlagsOpaqueEXT, 0xFF, origin, t, ray, tmax);
 		while(rayQueryProceedEXT(q)) {}
 
@@ -53,5 +55,7 @@ void main()
 		color = abs(normal);
 		break;
 	}
+
 	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1.));
+	
 }
