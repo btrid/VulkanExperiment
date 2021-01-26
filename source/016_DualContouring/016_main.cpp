@@ -277,10 +277,14 @@ struct Model
 	btr::BufferMemory b_index;
 	btr::BufferMemoryEx<Info> u_info;
 	btr::BufferMemoryEx<vk::DrawIndirectCommand> b_draw_cmd;
-	vk::UniqueAccelerationStructureKHR m_BLAS;
-	btr::BufferMemory m_BLAS_buffer;
-	vk::UniqueAccelerationStructureKHR m_TLAS;
-	btr::BufferMemory m_TLAS_buffer;
+
+	struct AS
+	{
+		vk::UniqueAccelerationStructureKHR m_AS;
+		btr::BufferMemory m_AS_buffer;
+	};
+	AS m_BLAS;
+	AS m_TLAS;
 
 	vk::UniqueDescriptorSet m_DS_Model;
 
@@ -469,18 +473,18 @@ struct Model
 				copy_info.mode = vk::CopyAccelerationStructureModeKHR::eCompact;
 				cmd.copyAccelerationStructureKHR(copy_info);
 
-				model->m_BLAS = std::move(AS_compact);
-				model->m_BLAS_buffer = std::move(AS_compact_buffer);
+				model->m_BLAS.m_AS = std::move(AS_compact);
+				model->m_BLAS.m_AS_buffer = std::move(AS_compact_buffer);
 
-				vk::BufferMemoryBarrier barrier[] = { model->m_BLAS_buffer.makeMemoryBarrier(vk::AccessFlagBits::eAccelerationStructureWriteKHR, vk::AccessFlagBits::eAccelerationStructureReadKHR), };
+				vk::BufferMemoryBarrier barrier[] = { model->m_BLAS.m_AS_buffer.makeMemoryBarrier(vk::AccessFlagBits::eAccelerationStructureWriteKHR, vk::AccessFlagBits::eAccelerationStructureReadKHR), };
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
 
 				sDeleter::Order().enque(std::move(AS), std::move(AS_buffer), std::move(scratch_buffer));
 			}
 			else
 			{
-				model->m_BLAS = std::move(AS);
-				model->m_BLAS_buffer = std::move(AS_buffer);
+				model->m_BLAS.m_AS = std::move(AS);
+				model->m_BLAS.m_AS_buffer = std::move(AS_buffer);
 				sDeleter::Order().enque(std::move(scratch_buffer));
 
 			}
@@ -507,7 +511,7 @@ struct Model
 			instance.mask = 0xFF;
 			instance.instanceShaderBindingTableRecordOffset = 0;
 			instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
-			instance.accelerationStructureReference = ctx.m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(model->m_BLAS.get()));
+			instance.accelerationStructureReference = ctx.m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(model->m_BLAS.m_AS.get()));
 
 			auto instance_buffer = dc_ctx.m_ASinstance_memory.allocateMemory<vk::AccelerationStructureInstanceKHR>(1, true);
 
@@ -546,8 +550,8 @@ struct Model
 			accelerationCI.buffer = AS_buffer.getInfo().buffer;
 			accelerationCI.offset = AS_buffer.getInfo().offset;
 			accelerationCI.size = AS_buffer.getInfo().range;
-			model->m_TLAS = ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
-			AS_buildinfo.dstAccelerationStructure = model->m_TLAS.get();
+			model->m_TLAS.m_AS = ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
+			AS_buildinfo.dstAccelerationStructure = model->m_TLAS.m_AS.get();
 
 			auto scratch_buffer = ctx.m_storage_memory.allocateMemory(size_info.buildScratchSize, true);
 			AS_buildinfo.scratchData.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo(scratch_buffer.getInfo().buffer)) + scratch_buffer.getInfo().offset;
@@ -559,7 +563,7 @@ struct Model
 			range.transformOffset = 0;
 
 			cmd.buildAccelerationStructuresKHR({ AS_buildinfo }, { &range });
-			model->m_TLAS_buffer = std::move(AS_buffer);
+			model->m_TLAS.m_AS_buffer = std::move(AS_buffer);
 			sDeleter::Order().enque(std::move(instance_buffer), std::move(scratch_buffer));
 		}
 
@@ -587,7 +591,7 @@ struct Model
 			};
 			vk::WriteDescriptorSetAccelerationStructureKHR acceleration;
 			acceleration.accelerationStructureCount = 1;
-			acceleration.pAccelerationStructures = &model->m_TLAS.get();
+			acceleration.pAccelerationStructures = &model->m_TLAS.m_AS.get();
 
 			vk::WriteDescriptorSet write[] =
 			{
@@ -1604,7 +1608,7 @@ struct Model
 		instance.mask = ObjectMask_Add;
 		instance.instanceShaderBindingTableRecordOffset = 0;
 		instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
-		instance.accelerationStructureReference = ctx.m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(model.m_BLAS.get()));
+		instance.accelerationStructureReference = ctx.m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(model.m_BLAS.m_AS.get()));
 
 		base.m_tlas[0].m_instance.push_back(instance);
 	}
@@ -1616,7 +1620,7 @@ struct Model
 		instance.mask = ObjectMask_Add;
 		instance.instanceShaderBindingTableRecordOffset = 0;
 		instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
-		instance.accelerationStructureReference = ctx.m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(model.m_BLAS.get()));
+		instance.accelerationStructureReference = ctx.m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(model.m_BLAS.m_AS.get()));
 
 		base.m_tlas[1].m_instance.push_back(instance);
 	}
@@ -1785,7 +1789,7 @@ int main()
 	FunctionLibrary dc_fl(*context, *dc_ctx);
 
 	auto model_box = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Box.dae", { 100.f });
-	auto model = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Duck.dae", { 0.5f });
+	auto model = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Duck.dae", { 1.5f });
 
 
 	auto dc_model = DCModel::Construct(*context, *dc_ctx);
@@ -1804,7 +1808,7 @@ int main()
 	auto boolean_model = std::make_shared<booleanOp::Model>();
 	{
  		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
- 		booleanOp::Model::Add(cmd, *context, *boolean_ctx, *boolean_model, *model_box, mat3x4(1.f));
+// 		booleanOp::Model::Add(cmd, *context, *boolean_ctx, *boolean_model, *model_box, mat3x4(1.f));
 	}
 	ModelInstance instance_list[30];
 	for (auto& i : instance_list)
@@ -1816,11 +1820,12 @@ int main()
  		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 		auto world = glm::translate(i.pos.xyz()) * glm::toMat4(rot);
 		mat3x4 world3x4 = glm::make_mat3x4(glm::value_ptr(glm::transpose(world)));
-		booleanOp::Model::Add(cmd, *context, *boolean_ctx, *boolean_model, *model, world3x4);
-
+//		booleanOp::Model::Sub(cmd, *context, *boolean_ctx, *boolean_model, *model, world3x4);
 	}
+
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+		booleanOp::Model::Add(cmd, *context, *boolean_ctx, *boolean_model, *model, mat3x4(1.f));
 		booleanOp::Model::BuildTLAS(cmd, *context, *boolean_ctx, *boolean_model);
 
 	}
@@ -1852,7 +1857,7 @@ int main()
 
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 
-				if(0)
+//				if(0)
 				{
 
 					dc_fl.executClear(cmd, *dc_model);
@@ -1878,37 +1883,15 @@ int main()
 					ModelInstance model_instance{ vec4(mix(instance.pos[0], instance.pos[1], instance.time), 100.f), vec4(mix(instance.rot[0], instance.rot[1], instance.time), 0.f) };
 
 					dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, model_instance);
-//					dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, { .pos = vec4(250.f, 0.f, 250.f, 0.f), .dir=vec4(0.f, 0.f, 1.f, 0.f)});						
-
-//					dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model_box, model_instance);
-
-// 					static int a = 0;
-// 					if (a++ >= 1000) a -= 2000;
-// 					if (a >= 0) {dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, model_instance);}
-// 					else {renderer.ExecuteRenderModel(cmd, *model, model_instance, *app.m_window->getFrontBuffer());}
-
-//					for (int i = 0; i < 100; i++)
-					{
-						DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
-					}
+					DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
 
 					renderer.ExecuteRenderDCModel(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
 					renderer.ExecuteTestRender(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
 				}
 
 				// BooleanOpTest
-//				if (0)
+				if (0)
 				{
- 					{
-						ModelInstance i = { vec4(glm::linearRand(vec3(0.f), vec3(500.f)), 0.f), vec4(glm::ballRand(1.f), 100.f) };
-
-						auto rot = glm::rotation(vec3(0.f, 0.f, 1.f), i.dir.xyz());
-
-						auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-						auto world = glm::translate(i.pos.xyz()) * glm::toMat4(rot);
-						mat3x4 world3x4 = glm::make_mat3x4(glm::value_ptr(glm::transpose(world)));
-						booleanOp::Model::Add(cmd, *context, *boolean_ctx, *boolean_model, *model, world3x4);
- 					}
 
 					booleanOp::Model::BuildTLAS(cmd, *context, *boolean_ctx, *boolean_model);
 					booleanOp::Model::executeRendering(cmd, *context, *boolean_ctx, *boolean_model, *app.m_window->getFrontBuffer());
