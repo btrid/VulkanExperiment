@@ -27,8 +27,7 @@ void MakeRayFromScreen(in vec3 eye, in vec3 target, in vec3 up, in vec2 screen, 
 
 void main() 
 {
-//	return;
-
+	float t_prev = 0.;
 	float t = 0.;
 	float tmax = 99999.;
 
@@ -37,25 +36,37 @@ void main()
 	vec3 ray;
 	vec2 screen = (gl_GlobalInvocationID / vec3(gl_NumWorkGroups * gl_WorkGroupSize)).xy * 2. - 1.;
 	MakeRayFromScreen(cam.u_eye.xyz, cam.u_target.xyz, cam.u_up.xyz, screen, cam.u_aspect, cam.u_fov_y, origin, ray);
+	
+	
 
-	vec3 color = vec3(0., 0., 0.);
+	rayQueryEXT add_rq;
 	for(;;)
 	{
-		rayQueryEXT q;
-		rayQueryInitializeEXT(q, u_Boolean_TLAS, gl_RayFlagsOpaqueEXT, 0xFF, origin, t, ray, tmax);
-		while(rayQueryProceedEXT(q)) {}
+		rayQueryInitializeEXT(add_rq, u_BooleanAdd_TLAS, gl_RayFlagsOpaqueEXT|gl_RayFlagsCullBackFacingTrianglesEXT, 0xFF, origin, t, ray, tmax);
+		while(rayQueryProceedEXT(add_rq)) {}
 
-		t = rayQueryGetIntersectionTEXT(q, true);
-		if(t >= tmax)
-		{ 
-			break;
+		float t_add_begin = rayQueryGetIntersectionTEXT(add_rq, true);
+		if(t_add_begin >= tmax){ break;}
+
+		rayQueryEXT sub_rq;
+		rayQueryInitializeEXT(sub_rq, u_BooleanAdd_TLAS, gl_RayFlagsOpaqueEXT|gl_RayFlagsCullBackFacingTrianglesEXT, 0xFF, origin, t, ray, tmax);
+		while(rayQueryProceedEXT(sub_rq)) {}
+		float t_sub_begin = rayQueryGetIntersectionTEXT(sub_rq, true);
+
+		if(t_sub_begin <= t_add_begin)
+		{
+			rayQueryInitializeEXT(sub_rq, u_BooleanAdd_TLAS, gl_RayFlagsOpaqueEXT|gl_RayFlagsCullFrontFacingTrianglesEXT, 0xFF, origin, t_sub_begin, ray, tmax);
+			while(rayQueryProceedEXT(sub_rq)) {}
+			t = rayQueryGetIntersectionTEXT(sub_rq, true);
 		}
-
-		vec3 normal = rayQueryGetIntersectionObjectRayDirectionEXT(q, true);
-		color = abs(normal);
-		break;
 	}
 
+	vec3 color = vec3(0., 0., 0.);
+	if(rayQueryGetIntersectionTEXT(add_rq, true) < tmax)
+	{
+		vec3 normal = rayQueryGetIntersectionObjectRayDirectionEXT(add_rq, true);
+		color = abs(normal);
+	}
 	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1.));
 	
 }

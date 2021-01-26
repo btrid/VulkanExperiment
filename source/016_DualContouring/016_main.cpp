@@ -1512,16 +1512,17 @@ struct Context
 			vk::DescriptorSetLayoutBinding binding[] =
 			{
 				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eAccelerationStructureKHR, 1, stage),
+				vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eAccelerationStructureKHR, 1, stage),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
 			desc_layout_info.setPBindings(binding);
-			desc_layout_info.flags = vk::DescriptorSetLayoutCreateFlagBits::eUpdateAfterBindPool;
-			vk::DescriptorSetLayoutBindingFlagsCreateInfoEXT setLayoutBindingFlags;
-			std::vector<vk::DescriptorBindingFlags> descriptorBindingFlags = { vk::DescriptorBindingFlagBits::eUpdateAfterBind };
-			setLayoutBindingFlags.setBindingFlags(descriptorBindingFlags);
-
-			desc_layout_info.pNext = &setLayoutBindingFlags;
+// 			desc_layout_info.flags = vk::DescriptorSetLayoutCreateFlagBits::eUpdateAfterBindPool;
+// 			vk::DescriptorSetLayoutBindingFlagsCreateInfoEXT setLayoutBindingFlags;
+// 			std::vector<vk::DescriptorBindingFlags> descriptorBindingFlags = { vk::DescriptorBindingFlagBits::eUpdateAfterBind };
+// 			setLayoutBindingFlags.setBindingFlags(descriptorBindingFlags);
+// 
+// 			desc_layout_info.pNext = &setLayoutBindingFlags;
 			m_DSL[DSL_TLAS] = ctx.m_device.createDescriptorSetLayoutUnique(desc_layout_info);
 
 		}
@@ -1580,26 +1581,23 @@ struct Model
 		ObjectMask_Sub = 0x2,
 	};
 
-	struct AS
+	struct TLAS
 	{
-		vk::UniqueAccelerationStructureKHR m_handle;
-		btr::BufferMemory m_as_buffer;
-	};
-	vk::UniqueAccelerationStructureKHR m_TLAS;
-	btr::BufferMemory m_TLAS_buffer;
-	btr::BufferMemoryEx<vk::AccelerationStructureInstanceKHR> m_instance_buffer;
+		vk::UniqueAccelerationStructureKHR m_TLAS;
+		btr::BufferMemory m_TLAS_buffer;
+		btr::BufferMemoryEx<vk::AccelerationStructureInstanceKHR> m_instance_buffer;
 
-//	vk::UniqueAccelerationStructureKHR m_TLAS_work[3];
+		std::vector<vk::AccelerationStructureInstanceKHR> m_instance;
+	};
 
 	vk::UniqueDescriptorSet m_DS;
 	vk::UniqueDescriptorPool m_DP;
 	vk::UniqueDescriptorUpdateTemplate m_DUT;
 
-	std::vector<vk::AccelerationStructureInstanceKHR> m_instance;
+	std::array<TLAS, 2> m_tlas;
 
 	static void Add(vk::CommandBuffer& cmd, btr::Context& ctx, Context& boolean_ctx, Model& base, ::Model& model, const mat3x4& world)
 	{
-
 		vk::AccelerationStructureInstanceKHR instance;
 		memcpy(&instance.transform, &world, sizeof(world));
 		instance.instanceCustomIndex = 0;
@@ -1608,68 +1606,84 @@ struct Model
 		instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
 		instance.accelerationStructureReference = ctx.m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(model.m_BLAS.get()));
 
-		base.m_instance.push_back(instance);
+		base.m_tlas[0].m_instance.push_back(instance);
+	}
+	static void Sub(vk::CommandBuffer& cmd, btr::Context& ctx, Context& boolean_ctx, Model& base, ::Model& model, const mat3x4& world)
+	{
+		vk::AccelerationStructureInstanceKHR instance;
+		memcpy(&instance.transform, &world, sizeof(world));
+		instance.instanceCustomIndex = 0;
+		instance.mask = ObjectMask_Add;
+		instance.instanceShaderBindingTableRecordOffset = 0;
+		instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+		instance.accelerationStructureReference = ctx.m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(model.m_BLAS.get()));
+
+		base.m_tlas[1].m_instance.push_back(instance);
 	}
 
 	static void BuildTLAS(vk::CommandBuffer& cmd, btr::Context& ctx, Context& boolean_ctx, Model& base)
 	{
-		auto instance_buffer = ctx.m_storage_memory.allocateMemory<vk::AccelerationStructureInstanceKHR>(base.m_instance.size());
+		for (auto& tlas : base.m_tlas)
 		{
-			for (size_t copyed = 0; copyed < vector_sizeof(base.m_instance); )
+			auto instance_buffer = ctx.m_storage_memory.allocateMemory<vk::AccelerationStructureInstanceKHR>(tlas.m_instance.size());
+			if(!tlas.m_instance.empty())
 			{
-				size_t size = glm::min(size_t(65536), vector_sizeof(base.m_instance) - copyed);
-				cmd.updateBuffer(instance_buffer.getInfo().buffer, instance_buffer.getInfo().offset + copyed, size, ((char*)base.m_instance.data()) + copyed);
-				copyed += size;
+				for (size_t copyed = 0; copyed < vector_sizeof(tlas.m_instance); )
+				{
+					size_t size = glm::min(size_t(65536), vector_sizeof(tlas.m_instance) - copyed);
+					cmd.updateBuffer(instance_buffer.getInfo().buffer, instance_buffer.getInfo().offset + copyed, size, ((char*)tlas.m_instance.data()) + copyed);
+					copyed += size;
+				}
+				vk::BufferMemoryBarrier barrier[] = { instance_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR), };
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
+
 			}
-			vk::BufferMemoryBarrier barrier[] = { instance_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR), };
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
+
+			vk::AccelerationStructureGeometryKHR as_geometry;
+			as_geometry.flags = vk::GeometryFlagBitsKHR::eNoDuplicateAnyHitInvocation;
+			as_geometry.geometryType = vk::GeometryTypeKHR::eInstances;
+			vk::AccelerationStructureGeometryInstancesDataKHR instance_data;
+			instance_data.data.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo().setBuffer(instance_buffer.getInfo().buffer)) + instance_buffer.getInfo().offset;
+			as_geometry.geometry.instances = instance_data;
+
+			vk::AccelerationStructureBuildGeometryInfoKHR AS_buildinfo;
+			AS_buildinfo.type = vk::AccelerationStructureTypeKHR::eTopLevel;
+			//		AS_buildinfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastBuild;
+			AS_buildinfo.mode = vk::BuildAccelerationStructureModeKHR::eBuild;
+			AS_buildinfo.geometryCount = 1;
+			AS_buildinfo.pGeometries = &as_geometry;
+
+			uint32_t maxCount = tlas.m_instance.size();
+			auto size_info = ctx.m_device.getAccelerationStructureBuildSizesKHR(vk::AccelerationStructureBuildTypeKHR::eDevice, AS_buildinfo, maxCount);
+
+			auto old_as = std::move(tlas.m_TLAS);
+			auto old_buffer = std::move(tlas.m_TLAS_buffer);
+
+			auto AS_buffer = ctx.m_storage_memory.allocateMemory(size_info.accelerationStructureSize);
+			vk::AccelerationStructureCreateInfoKHR accelerationCI;
+			accelerationCI.type = vk::AccelerationStructureTypeKHR::eTopLevel;
+			accelerationCI.buffer = AS_buffer.getInfo().buffer;
+			accelerationCI.offset = AS_buffer.getInfo().offset;
+			accelerationCI.size = AS_buffer.getInfo().range;
+
+			tlas.m_TLAS = ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
+			tlas.m_TLAS_buffer = std::move(AS_buffer);
+
+			AS_buildinfo.dstAccelerationStructure = tlas.m_TLAS.get();
+
+			auto scratch_buffer = ctx.m_storage_memory.allocateMemory(size_info.buildScratchSize);
+			AS_buildinfo.scratchData.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo(scratch_buffer.getInfo().buffer)) + scratch_buffer.getInfo().offset;
+
+			vk::AccelerationStructureBuildRangeInfoKHR range[] = { vk::AccelerationStructureBuildRangeInfoKHR(tlas.m_instance.size()) };
+
+			cmd.buildAccelerationStructuresKHR(AS_buildinfo, range);
+
+			sDeleter::Order().enque(std::move(instance_buffer), std::move(scratch_buffer), std::move(old_as), std::move(old_buffer));
+
+			vk::BufferMemoryBarrier to_read[] = { tlas.m_TLAS_buffer.makeMemoryBarrier(vk::AccessFlagBits::eAccelerationStructureWriteKHR, vk::AccessFlagBits::eShaderRead), };
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(to_read), to_read }, {});
 
 		}
-
-		vk::AccelerationStructureGeometryKHR as_geometry;
-		as_geometry.flags = vk::GeometryFlagBitsKHR::eNoDuplicateAnyHitInvocation;
-		as_geometry.geometryType = vk::GeometryTypeKHR::eInstances;
-		vk::AccelerationStructureGeometryInstancesDataKHR instance_data;
-		instance_data.data.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo().setBuffer(instance_buffer.getInfo().buffer)) + instance_buffer.getInfo().offset;
-		as_geometry.geometry.instances = instance_data;
-
-		vk::AccelerationStructureBuildGeometryInfoKHR AS_buildinfo;
-		AS_buildinfo.type = vk::AccelerationStructureTypeKHR::eTopLevel;
-		//		AS_buildinfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastBuild;
-		AS_buildinfo.mode = vk::BuildAccelerationStructureModeKHR::eBuild;
-		AS_buildinfo.geometryCount = 1;
-		AS_buildinfo.pGeometries = &as_geometry;
-
-		uint32_t maxCount = base.m_instance.size();
-		auto size_info = ctx.m_device.getAccelerationStructureBuildSizesKHR(vk::AccelerationStructureBuildTypeKHR::eDevice, AS_buildinfo, maxCount);
-
-		auto old_as = std::move(base.m_TLAS);
-		auto old_buffer = std::move(base.m_TLAS_buffer);
-
-		auto AS_buffer = ctx.m_storage_memory.allocateMemory(size_info.accelerationStructureSize);
-		vk::AccelerationStructureCreateInfoKHR accelerationCI;
-		accelerationCI.type = vk::AccelerationStructureTypeKHR::eTopLevel;
-		accelerationCI.buffer = AS_buffer.getInfo().buffer;
-		accelerationCI.offset = AS_buffer.getInfo().offset;
-		accelerationCI.size = AS_buffer.getInfo().range;
-
-		base.m_TLAS = ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
-		base.m_TLAS_buffer = std::move(AS_buffer);
-
-		AS_buildinfo.dstAccelerationStructure = base.m_TLAS.get();
-
-		auto scratch_buffer = ctx.m_storage_memory.allocateMemory(size_info.buildScratchSize);
-		AS_buildinfo.scratchData.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo(scratch_buffer.getInfo().buffer)) + scratch_buffer.getInfo().offset;
-
-		vk::AccelerationStructureBuildRangeInfoKHR range[] = {vk::AccelerationStructureBuildRangeInfoKHR(base.m_instance.size())};
-
-		cmd.buildAccelerationStructuresKHR(AS_buildinfo, range);
-
-		sDeleter::Order().enque(std::move(instance_buffer), std::move(scratch_buffer), std::move(old_as), std::move(old_buffer));
-
-		vk::BufferMemoryBarrier to_read[] = { base.m_TLAS_buffer.makeMemoryBarrier(vk::AccessFlagBits::eAccelerationStructureWriteKHR, vk::AccessFlagBits::eShaderRead), };
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(to_read), to_read }, {});
-
 
 		// descriptor set
 		{
@@ -1686,16 +1700,24 @@ struct Model
 			desc_info.setPSetLayouts(layouts);
 			base.m_DS = std::move(ctx.m_device.allocateDescriptorSetsUnique(desc_info)[0]);
 
-			vk::WriteDescriptorSetAccelerationStructureKHR as;
-			as.accelerationStructureCount = 1;
-			as.pAccelerationStructures = &base.m_TLAS.get();
+			vk::WriteDescriptorSetAccelerationStructureKHR as[2];
+			as[0].accelerationStructureCount = 1;
+			as[0].pAccelerationStructures = &base.m_tlas[0].m_TLAS.get();
+			as[1].accelerationStructureCount = 1;
+			as[1].pAccelerationStructures = &base.m_tlas[1].m_TLAS.get();
 			vk::WriteDescriptorSet write[] =
 			{
 				vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eAccelerationStructureKHR)
 				.setDescriptorCount(1)
-				.setPNext(&as)
+				.setPNext(&as[0])
 				.setDstBinding(0)
+				.setDstSet(base.m_DS.get()),
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eAccelerationStructureKHR)
+				.setDescriptorCount(1)
+				.setPNext(&as[1])
+				.setDstBinding(1)
 				.setDstSet(base.m_DS.get()),
 			};
 			ctx.m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
@@ -1784,7 +1806,7 @@ int main()
  		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
  		booleanOp::Model::Add(cmd, *context, *boolean_ctx, *boolean_model, *model_box, mat3x4(1.f));
 	}
-	ModelInstance instance_list[300];
+	ModelInstance instance_list[30];
 	for (auto& i : instance_list)
 	{
 		i = { vec4(glm::linearRand(vec3(0.f), vec3(500.f)), 0.f), vec4(glm::ballRand(1.f), 100.f) };
@@ -1799,7 +1821,7 @@ int main()
 	}
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-//		booleanOp::Model::BuildTLAS(cmd, *context, *boolean_ctx, *boolean_model);
+		booleanOp::Model::BuildTLAS(cmd, *context, *boolean_ctx, *boolean_model);
 
 	}
 
@@ -1835,6 +1857,8 @@ int main()
 
 					dc_fl.executClear(cmd, *dc_model);
 
+					for (auto& i : instance_list) dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, i);
+
 					struct I
 					{
 						float time;
@@ -1842,7 +1866,7 @@ int main()
 						vec3 pos[2];
 					};
 					static I instance{ 1.f, {vec4(0.f, 1.f, 1.f, 0.f), vec4(0.f, 1.f, 1.f, 0.f) }, {vec4(200.f), vec4(200.f)} };
-					instance.time += 0.00001f;
+					instance.time += 0.01f;
 					if (instance.time >= 1.f)
 					{
 						instance.time = 0.f;
@@ -1852,10 +1876,10 @@ int main()
 						instance.pos[1] = glm::linearRand(vec3(0.f), vec3(500.f));
 					}
 					ModelInstance model_instance{ vec4(mix(instance.pos[0], instance.pos[1], instance.time), 100.f), vec4(mix(instance.rot[0], instance.rot[1], instance.time), 0.f) };
-					dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, model_instance);
+
+					dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, model_instance);
 //					dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, { .pos = vec4(250.f, 0.f, 250.f, 0.f), .dir=vec4(0.f, 0.f, 1.f, 0.f)});						
 
-//					for (auto& i : instance_list) dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, i);
 //					dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model_box, model_instance);
 
 // 					static int a = 0;
@@ -1872,6 +1896,8 @@ int main()
 					renderer.ExecuteTestRender(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
 				}
 
+				// BooleanOpTest
+//				if (0)
 				{
  					{
 						ModelInstance i = { vec4(glm::linearRand(vec3(0.f), vec3(500.f)), 0.f), vec4(glm::ballRand(1.f), 100.f) };
@@ -1885,16 +1911,20 @@ int main()
  					}
 
 					booleanOp::Model::BuildTLAS(cmd, *context, *boolean_ctx, *boolean_model);
+					booleanOp::Model::executeRendering(cmd, *context, *boolean_ctx, *boolean_model, *app.m_window->getFrontBuffer());
 				}
-				booleanOp::Model::executeRendering(cmd, *context, *boolean_ctx, *boolean_model, *app.m_window->getFrontBuffer());
+				// BoolreanOp test2
+				if(0)
+				{
+					auto bm = std::make_shared<booleanOp::Model>();
+					{
+						booleanOp::Model::Add(cmd, *context, *boolean_ctx, *bm, *model_box, mat3x4(1.f));
+						booleanOp::Model::BuildTLAS(cmd, *context, *boolean_ctx, *bm);
+						booleanOp::Model::executeRendering(cmd, *context, *boolean_ctx, *bm, *app.m_window->getFrontBuffer());
+					}
+					sDeleter::Order().enque(std::move(bm));
+				}
 
-// 				auto bm = std::make_shared<booleanOp::Model>();
-// 				{
-// 					booleanOp::Model::Add(cmd, *context, *boolean_ctx, *bm, *model_box, mat3x4(1.f));
-// 					booleanOp::Model::BuildTLAS(cmd, *context, *boolean_ctx, *bm);
-// 					booleanOp::Model::executeRendering(cmd, *context, *boolean_ctx, *bm, *app.m_window->getFrontBuffer());
-// 				}
-// 				sDeleter::Order().enque(std::move(bm));
 
 				cmd.end();
 				cmds[cmd_render] = cmd;
