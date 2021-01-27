@@ -57,7 +57,6 @@ struct DCCell
 
 struct DCContext
 {
-	btr::AllocatedMemory m_ASinstance_memory;
 
 	enum DSL
 	{
@@ -89,7 +88,6 @@ struct DCContext
 // 	};
 	DCContext(btr::Context& ctx)
 	{
-		m_ASinstance_memory.setup(ctx.m_physical_device, ctx.m_device, vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, sizeof(vk::AccelerationStructureInstanceKHR) * 1000);
 
 		auto cmd = ctx.m_cmd_pool->allocCmdTempolary(0);
 
@@ -123,6 +121,7 @@ struct DCContext
 					vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(7, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(8, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(9, vk::DescriptorType::eStorageBuffer, 1, stage),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -513,7 +512,7 @@ struct Model
 			instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
 			instance.accelerationStructureReference = ctx.m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(model->m_BLAS.m_AS.get()));
 
-			auto instance_buffer = dc_ctx.m_ASinstance_memory.allocateMemory<vk::AccelerationStructureInstanceKHR>(1, true);
+			auto instance_buffer = ctx.m_storage_memory.allocateMemory<vk::AccelerationStructureInstanceKHR>(1, true);
 
 			cmd.updateBuffer<vk::AccelerationStructureInstanceKHR>(instance_buffer.getInfo().buffer, instance_buffer.getInfo().offset, { instance });
 			vk::BufferMemoryBarrier barrier[] = {
@@ -1789,7 +1788,7 @@ int main()
 	FunctionLibrary dc_fl(*context, *dc_ctx);
 
 	auto model_box = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Box.dae", { 100.f });
-	auto model = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Duck.dae", { 1.5f });
+	auto model = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Duck.dae", { 2.5f });
 
 
 	auto dc_model = DCModel::Construct(*context, *dc_ctx);
@@ -1800,8 +1799,8 @@ int main()
 
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-// 		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, { vec4(100.f), vec4(0.f, 0.f, 1.f, 0.f) });
-// 		DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
+ 		dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, { vec4(100.f), vec4(0.f, 0.f, 1.f, 0.f) });
+ 		DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
 	}
 
 	auto boolean_ctx = std::make_shared<booleanOp::Context>(*context);
@@ -1821,12 +1820,17 @@ int main()
 		auto world = glm::translate(i.pos.xyz()) * glm::toMat4(rot);
 		mat3x4 world3x4 = glm::make_mat3x4(glm::value_ptr(glm::transpose(world)));
 //		booleanOp::Model::Sub(cmd, *context, *boolean_ctx, *boolean_model, *model, world3x4);
+
 	}
+
 
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 		booleanOp::Model::Add(cmd, *context, *boolean_ctx, *boolean_model, *model, mat3x4(1.f));
 		booleanOp::Model::BuildTLAS(cmd, *context, *boolean_ctx, *boolean_model);
+
+		for (auto& i : instance_list) dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, i);
+		DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
 
 	}
 
@@ -1836,7 +1840,7 @@ int main()
 	while (true)
 	{
 		cStopWatch time;
-		dc_ctx->m_ASinstance_memory.gc();
+
 		app.preUpdate();
 		{
 			enum
@@ -1861,29 +1865,37 @@ int main()
 				{
 
 					dc_fl.executClear(cmd, *dc_model);
-
 					for (auto& i : instance_list) dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, i);
 
-					struct I
+					struct Instance
 					{
 						float time;
 						vec3 rot[2];
 						vec3 pos[2];
-					};
-					static I instance{ 1.f, {vec4(0.f, 1.f, 1.f, 0.f), vec4(0.f, 1.f, 1.f, 0.f) }, {vec4(200.f), vec4(200.f)} };
-					instance.time += 0.01f;
-					if (instance.time >= 1.f)
-					{
-						instance.time = 0.f;
-						instance.rot[0] = instance.rot[1];
-						instance.rot[1] = glm::ballRand(1.f);
-						instance.pos[0] = instance.pos[1];
-						instance.pos[1] = glm::linearRand(vec3(0.f), vec3(500.f));
-					}
-					ModelInstance model_instance{ vec4(mix(instance.pos[0], instance.pos[1], instance.time), 100.f), vec4(mix(instance.rot[0], instance.rot[1], instance.time), 0.f) };
 
-					dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, model_instance);
-					DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
+						ModelInstance get()
+						{
+							time += 0.002f;
+							if (time >= 1.f)
+							{
+								time = 0.f;
+								rot[0] = rot[1];
+								rot[1] = glm::ballRand(1.f);
+								pos[0] = pos[1];
+								pos[1] = glm::linearRand(vec3(0.f), vec3(500.f));
+							}
+							return { vec4(mix(pos[0], pos[1], time), 100.f), vec4(mix(rot[0], rot[1], time), 0.f) };
+						}
+					};
+ 					static Instance instance{ 1.f, {vec4(0.f, 1.f, 1.f, 0.f), vec4(0.f, 1.f, 1.f, 0.f) }, {vec4(200.f), vec4(200.f)} };
+ 					auto mi = instance.get();
+// 
+ 					dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model, mi);
+ 					DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
+
+// 					ModelInstance i = { vec4(glm::linearRand(vec3(0.f), vec3(500.f)), 0.f), vec4(glm::ballRand(1.f), 100.f) };
+// 					dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, i);
+// 					DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
 
 					renderer.ExecuteRenderDCModel(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
 					renderer.ExecuteTestRender(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());

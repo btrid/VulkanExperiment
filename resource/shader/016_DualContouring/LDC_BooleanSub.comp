@@ -37,13 +37,12 @@ LDCPoint getLDCPoint(inout float t, in float tmax, in vec3 origin, in vec3 f)
 	float voxel_p = (t/Voxel_Size)[gl_GlobalInvocationID.z];
 
 	LDCPoint point;
-	point.p = u8vec2(floor(voxel_p), int(fract(voxel_p)*253.+1.));
+	point.p = t;
 	point.normal = pack_normal_octahedron(g_rotate * normal);
 	point.flag = rayQueryGetIntersectionFrontFaceEXT(rayQuery, true) ? LDCFlag_Incident : LDCFlag_Exit;
 	return point;
 
 }
-
 void main() 
 {
 
@@ -90,7 +89,7 @@ void main()
 		bool is_a = false;
 		bool is_b = false;
 
-		if(point_a.p[0]<=point_b.p[0])
+		if(point_a.p<=point_b.p)
 		{
 			if(!is_incident_b)
 			{
@@ -98,7 +97,7 @@ void main()
 			}
 			is_a = true;
 		}
-		if(point_a.p[0]>=point_b.p[0])
+		if(point_a.p>=point_b.p)
 		{
 			if(is_incident_a)
 			{

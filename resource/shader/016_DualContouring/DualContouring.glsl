@@ -18,11 +18,11 @@ struct Info
 };
 struct LDCPoint
 {
-	u8vec2 p;
+	float p;
 	uint16_t flag;
 	uint16_t normal;
 };
-LDCPoint g_invalid_point = {u8vec2(255,255), uint16_t(0xffff), -1us};
+LDCPoint g_invalid_point = {999999., uint16_t(0xffff), -1us};
 bool is_valid(in LDCPoint p){ return p.flag!=g_invalid_point.flag; }
 #define LDCFlag_Incident 1s
 #define LDCFlag_Exit 2s
