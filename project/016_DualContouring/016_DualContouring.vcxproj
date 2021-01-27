@@ -93,6 +93,7 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\include\016_DualContouring\BooleanOp.h" />
     <ClInclude Include="..\..\include\016_DualContouring\test.h" />
     <ClInclude Include="..\..\include\016_DualContouring\texture.h" />
   </ItemGroup>

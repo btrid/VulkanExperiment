@@ -68,34 +68,6 @@ void main()
 	int grid = int(gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*Voxel_Reso.x + gl_GlobalInvocationID.z*Voxel_Reso.x*Voxel_Reso.y);
 	int head = -1;
 
-#if 0
-	// 投影テスト
-	{
-		{
-			LDCPoint point = {u8vec2(0, 1), 0us, 0us};
-			int index = allocate_ldc_point();
-			if(head==-1) { b_ldc_point_link_head[grid] = index; }
-			else { b_ldc_point_link_next[head] = index; }
-			b_ldc_point[index] = point;
-			head = index;
-
-		}
-		{
-			LDCPoint point = {u8vec2(255, 254), 0us, 0us};
-			int index = allocate_ldc_point();
-			if(head==-1) { b_ldc_point_link_head[grid] = index; }
-			else { b_ldc_point_link_next[head] = index; }
-			b_ldc_point[index] = point;
-			head = index;
-
-		}
-
-		if(head==-1) { b_ldc_point_link_head[grid] = -1; }
-		else { b_ldc_point_link_next[head] = -1; }
-		return;
-	}
-#endif
-
 	// loop
 	{
 
