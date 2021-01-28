@@ -45,6 +45,7 @@ LDCPoint getLDCPoint(inout float t, in float tmax, in vec3 origin, in vec3 f)
 
 void main() 
 {
+	
 	vec3 f = constants.axis[(gl_GlobalInvocationID.z+0)%3].xyz;
 	vec3 s = constants.axis[(gl_GlobalInvocationID.z+1)%3].xyz; 
 	vec3 u = constants.axis[(gl_GlobalInvocationID.z+2)%3].xyz;

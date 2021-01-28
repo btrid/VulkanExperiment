@@ -44,15 +44,15 @@
 
 struct LDCPoint
 {
-	u8vec2 p;
+	float p;
 	uint16_t flag;
-	uint normal;
+	uint16_t normal;
 };
 struct DCCell
 {
-	uvec3 normal;
-	uint8_t usepoint;
-	u8vec3 xyz;
+	uint axis_dist;
+	u16vec3 normal;
+	uint16_t flag;
 };
 
 struct DCContext
@@ -974,14 +974,6 @@ struct FunctionLibrary
 	{
 		DebugLabel _label(cmd, __FUNCTION__);
 		{
-			{
-				auto rot = glm::rotation(vec3(0.f, 0.f, 1.f), instance.dir.xyz());
-
-				auto world = glm::translate(instance.pos.xyz()) * glm::toMat4(rot);
-				mat3x4 world3x4 = glm::make_mat3x4(glm::value_ptr(glm::transpose(world)));
-//				Model::UpdateTLAS(cmd, *dc_ctx.m_ctx, boolean, world3x4);
-			}
-
 			vk::BufferMemoryBarrier barrier[] =
 			{
 				base.b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
@@ -1032,14 +1024,6 @@ struct FunctionLibrary
 	{
 		DebugLabel _label(cmd, __FUNCTION__);
 		{
-			{
-				auto rot = glm::rotation(vec3(0.f, 0.f, 1.f), instance.dir.xyz());
-
-				auto world = glm::translate(instance.pos.xyz()) * glm::toMat4(rot);
-				mat3x4 world3x4 = glm::make_mat3x4(glm::value_ptr(glm::transpose(world)));
-//				Model::UpdateTLAS(cmd, *dc_ctx.m_ctx, boolean, world3x4);
-			}
-
 			vk::BufferMemoryBarrier barrier[] =
 			{
 				base.b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
@@ -1091,12 +1075,18 @@ struct Renderer
 		Pipeline_RenderTest,
 		Pipeline_Num,
 	};
+
+	enum
+	{
+		PipelineLayout_RenderModel,
+		PipelineLayout_RenderDC,
+		PipelineLayout_Num,
+	};
 	vk::UniqueRenderPass m_render_pass;
 	vk::UniqueFramebuffer m_render_framebuffer;
 
 	std::array<vk::UniquePipeline, Pipeline_Num> m_pipeline;
-	vk::UniquePipelineLayout m_pl;
-	vk::UniquePipelineLayout m_pl_model;
+	std::array<vk::UniquePipelineLayout, PipelineLayout_Num> m_pl;
 
 	std::array<Material, 100> m_world_material;
 	vk::UniqueDescriptorSetLayout m_DSL_Rendering;
@@ -1172,7 +1162,7 @@ struct Renderer
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 				pipeline_layout_info.setPSetLayouts(layouts);
-				m_pl = ctx.m_device.createPipelineLayoutUnique(pipeline_layout_info);
+				m_pl[PipelineLayout_RenderDC] = ctx.m_device.createPipelineLayoutUnique(pipeline_layout_info);
 			}
 
 			// pipeline layout model
@@ -1194,7 +1184,7 @@ struct Renderer
 				pipeline_layout_info.setPSetLayouts(layouts);
 				pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
 				pipeline_layout_info.setPPushConstantRanges(constants);
-				m_pl_model = ctx.m_device.createPipelineLayoutUnique(pipeline_layout_info);
+				m_pl[PipelineLayout_RenderModel] = ctx.m_device.createPipelineLayoutUnique(pipeline_layout_info);
 			}
 		}
 
@@ -1333,7 +1323,7 @@ struct Renderer
 					.setPViewportState(&viewportInfo)
 					.setPRasterizationState(&rasterization_info)
 					.setPMultisampleState(&sample_info)
-					.setLayout(m_pl.get())
+					.setLayout(m_pl[PipelineLayout_RenderDC].get())
 					.setRenderPass(m_render_pass.get())
 					.setPDepthStencilState(&depth_stencil_info)
 					.setPColorBlendState(&blend_info);
@@ -1422,7 +1412,7 @@ struct Renderer
 					.setPViewportState(&viewportInfo)
 					.setPRasterizationState(&rasterization_info)
 					.setPMultisampleState(&sample_info)
-					.setLayout(m_pl.get())
+					.setLayout(m_pl[PipelineLayout_RenderDC].get())
 					.setRenderPass(m_render_pass.get())
 					.setPDepthStencilState(&depth_stencil_info)
 					.setPColorBlendState(&blend_info);
@@ -1437,7 +1427,7 @@ struct Renderer
 					.setPViewportState(&viewportInfo)
 					.setPRasterizationState(&rasterization_info)
 					.setPMultisampleState(&sample_info)
-					.setLayout(m_pl_model.get())
+					.setLayout(m_pl[PipelineLayout_RenderModel].get())
 					.setRenderPass(m_render_pass.get())
 					.setPDepthStencilState(&depth_stencil_info)
 					.setPColorBlendState(&blend_info);
@@ -1471,8 +1461,8 @@ struct Renderer
 		begin_render_Info.setPClearValues(&color);
 		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl.get(), 0, ldc_model.m_DS_DC.get(), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl[PipelineLayout_RenderDC].get(), 0, ldc_model.m_DS_DC.get(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl[PipelineLayout_RenderDC].get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_RenderTest].get());
 		cmd.draw(36, 1, 0, 0);
@@ -1505,9 +1495,9 @@ struct Renderer
 		begin_render_Info.setPClearValues(&color);
 		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl.get(), 0, ldc_model.m_DS_DC.get(), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl.get(), 2, m_DS_Rendering[0].get(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl[Pipeline_RenderModel].get(), 0, ldc_model.m_DS_DC.get(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl[Pipeline_RenderModel].get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl[Pipeline_RenderModel].get(), 2, m_DS_Rendering[0].get(), {});
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_RenderDC].get());
 		cmd.drawIndirect(ldc_model.b_dc_index_counter.getInfo().buffer, ldc_model.b_dc_index_counter.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
@@ -1540,16 +1530,16 @@ struct Renderer
 		begin_render_Info.setPClearValues(&color);
 		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl_model.get(), 0, model.m_DS_Model.get(), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl_model.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl_model.get(), 2, m_DS_Rendering[0].get(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl[Pipeline_RenderModel].get(), 0, model.m_DS_Model.get(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl[Pipeline_RenderModel].get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl[Pipeline_RenderModel].get(), 2, m_DS_Rendering[0].get(), {});
 
 
 		vec3 dir = normalize(instance.dir.xyz());
 		auto rot = quat(vec3(0.f, 0.f, 1.f), dir);
 
 		mat4 world = translate(instance.pos.xyz()) * mat4(rot);
-		cmd.pushConstants<mat4>(m_pl_model.get(), vk::ShaderStageFlagBits::eVertex, 0, world);
+		cmd.pushConstants<mat4>(m_pl[Pipeline_RenderModel].get(), vk::ShaderStageFlagBits::eVertex, 0, world);
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_RenderModel].get());
 		cmd.drawIndirect(model.b_draw_cmd.getInfo().buffer, model.b_draw_cmd.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
@@ -1598,36 +1588,8 @@ int main()
  		DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
 	}
 
-	auto boolean_ctx = std::make_shared<booleanOp::Context>(*context);
-	auto boolean_model = std::make_shared<booleanOp::Model>();
-	{
- 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-// 		booleanOp::Model::Add(cmd, *context, *boolean_ctx, *boolean_model, *model_box, mat3x4(1.f));
-	}
 	ModelInstance instance_list[30];
-	for (auto& i : instance_list)
-	{
-		i = { vec4(glm::linearRand(vec3(0.f), vec3(500.f)), 0.f), vec4(glm::ballRand(1.f), 100.f) };
-
-		auto rot = glm::rotation(vec3(0.f, 0.f, 1.f), i.dir.xyz());
-
- 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-		auto world = glm::translate(i.pos.xyz()) * glm::toMat4(rot);
-		mat3x4 world3x4 = glm::make_mat3x4(glm::value_ptr(glm::transpose(world)));
-//		booleanOp::Model::Sub(cmd, *context, *boolean_ctx, *boolean_model, *model, world3x4);
-
-	}
-
-
-	{
-		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-		booleanOp::Model::Add(cmd, *context, *boolean_ctx, *boolean_model, *model, mat3x4(1.f));
-		booleanOp::Model::BuildTLAS(cmd, *context, *boolean_ctx, *boolean_model);
-
-		for (auto& i : instance_list) dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, i);
-		DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
-
-	}
+	for (auto& i : instance_list){ i = { vec4(glm::linearRand(vec3(0.f), vec3(500.f)), 0.f), vec4(glm::ballRand(1.f), 100.f) }; }
 
 	app.setup();
 
@@ -1688,33 +1650,9 @@ int main()
  					dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model, mi);
  					DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
 
-// 					ModelInstance i = { vec4(glm::linearRand(vec3(0.f), vec3(500.f)), 0.f), vec4(glm::ballRand(1.f), 100.f) };
-// 					dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, i);
-// 					DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
-
 					renderer.ExecuteRenderDCModel(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
 					renderer.ExecuteTestRender(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
 				}
-
-				// BooleanOpTest
-				if (0)
-				{
-
-					booleanOp::Model::BuildTLAS(cmd, *context, *boolean_ctx, *boolean_model);
-					booleanOp::Model::executeRendering(cmd, *context, *boolean_ctx, *boolean_model, *app.m_window->getFrontBuffer());
-				}
-				// BoolreanOp test2
-				if(0)
-				{
-					auto bm = std::make_shared<booleanOp::Model>();
-					{
-						booleanOp::Model::Add(cmd, *context, *boolean_ctx, *bm, *model_box, mat3x4(1.f));
-						booleanOp::Model::BuildTLAS(cmd, *context, *boolean_ctx, *bm);
-						booleanOp::Model::executeRendering(cmd, *context, *boolean_ctx, *bm, *app.m_window->getFrontBuffer());
-					}
-					sDeleter::Order().enque(std::move(bm));
-				}
-
 
 				cmd.end();
 				cmds[cmd_render] = cmd;

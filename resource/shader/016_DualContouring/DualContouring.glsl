@@ -33,12 +33,6 @@ struct DCCell
 	uint16_t flag;
 };
 
-struct DCCell2
-{
-	uint normal;
-	uint8_t p;
-	uint8_t flag;
-};
 
 struct VkDrawIndexedIndirectCommand 
 {

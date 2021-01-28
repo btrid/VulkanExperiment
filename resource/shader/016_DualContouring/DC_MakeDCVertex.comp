@@ -54,10 +54,11 @@ vec3 leastSquares(in int N, in f16vec4[16] A)
 	{
 		for (int j=0; j<3; ++j)
 		{
-			float sum = 0.;
+			float16_t sum = 0.hf;
 			for (int k=0; k<N; ++k)
 			{
-				sum += A[k][i] * A[k][j];
+				sum = fma(A[k][i], A[k][j], sum);
+//				sum += A[k][i] * A[k][j];
 			}
 			At_A[i][j] = float16_t(sum);
 		}
@@ -65,10 +66,10 @@ vec3 leastSquares(in int N, in f16vec4[16] A)
 
 	for (int i=0; i<3; ++i)
 	{
-		float sum = 0.;
+		float16_t sum = 0.hf;
 		for (int k=0; k<N; ++k)
 		{
-			sum += A[k][i] * A[k][3];
+			sum = fma(A[k][i], A[k][3], sum);
 		}
 
 		At_b[i] = float16_t(sum);
