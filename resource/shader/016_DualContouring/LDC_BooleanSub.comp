@@ -78,16 +78,18 @@ void main()
 
 	}
 
-
 	bool is_incident_a = false;
 	bool is_incident_b = false;
 	int head = -1;
 
+	if((point_b.flag & LDCFlag_Exit) == LDCFlag_Exit)
+	{
+		is_incident_b = true;
+	}
+
 	for(;is_valid(point_a);)
 	{
 		LDCPoint point = g_invalid_point;
-		bool is_a = false;
-		bool is_b = false;
 
 		if(point_a.p<=point_b.p)
 		{
@@ -95,19 +97,6 @@ void main()
 			{
 				point = point_a;
 			}
-			is_a = true;
-		}
-		if(point_a.p>=point_b.p)
-		{
-			if(is_incident_a)
-			{
-				point = point_b;
-			}
-			is_b = true;
-		}
-
-		if(is_a)
-		{
 			is_incident_a = !is_incident_a;
 
 			if(index_a>=0)
@@ -122,8 +111,12 @@ void main()
 				 point_a = g_invalid_point;
 			}
 		}
-		if(is_b)
+		else
 		{
+			if(is_incident_a)
+			{
+				point = point_b;
+			}
 			is_incident_b = !is_incident_b;
 			point_b = getLDCPoint(t, tmax*99., origin, f);
 		}

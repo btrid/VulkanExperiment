@@ -974,24 +974,25 @@ struct FunctionLibrary
 	{
 		DebugLabel _label(cmd, __FUNCTION__);
 		{
+			{
+				auto rot = glm::rotation(vec3(0.f, 0.f, 1.f), instance.dir.xyz());
+
+				auto world = glm::translate(instance.pos.xyz()) * glm::toMat4(rot);
+				mat3x4 world3x4 = glm::make_mat3x4(glm::value_ptr(glm::transpose(world)));
+//				Model::UpdateTLAS(cmd, *dc_ctx.m_ctx, boolean, world3x4);
+			}
+
 			vk::BufferMemoryBarrier barrier[] =
 			{
 				base.b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				base.b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				base.b_ldc_point.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				boolean.m_TLAS.m_AS_buffer.makeMemoryBarrier(vk::AccessFlagBits::eAccelerationStructureWriteKHR, vk::AccessFlagBits::eShaderRead)
 			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
 
 		}
 
-		{
-			auto rot = glm::rotation(vec3(0.f, 0.f, 1.f), instance.dir.xyz());
-
-			auto world = glm::translate(instance.pos.xyz()) * glm::toMat4(rot);
-			mat3x4 world3x4 = glm::make_mat3x4(glm::value_ptr(glm::transpose(world)));
-//			Model::UpdateTLAS(cmd, *dc_ctx.m_ctx, boolean, world3x4);
-
-		}
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Boolean_Add].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL_boolean.get(), 0, { base.m_DS_DC.get() }, {});
@@ -1031,14 +1032,22 @@ struct FunctionLibrary
 	{
 		DebugLabel _label(cmd, __FUNCTION__);
 		{
+			{
+				auto rot = glm::rotation(vec3(0.f, 0.f, 1.f), instance.dir.xyz());
+
+				auto world = glm::translate(instance.pos.xyz()) * glm::toMat4(rot);
+				mat3x4 world3x4 = glm::make_mat3x4(glm::value_ptr(glm::transpose(world)));
+//				Model::UpdateTLAS(cmd, *dc_ctx.m_ctx, boolean, world3x4);
+			}
 
 			vk::BufferMemoryBarrier barrier[] =
 			{
 				base.b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				base.b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				base.b_ldc_point.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				boolean.m_TLAS.m_AS_buffer.makeMemoryBarrier(vk::AccessFlagBits::eAccelerationStructureWriteKHR, vk::AccessFlagBits::eShaderRead)
 			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
 
 		}
 
