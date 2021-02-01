@@ -1645,8 +1645,8 @@ int main()
 					};
  					static Instance instance{ 1.f, {vec4(0.f, 1.f, 1.f, 0.f), vec4(0.f, 1.f, 1.f, 0.f) }, {vec4(200.f), vec4(200.f)} };
  					auto mi = instance.get();
-// 
-// 					dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model, mi);
+
+//					dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, mi);
  					DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
 
 					renderer.ExecuteRenderDCModel(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());

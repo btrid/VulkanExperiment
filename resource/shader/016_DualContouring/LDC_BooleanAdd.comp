@@ -156,22 +156,16 @@ void main()
 			}
 		}
 
-
-		if(is_incident_b && point.p < tmax)
+		if(is_incident_b || (point.p < tmax && (point.flag & LDCFlag_Incident) == LDCFlag_Incident) )
 		{
-//			point_b = getLDCPoint(tmax, tmax*99., origin, f);
-//			if(is_valid(point_b))
-			{
-				point = LDCPoint(tmax, LDCFlag_Exit, pack_normal_octahedron(f));
-				int index = allocate_ldc_point();
-				if(head==-1) { b_ldc_point_link_head[grid] = index; }
-				else { b_ldc_point_link_next[head] = index; }
-				b_ldc_point[index] = point;
+			point = LDCPoint(tmax, LDCFlag_Exit, pack_normal_octahedron(f));
+			int index = allocate_ldc_point();
+			if(head==-1) { b_ldc_point_link_head[grid] = index; }
+			else { b_ldc_point_link_next[head] = index; }
+			b_ldc_point[index] = point;
 
-				head = index;
-				is_incident_b = false;
-			}
-
+			head = index;
+			is_incident_b = false;
 		}
 
 		if(head==-1) { b_ldc_point_link_head[grid] = -1; }
