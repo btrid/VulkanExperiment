@@ -85,10 +85,7 @@ struct DCContext
 	btr::BufferMemoryEx<uint32_t> b_dc_cell_hashmap;
 
 	vk::UniqueDescriptorSet m_DS_worker;
-// 	struct DCInfo
-// 	{
-// 		uvec3 m_voxel_reso;
-// 	};
+
 	DCContext(std::shared_ptr<btr::Context>& ctx)
 	{
 		m_ctx = ctx;
@@ -133,7 +130,7 @@ struct DCContext
 			}
 
 			{
-				auto stage = vk::ShaderStageFlagBits::eCompute;
+				auto stage = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eGeometry;
 				vk::DescriptorSetLayoutBinding binding[] = {
 					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
@@ -1158,6 +1155,7 @@ struct Renderer
 					dc_ctx.m_DSL[DCContext::DSL_DC].get(),
 					sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
 					m_DSL_Rendering.get(),
+					dc_ctx.m_DSL[DCContext::DSL_Worker].get(),
 				};
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
@@ -1498,6 +1496,7 @@ struct Renderer
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl[Pipeline_RenderModel].get(), 0, ldc_model.m_DS_DC.get(), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl[Pipeline_RenderModel].get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl[Pipeline_RenderModel].get(), 2, m_DS_Rendering[0].get(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl[Pipeline_RenderModel].get(), 3, dc_ctx.m_DS_worker.get(), {});
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_RenderDC].get());
 		cmd.drawIndirect(ldc_model.b_dc_index_counter.getInfo().buffer, ldc_model.b_dc_index_counter.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
@@ -1647,7 +1646,7 @@ int main()
  					static Instance instance{ 1.f, {vec4(0.f, 1.f, 1.f, 0.f), vec4(0.f, 1.f, 1.f, 0.f) }, {vec4(200.f), vec4(200.f)} };
  					auto mi = instance.get();
 // 
- 					dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model, mi);
+// 					dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model, mi);
  					DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
 
 					renderer.ExecuteRenderDCModel(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
