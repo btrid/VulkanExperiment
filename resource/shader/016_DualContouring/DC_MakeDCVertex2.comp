@@ -1,0 +1,99 @@
+#version 460
+
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_DC 0
+#define USE_DC_WorkBuffer 1
+#include "DualContouring.glsl"
+
+#include "qef.glsl"
+
+layout (local_size_x = 64) in;
+
+shared uint s_have_data;
+
+bool init()
+{
+	if(gl_LocalInvocationIndex == 0)
+	{
+		s_have_data = 0;
+	}
+
+	barrier();
+	memoryBarrierShared();
+
+	if(gl_LocalInvocationIndex < 12)
+	{
+		uvec3 map_reso = Voxel_Reso / uvec3(32, 1, 1);
+		uvec3 local = uvec3(gl_LocalInvocationIndex/4, (gl_LocalInvocationIndex/2)%2, gl_LocalInvocationIndex%2);
+		uvec3 i = gl_WorkGroupID * uvec3(2, 1, 1) + local;
+		if(all(lessThan(i, map_reso)))
+		{
+			uint idx = i.x + i.y * map_reso.x + i.z* map_reso.x * map_reso.y;
+			uint map = b_dc_cell_hashmap[idx];
+
+			if(map != 0) { atomicAdd(s_have_data, 1); }
+		}
+	}
+
+	barrier();
+	memoryBarrierShared();
+
+	return s_have_data != 0;
+}
+
+void main() 
+{
+	if(!init()){ return; }
+
+	vec3 axis[] = {vec3(1., 0., 0.),vec3(0., 1., 0.),vec3(0., 0., 1.),};
+	uvec3 reso = Voxel_Reso;
+
+	uvec3 cell_index = gl_GlobalInvocationID;
+	uint idx = cell_index.x + cell_index.y*reso.x + cell_index.z*reso.x*reso.y;
+	
+
+	f16vec4 pos[12];
+	f16vec4 nrm[12];
+//	f16vec4 plane[16];
+	int plame_num = 0;
+
+	for (int z = 0; z < 2; z++)
+	for (int y = 0; y < 2; y++)
+	for (int x = 0; x < 2; x++)
+	{
+		ivec3 p = ivec3(x, y, z);
+
+		uvec3 _i = cell_index+p;
+		if(any(greaterThanEqual(_i, reso))){continue;}
+		uint _idx = _i.x + _i.y*reso.x + _i.z*reso.x*reso.y;
+
+		
+		if((b_dc_cell_hashmap[_idx/32] & (1u<<(_idx%32))) == 0){continue;}
+
+		DCCell cell = b_dc_cell[_idx];
+		if(cell.axis_dist == 0){ continue; }
+
+		for (int i = 0; i < 3; i++)
+		{
+			if((cell.axis_dist&(1<<i)) == 0){ continue; }
+			ivec3 n = ivec3(i == 0, i == 1, i == 2);
+			if (any(equal(n&p, ivec3(1)))){continue;}
+
+			nrm[plame_num] = f16vec4(unpack_normal_octahedron(cell.normal[i]), 0.);
+			pos[plame_num] = f16vec4(n*(float((cell.axis_dist>>(8+8*i)) & 0xff))+p*255., 0.);
+			plame_num++;
+
+		}
+	}
+
+	if(plame_num >= 1)
+	{
+		f16vec3 v = clamp(qef_solve_from_points(pos, nrm, plame_num).xyz, 0.hf, 255.hf);
+		b_dc_vertex[idx] = u8vec4(v, 0);
+
+		atomicOr(b_dc_cell_hashmap[idx/32], 1u<<(idx%32));
+	}
+
+
+}

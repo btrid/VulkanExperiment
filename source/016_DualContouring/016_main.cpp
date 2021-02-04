@@ -1588,7 +1588,8 @@ int main()
 	}
 
 	ModelInstance instance_list[30];
-	for (auto& i : instance_list){ i = { vec4(glm::linearRand(vec3(0.f), vec3(500.f)), 0.f), vec4(glm::ballRand(1.f), 100.f) }; }
+	for (auto& i : instance_list) { i = { vec4(glm::linearRand(vec3(0.f), vec3(500.f)), 0.f), vec4(glm::ballRand(1.f), 100.f) }; }
+//	for (auto& i : instance_list) { i = { vec4(glm::linearRand(vec3(0.f), vec3(500.f)), 0.f), vec4(vec3(0.f, 0.f, 1.f), 100.f) }; }
 
 	app.setup();
 

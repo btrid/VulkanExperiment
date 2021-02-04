@@ -6,19 +6,18 @@
 #define USE_DC_WorkBuffer 1
 #include "DualContouring.glsl"
 
+// https://github.com/emilk/Dual-Contouring
 /* Solves for x in  A*x = b.
 	'A' contains the matrix row-wise.
 	'b' and 'x' are column vectors.
 Uses cramers rule.
 */
-vec3 solve3x3(in float16_t A[3][3], in float16_t b[3]) {
-	float det = determinant(mat3(
-		A[0][0], A[0][1], A[0][2],
-		A[1][0], A[1][1], A[1][2],
-		A[2][0], A[2][1], A[2][2]));
+vec3 solve3x3(in f16mat3 A, in f16vec3 b) 
+{
+	float det = determinant(mat3(A));
 
 	if (abs(det) <= 1e-12) {
-		return vec3(0.5);
+		return vec3(127.);
 	}
 
 	return vec3 
@@ -45,83 +44,34 @@ Solves A*x = b for over-determined systems.
 
 Solves using  At*A*x = At*b   trick where At is the transponate of A
 */
-vec3 leastSquares(in int N, in f16vec4[16] A)
+vec3 leastSquares(in int N, in f16vec4[15] A)
 {
-	float16_t At_A[3][3];
-	float16_t At_b[3];
+	f16mat3 At_A = f16mat3(0.hf);
+	f16vec3 At_b = f16vec3(0.hf);
 
-	for (int i=0; i<3; ++i)
+	for (int k=0; k<N; ++k)
 	{
-		for (int j=0; j<3; ++j)
+		for (int i=0; i<3; ++i)
 		{
-			float16_t sum = 0.hf;
-			for (int k=0; k<N; ++k)
-			{
-				sum = fma(A[k][i], A[k][j], sum);
-//				sum += A[k][i] * A[k][j];
-			}
-			At_A[i][j] = float16_t(sum);
+			At_A[i] = fma(A[k][i].xxx, A[k].xyz, At_A[i]);
 		}
-	}
-
-	for (int i=0; i<3; ++i)
-	{
-		float16_t sum = 0.hf;
-		for (int k=0; k<N; ++k)
-		{
-			sum = fma(A[k][i], A[k][3], sum);
-		}
-
-		At_b[i] = float16_t(sum);
+		At_b = fma(A[k].xyz, A[k][3].xxx, At_b);
 	}
 	return solve3x3(At_A, At_b);
 }
 
 layout (local_size_x = 64) in;
 
-shared uint s_have_data;
-bool init()
-{
-	if(gl_LocalInvocationIndex == 0)
-	{
-		s_have_data = 0;
-	}
-
-	barrier();
-	memoryBarrierShared();
-
-	if(gl_LocalInvocationIndex < 12)
-	{
-		uvec3 map_reso = Voxel_Reso / uvec3(32, 1, 1);
-		uvec3 local = uvec3(gl_LocalInvocationIndex/4, (gl_LocalInvocationIndex/2)%2, gl_LocalInvocationIndex%2);
-		uvec3 i = gl_WorkGroupID * uvec3(2, 1, 1) + local;
-		if(all(lessThan(i, map_reso)))
-		{
-			uint idx = i.x + i.y * map_reso.x + i.z* map_reso.x * map_reso.y;
-			uint map = b_dc_cell_hashmap[idx];
-
-			if(map != 0) { atomicAdd(s_have_data, 1); }
-		}
-	}
-
-	barrier();
-	memoryBarrierShared();
-
-	return s_have_data != 0;
-}
-
 void main() 
 {
-	if(!init()){ return; }
 
-	vec3 axis[] = {vec3(1., 0., 0.),vec3(0., 1., 0.),vec3(0., 0., 1.),};
 	uvec3 reso = Voxel_Reso;
 
 	uvec3 cell_index = gl_GlobalInvocationID;
 	uint idx = cell_index.x + cell_index.y*reso.x + cell_index.z*reso.x*reso.y;
 	
 
-	f16vec4 plane[16];
+	f16vec4 plane[15];
 	int plame_num = 0;
 
 	for (int z = 0; z < 2; z++)
@@ -151,15 +101,14 @@ void main()
 			plame_num++;
 
 		}
-
 	}
 
 	if(plame_num >= 1)
 	{
 		float n = 0.1;
-		plane[plame_num++] = f16vec4(axis[0]*n, dot(axis[0]*n, vec3(127.5)));
-		plane[plame_num++] = f16vec4(axis[1]*n, dot(axis[1]*n, vec3(127.5)));
-		plane[plame_num++] = f16vec4(axis[2]*n, dot(axis[2]*n, vec3(127.5)));
+		plane[plame_num++] = f16vec4(vec3(n, 0., 0.), dot(vec3(n, 0., 0.), vec3(127.5)));
+		plane[plame_num++] = f16vec4(vec3(0., n, 0.), dot(vec3(0., n, 0.), vec3(127.5)));
+		plane[plame_num++] = f16vec4(vec3(0., 0., n), dot(vec3(0., 0., n), vec3(127.5)));
 
 		vec3 v = clamp(leastSquares(plame_num, plane), 0., 255.);
 		b_dc_vertex[idx] = u8vec4(v, 0);
