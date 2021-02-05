@@ -38,44 +38,50 @@ void main()
 
 	float t = 0.;
 	float tmax = 99999.;
-	rayQueryEXT add_rq;
-	for(;t<tmax;)
+	rayQueryEXT rq;
+	int count = 0;
+	bool is_incident = false;
+	vec3 color;
+
+	for(;;)
 	{
-		rayQueryInitializeEXT(add_rq, u_BooleanAdd_TLAS, gl_RayFlagsOpaqueEXT|gl_RayFlagsCullBackFacingTrianglesEXT, 0xFF, origin, t, ray, tmax);
-		while(rayQueryProceedEXT(add_rq)) {}
+		rayQueryInitializeEXT(rq, u_BooleanAdd_TLAS, gl_RayFlagsOpaqueEXT, 0xFF, origin, t, ray, tmax);
+		while(rayQueryProceedEXT(rq)) {}
 
-		float t_add_begin = rayQueryGetIntersectionTEXT(add_rq, true);
-		if(t_add_begin >= tmax){ break;}
-
-		rayQueryEXT sub_rq;
-		rayQueryInitializeEXT(sub_rq, u_BooleanSub_TLAS, gl_RayFlagsOpaqueEXT|gl_RayFlagsCullBackFacingTrianglesEXT, 0xFF, origin, t, ray, tmax);
-		while(rayQueryProceedEXT(sub_rq)) {}
-		float t_sub_begin = rayQueryGetIntersectionTEXT(sub_rq, true);
-
-		if(t_sub_begin > t_add_begin)
+		t = rayQueryGetIntersectionTEXT(rq, true);
+		if(t>=tmax)
 		{
 			break;
 		}
-
-		t = t_sub_begin;
-		int count = 1;
-		for(;count != 0;)
+		bool is_frontface = rayQueryGetIntersectionFrontFaceEXT(rq, true);
+		bool is_add = rayQueryGetIntersectionInstanceCustomIndexEXT(rq, true)==0;
+		if(is_add)
 		{
-			rayQueryInitializeEXT(sub_rq, u_BooleanSub_TLAS, gl_RayFlagsOpaqueEXT, 0xFF, origin, t, ray, tmax);
-			while(rayQueryProceedEXT(sub_rq)) {}
-			
-			count += rayQueryGetIntersectionFrontFaceEXT(sub_rq, true)?1:-1;
-			t = rayQueryGetIntersectionTEXT(sub_rq, true);
-			if(t>=tmax){ break;}
+			if(is_frontface)
+			{
+				vec3 normal = rayQueryGetIntersectionObjectRayDirectionEXT(rq, true);
+				color = abs(normal);
+			}
+			is_incident = is_frontface;
+
+			if(count==0 && is_incident)
+			{
+				imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1.));
+				break;
+			}
+		}
+		else
+		{
+			count += is_frontface?1:-1;
+			count = max(count, 0);
+			if(count==0 && is_incident)
+			{
+//				vec3 normal = rayQueryGetIntersectionObjectRayDirectionEXT(rq, true);
+//				vec3 color = abs(normal);
+				imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1.));
+				break;
+			}
 		}
 	}
-
-	vec3 color = vec3(0., 0., 0.);
-	if(rayQueryGetIntersectionTEXT(add_rq, true) < tmax)
-	{
-		vec3 normal = rayQueryGetIntersectionObjectRayDirectionEXT(add_rq, true);
-		color = abs(normal);
-	}
-	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1.));
 	
 }

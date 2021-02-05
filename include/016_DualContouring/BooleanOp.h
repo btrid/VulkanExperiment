@@ -145,13 +145,14 @@ struct Model
 	{
 		vk::AccelerationStructureInstanceKHR instance;
 		memcpy(&instance.transform, &world, sizeof(world));
-		instance.instanceCustomIndex = 0;
-		instance.mask = ObjectMask_Add;
+		instance.instanceCustomIndex = 1;
+		instance.mask = ObjectMask_Sub;
 		instance.instanceShaderBindingTableRecordOffset = 0;
 		instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
 		instance.accelerationStructureReference = ctx.m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(model.m_BLAS.m_AS.get()));
 
-		base.m_tlas[1].m_instance.push_back(instance);
+//		base.m_tlas[1].m_instance.push_back(instance);
+		base.m_tlas[0].m_instance.push_back(instance);
 	}
 
 	static void BuildTLAS(vk::CommandBuffer& cmd, btr::Context& ctx, Context& boolean_ctx, Model& base)
@@ -181,7 +182,7 @@ struct Model
 
 			vk::AccelerationStructureBuildGeometryInfoKHR AS_buildinfo;
 			AS_buildinfo.type = vk::AccelerationStructureTypeKHR::eTopLevel;
-			//		AS_buildinfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastBuild;
+			AS_buildinfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
 			AS_buildinfo.mode = vk::BuildAccelerationStructureModeKHR::eBuild;
 			AS_buildinfo.geometryCount = 1;
 			AS_buildinfo.pGeometries = &as_geometry;
@@ -293,5 +294,107 @@ struct Model
 	}
 
 };
+
+int main()
+{
+	btr::setResourceAppPath("../../resource/");
+	auto camera = cCamera::sCamera::Order().create();
+	camera->getData().m_position = vec3(50.f, 50.f, -500.f);
+	camera->getData().m_target = vec3(256.f);
+	camera->getData().m_up = vec3(0.f, -1.f, 0.f);
+	camera->getData().m_width = 1024;
+	camera->getData().m_height = 1024;
+	camera->getData().m_far = 5000.f;
+	camera->getData().m_near = 0.01f;
+
+	app::AppDescriptor app_desc;
+	app_desc.m_window_size = uvec2(1024, 1024);
+	app::App app(app_desc);
+
+	auto context = app.m_context;
+	auto dc_ctx = std::make_shared<DCContext>(context);
+	auto boolean_ctx = std::make_shared<booleanOp::Context>(*context);
+
+	auto model_box = ::Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Box.dae", { 300.f });
+	auto model = ::Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Duck.dae", { 5.5f });
+
+	Model boolean_model;
+
+	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
+	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchain());
+
+	ModelInstance instance_list[1];
+	for (auto& i : instance_list) { i = { vec4(glm::linearRand(vec3(0.f), vec3(500.f)), 0.f), vec4(glm::ballRand(1.f), 100.f) }; }
+	ModelInstance instance_list_sub[50];
+	for (auto& i : instance_list_sub) { i = { vec4(glm::linearRand(vec3(0.f), vec3(500.f)), 0.f), vec4(glm::ballRand(1.f), 100.f) }; }
+	//	for (auto& i : instance_list) { i = { vec4(glm::linearRand(vec3(0.f), vec3(500.f)), 0.f), vec4(vec3(0.f, 0.f, 1.f), 100.f) }; }
+
+	{
+		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+
+		for (auto& i : instance_list)
+		{
+			auto rot = glm::rotation(vec3(0.f, 0.f, 1.f), i.dir.xyz());
+
+			auto world = glm::translate(i.pos.xyz()) * glm::toMat4(rot);
+			mat3x4 world3x4 = glm::make_mat3x4(glm::value_ptr(glm::transpose(world)));
+			Model::Add(cmd, *context, *boolean_ctx, boolean_model, *model, world3x4);
+		}
+		for (auto& i : instance_list_sub)
+		{
+			auto rot = glm::rotation(vec3(0.f, 0.f, 1.f), i.dir.xyz());
+
+			auto world = glm::translate(i.pos.xyz()) * glm::toMat4(rot);
+			mat3x4 world3x4 = glm::make_mat3x4(glm::value_ptr(glm::transpose(world)));
+			Model::Sub(cmd, *context, *boolean_ctx, boolean_model, *model_box, world3x4);
+		}
+		booleanOp::Model::BuildTLAS(cmd, *context, *boolean_ctx, boolean_model);
+
+	}
+
+
+	app.setup();
+
+
+	while (true)
+	{
+		cStopWatch time;
+
+		app.preUpdate();
+		{
+			enum
+			{
+				cmd_render_clear,
+				cmd_render,
+				cmd_render_present,
+				cmd_num
+			};
+			std::vector<vk::CommandBuffer> cmds(cmd_num);
+
+			{
+				cmds[cmd_render_clear] = clear_pipeline.execute();
+				cmds[cmd_render_present] = present_pipeline.execute();
+			}
+			{
+				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+
+				{
+					booleanOp::Model::executeRendering(cmd, *context, *boolean_ctx, boolean_model, *app.m_window->getFrontBuffer());
+				}
+
+				cmd.end();
+				cmds[cmd_render] = cmd;
+
+			}
+			app.submit(std::move(cmds));
+			context->m_device.waitIdle();
+
+		}
+		app.postUpdate();
+		printf("%-6.3fms\n", time.getElapsedTimeAsMilliSeconds());
+	}
+
+	return 0;
+}
 
 }

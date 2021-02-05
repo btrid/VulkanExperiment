@@ -1552,6 +1552,7 @@ struct Renderer
 #include <016_DualContouring/test.h>
 int main()
 {
+//	return booleanOp::main();
 
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
@@ -1593,6 +1594,26 @@ int main()
 
 	app.setup();
 
+	struct Instance
+	{
+		float time;
+		vec3 rot[2];
+		vec3 pos[2];
+
+		ModelInstance get()
+		{
+			time += 0.002f;
+			if (time >= 1.f)
+			{
+				time = 0.f;
+				rot[0] = rot[1]; rot[1] = glm::ballRand(1.f);
+				pos[0] = pos[1]; pos[1] = glm::linearRand(vec3(0.f), vec3(500.f));
+			}
+			return { vec4(mix(pos[0], pos[1], time), 100.f), vec4(mix(rot[0], rot[1], time), 0.f) };
+		}
+	};
+	Instance dynamic_instance{ 1.f, {vec4(0.f, 1.f, 1.f, 0.f), vec4(0.f, 1.f, 1.f, 0.f) }, {vec4(200.f), vec4(200.f)} };
+
 
 	while (true)
 	{
@@ -1614,40 +1635,13 @@ int main()
 				cmds[cmd_render_present] = present_pipeline.execute();
 			}
 			{
-//				cCamera::sCamera::Order().getCameraList()[0]->control(app.m_window->getInput(), 0.016f);
-
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
-
-//				if(0)
 				{
 
 					dc_fl.executClear(cmd, *dc_model);
 					for (auto& i : instance_list) dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, i);
 
-					struct Instance
-					{
-						float time;
-						vec3 rot[2];
-						vec3 pos[2];
-
-						ModelInstance get()
-						{
-							time += 0.002f;
-							if (time >= 1.f)
-							{
-								time = 0.f;
-								rot[0] = rot[1];
-								rot[1] = glm::ballRand(1.f);
-								pos[0] = pos[1];
-								pos[1] = glm::linearRand(vec3(0.f), vec3(500.f));
-							}
-							return { vec4(mix(pos[0], pos[1], time), 100.f), vec4(mix(rot[0], rot[1], time), 0.f) };
-						}
-					};
- 					static Instance instance{ 1.f, {vec4(0.f, 1.f, 1.f, 0.f), vec4(0.f, 1.f, 1.f, 0.f) }, {vec4(200.f), vec4(200.f)} };
- 					auto mi = instance.get();
-
-//					dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, mi);
+//					dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, dynamic_instance.get());
  					DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
 
 					renderer.ExecuteRenderDCModel(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
