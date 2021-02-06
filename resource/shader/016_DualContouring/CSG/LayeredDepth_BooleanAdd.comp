@@ -1,0 +1,157 @@
+#version 460
+
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_LayeredDepth 0
+#define USE_Model 1
+#include "CSG.glsl"
+
+#define SETPOINT_CAMERA 2
+#include "btrlib/camera.glsl"
+
+
+layout (local_size_x = 8, local_size_y = 8) in;
+
+LDPoint getLDPoint(inout float t, in float tmax, in vec3 origin, in vec3 f)
+{
+	rayQueryEXT rayQuery;
+	rayQueryInitializeEXT(rayQuery,	topLevelAS, gl_RayFlagsOpaqueEXT, 0xFF, origin, t, f, tmax);
+	while(rayQueryProceedEXT(rayQuery)) {}
+
+	t = rayQueryGetIntersectionTEXT(rayQuery, true);
+	if(t >= tmax)
+	{ 
+		return g_invalid_point;
+	}
+
+	LDPoint point;
+	point.p = t;
+	point.flag = rayQueryGetIntersectionFrontFaceEXT(rayQuery, true) ? LDFlag_Incident : LDFlag_Exit;
+	return point;
+
+}
+void main() 
+{
+	uvec3 reso = gl_WorkGroupSize * gl_NumWorkGroups;
+
+	Camera cam = u_camera[0];
+	vec3 f = normalize(cam.u_target.xyz - cam.u_eye.xyz).xyz;
+	vec3 s = normalize(cross(cam.u_up.xyz, f));
+	vec3 u = cam.u_up.xyz;
+
+	// イメージセンサー上の位置
+	float tan_fov_y = tan(cam.u_fov_y / 2.);
+	vec2 screen = (gl_GlobalInvocationID / vec3(reso)).xy * 2. - 1.;
+
+	vec3 dir = normalize(f + s * screen.x * tan_fov_y * cam.u_aspect + u * screen.y * tan_fov_y);
+	vec3 origin = cam.u_eye.xyz;
+
+
+	float t = 0.;
+	float tmax = 10000.;
+
+	LDPoint point_b = getLDPoint(t, tmax, origin, f);
+	if(!is_valid(point_b)){ return; }
+
+	// loop
+	{
+		int grid = int(gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*reso.x);
+		int head = -1;
+		int index_a = b_LayeredDepth_point_link_head[grid];
+
+		LDPoint point_a = g_invalid_point;
+		if(index_a>=0) 
+		{
+			point_a = b_LayeredDepth_point[index_a];
+			index_a = b_LayeredDepth_point_link_next[index_a];
+		}
+
+		bool is_incident_a = false;
+		bool is_incident_b = false;
+
+		if((point_b.flag & LDFlag_Exit) == LDFlag_Exit)
+		{
+			LDPoint point = {0., LDFlag_Incident};
+			int index = allocate_LayeredDepth_point();
+			if(head==-1) { b_LayeredDepth_point_link_head[grid] = index; }
+			else { b_LayeredDepth_point_link_next[head] = index; }
+			b_LayeredDepth_point[index] = point;
+
+			head = index;
+			is_incident_b = true;
+		}
+
+		LDPoint point = g_invalid_point;
+		for(;is_valid(point_a)||is_valid(point_b);)
+		{
+			point = g_invalid_point;
+			if(point_b.p<=point_a.p)
+			{
+				if(!is_incident_a && !is_incident_b)
+				{
+					// 開始
+					point = point_b;
+				}
+				else if(!is_incident_a && is_incident_b)
+				{
+					// 終了
+					point = point_b;
+				}
+
+				is_incident_b = !is_incident_b;
+				point_b = getLDPoint(t, tmax, origin, f);
+			}
+			else
+			{
+				if(!is_incident_a && !is_incident_b)
+				{
+					// 開始
+					point = point_a;
+				}
+				else if(is_incident_a && !is_incident_b)
+				{
+					// 終了
+					point = point_a;
+				}
+
+				is_incident_a = !is_incident_a;
+				if(index_a>=0)
+				{
+					point_a = b_LayeredDepth_point[index_a];
+					index_a = b_LayeredDepth_point_link_next[index_a];
+				}
+				else
+				{
+					point_a = g_invalid_point;
+				}
+
+			}
+
+			if(is_valid(point))
+			{
+				int index = allocate_LayeredDepth_point();
+				if(head==-1) { b_LayeredDepth_point_link_head[grid] = index; }
+				else { b_LayeredDepth_point_link_next[head] = index; }
+				b_LayeredDepth_point[index] = point;
+				head = index;
+			}
+		}
+
+		if(is_incident_b || (point.p < tmax && (point.flag & LDFlag_Incident) == LDFlag_Incident) )
+		{
+			point = LDPoint(tmax, LDFlag_Exit);
+			int index = allocate_LayeredDepth_point();
+			if(head==-1) { b_LayeredDepth_point_link_head[grid] = index; }
+			else { b_LayeredDepth_point_link_next[head] = index; }
+			b_LayeredDepth_point[index] = point;
+
+			head = index;
+			is_incident_b = false;
+		}
+
+		if(head==-1) { b_LayeredDepth_point_link_head[grid] = -1; }
+		else { b_LayeredDepth_point_link_next[head] = -1; }
+
+	}
+
+}

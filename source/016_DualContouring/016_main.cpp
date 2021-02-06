@@ -447,8 +447,9 @@ struct Model
 			std::vector<const vk::AccelerationStructureBuildRangeInfoKHR*> ranges = { &acceleration_buildrangeinfo };
 			cmd.buildAccelerationStructuresKHR({ AS_buildinfo }, ranges);
 
-			vk::BufferMemoryBarrier barrier[] = { AS_buffer.makeMemoryBarrier(vk::AccessFlagBits::eAccelerationStructureWriteKHR, vk::AccessFlagBits::eAccelerationStructureReadKHR), };
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
+//			ctx.m_device.buildAccelerationStructuresKHR()
+//			vk::BufferMemoryBarrier barrier[] = { AS_buffer.makeMemoryBarrier(vk::AccessFlagBits::eAccelerationStructureWriteKHR, vk::AccessFlagBits::eAccelerationStructureReadKHR), };
+//			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
 
 			// Compacting BLAS #todo queryÇ™cpuë§èàóùÇ»ÇÃÇ≈é¿ëïÇ™ìÔÇµÇ¢
 			if(0)
@@ -802,9 +803,8 @@ struct DCModel
 		{
 			vk::BufferMemoryBarrier barrier[] =
 			{
-				//			dc_ctx.b_dc_cell_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-							dc_model.b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-							dc_model.b_ldc_point.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				dc_model.b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				dc_model.b_ldc_point.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
 
@@ -1088,6 +1088,7 @@ struct Renderer
 	std::array<Material, 100> m_world_material;
 	vk::UniqueDescriptorSetLayout m_DSL_Rendering;
 	std::array<vk::UniqueDescriptorSet, sGlobal::BUFFER_COUNT_MAX> m_DS_Rendering;
+
 
 	Renderer(btr::Context& ctx, DCContext& dc_ctx, RenderTarget& rt)
 	{
@@ -1547,12 +1548,13 @@ struct Renderer
 
 	}
 };
-
 #include <016_DualContouring/BooleanOp.h>
+#include <016_DualContouring/CSG.h>
 #include <016_DualContouring/test.h>
 int main()
 {
 //	return booleanOp::main();
+	return csg::main();
 
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
@@ -1590,7 +1592,6 @@ int main()
 
 	ModelInstance instance_list[30];
 	for (auto& i : instance_list) { i = { vec4(glm::linearRand(vec3(0.f), vec3(500.f)), 0.f), vec4(glm::ballRand(1.f), 100.f) }; }
-//	for (auto& i : instance_list) { i = { vec4(glm::linearRand(vec3(0.f), vec3(500.f)), 0.f), vec4(vec3(0.f, 0.f, 1.f), 100.f) }; }
 
 	app.setup();
 

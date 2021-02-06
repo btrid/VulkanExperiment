@@ -318,6 +318,7 @@ App::App(const AppDescriptor& desc)
 		vk::DescriptorSetLayoutBinding binding[] = {
 			vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageImage, 1, stage),
 			vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eUniformBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageImage, 1, stage),
 		};
 		vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 		desc_layout_info.setBindingCount(array_length(binding));
@@ -641,11 +642,13 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 		depth_info.extent.depth = 1;
 		depth_info.imageType = vk::ImageType::e2D;
 		depth_info.initialLayout = vk::ImageLayout::eUndefined;
+//		depth_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
 //		depth_info.queueFamilyIndexCount = (uint32_t)context->m_device.getQueueFamilyIndex().size();
 //		depth_info.pQueueFamilyIndices = context->m_device.getQueueFamilyIndex().data();
 		m_depth_image = context->m_device.createImageUnique(depth_info);
 		m_depth_info = depth_info;
-					// ƒƒ‚ƒŠŠm•Û
+
+		// ƒƒ‚ƒŠŠm•Û
 		auto memory_request = context->m_device.getImageMemoryRequirements(m_depth_image.get());
 		uint32_t memory_index = Helper::getMemoryTypeIndex(context->m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
@@ -658,6 +661,7 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 
 		vk::ImageViewCreateInfo depth_view_info;
 		depth_view_info.format = depth_info.format;
+//		depth_view_info.format = vk::Format::eR32Sfloat;
 		depth_view_info.image = m_depth_image.get();
 		depth_view_info.viewType = vk::ImageViewType::e2D;
 		depth_view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
@@ -800,6 +804,9 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 		vk::DescriptorImageInfo images[] = {
 			vk::DescriptorImageInfo().setImageLayout(vk::ImageLayout::eGeneral).setImageView(m_front_buffer->m_view),
 		};
+		vk::DescriptorImageInfo images2[] = {
+			vk::DescriptorImageInfo().setImageLayout(vk::ImageLayout::eGeneral).setImageView(m_front_buffer->m_depth_view),
+		};
 
 		vk::DescriptorBufferInfo uniforms[] = {
 			m_front_buffer->u_render_info.getInfo()
@@ -818,6 +825,12 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 			.setPBufferInfo(uniforms)
 			.setDstBinding(1)
 			.setDstSet(m_front_buffer->m_descriptor.get()),
+// 			vk::WriteDescriptorSet()
+// 			.setDescriptorType(vk::DescriptorType::eStorageImage)
+// 			.setDescriptorCount(array_length(images2))
+// 			.setPImageInfo(images2)
+// 			.setDstBinding(2)
+// 			.setDstSet(m_front_buffer->m_descriptor.get()),
 		};
 		context->m_device.updateDescriptorSets(std::size(write), write, 0, nullptr);
 	}

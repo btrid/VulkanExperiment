@@ -72,11 +72,8 @@ struct RenderTargetInfo
 };
 
 layout(set=USE_RenderTarget, binding=0, rgba16f) uniform image2D i_render_target;
-layout(set=USE_RenderTarget, binding=1, std140) uniform RenderInfo
-{
-	RenderTargetInfo u_render_info;
-
-};
+layout(set=USE_RenderTarget, binding=1, std140) uniform RenderInfo{ RenderTargetInfo u_render_info; };
+layout(set=USE_RenderTarget, binding=2, r32f) uniform image2D i_depth;
 
 #endif
 

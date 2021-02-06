@@ -1,0 +1,29 @@
+#version 460
+
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_RenderTarget 0
+#include "applib/System.glsl"
+
+#define USE_LayeredDepth 1
+#include "CSG.glsl"
+
+
+layout (local_size_x = 8, local_size_y = 8) in;
+
+void main() 
+{
+	float depth = -1.;
+
+	uvec3 reso = gl_WorkGroupSize * gl_NumWorkGroups;
+	int grid = int(gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*reso.x);
+	int index = b_LayeredDepth_point_link_head[grid];
+	if(index!=-1)
+	{
+		depth = b_LayeredDepth_point[index].p;
+	}
+
+	imageStore(i_depth, ivec2(gl_GlobalInvocationID.xy), vec4(depth));
+
+
+}

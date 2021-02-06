@@ -1,0 +1,102 @@
+#version 460
+
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_LayeredDepth 0
+#define USE_Model 1
+#include "CSG.glsl"
+
+#define SETPOINT_CAMERA 2
+#include "btrlib/camera.glsl"
+
+void main() 
+{
+/*
+	vec3 f = constants.axis[(gl_GlobalInvocationID.z+0)%3].xyz;
+	vec3 s = constants.axis[(gl_GlobalInvocationID.z+1)%3].xyz; 
+	vec3 u = constants.axis[(gl_GlobalInvocationID.z+2)%3].xyz;
+
+	g_rotate = transpose(mat3(constants.axis[0].xyz, constants.axis[1].xyz, constants.axis[2].xyz));
+
+	vec3 extent = Voxel_Block_Size;
+
+	float t = 0.;
+	float tmax = extent[gl_GlobalInvocationID.z];
+
+	vec3 rate = vec3(gl_GlobalInvocationID) / vec3(Voxel_Reso);
+	vec3 origin = (s*rate.x*extent[(gl_GlobalInvocationID.z+1)%3]+u*rate.y*extent[(gl_GlobalInvocationID.z+2)%3]);
+
+	vec3 pos = constants.pos.xyz;
+	origin -= f*pos[(gl_GlobalInvocationID.z+0)%3] + (s*pos[(gl_GlobalInvocationID.z+1)%3]+u*pos[(gl_GlobalInvocationID.z+2)%3]);
+
+	LDCPoint point_b = getLDCPoint(t, tmax*99., origin, f);
+	if(!is_valid(point_b)){ return; }
+
+	int grid = int(gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*Voxel_Reso.x + gl_GlobalInvocationID.z*Voxel_Reso.x*Voxel_Reso.y);
+	int index_a = b_ldc_point_link_head[grid];
+	if(index_a <0){ return; }
+
+	LDCPoint point_a = b_ldc_point[index_a];
+	{
+		int next_a = b_ldc_point_link_next[index_a];
+		free_ldc_point(index_a);
+		index_a = next_a;
+
+	}
+
+	bool is_incident_a = false;
+	bool is_incident_b = false;
+	int head = -1;
+
+	if((point_b.flag & LDCFlag_Exit) == LDCFlag_Exit)
+	{
+		is_incident_b = true;
+	}
+
+	for(;is_valid(point_a);)
+	{
+		LDCPoint point = g_invalid_point;
+
+		if(point_a.p<=point_b.p)
+		{
+			if(!is_incident_b)
+			{
+				point = point_a;
+			}
+			is_incident_a = !is_incident_a;
+
+			if(index_a>=0)
+			{
+				point_a = b_ldc_point[index_a];
+				int next = b_ldc_point_link_next[index_a];
+				free_ldc_point(index_a);
+				index_a = next;
+			}
+			else
+			{
+				 point_a = g_invalid_point;
+			}
+		}
+		else
+		{
+			if(is_incident_a)
+			{
+				point = point_b;
+			}
+			is_incident_b = !is_incident_b;
+			point_b = getLDCPoint(t, tmax*99., origin, f);
+		}
+
+		if(is_valid(point))
+		{
+			int index = allocate_ldc_point();
+			if(head==-1) { b_ldc_point_link_head[grid] = index; }
+			else { b_ldc_point_link_next[head] = index; }
+			b_ldc_point[index] = point;
+			head = index;
+		}
+	}
+	if(head==-1) { b_ldc_point_link_head[grid] = -1; }
+	else { b_ldc_point_link_next[head] = -1; }
+*/
+}
