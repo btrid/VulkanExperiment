@@ -167,9 +167,14 @@ struct Renderer
 					sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
 				};
 
+				vk::PushConstantRange constants[] = {
+					vk::PushConstantRange().setSize(sizeof(mat4)).setStageFlags(vk::ShaderStageFlagBits::eVertex),
+				};
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 				pipeline_layout_info.setPSetLayouts(layouts);
+				pipeline_layout_info.setPushConstantRangeCount(array_size(constants));
+				pipeline_layout_info.setPPushConstantRanges(constants);
 				m_pl[PipelineLayout_Rendering] = ctx.m_device.createPipelineLayoutUnique(pipeline_layout_info);
 			}
 
@@ -353,14 +358,12 @@ struct Renderer
 				// render pass
 				{
 					vk::AttachmentReference depth_ref;
-					depth_ref.setAttachment(1);
+					depth_ref.setAttachment(0);
 					depth_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
 					// sub pass
 					vk::SubpassDescription subpass;
 					subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
-					subpass.setInputAttachmentCount(0);
-					subpass.setPInputAttachments(nullptr);
 					subpass.setPDepthStencilAttachment(&depth_ref);
 
 					vk::AttachmentDescription attach_desc[] =
@@ -386,7 +389,7 @@ struct Renderer
 							rt.m_depth_view,
 						};
 						vk::FramebufferCreateInfo framebuffer_info;
-						framebuffer_info.setRenderPass(m_render_pass.get());
+						framebuffer_info.setRenderPass(m_make_depth_pass.get());
 						framebuffer_info.setAttachmentCount(array_length(view));
 						framebuffer_info.setPAttachments(view);
 						framebuffer_info.setWidth(rt.m_info.extent.width);
@@ -531,9 +534,9 @@ struct Renderer
 //			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, barrier, image_barrier);
 
 			vk::RenderPassBeginInfo begin_render_Info;
-			begin_render_Info.setRenderPass(m_render_pass.get());
+			begin_render_Info.setRenderPass(m_make_depth_pass.get());
 			begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(rt.m_info.extent.width, rt.m_info.extent.height)));
-			begin_render_Info.setFramebuffer(m_render_framebuffer.get());
+			begin_render_Info.setFramebuffer(m_make_depth_framebuffer.get());
 			cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_MakeDepthMap].get());
