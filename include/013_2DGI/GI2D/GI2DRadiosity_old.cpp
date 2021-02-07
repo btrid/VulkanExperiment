@@ -273,7 +273,7 @@ GI2DRadiosity_old::GI2DRadiosity_old(const std::shared_ptr<btr::Context>& contex
 			.setStage(shader_info[2])
 			.setLayout(m_pipeline_layout[PipelineLayout_Radiosity].get()),
 		};
-		auto compute_pipeline = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
+		auto compute_pipeline = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info).value;
 		m_pipeline[Pipeline_MakeHitpoint] = std::move(compute_pipeline[0]);
 		m_pipeline[Pipeline_RayMarch] = std::move(compute_pipeline[1]);
 		m_pipeline[Pipeline_RayBounce] = std::move(compute_pipeline[2]);

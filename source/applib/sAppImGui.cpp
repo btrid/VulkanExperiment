@@ -422,8 +422,8 @@ void sAppImGui::Render(vk::CommandBuffer& cmd)
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get(), 0, { m_descriptor_set.get() }, {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get(), 1, { sSystem::Order().getSystemDescriptorSet() }, { i * sSystem::Order().getSystemDescriptorStride() });
 
-		vk::Viewport viewport(draw_data->DisplayPos.x, draw_data->DisplayPos.y, draw_data->DisplaySize.x, draw_data->DisplaySize.y);
-		cmd.setViewport(0, 1, &viewport);
+//		vk::Viewport viewport(draw_data->DisplayPos.x, draw_data->DisplayPos.y, draw_data->DisplaySize.x, draw_data->DisplaySize.y);
+//		cmd.setViewport(0, 1, &viewport);
 
 		for (int n = 0; n < draw_data->CmdListsCount; n++)
 		{

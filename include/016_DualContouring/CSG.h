@@ -529,19 +529,19 @@ struct Renderer
 
 		_label.insert("Make DepthMap ");
 		{
-			std::array<vk::BufferMemoryBarrier, 1> barrier =
+			vk::BufferMemoryBarrier barrier[] =
 			{
 				b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			};
-			std::array<vk::ImageMemoryBarrier, 1> image_barrier;
-			image_barrier[0].setImage(rt.m_depth_image);
-			image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1 });
-			image_barrier[0].setOldLayout(vk::ImageLayout::eDepthAttachmentOptimal);
-			image_barrier[0].setSrcAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentRead);
-			image_barrier[0].setNewLayout(vk::ImageLayout::eGeneral);
-			image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
+// 			vk::ImageMemoryBarrier image_barrier[1];
+// 			image_barrier[0].setImage(rt.m_depth_image);
+// 			image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1 });
+// 			image_barrier[0].setOldLayout(vk::ImageLayout::eDepthAttachmentOptimal);
+// 			image_barrier[0].setSrcAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentRead);
+// 			image_barrier[0].setNewLayout(vk::ImageLayout::eGeneral);
+// 			image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
 
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput|vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, barrier, image_barrier);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, { array_size(barrier), barrier }, {}/* { array_size(image_barrier), image_barrier }*/);
 
 			vk::RenderPassBeginInfo begin_render_Info;
 			begin_render_Info.setRenderPass(m_make_depth_pass.get());
@@ -562,19 +562,19 @@ struct Renderer
 		_label.insert("Rendering");
 		{
 			{
-				vk::ImageMemoryBarrier image_barrier[2];
+				vk::ImageMemoryBarrier image_barrier[1];
 				image_barrier[0].setImage(rt.m_image);
 				image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
 				image_barrier[0].setOldLayout(vk::ImageLayout::eColorAttachmentOptimal);
 				image_barrier[0].setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
 				image_barrier[0].setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
 				image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
- 				image_barrier[1].setImage(rt.m_depth_image);
- 				image_barrier[1].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1 });
- 				image_barrier[1].setOldLayout(vk::ImageLayout::eGeneral);
- 				image_barrier[1].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
- 				image_barrier[1].setNewLayout(vk::ImageLayout::eDepthAttachmentOptimal);
- 				image_barrier[1].setDstAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentRead);
+//  				image_barrier[1].setImage(rt.m_depth_image);
+//  				image_barrier[1].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1 });
+//  				image_barrier[1].setOldLayout(vk::ImageLayout::eGeneral);
+//  				image_barrier[1].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+//  				image_barrier[1].setNewLayout(vk::ImageLayout::eDepthAttachmentOptimal);
+//  				image_barrier[1].setDstAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentRead);
 
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader|vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eColorAttachmentOutput,
 					{}, {}, { /*array_size(to_read), to_read*/ }, { array_size(image_barrier), image_barrier });

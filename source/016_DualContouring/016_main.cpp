@@ -1548,7 +1548,7 @@ struct Renderer
 
 	}
 };
-#include <016_DualContouring/BooleanOp.h>
+//#include <016_DualContouring/BooleanOp.h>
 #include <016_DualContouring/CSG.h>
 #include <016_DualContouring/test.h>
 int main()
