@@ -7,6 +7,7 @@
 #define SETPOINT_CAMERA 1
 #include "btrlib/Camera.glsl"
 
+//https://stackoverflow.com/questions/6652253/getting-the-true-z-value-from-the-depth-buffer
 // depthSample from depthTexture.r, for instance
 float linearDepth(float depthSample)
 {
@@ -17,12 +18,17 @@ float linearDepth(float depthSample)
 }
 
 // result suitable for assigning to gl_FragDepth
-float depthSample(float linearDepth)
+float ToDepth(float linearDepth)
 {
 	Camera cam = u_camera[0];
-	float nonLinearDepth = (cam.u_far + cam.u_near - 2.0 * cam.u_near * cam.u_far / linearDepth) / (cam.u_far - cam.u_near);
-	nonLinearDepth = (nonLinearDepth + 1.0) / 2.0;
-	return nonLinearDepth;
+//	float nonLinearDepth = (cam.u_far + cam.u_near - 2.0 * cam.u_near * cam.u_far / linearDepth) / (cam.u_near - cam.u_far);
+//	float nonLinearDepth = (cam.u_far + cam.u_near - 2.0 * cam.u_near * cam.u_far / linearDepth) / (cam.u_far - cam.u_near);
+//	nonLinearDepth = (nonLinearDepth + 1.0) / 2.0;
+//	return nonLinearDepth;
+
+	float A = cam.u_projection[2].z;
+	float B = cam.u_projection[3].z;
+	return 1.515;
 }
 
 void main()
@@ -31,6 +37,6 @@ void main()
 	uvec2 index = uvec2(gl_FragCoord.xy);
 	uint i = index.x + index.y*texsize.x;
 	int head = b_LayeredDepth_point_link_head[i];
-	gl_FragDepth = head >= 0 ? depthSample(b_LayeredDepth_point[head].p) : 1.;
+	gl_FragDepth = head >= 0 ? ToDepth(b_LayeredDepth_point[head].p) : 0.;
 
 }

@@ -312,7 +312,9 @@ struct Renderer
 				vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
 				depth_stencil_info.setDepthTestEnable(VK_TRUE);
 				depth_stencil_info.setDepthWriteEnable(VK_FALSE);
-				depth_stencil_info.setDepthCompareOp(vk::CompareOp::eEqual);
+//				depth_stencil_info.setDepthCompareOp(vk::CompareOp::eEqual);
+//				depth_stencil_info.setDepthCompareOp(vk::CompareOp::eLessOrEqual);
+				depth_stencil_info.setDepthCompareOp(vk::CompareOp::eGreaterOrEqual);
 				depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
 				depth_stencil_info.setStencilTestEnable(VK_FALSE);
 
@@ -441,7 +443,7 @@ struct Renderer
 				vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
 				depth_stencil_info.setDepthTestEnable(VK_TRUE);
 				depth_stencil_info.setDepthWriteEnable(VK_TRUE);
-				depth_stencil_info.setDepthCompareOp(vk::CompareOp::eLessOrEqual);
+				depth_stencil_info.setDepthCompareOp(vk::CompareOp::eAlways);
 				depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
 				depth_stencil_info.setStencilTestEnable(VK_FALSE);
 
@@ -512,6 +514,14 @@ struct Renderer
 			{
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pl[PipelineLayout_LayeredDepth].get(), 1, instance.model->m_DS_Model.get(), {});
 
+//				::Model::UpdateTLAS(cmd, )
+// 				auto& cam = cCamera::sCamera::Order().getCameraList()[0];
+// 				cam->getRenderData();
+// 				Frustom frustom;
+// 				frustom.setup(cam);
+// 				frustom.
+
+
 				auto size = app::calcDipatchGroups(uvec3(1024, 1024, 1), uvec3(8, 8, 1));
 				cmd.dispatch(size.x, size.y, size.z);
 			}
@@ -521,17 +531,17 @@ struct Renderer
 		{
 			std::array<vk::BufferMemoryBarrier, 1> barrier =
 			{
-				b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+				b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			};
-// 			std::array<vk::ImageMemoryBarrier, 1> image_barrier;
-// 			image_barrier[0].setImage(rt.m_depth_image);
-// 			image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1 });
-//			image_barrier[0].setOldLayout(vk::ImageLayout:: eColorAttachmentOptimal);
-//			image_barrier[0].setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
-// 			image_barrier[0].setNewLayout(vk::ImageLayout::eGeneral);
-// 			image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
+			std::array<vk::ImageMemoryBarrier, 1> image_barrier;
+			image_barrier[0].setImage(rt.m_depth_image);
+			image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1 });
+			image_barrier[0].setOldLayout(vk::ImageLayout::eDepthAttachmentOptimal);
+			image_barrier[0].setSrcAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentRead);
+			image_barrier[0].setNewLayout(vk::ImageLayout::eGeneral);
+			image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
 
-//			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, barrier, image_barrier);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput|vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, barrier, image_barrier);
 
 			vk::RenderPassBeginInfo begin_render_Info;
 			begin_render_Info.setRenderPass(m_make_depth_pass.get());
@@ -552,21 +562,21 @@ struct Renderer
 		_label.insert("Rendering");
 		{
 			{
-				vk::ImageMemoryBarrier image_barrier[1];
+				vk::ImageMemoryBarrier image_barrier[2];
 				image_barrier[0].setImage(rt.m_image);
 				image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
 				image_barrier[0].setOldLayout(vk::ImageLayout::eColorAttachmentOptimal);
 				image_barrier[0].setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
 				image_barrier[0].setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
 				image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
-// 				image_barrier[1].setImage(rt.m_depth_image);
-// 				image_barrier[1].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1 });
-// 				image_barrier[1].setOldLayout(vk::ImageLayout::eGeneral);
-// 				image_barrier[1].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
-// 				image_barrier[1].setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
-// 				image_barrier[1].setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+ 				image_barrier[1].setImage(rt.m_depth_image);
+ 				image_barrier[1].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1 });
+ 				image_barrier[1].setOldLayout(vk::ImageLayout::eGeneral);
+ 				image_barrier[1].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+ 				image_barrier[1].setNewLayout(vk::ImageLayout::eDepthAttachmentOptimal);
+ 				image_barrier[1].setDstAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentRead);
 
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eColorAttachmentOutput,
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader|vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eColorAttachmentOutput,
 					{}, {}, { /*array_size(to_read), to_read*/ }, { array_size(image_barrier), image_barrier });
 			}
 
@@ -602,6 +612,33 @@ struct Renderer
 
 };
 
+float linearDepth(float depthSample)
+{
+	auto camera = cCamera::sCamera::Order().getCameraList()[0];
+	auto d = camera->getData();
+
+	depthSample = 2.0 * depthSample - 1.0;
+//	float zLinear = 2.0 * d.m_near * d.m_far / (d.m_far + d.m_near - depthSample * (d.m_far - d.m_near));
+	float zLinear = 2.0 * d.m_near * d.m_far / (d.m_far + d.m_near - depthSample * (d.m_near - d.m_far));
+	return zLinear;
+}
+
+// result suitable for assigning to gl_FragDepth
+float depthSample(float linearDepth)
+{
+	auto camera = cCamera::sCamera::Order().getCameraList()[0];
+	auto d = camera->getData();
+	auto p = glm::perspective(d.m_fov, d.getAspect(), d.m_far, d.m_near);
+
+//	float nonLinearDepth = (d.m_far + d.m_near - 2.0 * d.m_near * d.m_far / linearDepth) / (d.m_far - d.m_near);
+//	float nonLinearDepth = (d.m_far + d.m_near - d.m_near * d.m_far / linearDepth) / (d.m_near - d.m_far);
+//	nonLinearDepth = (nonLinearDepth + 1.0) / 2.0;
+//	return nonLinearDepth;
+
+	float A = p[2].z;
+	float B = p[3].z;
+	return (-A * linearDepth + B) / linearDepth;
+}
 int main()
 {
 	btr::setResourceAppPath("../../resource/");
@@ -629,10 +666,18 @@ int main()
 	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
 	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchain());
 
-	ModelInstance instance_list[30];
+	ModelInstance instance_list[5];
 	for (auto& i : instance_list) { i = { vec4(glm::linearRand(vec3(0.f), vec3(500.f)), 0.f), vec4(glm::ballRand(1.f), 100.f) }; }
 
 	app.setup();
+
+	float d1 = depthSample(4999.f);
+	float d2 = depthSample(0.03f);
+	float z1 = linearDepth(0.01f);
+	float z2 = linearDepth(0.99f);
+	float z3 = linearDepth(0.9999f);
+	int a = 0;
+
 
 	struct DynamicInstance
 	{
@@ -677,10 +722,9 @@ int main()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				{
-					for (auto& i : instance_list) renderer.Request(*model, i);
+					for (auto& i : instance_list) renderer.Request(*model_box, i);
 
 					renderer.ExecuteRendering(cmd, *app.m_window->getFrontBuffer());
-//					renderer.ExecuteTestRender(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
 				}
 
 				cmd.end();
