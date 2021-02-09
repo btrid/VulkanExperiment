@@ -208,69 +208,69 @@ struct Renderer
 			m_pipeline[Pipeline_Boolean_Sub] = ctx.m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[1]).value;
 		}
 		{
-			// レンダーパス
-			{
-				vk::AttachmentReference color_ref[] = {
-					vk::AttachmentReference().setLayout(vk::ImageLayout::eColorAttachmentOptimal).setAttachment(0),
-				};
-				vk::AttachmentReference depth_ref;
-				depth_ref.setAttachment(1);
-				depth_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-
-				// sub pass
-				vk::SubpassDescription subpass;
-				subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
-				subpass.setInputAttachmentCount(0);
-				subpass.setPInputAttachments(nullptr);
-				subpass.setColorAttachmentCount(array_length(color_ref));
-				subpass.setPColorAttachments(color_ref);
-				subpass.setPDepthStencilAttachment(&depth_ref);
-
-				vk::AttachmentDescription attach_desc[] =
-				{
-					// color1
-					vk::AttachmentDescription()
-					.setFormat(rt.m_info.format)
-					.setSamples(vk::SampleCountFlagBits::e1)
-					.setLoadOp(vk::AttachmentLoadOp::eLoad)
-					.setStoreOp(vk::AttachmentStoreOp::eStore)
-					.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
-					.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
-					vk::AttachmentDescription()
-					.setFormat(rt.m_depth_info.format)
-					.setSamples(vk::SampleCountFlagBits::e1)
-					.setLoadOp(vk::AttachmentLoadOp::eLoad)
-					.setStoreOp(vk::AttachmentStoreOp::eStore)
-					.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
-					.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
-				};
-				vk::RenderPassCreateInfo renderpass_info;
-				renderpass_info.setAttachmentCount(array_length(attach_desc));
-				renderpass_info.setPAttachments(attach_desc);
-				renderpass_info.setSubpassCount(1);
-				renderpass_info.setPSubpasses(&subpass);
-
-				m_render_pass = ctx.m_device.createRenderPassUnique(renderpass_info);
-
-				{
-					vk::ImageView view[] = {
-						rt.m_view,
-						rt.m_depth_view,
-					};
-					vk::FramebufferCreateInfo framebuffer_info;
-					framebuffer_info.setRenderPass(m_render_pass.get());
-					framebuffer_info.setAttachmentCount(array_length(view));
-					framebuffer_info.setPAttachments(view);
-					framebuffer_info.setWidth(rt.m_info.extent.width);
-					framebuffer_info.setHeight(rt.m_info.extent.height);
-					framebuffer_info.setLayers(1);
-
-					m_render_framebuffer = ctx.m_device.createFramebufferUnique(framebuffer_info);
-				}
-			}
 
 			// graphics pipeline render
 			{
+				// レンダーパス
+				{
+					vk::AttachmentReference color_ref[] = {
+						vk::AttachmentReference().setLayout(vk::ImageLayout::eColorAttachmentOptimal).setAttachment(0),
+					};
+					vk::AttachmentReference depth_ref;
+					depth_ref.setAttachment(1);
+					depth_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+					// sub pass
+					vk::SubpassDescription subpass;
+					subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+					subpass.setInputAttachmentCount(0);
+					subpass.setPInputAttachments(nullptr);
+					subpass.setColorAttachmentCount(array_length(color_ref));
+					subpass.setPColorAttachments(color_ref);
+					subpass.setPDepthStencilAttachment(&depth_ref);
+
+					vk::AttachmentDescription attach_desc[] =
+					{
+						// color1
+						vk::AttachmentDescription()
+						.setFormat(rt.m_info.format)
+						.setSamples(vk::SampleCountFlagBits::e1)
+						.setLoadOp(vk::AttachmentLoadOp::eLoad)
+						.setStoreOp(vk::AttachmentStoreOp::eStore)
+						.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
+						.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
+						vk::AttachmentDescription()
+						.setFormat(rt.m_depth_info.format)
+						.setSamples(vk::SampleCountFlagBits::e1)
+						.setLoadOp(vk::AttachmentLoadOp::eLoad)
+						.setStoreOp(vk::AttachmentStoreOp::eStore)
+						.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
+						.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
+					};
+					vk::RenderPassCreateInfo renderpass_info;
+					renderpass_info.setAttachmentCount(array_length(attach_desc));
+					renderpass_info.setPAttachments(attach_desc);
+					renderpass_info.setSubpassCount(1);
+					renderpass_info.setPSubpasses(&subpass);
+
+					m_render_pass = ctx.m_device.createRenderPassUnique(renderpass_info);
+
+					{
+						vk::ImageView view[] = {
+							rt.m_view,
+							rt.m_depth_view,
+						};
+						vk::FramebufferCreateInfo framebuffer_info;
+						framebuffer_info.setRenderPass(m_render_pass.get());
+						framebuffer_info.setAttachmentCount(array_length(view));
+						framebuffer_info.setPAttachments(view);
+						framebuffer_info.setWidth(rt.m_info.extent.width);
+						framebuffer_info.setHeight(rt.m_info.extent.height);
+						framebuffer_info.setLayers(1);
+
+						m_render_framebuffer = ctx.m_device.createFramebufferUnique(framebuffer_info);
+					}
+				}
 				struct { const char* name; vk::ShaderStageFlagBits flag; } shader_param[] =
 				{
 					{"CSG_RenderModel.vert.spv", vk::ShaderStageFlagBits::eVertex},
@@ -313,8 +313,8 @@ struct Renderer
 				depth_stencil_info.setDepthTestEnable(VK_TRUE);
 				depth_stencil_info.setDepthWriteEnable(VK_FALSE);
 //				depth_stencil_info.setDepthCompareOp(vk::CompareOp::eEqual);
-//				depth_stencil_info.setDepthCompareOp(vk::CompareOp::eLessOrEqual);
-				depth_stencil_info.setDepthCompareOp(vk::CompareOp::eGreaterOrEqual);
+				depth_stencil_info.setDepthCompareOp(vk::CompareOp::eLess);
+//				depth_stencil_info.setDepthCompareOp(vk::CompareOp::eAlways);
 				depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
 				depth_stencil_info.setStencilTestEnable(VK_FALSE);
 
@@ -355,7 +355,7 @@ struct Renderer
 
 			}
 
-			// graphics pipeline render
+			// graphics pipeline pre-z
 			{
 				// render pass
 				{
@@ -373,7 +373,7 @@ struct Renderer
 						vk::AttachmentDescription()
 						.setFormat(rt.m_depth_info.format)
 						.setSamples(vk::SampleCountFlagBits::e1)
-						.setLoadOp(vk::AttachmentLoadOp::eLoad)
+						.setLoadOp(vk::AttachmentLoadOp::eDontCare)
 						.setStoreOp(vk::AttachmentStoreOp::eStore)
 						.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
 						.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
@@ -416,7 +416,6 @@ struct Renderer
 					shaderStages[i].setModule(shader[i].get()).setStage(shader_param[i].flag).setPName("main");
 				}
 
-				// assembly
 				vk::PipelineInputAssemblyStateCreateInfo assembly_info;
 				assembly_info.setPrimitiveRestartEnable(VK_FALSE);
 				assembly_info.setTopology(vk::PrimitiveTopology::eTriangleList);
@@ -450,6 +449,17 @@ struct Renderer
 
 				vk::PipelineColorBlendAttachmentState blend_state;
 				blend_state.setBlendEnable(VK_FALSE);
+				blend_state.setColorBlendOp(vk::BlendOp::eAdd);
+				blend_state.setSrcColorBlendFactor(vk::BlendFactor::eOne);
+				blend_state.setDstColorBlendFactor(vk::BlendFactor::eZero);
+				blend_state.setAlphaBlendOp(vk::BlendOp::eAdd);
+				blend_state.setSrcAlphaBlendFactor(vk::BlendFactor::eOne);
+				blend_state.setDstAlphaBlendFactor(vk::BlendFactor::eZero);
+				blend_state.setColorWriteMask(vk::ColorComponentFlagBits::eR
+					| vk::ColorComponentFlagBits::eG
+					| vk::ColorComponentFlagBits::eB
+					| vk::ColorComponentFlagBits::eA);
+
 				vk::PipelineColorBlendStateCreateInfo blend_info;
 				blend_info.setAttachmentCount(1);
 				blend_info.setPAttachments(&blend_state);
@@ -466,7 +476,7 @@ struct Renderer
 					.setPRasterizationState(&rasterization_info)
 					.setPMultisampleState(&sample_info)
 					.setLayout(m_pl[PipelineLayout_MakeDepthMap].get())
-					.setRenderPass(m_make_depth_pass.get())
+					.setRenderPass(m_render_pass.get())
 					.setPDepthStencilState(&depth_stencil_info)
 					.setPColorBlendState(&blend_info);
 				m_pipeline[Pipeline_MakeDepthMap] = ctx.m_device.createGraphicsPipelineUnique(vk::PipelineCache(), graphics_pipeline_info).value;
@@ -532,6 +542,7 @@ struct Renderer
 			vk::BufferMemoryBarrier barrier[] =
 			{
 				b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				b_ldc_point.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			};
 // 			vk::ImageMemoryBarrier image_barrier[1];
 // 			image_barrier[0].setImage(rt.m_depth_image);
@@ -542,24 +553,42 @@ struct Renderer
 // 			image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
 
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, { array_size(barrier), barrier }, {}/* { array_size(image_barrier), image_barrier }*/);
+			vk::ImageMemoryBarrier image_barrier[1];
+			image_barrier[0].setImage(rt.m_image);
+			image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+			image_barrier[0].setOldLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			image_barrier[0].setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+			image_barrier[0].setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+//   			image_barrier[1].setImage(rt.m_depth_image);
+//   			image_barrier[1].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1 });
+//   			image_barrier[1].setOldLayout(vk::ImageLayout::eGeneral);
+// 			image_barrier[1].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+// 			image_barrier[1].setNewLayout(vk::ImageLayout::eDepthAttachmentOptimal);
+// 			image_barrier[1].setDstAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentRead);
 
-			vk::RenderPassBeginInfo begin_render_Info;
-			begin_render_Info.setRenderPass(m_make_depth_pass.get());
-			begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(rt.m_info.extent.width, rt.m_info.extent.height)));
-			begin_render_Info.setFramebuffer(m_make_depth_framebuffer.get());
-			cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eColorAttachmentOutput,
+				{}, {}, { /*array_size(to_read), to_read*/ }, { array_size(image_barrier), image_barrier });
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_MakeDepthMap].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl[PipelineLayout_MakeDepthMap].get(), 0, m_DS[DS_LayeredDepth].get(), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pl[PipelineLayout_MakeDepthMap].get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
+
+			vk::RenderPassBeginInfo begin_render_Info;
+			begin_render_Info.setRenderPass(m_render_pass.get());
+			begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(rt.m_info.extent.width, rt.m_info.extent.height)));
+			begin_render_Info.setFramebuffer(m_render_framebuffer.get());
+			cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
+
 			cmd.draw(3, 1, 0, 0);
 
 			cmd.endRenderPass();
 
 		}
-
+		
 
 		_label.insert("Rendering");
+//		if (0)
 		{
 			{
 				vk::ImageMemoryBarrier image_barrier[1];
