@@ -1654,7 +1654,6 @@ int main()
 
 			}
 			app.submit(std::move(cmds));
-			context->m_device.waitIdle();
 
 		}
 		app.postUpdate();

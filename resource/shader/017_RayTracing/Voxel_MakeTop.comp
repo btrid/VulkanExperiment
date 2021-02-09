@@ -1,0 +1,35 @@
+#version 460
+
+#extension GL_GOOGLE_include_directive : require
+#define USE_Voxel 0
+#include "Voxel.glsl"
+
+layout (local_size_x = 4, local_size_y = 4, local_size_y = 8) in;
+
+shared uvec4 s_map;
+void main() 
+{
+	if(gl_LocalInvocationIndex==0)
+	{
+		s_map = uvec4(0);
+	}
+	memoryBarrierShared();
+	barrier();
+
+	uvec3 reso = gl_NumWorkGroups * gl_WorkGroupID;
+	uvec3 p = gl_GlobalInvocationID.xyz;
+	uint i = p.x + p.y*reso.x + p.y*reso.x*reso.y;
+	uvec4 bottom = b_bottom[i];
+	if(any(notEqual(bottom, uvec4(0))))
+	{
+		uint c = gl_LocalInvocationIndex / 32;
+		uint b = gl_LocalInvocationIndex % 32;
+		atomicOr(s_map[c], 1<<b);
+	}
+
+	if(gl_LocalInvocationIndex==0)
+	{
+		uint index = gl_WorkGroupID.x + gl_WorkGroupID.y*gl_NumWorkGroups.x + gl_WorkGroupID.z*gl_NumWorkGroups.x*gl_NumWorkGroups.y;
+		b_top[index] = s_map;
+	}
+}

@@ -1,0 +1,53 @@
+#version 460
+
+#extension GL_GOOGLE_include_directive : require
+#define USE_Voxel 0
+#include "Voxel.glsl"
+
+layout (local_size_x = 4, local_size_y = 4, local_size_y = 8) in;
+
+float sdBox( vec3 p, vec3 b )
+{
+	vec3 d = abs(p) - b;
+	return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
+}
+
+float map(in vec3 p)
+{
+	float d = 9999999.;
+	{
+		d = min(d, sdBox(p-vec3(50.), vec3(30.)));
+	}
+	return d;
+}
+
+shared uvec4 s_map;
+void main() 
+{
+	if(gl_LocalInvocationIndex==0)
+	{
+		s_map = uvec4(0);
+	}
+	memoryBarrierShared();
+	barrier();
+
+	vec3 p = vec3(gl_GlobalInvocationID.xyz);
+	vec4 d;
+	d[0] = map(p);
+	d[1] = map(p+vec3(1., 0., 0.));
+	d[2] = map(p+vec3(0., 1., 0.));
+	d[3] = map(p+vec3(0., 0., 1.));
+
+	// 境界のみボクセル化する
+	if(any(greaterThan(d, vec4(0))) && any(lessThan(d, vec4(0))))
+	{
+		uint index = gl_LocalInvocationID.x+ gl_LocalInvocationID.y*4+gl_LocalInvocationID.z*4*4;
+		atomicOr(s_map[index/32], 1<<(index%32));
+	}
+
+	if(gl_LocalInvocationIndex==0)
+	{
+		uint index = gl_WorkGroupID.x + gl_WorkGroupID.y*gl_NumWorkGroups.x + gl_WorkGroupID.z*gl_NumWorkGroups.x*gl_NumWorkGroups.y;
+		b_bottom[index] = s_map;
+	}
+}
