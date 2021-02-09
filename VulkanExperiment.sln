@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27130.2036
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30907.101
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "btrlib", "project\btrlib\btrlib.vcxproj", "{6AB61332-963C-4D53-B5FF-04B3A9689E23}"
 EndProject
@@ -112,6 +112,13 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "imgui", "external\imgui.vcxproj", "{D7234B59-605E-448A-8E53-D7E19C6CF2B6}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "016_DualContouring", "project\016_DualContouring\016_DualContouring.vcxproj", "{FD6AC8FC-C235-4C2F-B1CC-7C0F1D04D247}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "017_RayTracing", "project\017_RayTracing\017_RayTracing.vcxproj", "{BE85004A-B86A-4E5E-851B-2523D82DC97C}"
+	ProjectSection(ProjectDependencies) = postProject
+		{6AB61332-963C-4D53-B5FF-04B3A9689E23} = {6AB61332-963C-4D53-B5FF-04B3A9689E23}
+		{D7234B59-605E-448A-8E53-D7E19C6CF2B6} = {D7234B59-605E-448A-8E53-D7E19C6CF2B6}
+		{4C880FFD-9EA8-4E57-A6CD-FE406E798948} = {4C880FFD-9EA8-4E57-A6CD-FE406E798948}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -249,6 +256,12 @@ Global
 		{FD6AC8FC-C235-4C2F-B1CC-7C0F1D04D247}.Release|x64.ActiveCfg = Release|x64
 		{FD6AC8FC-C235-4C2F-B1CC-7C0F1D04D247}.Release|x64.Build.0 = Release|x64
 		{FD6AC8FC-C235-4C2F-B1CC-7C0F1D04D247}.Release|x86.ActiveCfg = Release|x64
+		{BE85004A-B86A-4E5E-851B-2523D82DC97C}.Debug|x64.ActiveCfg = Debug|x64
+		{BE85004A-B86A-4E5E-851B-2523D82DC97C}.Debug|x64.Build.0 = Debug|x64
+		{BE85004A-B86A-4E5E-851B-2523D82DC97C}.Debug|x86.ActiveCfg = Debug|x64
+		{BE85004A-B86A-4E5E-851B-2523D82DC97C}.Release|x64.ActiveCfg = Release|x64
+		{BE85004A-B86A-4E5E-851B-2523D82DC97C}.Release|x64.Build.0 = Release|x64
+		{BE85004A-B86A-4E5E-851B-2523D82DC97C}.Release|x86.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
