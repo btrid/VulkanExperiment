@@ -67,10 +67,10 @@ struct Voxel
 	struct VoxelInfo
 	{
 		uvec4 reso;
+		uvec4 bottom_brick;
+		uvec4 top_brick;
 		uvec4 bottom_reso;
 		uvec4 top_reso;
-		uvec4 bottom;
-		uvec4 top;
 		uint material_size;
 	};
 	struct Material
@@ -110,15 +110,15 @@ struct Voxel
 		// descriptor set
 		{
 			m_info.reso = uvec4(2048, 2048, 512, 1);
-			m_info.bottom_reso = uvec4(4, 4, 8, 1);
-			m_info.top_reso = uvec4(4, 4, 8, 1);
-			m_info.bottom = m_info.reso / m_info.bottom_reso;
-			m_info.top = m_info.bottom / m_info.top_reso;
+			m_info.bottom_brick = uvec4(4, 4, 8, 1);
+			m_info.top_brick = uvec4(4, 4, 8, 1);
+			m_info.bottom_reso = m_info.reso / m_info.bottom_brick;
+			m_info.top_reso = m_info.bottom_reso / m_info.top_brick;
 			m_info.material_size = 20000;
 
 			u_info = ctx.m_uniform_memory.allocateMemory<VoxelInfo>(1);
-			b_map_top = ctx.m_storage_memory.allocateMemory<uvec4>(m_info.top.x * m_info.top.y * m_info.top.z, {});
-			b_map_bottom = ctx.m_storage_memory.allocateMemory<uvec4>(m_info.bottom.x * m_info.bottom.y * m_info.bottom.z, {});
+			b_map_top = ctx.m_storage_memory.allocateMemory<uvec4>(m_info.top_reso.x * m_info.top_reso.y * m_info.top_reso.z, {});
+			b_map_bottom = ctx.m_storage_memory.allocateMemory<uvec4>(m_info.bottom_reso.x * m_info.bottom_reso.y * m_info.bottom_reso.z, {});
 			b_material_counter = ctx.m_storage_memory.allocateMemory<uvec4>(1);
 			b_material_id = ctx.m_storage_memory.allocateMemory<uint>(1);
 			b_material = ctx.m_storage_memory.allocateMemory<uint>(m_info.material_size);
@@ -231,23 +231,48 @@ struct Voxel
 	void execute_MakeVoxel(vk::CommandBuffer cmd)
 	{
 		DebugLabel _label(cmd, __FUNCTION__);
+
+		_label.insert("Make Voxel Bottom");
 		{
-// 			vk::BufferMemoryBarrier barrier[] =
-// 			{
-// 				base.b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-// 				base.b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-// 				base.b_ldc_point.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-// 				boolean.m_TLAS.m_AS_buffer.makeMemoryBarrier(vk::AccessFlagBits::eAccelerationStructureWriteKHR, vk::AccessFlagBits::eShaderRead)
-// 			};
-// 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
+			{
+				// 			vk::BufferMemoryBarrier barrier[] =
+				// 			{
+				// 				base.b_ldc_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				// 				base.b_ldc_point_link_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				// 				base.b_ldc_point.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				// 				boolean.m_TLAS.m_AS_buffer.makeMemoryBarrier(vk::AccessFlagBits::eAccelerationStructureWriteKHR, vk::AccessFlagBits::eShaderRead)
+				// 			};
+				// 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
+
+			}
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeVoxelBottom].get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL[PipelineLayout_MakeVoxel].get(), 0, { m_DS[DSL_Voxel].get() }, {});
+
+//			auto num = app::calcDipatchGroups(m_info.reso.xyz(), uvec3(4, 4, 8));
+			auto num = m_info.bottom_reso.xyz();
+			cmd.dispatch(num.x, num.y, num.z);
 
 		}
 
-		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeVoxelBottom].get());
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL[PipelineLayout_MakeVoxel].get(), 0, { m_DS[DSL_Voxel].get() }, {});
+		_label.insert("Make Voxel Top");
+		{
+			{
+				vk::BufferMemoryBarrier barrier[] =
+				{
+					b_map_bottom.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
+			}
 
-		auto num = app::calcDipatchGroups(m_info.reso.xyz(), uvec3(4, 4, 8));
-		cmd.dispatch(num.x, num.y, num.z);
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeVoxelTop].get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL[PipelineLayout_MakeVoxel].get(), 0, { m_DS[DSL_Voxel].get() }, {});
+
+//			auto num = app::calcDipatchGroups(m_info.top.xyz(), uvec3(4, 4, 8));
+			auto num = m_info.top_reso.xyz();
+//			cmd.dispatch(num.x, num.y, num.z);
+
+		}
 	}
 	void execute_RenderVoxel(vk::CommandBuffer cmd, RenderTarget& rt)
 	{
@@ -293,7 +318,7 @@ void dda()
 {
 // http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.42.3443&rep=rep1&type=pdf
 	vec3 p = vec3(125, 23, 28);
-	vec3 d = normalize(vec3(-40, 7, 88));
+	vec3 d = normalize(vec3(-40, -7, -88));
 	vec3 inv_d;
 	inv_d.x = abs(d.x) < 0.000001 ? 999999.f : 1. / d.x;
 	inv_d.y = abs(d.y) < 0.000001 ? 999999.f : 1. / d.y;
@@ -310,13 +335,20 @@ void dda()
 	int axis = abs(d).x > abs(d).y ? 0 : 1;
 	axis = abs(d)[axis] > abs(d).z ? axis : 2;
 	d *= abs(inv_d)[axis];
+	inv_d /= abs(inv_d)[axis];
 	vec3 error = mix(fract(p), vec3(1.) - fract(p), step(d, vec3(0.)));
 	while (all(lessThan(p, vec3(512.f))) && all(greaterThanEqual(p, vec3(0.f))))
 	{
 		printf("%6.2f,%6.2f,%6.2f\n", p.x, p.y, p.z);
 		error += abs(d);
 		p += glm::sign(d) * floor(error);
-		error -= floor(error);
+ 		error = fract(error);
+
+ 		intersection(vec3(0), vec3(512), p, inv_d, n, f);
+ 		error += abs(d) * glm::max(f + 0.01f, 0.f);
+ 		p += glm::sign(d) * floor(error);
+ 		error = fract(error);
+
 	}
 // #elif 0
 //	vec3 error = mix(vec3(1.) - glm::fract(p), glm::fract(p), step(d, vec3(0.))) * abs(inv_d);
@@ -355,8 +387,8 @@ int main()
 {
 	dda();
 	auto camera = cCamera::sCamera::Order().create();
-	camera->getData().m_position = vec3(-200.f, 50.f, -200.f);
-	camera->getData().m_target = vec3(0.f, 50.f, 0.f);
+	camera->getData().m_position = vec3(-1000.f, 0.f, -500.f);
+	camera->getData().m_target = vec3(0.f, 200.f, 0.f);
 	camera->getData().m_up = vec3(0.f, -1.f, 0.f);
 	camera->getData().m_width = 1024;
 	camera->getData().m_height = 1024;

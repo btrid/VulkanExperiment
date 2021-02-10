@@ -16,12 +16,13 @@ void main()
 	memoryBarrierShared();
 	barrier();
 
-	uvec3 reso = gl_NumWorkGroups * gl_WorkGroupID;
+	uvec3 reso = gl_NumWorkGroups * gl_WorkGroupSize;
 	uvec3 p = gl_GlobalInvocationID.xyz;
-	uint i = p.x + p.y*reso.x + p.y*reso.x*reso.y;
+	uint i = p.x + p.y*reso.x + p.z*reso.x*reso.y;
 	uvec4 bottom = b_bottom[i];
 	if(any(notEqual(bottom, uvec4(0))))
 	{
+//		uvec3 l = gl_LocalInvocationID.xyz;
 		uint c = gl_LocalInvocationIndex / 32;
 		uint b = gl_LocalInvocationIndex % 32;
 		atomicOr(s_map[c], 1<<b);
