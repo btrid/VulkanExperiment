@@ -4,7 +4,7 @@
 #define USE_Voxel 0
 #include "Voxel.glsl"
 
-layout (local_size_x = 4, local_size_y = 4, local_size_y = 8) in;
+layout (local_size_x = 4, local_size_y = 4, local_size_z = 8) in;
 
 shared uvec4 s_map;
 void main() 
@@ -27,6 +27,8 @@ void main()
 		atomicOr(s_map[c], 1<<b);
 	}
 
+	memoryBarrierShared();
+	barrier();
 	if(gl_LocalInvocationIndex==0)
 	{
 		uint index = gl_WorkGroupID.x + gl_WorkGroupID.y*gl_NumWorkGroups.x + gl_WorkGroupID.z*gl_NumWorkGroups.x*gl_NumWorkGroups.y;

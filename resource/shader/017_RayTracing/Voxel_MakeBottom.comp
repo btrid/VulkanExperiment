@@ -4,7 +4,7 @@
 #define USE_Voxel 0
 #include "Voxel.glsl"
 
-layout (local_size_x = 4, local_size_y = 4, local_size_y = 8) in;
+layout (local_size_x = 4, local_size_y = 4, local_size_z = 8) in;
 
 float sdBox( vec3 p, vec3 b )
 {
@@ -16,7 +16,7 @@ float map(in vec3 p)
 {
 	float d = 9999999.;
 	{
-		d = min(d, sdBox(p-vec3(50.), vec3(30.)));
+		d = min(d, sdBox(p-vec3(50.), vec3(300.)));
 	}
 	return d;
 }
@@ -32,19 +32,22 @@ void main()
 	barrier();
 
 	vec3 p = vec3(gl_GlobalInvocationID.xyz);
-	vec4 d;
+	vec4 d = vec4(0.);
 	d[0] = map(p);
-	d[1] = map(p+vec3(1., 0., 0.));
-	d[2] = map(p+vec3(0., 1., 0.));
-	d[3] = map(p+vec3(0., 0., 1.));
+//	d[1] = map(p+vec3(1., 0., 0.));
+//	d[2] = map(p+vec3(0., 1., 0.));
+//	d[3] = map(p+vec3(0., 0., 1.));
 
 	// 境界のみボクセル化する
-	if(any(greaterThan(d, vec4(0))) && any(lessThan(d, vec4(0))))
+//	if(any(greaterThan(d, vec4(0))) && any(lessThan(d, vec4(0))))
+	if(any(lessThan(d, vec4(0))))
 	{
 		uint index = gl_LocalInvocationID.x+ gl_LocalInvocationID.y*4+gl_LocalInvocationID.z*4*4;
 		atomicOr(s_map[index/32], 1<<(index%32));
 	}
 
+	memoryBarrierShared();
+	barrier();
 	if(gl_LocalInvocationIndex==0)
 	{
 		uint index = gl_WorkGroupID.x + gl_WorkGroupID.y*gl_NumWorkGroups.x + gl_WorkGroupID.z*gl_NumWorkGroups.x*gl_NumWorkGroups.y;

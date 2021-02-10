@@ -113,7 +113,7 @@ struct Voxel
 			m_info.bottom_reso = uvec4(4, 4, 8, 1);
 			m_info.top_reso = uvec4(4, 4, 8, 1);
 			m_info.bottom = m_info.reso / m_info.bottom_reso;
-			m_info.top = m_info.bottom_reso / m_info.top_reso;
+			m_info.top = m_info.bottom / m_info.top_reso;
 			m_info.material_size = 20000;
 
 			u_info = ctx.m_uniform_memory.allocateMemory<VoxelInfo>(1);
@@ -269,7 +269,7 @@ struct Voxel
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL[PipelineLayout_RenderVoxel].get(), 1, { sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA) }, {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL[PipelineLayout_RenderVoxel].get(), 2, { rt.m_descriptor.get() }, {});
 
-		auto num = app::calcDipatchGroups(uvec3(1024, 1024, 1), uvec3(4, 4, 8));
+		auto num = app::calcDipatchGroups(uvec3(1024, 1024, 1), uvec3(8, 8, 1));
 		cmd.dispatch(num.x, num.y, num.z);
 	}
 };
@@ -293,7 +293,7 @@ void dda()
 {
 // http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.42.3443&rep=rep1&type=pdf
 	vec3 p = vec3(125, 23, 28);
-	vec3 d = normalize(vec3(-40, 0, 88));
+	vec3 d = normalize(vec3(-40, 7, 88));
 	vec3 inv_d;
 	inv_d.x = abs(d.x) < 0.000001 ? 999999.f : 1. / d.x;
 	inv_d.y = abs(d.y) < 0.000001 ? 999999.f : 1. / d.y;
@@ -305,20 +305,41 @@ void dda()
 //	vec3 target = p + d * f;
 //	vec3 delta = target - p;
 //	vec3 delta_error = abs(inv_d);
-	vec3 error = mix(vec3(1.)-glm::fract(p), glm::fract(p), step(d, vec3(0.))) * abs(inv_d);
 
-#if 0
-	int axis = (delta_error.x < delta_error.y) ? 0 : 1;
-	axis = delta_error[axis] < delta_error.z ? axis : 2;
-	delta_error /= delta_error[axis];
+#if 1
+	int axis = abs(d).x > abs(d).y ? 0 : 1;
+	axis = abs(d)[axis] > abs(d).z ? axis : 2;
+	d *= abs(inv_d)[axis];
+	vec3 error = mix(fract(p), vec3(1.) - fract(p), step(d, vec3(0.)));
 	while (all(lessThan(p, vec3(512.f))) && all(greaterThanEqual(p, vec3(0.f))))
 	{
 		printf("%6.2f,%6.2f,%6.2f\n", p.x, p.y, p.z);
-		error += delta_error;
+		error += abs(d);
 		p += glm::sign(d) * floor(error);
 		error -= floor(error);
 	}
+// #elif 0
+//	vec3 error = mix(vec3(1.) - glm::fract(p), glm::fract(p), step(d, vec3(0.))) * abs(inv_d);
+// 	while (all(lessThan(p, vec3(512.f))) && all(greaterThanEqual(p, vec3(0.f))))
+// 	{
+// 		printf("%6.2f,%6.2f,%6.2f\n", p.x, p.y, p.z);
+// 		p.x += glm::sign(d.x);
+// 		error.y += abs(inv_d).y;
+// 		while (error.y >= 0.5)
+// 		{
+// 			p.y += glm::sign(delta.y);
+// 			error.y--;
+// 		}
+// 		error.z += deltaError.z;
+// 		while (error.z >= 0.5)
+// 		{
+// 			p.z += glm::sign(delta.z);
+// 			errorZ--;
+// 		}
+// 	}
+// 
 #elif 1
+	vec3 error = mix(fract(p), vec3(1.) - fract(p), step(d, vec3(0.))) * abs(inv_d);
 	while (all(lessThan(p, vec3(512.f))) && all(greaterThanEqual(p, vec3(0.f))))
 	{
 		printf("%6.2f,%6.2f,%6.2f\n", p.x, p.y, p.z);
@@ -327,15 +348,15 @@ void dda()
 		p[axis] += glm::sign(d[axis]);
 		error[axis] += abs(inv_d[axis]);
 	}
-	int a = 0;
 #endif
+	int a = 0;
 }
 int main()
 {
-//	dda();
+	dda();
 	auto camera = cCamera::sCamera::Order().create();
-	camera->getData().m_position = vec3(0.f, 0.f, 1.f);
-	camera->getData().m_target = vec3(0.f, 0.f, 0.f);
+	camera->getData().m_position = vec3(-200.f, 50.f, -200.f);
+	camera->getData().m_target = vec3(0.f, 50.f, 0.f);
 	camera->getData().m_up = vec3(0.f, -1.f, 0.f);
 	camera->getData().m_width = 1024;
 	camera->getData().m_height = 1024;
