@@ -249,7 +249,6 @@ struct Voxel
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeVoxelBottom].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL[PipelineLayout_MakeVoxel].get(), 0, { m_DS[DSL_Voxel].get() }, {});
 
-//			auto num = app::calcDipatchGroups(m_info.reso.xyz(), uvec3(4, 4, 8));
 			auto num = m_info.bottom_reso.xyz();
 			cmd.dispatch(num.x, num.y, num.z);
 
@@ -268,9 +267,8 @@ struct Voxel
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeVoxelTop].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL[PipelineLayout_MakeVoxel].get(), 0, { m_DS[DSL_Voxel].get() }, {});
 
-//			auto num = app::calcDipatchGroups(m_info.top.xyz(), uvec3(4, 4, 8));
 			auto num = m_info.top_reso.xyz();
-//			cmd.dispatch(num.x, num.y, num.z);
+			cmd.dispatch(num.x, num.y, num.z);
 
 		}
 	}

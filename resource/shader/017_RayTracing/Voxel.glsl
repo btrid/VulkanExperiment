@@ -7,12 +7,12 @@
 
 struct VoxelInfo
 {
-	uvec4 reso;
-	uvec4 bottom_brick;
-	uvec4 top_brick;
-	uvec4 bottom_reso;
-	uvec4 top_reso;
-	uint material_size;
+	ivec4 reso;
+	ivec4 bottom_brick;
+	ivec4 top_brick;
+	ivec4 bottom_reso;
+	ivec4 top_reso;
+	int material_size;
 
 };
 
