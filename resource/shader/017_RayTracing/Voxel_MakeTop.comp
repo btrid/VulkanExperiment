@@ -4,7 +4,7 @@
 #define USE_Voxel 0
 #include "Voxel.glsl"
 
-layout (local_size_x = 4, local_size_y = 4, local_size_z = 8) in;
+layout (local_size_x = 4, local_size_y = 8, local_size_z = 4) in;
 
 shared uvec4 s_map;
 void main() 

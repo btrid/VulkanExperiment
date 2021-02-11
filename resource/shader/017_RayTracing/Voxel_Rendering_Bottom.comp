@@ -1,4 +1,5 @@
 #version 460
+// http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.42.3443&rep=rep1&type=pdf
 
 #extension GL_GOOGLE_include_directive : require
 #define USE_Voxel 0
@@ -73,51 +74,50 @@ void main()
 	MakeRay(pos, dir, inv_dir);
 
 	float n, f;
-	intersection(vec3(0), vec3(s_info.reso.xyz), pos, inv_dir, n, f);
-	pos = pos + max(n+0.01, 0.) * dir;
-
-	vec4 c = vec4(0.);
-
-	// http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.42.3443&rep=rep1&type=pdf
-
+	intersection(vec3(0.01), vec3(s_info.reso.xyz)-0.01, pos, inv_dir, n, f);
+	pos = pos + max(n, 0.) * dir;
 
 	vec3 error = mix(fract(pos), vec3(1.) - fract(pos), step(dir, vec3(0.)));
-	pos = floor(pos) + vec3(0.5);
-	while (all(lessThan(pos, s_info.reso.xyz)) && all(greaterThanEqual(pos, vec3(0.f))))
+	ivec3 ipos = ivec3(pos);
+
+	f16vec4 c = f16vec4(0.);
+	while (all(lessThan(ipos, s_info.reso.xyz)) && all(greaterThanEqual(ipos, ivec3(0))))
 	{
-		ivec3 i = ToBottomIndex(ivec3(pos));
+		ivec3 i = ToBottomIndex(ipos);
 		uvec4 bottom = b_bottom[To1D(i, s_info.bottom_reso)];
 
 		if(all(equal(bottom, uvec4(0))))
 		{
 			// skip
-			intersection(i*s_info.bottom_brick.xyz, (i+1)*s_info.bottom_brick.xyz, pos, inv_dir, n, f);
+			intersection(i*s_info.bottom_brick.xyz-0.01, (i+1)*s_info.bottom_brick.xyz+0.01, ipos+error, inv_dir, n, f);
 
-			error = error + abs(dir) * max(f+0.05, 0.);
-			pos += sign(dir) * floor(error);
+			error = error + abs(dir) * max(f, 0.);
+			ipos += ivec3(trunc(sign(dir) * error));
 			error = fract(error);
 
 			continue;
 		}
+//		c = f16vec4(1.);
+//		ipos = ivec3(999999);
+//		break;
 
-				c = vec4(1.);
-				pos = uvec3(999999);
-				break;
 		do
 		{
-			ivec3 bit = ivec3(pos)%s_info.bottom_brick.xyz;
+			ivec3 bit = ipos%s_info.bottom_brick.xyz;
 			int b = To1D(bit, s_info.bottom_brick);
-			if((bottom[b/32] & (1<<(b%32))) != 0)
+			if((bottom[b/32] & (1<<(b%32))) == 0)
 			{
-				c = vec4(1.);
-				pos = uvec3(999999);
-				break;
+				error += abs(dir);
+				ipos += ivec3(sign(dir) * error);
+				error = fract(error);
+				continue;
 			}
-			error += abs(dir);
-			pos += sign(dir) * floor(error);
-			error = fract(error);
 
-		} while(all(greaterThanEqual(pos, vec3(0.f))) && all(equal(i, uvec3(pos)/s_info.bottom_brick.xyz)));
+			c = f16vec4(1.);
+			ipos = ivec3(999999);
+			break;
+
+		} while(all(greaterThanEqual(ipos, ivec3(0))) && all(equal(i, ipos>>s_info.bottom_brick_sqrt.xyz)));
 	}
 	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), c);
 }

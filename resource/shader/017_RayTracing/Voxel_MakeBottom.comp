@@ -4,7 +4,7 @@
 #define USE_Voxel 0
 #include "Voxel.glsl"
 
-layout (local_size_x = 4, local_size_y = 4, local_size_z = 8) in;
+layout (local_size_x = 4, local_size_y = 8, local_size_z = 4) in;
 shared uvec4 s_map;
 float sdBox( vec3 p, vec3 b )
 {
@@ -21,7 +21,7 @@ float map(in vec3 p)
 	float d = 9999999.;
 	{
 		d = min(d, sdBox(p-vec3(50.), vec3(300.)));
-		d = min(d, sdSphere(p-vec3(120., 390., 555.), 120.));
+		d = min(d, sdSphere(p-vec3(220., 390., 55.), 200.));
 	}
 	return d;
 }

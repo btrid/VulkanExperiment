@@ -111,11 +111,11 @@ struct Voxel
 
 		// descriptor set
 		{
-			m_info.reso = uvec4(2048, 2048, 512, 1);
-			m_info.bottom_brick = uvec4(4, 4, 8, 1);
-			m_info.top_brick = uvec4(4, 4, 8, 1);
-			m_info.bottom_brick_sqrt = uvec4(2, 2, 3, 1);
-			m_info.top_brick_sqrt = uvec4(2, 2, 3, 1);
+			m_info.reso = uvec4(2048,512,2048, 1);
+			m_info.bottom_brick = uvec4(4, 8, 4, 1);
+			m_info.top_brick = uvec4(4, 8, 4, 1);
+			m_info.bottom_brick_sqrt = uvec4(2, 3, 2, 1);
+			m_info.top_brick_sqrt = uvec4(2, 3, 2, 1);
 			m_info.bottom_reso = m_info.reso / m_info.bottom_brick;
 			m_info.top_reso = m_info.bottom_reso / m_info.top_brick;
 			m_info.material_size = 20000;
@@ -389,9 +389,13 @@ int main()
 {
 	dda();
 	auto camera = cCamera::sCamera::Order().create();
-	camera->getData().m_position = vec3(300.f, 2200.f, 500.f);
-	camera->getData().m_target = vec3(333.f, 200.f, 333.f);
-//	camera->getData().m_position = vec3(-1000.f, 0.f, -500.f);
+	camera->getData().m_position = vec3(300.f, 4700.f, 330.f);
+	camera->getData().m_target = vec3(333.f, -200.f, 333.f);
+//	camera->getData().m_position = vec3(333.f, -200.f, 333.f);
+//	camera->getData().m_target = vec3(300.f, 2200.f, 330.f);
+//	camera->getData().m_position = vec3(-300.f, 220.f, 0.f);
+//	camera->getData().m_target = vec3(0.f, 220.f, 0.f);
+	//	camera->getData().m_position = vec3(-1000.f, 0.f, -500.f);
 //	camera->getData().m_target = vec3(0.f, 200.f, 0.f);
 	camera->getData().m_up = vec3(0.f, -1.f, 0.f);
 	camera->getData().m_width = 1024;
