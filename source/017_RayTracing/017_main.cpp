@@ -389,8 +389,10 @@ int main()
 {
 	dda();
 	auto camera = cCamera::sCamera::Order().create();
-	camera->getData().m_position = vec3(-1000.f, 0.f, -500.f);
-	camera->getData().m_target = vec3(0.f, 200.f, 0.f);
+	camera->getData().m_position = vec3(300.f, 2200.f, 500.f);
+	camera->getData().m_target = vec3(333.f, 200.f, 333.f);
+//	camera->getData().m_position = vec3(-1000.f, 0.f, -500.f);
+//	camera->getData().m_target = vec3(0.f, 200.f, 0.f);
 	camera->getData().m_up = vec3(0.f, -1.f, 0.f);
 	camera->getData().m_width = 1024;
 	camera->getData().m_height = 1024;
