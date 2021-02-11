@@ -319,60 +319,40 @@ bool intersection(vec3 aabb_min, vec3 aabb_max, vec3 pos, vec3 inv_dir, float& n
 void dda()
 {
 // http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.42.3443&rep=rep1&type=pdf
-	vec3 p = vec3(125, 23, 28);
-	vec3 d = normalize(vec3(-40, -7, -88));
+	vec3 p = vec3(125, 534, 28);
+	vec3 d = normalize(vec3(-1, -79, 2));
 	vec3 inv_d;
 	inv_d.x = abs(d.x) < 0.000001 ? 999999.f : 1. / d.x;
 	inv_d.y = abs(d.y) < 0.000001 ? 999999.f : 1. / d.y;
 	inv_d.z = abs(d.z) < 0.000001 ? 999999.f : 1. / d.z;
 
-	float n, f;
-	intersection(vec3(0), vec3(512), p, inv_d, n, f);
-
-//	vec3 target = p + d * f;
-//	vec3 delta = target - p;
-//	vec3 delta_error = abs(inv_d);
-
-#if 1
 	int axis = abs(d).x > abs(d).y ? 0 : 1;
 	axis = abs(d)[axis] > abs(d).z ? axis : 2;
 	d *= abs(inv_d)[axis];
 	inv_d /= abs(inv_d)[axis];
-	vec3 error = mix(fract(p), vec3(1.) - fract(p), step(d, vec3(0.)));
-	while (all(lessThan(p, vec3(512.f))) && all(greaterThanEqual(p, vec3(0.f))))
-	{
-		printf("%6.2f,%6.2f,%6.2f\n", p.x, p.y, p.z);
-		error += abs(d);
-		p += glm::sign(d) * floor(error);
- 		error = fract(error);
 
- 		intersection(vec3(0), vec3(512), p, inv_d, n, f);
- 		error += abs(d) * glm::max(f + 0.01f, 0.f);
- 		p += glm::sign(d) * floor(error);
+	float n, f;
+	intersection(vec3(0)+0.01f, vec3(512)-0.01f, p, inv_d, n, f);
+	p += n * d;
+#if 1
+	vec3 error = fract(p);
+	ivec3 ipos = ivec3(p);
+	while (all(lessThan(ipos, ivec3(512))) && all(greaterThanEqual(ipos, ivec3(0))))
+	{
+		printf("%3d,%3d,%3d\n", ipos.x, ipos.y, ipos.z);
+//		error += abs(d);
+//		p += ivec3(sign(d) * error);
+// 		error = fract(error);
+
+		ivec3 sp = ipos / 4;
+ 		intersection(vec3(sp)*4.f-0.01f, vec3(sp)*4.f+4.01f, vec3(ipos)+error, inv_d, n, f);
+ 		error += abs(d) * glm::max(f, 0.f);
+ 		ipos += ivec3(sign(d) * error);
  		error = fract(error);
 
 	}
-// #elif 0
-//	vec3 error = mix(vec3(1.) - glm::fract(p), glm::fract(p), step(d, vec3(0.))) * abs(inv_d);
-// 	while (all(lessThan(p, vec3(512.f))) && all(greaterThanEqual(p, vec3(0.f))))
-// 	{
-// 		printf("%6.2f,%6.2f,%6.2f\n", p.x, p.y, p.z);
-// 		p.x += glm::sign(d.x);
-// 		error.y += abs(inv_d).y;
-// 		while (error.y >= 0.5)
-// 		{
-// 			p.y += glm::sign(delta.y);
-// 			error.y--;
-// 		}
-// 		error.z += deltaError.z;
-// 		while (error.z >= 0.5)
-// 		{
-// 			p.z += glm::sign(delta.z);
-// 			errorZ--;
-// 		}
-// 	}
-// 
 #elif 1
+	// 1voxel版
 	vec3 error = mix(fract(p), vec3(1.) - fract(p), step(d, vec3(0.))) * abs(inv_d);
 	while (all(lessThan(p, vec3(512.f))) && all(greaterThanEqual(p, vec3(0.f))))
 	{
@@ -389,10 +369,10 @@ int main()
 {
 	dda();
 	auto camera = cCamera::sCamera::Order().create();
-	camera->getData().m_position = vec3(300.f, 4700.f, 330.f);
-	camera->getData().m_target = vec3(333.f, -200.f, 333.f);
-//	camera->getData().m_position = vec3(333.f, -200.f, 333.f);
-//	camera->getData().m_target = vec3(300.f, 2200.f, 330.f);
+//	camera->getData().m_position = vec3(300.f, 4700.f, 330.f);
+//	camera->getData().m_target = vec3(333.f, -200.f, 333.f);
+	camera->getData().m_position = vec3(333.f, -200.f, 333.f);
+	camera->getData().m_target = vec3(300.f, 2200.f, 330.f);
 //	camera->getData().m_position = vec3(-300.f, 220.f, 0.f);
 //	camera->getData().m_target = vec3(0.f, 220.f, 0.f);
 	//	camera->getData().m_position = vec3(-1000.f, 0.f, -500.f);

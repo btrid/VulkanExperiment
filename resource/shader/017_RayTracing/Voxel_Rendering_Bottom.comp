@@ -97,10 +97,6 @@ void main()
 
 			continue;
 		}
-//		c = f16vec4(1.);
-//		ipos = ivec3(999999);
-//		break;
-
 		do
 		{
 			ivec3 bit = ipos%s_info.bottom_brick.xyz;
