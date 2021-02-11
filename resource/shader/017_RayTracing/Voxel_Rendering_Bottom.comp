@@ -25,28 +25,49 @@ bool intersection(vec3 aabb_min, vec3 aabb_max, vec3 pos, vec3 inv_dir, out floa
 
 	return f > n;
 }
+shared VoxelInfo s_info;
+shared f16vec3 s_axis[3];
 
-uint To1D(in uvec3 i, in uvec3 s){ return i.x + i.y*s.x + i.z*s.x*s.y; }
-uint To1D(in uvec3 i, in uvec4 s){ return i.x + i.y*s.x + i.z*s.x*s.y; }
-void main() 
+void init()
 {
-	uvec3 reso = gl_WorkGroupSize * gl_NumWorkGroups;
+	if(gl_LocalInvocationIndex == 0)
+	{
+		s_info = u_info;
+		s_axis[2] = f16vec3(normalize(u_camera[0].u_target.xyz - u_camera[0].u_eye.xyz).xyz);
+		s_axis[0] = f16vec3(normalize(cross(f16vec3(u_camera[0].u_up.xyz), s_axis[2])));
+		s_axis[1] = f16vec3(u_camera[0].u_up.xyz);
+	}
+
+	memoryBarrierShared();
+	barrier();
+
+}
+void MakeRay(out vec3 pos, out vec3 dir)
+{
+//	Camera cam = u_camera[0];
+//	vec3 f = normalize(cam.u_target.xyz - cam.u_eye.xyz).xyz;
+//	vec3 s = normalize(cross(cam.u_up.xyz, f));
+//	vec3 u = cam.u_up.xyz;
+
+	vec2 screen = (gl_GlobalInvocationID / vec3(gl_WorkGroupSize * gl_NumWorkGroups)).xy * 2. - 1.;
+	screen *= tan(u_camera[0].u_fov_y / 2.);
+
+	dir = normalize(s_axis[2] + s_axis[0] * screen.x * u_camera[0].u_aspect + s_axis[1] * screen.y);
+	pos = u_camera[0].u_eye.xyz;
+}
+
+int To1D(in ivec3 p, in ivec3 s){ return p.x + p.y*s.x + p.z*s.x*s.y; }
+int To1D(in ivec3 p, in ivec4 s){ return p.x + p.y*s.x + p.z*s.x*s.y; }
+ivec3 ToTopIndex(in ivec3 p){ return p >> (s_info.top_brick_sqrt + s_info.bottom_brick_sqrt).xyz; }
+ivec3 ToTopBit(in ivec3 p){ return ((p >> s_info.bottom_brick_sqrt.xyz) % s_info.top_brick.xyz); }
+ivec3 ToBottomIndex(in ivec3 p){ return p >> s_info.bottom_brick_sqrt.xyz; }
+void main()
+{
+	
+	init();
 
 	vec3 dir,pos;
-	{
-		Camera cam = u_camera[0];
-		vec3 f = normalize(cam.u_target.xyz - cam.u_eye.xyz).xyz;
-		vec3 s = normalize(cross(cam.u_up.xyz, f));
-		vec3 u = cam.u_up.xyz;
-
-		// イメージセンサー上の位置
-		float tan_fov_y = tan(cam.u_fov_y / 2.);
-		vec2 screen = (gl_GlobalInvocationID / vec3(reso)).xy * 2. - 1.;
-
-		dir = normalize(f + s * screen.x * tan_fov_y * cam.u_aspect + u * screen.y * tan_fov_y);
-		pos = cam.u_eye.xyz;
-
-	}
+	MakeRay(pos, dir);
 
 	vec3 inv_d;
 	inv_d.x = abs(dir.x) < 0.00001 ? 99999.f : 1. / dir.x;
@@ -54,9 +75,9 @@ void main()
 	inv_d.z = abs(dir.z) < 0.00001 ? 99999.f : 1. / dir.z;
 
 	float n, f;
-	intersection(vec3(0), vec3(u_info.reso.xyz), pos, inv_d, n, f);
+	intersection(vec3(0), vec3(s_info.reso.xyz), pos, inv_d, n, f);
 
-	pos = ivec3(pos + max(n, 0.) * dir);
+	pos = pos + max(n+0.01, 0.) * dir;
 
 	vec4 c = vec4(0.);
 
@@ -69,15 +90,15 @@ void main()
 
 	vec3 error = mix(fract(pos), vec3(1.) - fract(pos), step(dir, vec3(0.)));
 	pos = floor(pos) + vec3(0.5);
-	while (all(lessThan(pos, u_info.reso.xyz)) && all(greaterThanEqual(pos, vec3(0.f))))
+	while (all(lessThan(pos, s_info.reso.xyz)) && all(greaterThanEqual(pos, vec3(0.f))))
 	{
-		uvec3 i = uvec3(pos)/u_info.bottom_brick.xyz;
-		uvec4 bottom = b_bottom[To1D(i, u_info.bottom_reso)];
+		ivec3 i = ToBottomIndex(ivec3(pos));
+		uvec4 bottom = b_bottom[To1D(i, s_info.bottom_reso)];
 
 		if(all(equal(bottom, uvec4(0))))
 		{
 			// skip
-			intersection(i*u_info.bottom_brick.xyz, (i+1)*u_info.bottom_brick.xyz, pos, inv_d, n, f);
+			intersection(i*s_info.bottom_brick.xyz, (i+1)*s_info.bottom_brick.xyz, pos, inv_d, n, f);
 
 			error = error + abs(dir) * max(f+0.01, 0.);
 			pos += sign(dir) * floor(error);
@@ -88,8 +109,8 @@ void main()
 
 		do
 		{
-			uvec3 bit = uvec3(pos)%u_info.bottom_brick.xyz;
-			uint b = To1D(bit, u_info.bottom_brick);
+			ivec3 bit = ivec3(pos)%s_info.bottom_brick.xyz;
+			int b = To1D(bit, s_info.bottom_brick);
 			if((bottom[b/32] & (1<<(b%32))) != 0)
 			{
 				c = vec4(1.);
@@ -100,7 +121,7 @@ void main()
 			pos += sign(dir) * floor(error);
 			error = fract(error);
 
-		} while(all(greaterThanEqual(pos, vec3(0.f))) && all(equal(i, uvec3(pos)/u_info.bottom_brick.xyz)));
+		} while(all(greaterThanEqual(pos, vec3(0.f))) && all(equal(i, uvec3(pos)/s_info.bottom_brick.xyz)));
 	}
 	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), c);
 }

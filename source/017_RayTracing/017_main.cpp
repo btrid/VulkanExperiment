@@ -69,6 +69,8 @@ struct Voxel
 		uvec4 reso;
 		uvec4 bottom_brick;
 		uvec4 top_brick;
+		uvec4 bottom_brick_sqrt;
+		uvec4 top_brick_sqrt;
 		uvec4 bottom_reso;
 		uvec4 top_reso;
 		uint material_size;
@@ -112,6 +114,8 @@ struct Voxel
 			m_info.reso = uvec4(2048, 2048, 512, 1);
 			m_info.bottom_brick = uvec4(4, 4, 8, 1);
 			m_info.top_brick = uvec4(4, 4, 8, 1);
+			m_info.bottom_brick_sqrt = uvec4(2, 2, 3, 1);
+			m_info.top_brick_sqrt = uvec4(2, 2, 3, 1);
 			m_info.bottom_reso = m_info.reso / m_info.bottom_brick;
 			m_info.top_reso = m_info.bottom_reso / m_info.top_brick;
 			m_info.material_size = 20000;

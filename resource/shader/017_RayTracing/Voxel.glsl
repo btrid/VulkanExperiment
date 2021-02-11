@@ -10,6 +10,8 @@ struct VoxelInfo
 	ivec4 reso;
 	ivec4 bottom_brick;
 	ivec4 top_brick;
+	ivec4 bottom_brick_sqrt;
+	ivec4 top_brick_sqrt;
 	ivec4 bottom_reso;
 	ivec4 top_reso;
 	int material_size;
