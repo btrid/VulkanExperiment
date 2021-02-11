@@ -25,55 +25,41 @@ bool intersection(vec3 aabb_min, vec3 aabb_max, vec3 pos, vec3 inv_dir, out floa
 
 	return f > n;
 }
-shared VoxelInfo s_info;
-shared f16mat3 s_view;
 
-void init()
-{
-	if(gl_LocalInvocationIndex == 0)
-	{
-		s_info = u_info;
-		s_view = transpose(f16mat3(u_camera[0].u_view));
-	}
-
-	memoryBarrierShared();
-	barrier();
-
-}
 void MakeRay(out vec3 pos, out vec3 dir, out vec3 inv_dir)
 {
 	vec2 screen = (gl_GlobalInvocationID / vec3(gl_WorkGroupSize * gl_NumWorkGroups)).xy * 2. - 1.;
 	screen *= tan(u_camera[0].u_fov_y / 2.);
 
-	dir = normalize(s_view[2] + s_view[0] * screen.x * u_camera[0].u_aspect + s_view[1] * screen.y);
+	mat3 axis = transpose(mat3(u_camera[0].u_view));
+
+	dir = normalize(axis[2] + axis[0] * screen.x * u_camera[0].u_aspect + axis[1] * screen.y);
 	pos = u_camera[0].u_eye.xyz;
 	
 	inv_dir.x = abs(dir.x) < 0.00001 ? 99999.f : 1. / dir.x;
 	inv_dir.y = abs(dir.y) < 0.00001 ? 99999.f : 1. / dir.y;
 	inv_dir.z = abs(dir.z) < 0.00001 ? 99999.f : 1. / dir.z;
 
-	int axis = abs(dir.x) > abs(dir.y) ? 0 : 1;
-	axis = abs(dir[axis]) > abs(dir.z) ? axis : 2;
-	dir *= abs(inv_dir[axis]);
-	inv_dir /= abs(inv_dir[axis]);
+	int a = abs(dir.x) > abs(dir.y) ? 0 : 1;
+	a = abs(dir[a]) > abs(dir.z) ? a : 2;
+	dir *= abs(inv_dir[a]);
+	inv_dir /= abs(inv_dir[a]);
 
 }
 
 int To1D(in ivec3 p, in ivec3 s){ return p.x + p.y*s.x + p.z*s.x*s.y; }
 int To1D(in ivec3 p, in ivec4 s){ return p.x + p.y*s.x + p.z*s.x*s.y; }
-ivec3 ToTopIndex(in ivec3 p){ return p >> (s_info.top_brick_sqrt + s_info.bottom_brick_sqrt).xyz; }
-ivec3 ToTopBit(in ivec3 p){ return ((p >> s_info.bottom_brick_sqrt.xyz) % s_info.top_brick.xyz); }
-ivec3 ToBottomIndex(in ivec3 p){ return p >> s_info.bottom_brick_sqrt.xyz; }
+ivec3 ToTopIndex(in ivec3 p){ return p >> (u_info.top_brick_sqrt + u_info.bottom_brick_sqrt).xyz; }
+ivec3 ToTopBit(in ivec3 p){ return ((p >> u_info.bottom_brick_sqrt.xyz) % u_info.top_brick.xyz); }
+ivec3 ToBottomIndex(in ivec3 p){ return p >> u_info.bottom_brick_sqrt.xyz; }
 
 void main() 
 {	
-	init();
-
 	vec3 dir,pos, inv_dir;
 	MakeRay(pos, dir, inv_dir);
 
 	float n, f;
-	intersection(vec3(0.01), vec3(s_info.reso.xyz)-0.01, pos, inv_dir, n, f);
+	intersection(vec3(0.01), vec3(u_info.reso.xyz)-0.01, pos, inv_dir, n, f);
 	pos = pos + max(n, 0.) * dir;
 
 //	vec3 error = fract(pos);
@@ -81,16 +67,16 @@ void main()
 
 	f16vec4 c = f16vec4(0.);
 //	int count = 0;
-	while (all(lessThan(pos, s_info.reso.xyz)) && all(greaterThanEqual(pos, ivec3(0))))
+	while (all(lessThan(pos, u_info.reso.xyz)) && all(greaterThanEqual(pos, ivec3(0))))
 	{
 //		count++;
 		ivec3 top_index = ToTopIndex(ivec3(pos));
-		uvec4 top = b_top[To1D(top_index, s_info.top_reso)];
+		uvec4 top = b_top[To1D(top_index, u_info.top_reso)];
 
 		if(all(equal(top, uvec4(0))))
 		{
 			// skip
-			intersection(top_index*(s_info.top_brick*s_info.bottom_brick).xyz-0.01f, (top_index+1)*(s_info.top_brick*s_info.bottom_brick).xyz+0.01f, pos, inv_dir, n, f);
+			intersection(top_index*(u_info.top_brick*u_info.bottom_brick).xyz-0.01f, (top_index+1)*(u_info.top_brick*u_info.bottom_brick).xyz+0.01f, pos, inv_dir, n, f);
 			pos += abs(dir) * max(f, 0.f);
 
 			continue;
@@ -99,11 +85,11 @@ void main()
 		do
 		{
 			ivec3 top_bit = ToTopBit(ivec3(pos));
-			int tb = To1D(top_bit, s_info.top_brick);
+			int tb = To1D(top_bit, u_info.top_brick);
 			if((top[tb/32] & (1<<(tb%32))) == 0)
 			{
 				ivec3 bottom_index = ToBottomIndex(ivec3(pos));
-				intersection(bottom_index*s_info.bottom_brick.xyz-0.01f, (bottom_index+1)*s_info.bottom_brick.xyz+0.01f, pos, inv_dir, n, f);
+				intersection(bottom_index*u_info.bottom_brick.xyz-0.01f, (bottom_index+1)*u_info.bottom_brick.xyz+0.01f, pos, inv_dir, n, f);
 
 				pos += abs(dir) * max(f, 0.f);
 				continue;
