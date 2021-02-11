@@ -76,49 +76,49 @@ void main()
 	intersection(vec3(0.01), vec3(s_info.reso.xyz)-0.01, pos, inv_dir, n, f);
 	pos = pos + max(n, 0.) * dir;
 
-	vec3 error = fract(pos);
-	ivec3 ipos = ivec3(pos);
+//	vec3 error = fract(pos);
+//	ivec3 ipos = ivec3(pos);
 
 	f16vec4 c = f16vec4(0.);
-	int _count = 0;
-	while (all(lessThan(ipos, s_info.reso.xyz)) && all(greaterThanEqual(ipos, ivec3(0))))
+//	int count = 0;
+	while (all(lessThan(pos, s_info.reso.xyz)) && all(greaterThanEqual(pos, ivec3(0))))
 	{
-		_count++;
-		ivec3 top_index = ToTopIndex(ipos);
+//		count++;
+		ivec3 top_index = ToTopIndex(ivec3(pos));
 		uvec4 top = b_top[To1D(top_index, s_info.top_reso)];
 
 		if(all(equal(top, uvec4(0))))
 		{
 			// skip
-			intersection(top_index*(s_info.top_brick*s_info.bottom_brick).xyz-0.01, (top_index+1)*(s_info.top_brick*s_info.bottom_brick).xyz+0.01, ipos+error, inv_dir, n, f);
-
-			error = error + abs(dir) * max(f, 0.);
-			ipos += ivec3(trunc(sign(dir) * error));
-			error = fract(error);
+			intersection(top_index*(s_info.top_brick*s_info.bottom_brick).xyz-0.01f, (top_index+1)*(s_info.top_brick*s_info.bottom_brick).xyz+0.01f, pos, inv_dir, n, f);
+			pos += abs(dir) * max(f, 0.f);
 
 			continue;
 		}
 
 		do
 		{
-			ivec3 top_bit = ToTopBit(ipos);
+			ivec3 top_bit = ToTopBit(ivec3(pos));
 			int tb = To1D(top_bit, s_info.top_brick);
 			if((top[tb/32] & (1<<(tb%32))) == 0)
 			{
-				ivec3 bottom_index = ToBottomIndex(ipos);
-				intersection(bottom_index*s_info.bottom_brick.xyz-0.01, (bottom_index+1)*s_info.bottom_brick.xyz+0.01, ipos+error, inv_dir, n, f);
+				ivec3 bottom_index = ToBottomIndex(ivec3(pos));
+				intersection(bottom_index*s_info.bottom_brick.xyz-0.01f, (bottom_index+1)*s_info.bottom_brick.xyz+0.01f, pos, inv_dir, n, f);
 
-				error = error + abs(dir) * max(f, 0.);
-				ipos += ivec3(sign(dir) * error);
-				error = fract(error);
-
+				pos += abs(dir) * max(f, 0.f);
 				continue;
 			}
-			c = f16vec4(1.);
-			ipos = ivec3(999999);
+
+			c = f16vec4(1.hf);
+			pos = vec3(999999);
 			break;
 		}
-		while(all(greaterThanEqual(ipos, ivec3(0))) && all(equal(top_index, ToTopIndex(ipos))));
+		while(all(greaterThanEqual(pos, vec3(0))) && all(equal(top_index, ToTopIndex(ivec3(pos)))));
 	}
+//	float _b = count % 10;
+//	float _g = (count / 200.)*100.;
+//	float _r = (count / 500)*1000.;
+//	if(count != 0){ c = f16vec4(normalize(vec3(_r, _g, _b+0.1)), 1.);}
+
 	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), c);
 }

@@ -319,8 +319,8 @@ bool intersection(vec3 aabb_min, vec3 aabb_max, vec3 pos, vec3 inv_dir, float& n
 void dda()
 {
 // http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.42.3443&rep=rep1&type=pdf
-	vec3 p = vec3(125, 534, 28);
-	vec3 d = normalize(vec3(-1, -79, 2));
+	vec3 p = vec3(10, 900, 0);
+	vec3 d = normalize(vec3(100, -9, 2));
 	vec3 inv_d;
 	inv_d.x = abs(d.x) < 0.000001 ? 999999.f : 1. / d.x;
 	inv_d.y = abs(d.y) < 0.000001 ? 999999.f : 1. / d.y;
@@ -333,7 +333,7 @@ void dda()
 
 	float n, f;
 	intersection(vec3(0)+0.01f, vec3(512)-0.01f, p, inv_d, n, f);
-	p += n * d;
+	p += glm::max(n, 0.f) * d;
 #if 1
 	vec3 error = fract(p);
 	ivec3 ipos = ivec3(p);
@@ -371,10 +371,10 @@ int main()
 	auto camera = cCamera::sCamera::Order().create();
 //	camera->getData().m_position = vec3(300.f, 4700.f, 330.f);
 //	camera->getData().m_target = vec3(333.f, -200.f, 333.f);
-	camera->getData().m_position = vec3(333.f, -200.f, 333.f);
-	camera->getData().m_target = vec3(300.f, 2200.f, 330.f);
-//	camera->getData().m_position = vec3(-300.f, 220.f, 0.f);
-//	camera->getData().m_target = vec3(0.f, 220.f, 0.f);
+//	camera->getData().m_position = vec3(333.f, -200.f, 333.f);
+//	camera->getData().m_target = vec3(300.f, 2200.f, 330.f);
+	camera->getData().m_position = vec3(-5000.f, 220.f, 0.f);
+	camera->getData().m_target = vec3(0.f, 220.f, 0.f);
 	//	camera->getData().m_position = vec3(-1000.f, 0.f, -500.f);
 //	camera->getData().m_target = vec3(0.f, 200.f, 0.f);
 	camera->getData().m_up = vec3(0.f, -1.f, 0.f);
