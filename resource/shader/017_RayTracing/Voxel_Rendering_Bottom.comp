@@ -86,21 +86,21 @@ void main()
 			continue;
 		}
 
-//		do
-//		{
-//			uvec3 bit = uvec3(pos)%u_info.bottom_brick.xyz;
-//			uint b = To1D(bit, u_info.bottom_brick);
-//			if((bottom[b/32] & (1<<(b%32))) != 0)
+		do
+		{
+			uvec3 bit = uvec3(pos)%u_info.bottom_brick.xyz;
+			uint b = To1D(bit, u_info.bottom_brick);
+			if((bottom[b/32] & (1<<(b%32))) != 0)
 			{
 				c = vec4(1.);
 				pos = uvec3(999999);
 				break;
 			}
-//			error += abs(dir);
-//			pos += sign(dir) * floor(error);
-//			error = fract(error);
-//
-//		} while(all(equal(i, uvec3(pos)/u_info.bottom_brick.xyz)));
+			error += abs(dir);
+			pos += sign(dir) * floor(error);
+			error = fract(error);
+
+		} while(all(greaterThanEqual(pos, vec3(0.f))) && all(equal(i, uvec3(pos)/u_info.bottom_brick.xyz)));
 	}
 	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), c);
 }
