@@ -50,9 +50,9 @@ void MakeRay(out vec3 pos, out vec3 dir, out vec3 inv_dir)
 int To1D(in ivec3 p, in ivec3 s){ return p.x + p.y*s.x + p.z*s.x*s.y; }
 int To1D(in ivec3 p, in ivec4 s){ return p.x + p.y*s.x + p.z*s.x*s.y; }
 ivec3 ToTopIndex(in ivec3 p){ return p >> (u_info.top_brick_sqrt + u_info.bottom_brick_sqrt).xyz; }
-ivec3 ToTopBit(in ivec3 p){ return ((p >> u_info.bottom_brick_sqrt.xyz) % u_info.top_brick.xyz); }
+ivec3 ToTopBit(in ivec3 p){ return p-((p >> u_info.bottom_brick_sqrt.xyz) << u_info.bottom_brick_sqrt.xyz); }
 ivec3 ToBottomIndex(in ivec3 p){ return p >> u_info.bottom_brick_sqrt.xyz; }
-ivec3 ToBottomBit(in ivec3 p){ return p % u_info.bottom_brick.xyz; }
+ivec3 ToBottomBit(in ivec3 p){ return p - (p >> u_info.bottom_brick_sqrt.xyz); }
 
 void main() 
 {	
@@ -62,9 +62,14 @@ void main()
 	float n, f;
 	intersection(vec3(0.01), vec3(u_info.reso.xyz)-0.01, pos, inv_dir, n, f);
 	pos = pos + max(n, 0.) * dir;
+	if(!all(lessThan(pos, u_info.reso.xyz)) || !all(greaterThanEqual(pos, ivec3(0))))
+	{
+		imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), f16vec4(0,0,0,1));
+		return;	
+	}
 
 	f16vec4 c = f16vec4(0.);
-	while (all(lessThan(pos, u_info.reso.xyz)) && all(greaterThanEqual(pos, ivec3(0))))
+	while (all(lessThan(pos, u_info.reso.xyz)) && all(greaterThanEqual(pos, vec3(0))))
 	{
 		ivec3 top_index = ToTopIndex(ivec3(pos));
 		uvec4 top = b_top[To1D(top_index, u_info.top_reso)];
@@ -72,9 +77,8 @@ void main()
 		if(all(equal(top, uvec4(0))))
 		{
 			// skip
-			intersection(top_index*(u_info.top_brick*u_info.bottom_brick).xyz-0.01f, (top_index+1)*(u_info.top_brick*u_info.bottom_brick).xyz+0.01f, pos, inv_dir, n, f);
-			pos += dir * f;
-
+			intersection((top_index<<(u_info.top_brick_sqrt+u_info.bottom_brick_sqrt).xyz), ((top_index+1)<<(u_info.top_brick_sqrt+u_info.bottom_brick_sqrt).xyz), pos, inv_dir, n, f);
+			pos = fma(dir, vec3(f+0.01), pos);
 			continue;
 		}
 
@@ -85,7 +89,9 @@ void main()
 			int tb = To1D(top_bit, u_info.top_brick);
 			if((top[tb/32] & (1<<(tb%32))) == 0)
 			{
-				intersection(bottom_index*u_info.bottom_brick.xyz-0.01f, (bottom_index+1)*u_info.bottom_brick.xyz+0.01f, pos, inv_dir, n, f);
+				vec3 min = (bottom_index<<u_info.bottom_brick_sqrt.xyz)-0.01f;
+				vec3 max = ((bottom_index+1)<<u_info.bottom_brick_sqrt.xyz)+0.01f;
+				intersection(min, max, pos, inv_dir, n, f);
 
 				pos += dir * f;
 				continue;
@@ -94,7 +100,7 @@ void main()
 			uvec4 bottom = b_bottom[To1D(bottom_index, u_info.bottom_reso)];
 			do
 			{
-				ivec3 bottom_bit = ToBottomBit(ivec3(pos));
+				ivec3 bottom_bit = ivec3(pos) - (ivec3(pos)>>u_info.bottom_brick_sqrt.xyz<<u_info.bottom_brick_sqrt.xyz);
 				int bb = To1D(bottom_bit, u_info.bottom_brick);
 				if((bottom[bb/32] & (1<<(bb%32))) == 0)
 				{
