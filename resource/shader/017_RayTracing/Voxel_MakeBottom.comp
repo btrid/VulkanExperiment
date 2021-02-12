@@ -36,7 +36,7 @@ void main()
 	memoryBarrierShared();
 	barrier();
 
-	vec3 p = vec3(gl_GlobalInvocationID.xyz);
+	vec3 p = vec3(gl_GlobalInvocationID.xyz)+0.5;
 	vec4 d = vec4(0.);
 	d[0] = map(p);
 	d[1] = map(p+vec3(1., 0., 0.));
@@ -44,8 +44,8 @@ void main()
 	d[3] = map(p+vec3(0., 0., 1.));
 
 	// 境界のみボクセル化する
-//	if(any(greaterThan(d, vec4(0))) && any(lessThan(d, vec4(0))))
-	if(any(lessThan(d, vec4(0))))
+	if(any(greaterThanEqual(d, vec4(0))) && any(lessThanEqual(d, vec4(0))))
+//	if(any(lessThan(d, vec4(0))))
 	{
 		uint index = gl_LocalInvocationID.x+ gl_LocalInvocationID.y*gl_WorkGroupSize.x+gl_LocalInvocationID.z*gl_WorkGroupSize.x*gl_WorkGroupSize.y;
 		atomicOr(s_map[index/32], 1<<(index%32));
