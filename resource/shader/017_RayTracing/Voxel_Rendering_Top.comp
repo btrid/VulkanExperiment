@@ -77,7 +77,7 @@ void main()
 		{
 			// skip
 			intersection(top_index*(u_info.top_brick*u_info.bottom_brick).xyz-0.01f, (top_index+1)*(u_info.top_brick*u_info.bottom_brick).xyz+0.01f, pos, inv_dir, n, f);
-			pos += abs(dir) * max(f, 0.f);
+			pos += dir * max(f, 0.f);
 
 			continue;
 		}
@@ -91,7 +91,7 @@ void main()
 				ivec3 bottom_index = ToBottomIndex(ivec3(pos));
 				intersection(bottom_index*u_info.bottom_brick.xyz-0.01f, (bottom_index+1)*u_info.bottom_brick.xyz+0.01f, pos, inv_dir, n, f);
 
-				pos += abs(dir) * max(f, 0.f);
+				pos += dir * max(f, 0.f);
 				continue;
 			}
 

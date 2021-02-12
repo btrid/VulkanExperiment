@@ -22,14 +22,13 @@ void main()
 	uvec4 bottom = b_bottom[i];
 	if(any(notEqual(bottom, uvec4(0))))
 	{
-//		uvec3 l = gl_LocalInvocationID.xyz;
-		uint c = gl_LocalInvocationIndex / 32;
-		uint b = gl_LocalInvocationIndex % 32;
-		atomicOr(s_map[c], 1<<b);
+		uint index = gl_LocalInvocationID.x+ gl_LocalInvocationID.y*gl_WorkGroupSize.x+gl_LocalInvocationID.z*gl_WorkGroupSize.x*gl_WorkGroupSize.y;
+		atomicOr(s_map[index/32], 1<<(index%32));
 	}
 
 	memoryBarrierShared();
 	barrier();
+
 	if(gl_LocalInvocationIndex==0)
 	{
 		uint index = gl_WorkGroupID.x + gl_WorkGroupID.y*gl_NumWorkGroups.x + gl_WorkGroupID.z*gl_NumWorkGroups.x*gl_NumWorkGroups.y;

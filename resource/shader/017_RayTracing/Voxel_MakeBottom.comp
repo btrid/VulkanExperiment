@@ -20,8 +20,8 @@ float map(in vec3 p)
 {
 	float d = 9999999.;
 	{
-		d = min(d, sdBox(p-vec3(50.), vec3(300.)));
-		d = min(d, sdSphere(p-vec3(220., 390., 55.), 200.));
+		d = min(d, sdBox(p-vec3(500., 200., 700.), vec3(300.)));
+		d = min(d, sdSphere(p-vec3(1200., 190., 1055.), 200.));
 	}
 	return d;
 }
@@ -57,5 +57,6 @@ void main()
 	{
 		uint index = gl_WorkGroupID.x + gl_WorkGroupID.y*gl_NumWorkGroups.x + gl_WorkGroupID.z*gl_NumWorkGroups.x*gl_NumWorkGroups.y;
 		b_bottom[index] = s_map;
+//		b_bottom[index] = uvec4(0xffffffff);
 	}
 }

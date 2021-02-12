@@ -8,5 +8,5 @@ SET output=-o ../binary/
 %exe% %output%/Voxel_MakeTop.comp.spv Voxel_MakeTop.comp
 
 %exe% %output%/Voxel_Rendering.comp.spv Voxel_Rendering.comp
-%exe% %output%/Voxel_Rendering.comp.spv Voxel_Rendering_Top.comp
+rem %exe% %output%/Voxel_Rendering.comp.spv Voxel_Rendering_Top.comp
 rem %exe% %output%/Voxel_Rendering.comp.spv Voxel_Rendering_Bottom.comp
