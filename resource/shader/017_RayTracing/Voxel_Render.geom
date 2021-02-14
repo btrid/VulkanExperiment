@@ -74,18 +74,29 @@ void main()
 	}
 
 	vec3 p = vec3(x, y, z)+0.5;
-	vec2 d = vec2(0.);
-	d[0] = map(p);
-	d[1] = map(p+1.);
-
+	vec4 d = vec4(0.);
+	d[0] = map(p-0.5);
 	// 境界のみボクセル化する
-	if(any(greaterThanEqual(d, vec2(0))) && any(lessThanEqual(d, vec2(0))))
-	{
-	}
-	else
+	if(abs(d[0])>2.)
 	{
 		return;
 	}
+
+	bool ok = false;
+	for(int z = 0; z < 2; z++)
+	for(int y = 0; y < 2; y++)
+	for(int x = 0; x < 2; x++)
+	{
+		if(z==0 && y==0 && x==0){continue;}
+		if(sign(d[0]) != sign(map(p + vec3(x, y, z)-0.5)))
+		{
+			ok = true;
+			z=2;
+			y=2;
+			x=2;
+		}
+	}
+	if(!ok){ return; }
 
 	for(int i = 0; i < cube_strip.length(); i++)
 	{

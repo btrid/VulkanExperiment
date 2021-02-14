@@ -646,13 +646,13 @@ int main()
 					}
 					else
 					{
-						voxel.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
+//						voxel.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 					}
-					t++;
-					if (t >= 100)
-					{
-						t -= 103;
-					}
+//					t++;
+//					if (t >= 100)
+//					{
+//						t -= 103;
+//					}
 				}
 
 				cmd.end();

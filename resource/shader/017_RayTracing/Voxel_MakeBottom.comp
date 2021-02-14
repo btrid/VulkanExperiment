@@ -37,17 +37,24 @@ void main()
 	barrier();
 
 	vec3 p = vec3(gl_GlobalInvocationID.xyz)+0.5;
-	vec4 d = vec4(0.);
-	d[0] = map(p);
-	d[1] = map(p+1.);
-	d[2] = map(p);
-	d[3] = map(p+1.);
-//	d[2] = map(p+vec3(1., 1., -1.));
-//	d[3] = map(p+vec3(-1., -1., 1.));
+	float d = map(p-0.5);
+	bool ok = false;
+	for(int z = 0; z < 2; z++)
+	for(int y = 0; y < 2; y++)
+	for(int x = 0; x < 2; x++)
+	{
+		if(z==0 && y==0 && x==0){continue;}
+		if(sign(d) != sign(map(p + vec3(x, y, z)-0.5)))
+		{
+			ok = true;
+			z=2;
+			y=2;
+			x=2;
+		}
+	}
 
 	// 境界のみボクセル化する
-	if(any(greaterThanEqual(d, vec4(0))) && any(lessThanEqual(d, vec4(0))))
-//	if(any(lessThan(d, vec4(0))))
+	if(ok)
 	{
 		uint index = gl_LocalInvocationID.x+ gl_LocalInvocationID.y*gl_WorkGroupSize.x+gl_LocalInvocationID.z*gl_WorkGroupSize.x*gl_WorkGroupSize.y;
 		atomicOr(s_map[index/32], 1<<(index%32));

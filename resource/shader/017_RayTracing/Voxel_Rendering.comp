@@ -85,6 +85,7 @@ void main()
 //			pos = fma(dir, vec3(f), pos);
 //			count++;
 //			continue;
+
 		}
 
 		do
