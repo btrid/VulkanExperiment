@@ -26,4 +26,24 @@ layout(set=USE_Voxel,binding=4, scalar) buffer V4 { uint b_material_id[]; };
 layout(set=USE_Voxel,binding=5, scalar) buffer V5 { uint b_material[]; };
 #endif
 
+
+float sdBox( vec3 p, vec3 b )
+{
+	vec3 d = abs(p) - b;
+	return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
+}
+float sdSphere( vec3 p, float s )
+{
+  return length( p ) - s;
+}
+
+float map(in vec3 p)
+{
+	float d = 9999999.;
+	{
+		d = min(d, sdSphere(p-vec3(1000., 250., 1000.), 1000.));
+	}
+	return d;
+}
+
 #endif // VOXEL_H_

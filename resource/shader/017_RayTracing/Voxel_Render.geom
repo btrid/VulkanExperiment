@@ -28,25 +28,6 @@ vec3(0.f, 1.f, 0.f),    // Back-top-left
 vec3(1.f, 1.f, 0.f),    // Back-top-right
 };
 
-float sdBox( vec3 p, vec3 b )
-{
-	vec3 d = abs(p) - b;
-	return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
-}
-float sdSphere( vec3 p, float s )
-{
-  return length( p ) - s;
-}
-
-float map(in vec3 p)
-{
-	float d = 9999999.;
-	{
-		d = min(d, sdSphere(p-vec3(1000., 250., 1000.), 1000.));
-	}
-	return d;
-}
-
 layout(location=1) in Vertex
 {
 	flat int VertexIndex;
@@ -74,10 +55,9 @@ void main()
 	}
 
 	vec3 p = vec3(x, y, z)+0.5;
-	vec4 d = vec4(0.);
-	d[0] = map(p-0.5);
+	float d = map(p-0.5);
 	// 境界のみボクセル化する
-	if(abs(d[0])>2.)
+	if(abs(d)>2.)
 	{
 		return;
 	}
@@ -88,7 +68,7 @@ void main()
 	for(int x = 0; x < 2; x++)
 	{
 		if(z==0 && y==0 && x==0){continue;}
-		if(sign(d[0]) != sign(map(p + vec3(x, y, z)-0.5)))
+		if(sign(d) != sign(map(p + vec3(x, y, z)-0.5)))
 		{
 			ok = true;
 			z=2;

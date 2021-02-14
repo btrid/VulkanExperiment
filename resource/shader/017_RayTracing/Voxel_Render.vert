@@ -7,24 +7,6 @@
 #define SETPOINT_CAMERA 1
 #include "btrlib/camera.glsl"
 
-float sdBox( vec3 p, vec3 b )
-{
-	vec3 d = abs(p) - b;
-	return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
-}
-float sdSphere( vec3 p, float s )
-{
-  return length( p ) - s;
-}
-
-float map(in vec3 p)
-{
-	float d = 9999999.;
-	{
-		d = min(d, sdSphere(p-vec3(1000., 250., 1000.), 1000.));
-	}
-	return d;
-}
 
 layout(location=0)out gl_PerVertex
 {
