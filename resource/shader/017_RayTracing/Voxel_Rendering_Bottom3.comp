@@ -1,0 +1,123 @@
+#version 460
+// http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.42.3443&rep=rep1&type=pdf
+
+#extension GL_GOOGLE_include_directive : require
+#define USE_Voxel 0
+#include "Voxel.glsl"
+
+#define SETPOINT_CAMERA 1
+#include "btrlib/camera.glsl"
+
+#define USE_RenderTarget 2
+#include "applib/System.glsl"
+layout (local_size_x = 8, local_size_y = 8) in;
+
+bool intersection(vec3 aabb_min, vec3 aabb_max, vec3 pos, vec3 inv_dir, out float n, out float f)
+{
+	// https://tavianator.com/fast-branchless-raybounding-box-intersections/
+	vec3 t1 = (aabb_min - pos) * inv_dir;
+	vec3 t2 = (aabb_max - pos) * inv_dir;
+
+	vec3 tmin = min(t1, t2);
+	vec3 tmax = max(t1, t2);
+
+	n = max(max(tmin.x, tmin.y), tmin.z);
+	f = min(min(tmax.x, tmax.y), tmax.z);
+
+	return f > n;
+}
+
+void MakeRay(out vec3 pos, out vec3 dir, out vec3 inv_dir)
+{
+	vec2 screen = (gl_GlobalInvocationID / vec3(gl_WorkGroupSize * gl_NumWorkGroups)).xy * 2. - 1.;
+	screen *= tan(u_camera[0].u_fov_y / 2.);
+
+	mat3 axis = transpose(mat3(u_camera[0].u_view));
+
+	dir = normalize(axis[2] + axis[0] * screen.x * u_camera[0].u_aspect + axis[1] * screen.y);
+	pos = u_camera[0].u_eye.xyz;
+	
+	inv_dir.x = abs(dir.x) < 0.00001 ? 99999.f : 1. / dir.x;
+	inv_dir.y = abs(dir.y) < 0.00001 ? 99999.f : 1. / dir.y;
+	inv_dir.z = abs(dir.z) < 0.00001 ? 99999.f : 1. / dir.z;
+
+	int a = abs(dir.x) > abs(dir.y) ? 0 : 1;
+	a = abs(dir[a]) > abs(dir.z) ? a : 2;
+	dir *= abs(inv_dir[a]);
+	inv_dir /= abs(inv_dir[a]);
+
+}
+
+int To1D(in ivec3 p, in ivec3 s){ return p.x + p.y*s.x + p.z*s.x*s.y; }
+int To1D(in ivec3 p, in ivec4 s){ return p.x + p.y*s.x + p.z*s.x*s.y; }
+ivec3 ToTopIndex(in ivec3 p){ return p >> (u_info.top_brick_sqrt + u_info.bottom_brick_sqrt).xyz; }
+ivec3 ToTopBit(in ivec3 p){ return ((p >> u_info.bottom_brick_sqrt.xyz) % u_info.top_brick.xyz); }
+ivec3 ToBottomIndex(in ivec3 p){ return p >> u_info.bottom_brick_sqrt.xyz; }
+void main()
+{
+	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), f16vec4(0., 0., 0., 1.));
+	
+	vec3 dir, pos, inv_dir;
+	MakeRay(pos, dir, inv_dir);
+
+	float n, f;
+	intersection(vec3(0.0)+0.01, vec3(u_info.reso.xyz)-0.01, pos, inv_dir, n, f);
+
+	ivec3 ipos = ivec3(pos + max(n, 0.f) * dir);
+	ivec3 igoal = ivec3(pos + max(f, 0.f) * dir);
+	if(any(lessThan(ipos, ivec3(0))) || any(greaterThanEqual(ipos, u_info.reso.xyz)))
+	{
+
+		imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), f16vec4(1., 0., 0., 1.));
+		return;
+	}
+
+	ivec3 idir = igoal - ipos;
+	ivec3 isign = sign(idir);
+//	if(isign.x+isign.y+isign.z == 0){ return;}
+		
+	int dominant = abs(idir.x) > abs(idir.y) ? 0 : 1;
+	dominant = abs(idir[dominant]) > abs(idir.z) ? dominant : 2;
+
+	ivec2 delta;
+	delta.x = 2*abs(idir[(dominant + 1) % 3]) - abs(idir[dominant]);
+	delta.y = 2*abs(idir[(dominant + 2) % 3]) - abs(idir[dominant]);
+
+	f16vec4 c = f16vec4(0,0,0,1);
+	for (; !all(equal(ipos, igoal));)
+	{
+		ivec3 i = ToBottomIndex(ipos);
+		uvec4 bottom = b_bottom[To1D(i, u_info.bottom_reso)];
+//		do 
+		{
+			ivec3 bit = ipos-(ipos>>u_info.bottom_brick_sqrt.xyz<<u_info.bottom_brick_sqrt.xyz);
+			int b = To1D(bit, u_info.bottom_brick);
+			if((bottom[b/32] & (1<<(b%32))) == 0)
+			{
+				if (delta.x >= 0)
+				{
+					ipos[(dominant+1)%3] += isign[(dominant + 1) % 3];
+					delta.x -= abs(idir[dominant])*2;
+				}
+				else if (delta.y >= 0)
+				{
+					ipos[(dominant + 2) % 3] += isign[(dominant + 2) % 3];
+					delta.y -= abs(idir[dominant])*2;
+				}
+				else
+				{
+					ipos[dominant] += isign[dominant];
+					delta.x += 2*abs(idir[(dominant+1)%3]);
+					delta.y += 2*abs(idir[(dominant+2)%3]);
+				}
+				continue;
+			}
+			c = f16vec4(1.);
+			igoal = ipos;
+			break;
+		}
+//		while(all(greaterThanEqual(ipos, ivec3(0))) && all(equal(i, ToBottomIndex(ipos))));
+	}
+
+	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), c);
+}

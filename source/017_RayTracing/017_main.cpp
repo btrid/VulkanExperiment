@@ -319,8 +319,8 @@ bool intersection(vec3 aabb_min, vec3 aabb_max, vec3 pos, vec3 inv_dir, float& n
 void dda()
 {
 // http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.42.3443&rep=rep1&type=pdf
-	vec3 p = vec3(10, 400, 160);
-	vec3 d = normalize(vec3(100, -29, 7));
+	vec3 p = vec3(0, 600, 160);
+	vec3 d = normalize(vec3(10, -200, 0));
 	vec3 inv_d;
 	inv_d.x = abs(d.x) < 0.000001 ? 999999.f : 1. / d.x;
 	inv_d.y = abs(d.y) < 0.000001 ? 999999.f : 1. / d.y;
@@ -331,10 +331,10 @@ void dda()
 	d *= abs(inv_d)[axis];
 	inv_d /= abs(inv_d)[axis];
 
-	float n, f;
-	intersection(vec3(0)+0.01f, vec3(512)-0.01f, p, inv_d, n, f);
-	p += glm::max(n, 0.f) * d;
 #if 0
+	float n, f;
+	intersection(vec3(0) + 0.01f, vec3(512) - 0.01f, p, inv_d, n, f);
+	p += glm::max(n, 0.f) * d;
 	vec3 error = fract(p);
 	ivec3 ipos = ivec3(p);
 	while (all(lessThan(ipos, ivec3(512))) && all(greaterThanEqual(ipos, ivec3(0))))
@@ -352,6 +352,44 @@ void dda()
 
 	}
 #elif 1
+	float n, f;
+	intersection(vec3(0), vec3(512), p, inv_d, n, f);
+	ivec3 ipos = ivec3(p + glm::max(n, 0.f) * d);
+	ivec3 igoal = ivec3(p + glm::max(f, 0.f) * d);
+	ivec3 idir = igoal - ipos;
+	ivec3 isign = sign(idir);
+		
+	int dominant = abs(idir.x) > abs(idir.y) ? 0 : 1;
+	dominant = abs(idir[dominant]) > abs(idir.z) ? dominant : 2;
+
+	ivec2 delta;
+	delta.x = 2*abs(idir[(dominant + 1) % 3]) - abs(idir[dominant]);
+	delta.y = 2*abs(idir[(dominant + 2) % 3]) - abs(idir[dominant]);
+
+	for (; ipos[dominant] != igoal[dominant];)
+	{
+		printf("%3d,%3d,%3d\n", ipos.x, ipos.y, ipos.z);
+		if (delta.x >= 0)
+		{
+			ipos[(dominant+1)%3] += isign[(dominant + 1) % 3];
+			delta.x -= abs(idir[dominant])*2;
+		}
+		else if (delta.y >= 0)
+		{
+			ipos[(dominant + 2) % 3] += isign[(dominant + 2) % 3];
+			delta.y -= abs(idir[dominant])*2;
+		}
+		else
+		{
+			ipos[dominant] += isign[dominant];
+			delta.x += 2 * abs(idir[(dominant + 1) % 3]);
+			delta.y += 2 * abs(idir[(dominant + 2) % 3]);
+		}
+
+	}
+	assert(all(equal(ipos, igoal)));
+
+#else
 	// 1voxel版
 	vec3 error = mix(fract(p), vec3(1.) - fract(p), step(d, vec3(0.))) * abs(inv_d);
 	while (all(lessThan(p, vec3(512.f))) && all(greaterThanEqual(p, vec3(0.f))))
