@@ -29,12 +29,17 @@ float map(in vec3 p)
 layout(location=0)out gl_PerVertex
 {
 	vec4 gl_Position;
-	float gl_PointSize;
 };
+
+layout(location=1) out Vertex{
+	flat uint VertexIndex;
+}vs_out;
 
 void main() 
 {
-	int x = gl_VertexIndex % u_info.reso.x;
+	vs_out.VertexIndex = gl_VertexIndex;
+	gl_Position = vec4(1.);
+/*	int x = gl_VertexIndex % u_info.reso.x;
 	int y = (gl_VertexIndex / u_info.reso.x) % u_info.reso.y;
 	int z = (gl_VertexIndex / u_info.reso.x / u_info.reso.y) % u_info.reso.z;
 	vec3 p = vec3(x, y, z)+0.5;
@@ -44,12 +49,13 @@ void main()
 	d[2] = map(p);
 	d[3] = map(p+1.);
 
-	gl_Position = u_camera[0].u_projection * u_camera[0].u_view * vec4(vec3(x, y, z), 1.);
 	gl_PointSize = 0.;
-
+	gl_Position = vec4(1.);
 	// 境界のみボクセル化する
 	if(any(greaterThanEqual(d, vec4(0))) && any(lessThanEqual(d, vec4(0))))
 	{
-		gl_PointSize = 3.;
+		gl_Position = u_camera[0].u_projection * u_camera[0].u_view * vec4(vec3(x, y, z), 1.);
+		gl_PointSize = 1.;
 	}
+*/
 }

@@ -301,6 +301,7 @@ struct Voxel
 			struct { const char* name; vk::ShaderStageFlagBits flag; } shader_param[] =
 			{
 				{"Voxel_Render.vert.spv", vk::ShaderStageFlagBits::eVertex},
+				{"Voxel_Render.geom.spv", vk::ShaderStageFlagBits::eGeometry},
 				{"Voxel_Render.frag.spv", vk::ShaderStageFlagBits::eFragment},
 
 			};
