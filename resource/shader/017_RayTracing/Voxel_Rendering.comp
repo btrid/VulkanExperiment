@@ -102,7 +102,7 @@ void main()
 				continue;
 			}
 
-			uvec4 bottom = b_bottom[To1D(bottom_index, u_info.bottom_reso)];
+			uvec4 bottom = b_bottom[b_map_index[To1D(bottom_index, u_info.bottom_reso)]];
 			do
 			{
 				count++;

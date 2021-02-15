@@ -4,8 +4,11 @@ cd /d %~dp0
 SET exe=glslangValidator.exe --target-env vulkan1.2 -V -I./ -I../include -g
 SET output=-o ../binary/
 
-%exe% %output%/Voxel_MakeBottom.comp.spv Voxel_MakeBottom.comp
-%exe% %output%/Voxel_MakeTop.comp.spv Voxel_MakeTop.comp
+rem %exe% %output%/Voxel_MakeBottom.comp.spv Voxel_MakeBottom.comp
+rem %exe% %output%/Voxel_MakeTop.comp.spv Voxel_MakeTop.comp
+
+%exe% %output%/Voxel_MakeBottom.comp.spv Voxel_MakeBottom2.comp
+%exe% %output%/Voxel_MakeTop.comp.spv Voxel_MakeTop2.comp
 
 %exe% %output%/Voxel_Render.vert.spv Voxel_Render.vert
 %exe% %output%/Voxel_Render.geom.spv Voxel_Render.geom

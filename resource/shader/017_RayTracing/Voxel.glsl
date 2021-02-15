@@ -18,12 +18,17 @@ struct VoxelInfo
 
 };
 
+struct VoxelData
+{
+	int a;
+};
+
 layout(set=USE_Voxel,binding=0, std140) uniform V0 {VoxelInfo u_info; };
 layout(set=USE_Voxel,binding=1, scalar) buffer V1 { uvec4 b_top[]; };
 layout(set=USE_Voxel,binding=2, scalar) buffer V2 { uvec4 b_bottom[]; };
-layout(set=USE_Voxel,binding=3, scalar) buffer V3 { uint b_material_counter; };
-layout(set=USE_Voxel,binding=4, scalar) buffer V4 { uint b_material_id[]; };
-layout(set=USE_Voxel,binding=5, scalar) buffer V5 { uint b_material[]; };
+layout(set=USE_Voxel,binding=3, scalar) buffer V3 { int b_map_index_counter; };
+layout(set=USE_Voxel,binding=4, scalar) buffer V4 { int b_map_index[]; };
+layout(set=USE_Voxel,binding=5, scalar) buffer V5 { int b_data[]; };
 #endif
 
 
@@ -41,7 +46,10 @@ float map(in vec3 p)
 {
 	float d = 9999999.;
 	{
-		d = min(d, sdSphere(p-vec3(1000., 250., 1000.), 1000.));
+//		d = min(d, sdSphere(p-vec3(1000., 250., 1000.), 1000.));
+
+		d = min(d, sdBox(p-vec3(500., 200., 700.), vec3(300.)));
+		d = min(d, sdSphere(p-vec3(1200., 190., 1055.), 200.));
 	}
 	return d;
 }

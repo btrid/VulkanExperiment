@@ -77,7 +77,7 @@ struct Voxel
 		uvec4 top_brick_sqrt;
 		uvec4 bottom_reso;
 		uvec4 top_reso;
-		uint material_size;
+		uint data_size;
 	};
 	struct Material
 	{
@@ -86,9 +86,9 @@ struct Voxel
 	btr::BufferMemoryEx<VoxelInfo> u_info;
 	btr::BufferMemoryEx<uvec4> b_map_bottom;
 	btr::BufferMemoryEx<uvec4> b_map_top;
-	btr::BufferMemoryEx<uvec4> b_material_counter;
-	btr::BufferMemoryEx<uint> b_material_id;
-	btr::BufferMemoryEx<uint> b_material;
+	btr::BufferMemoryEx<uint> b_index_map_counter;
+	btr::BufferMemoryEx<uint> b_index_map;
+	btr::BufferMemoryEx<uint> b_data;
 
 	VoxelInfo m_info;
 
@@ -122,14 +122,14 @@ struct Voxel
 			m_info.top_brick_sqrt = uvec4(2, 3, 2, 1);
 			m_info.bottom_reso = m_info.reso / m_info.bottom_brick;
 			m_info.top_reso = m_info.bottom_reso / m_info.top_brick;
-			m_info.material_size = 20000;
+			m_info.data_size = m_info.bottom_reso.x * m_info.bottom_reso.y * m_info.bottom_reso.z / 8;
 
 			u_info = ctx.m_uniform_memory.allocateMemory<VoxelInfo>(1);
+			b_index_map_counter = ctx.m_storage_memory.allocateMemory<uint>(1);
+			b_index_map = ctx.m_storage_memory.allocateMemory<uint>(m_info.bottom_reso.x * m_info.bottom_reso.y * m_info.bottom_reso.z, {});
 			b_map_top = ctx.m_storage_memory.allocateMemory<uvec4>(m_info.top_reso.x * m_info.top_reso.y * m_info.top_reso.z, {});
-			b_map_bottom = ctx.m_storage_memory.allocateMemory<uvec4>(m_info.bottom_reso.x * m_info.bottom_reso.y * m_info.bottom_reso.z, {});
-			b_material_counter = ctx.m_storage_memory.allocateMemory<uvec4>(1);
-			b_material_id = ctx.m_storage_memory.allocateMemory<uint>(1);
-			b_material = ctx.m_storage_memory.allocateMemory<uint>(m_info.material_size);
+			b_map_bottom = ctx.m_storage_memory.allocateMemory<uvec4>(m_info.data_size, {});
+			b_data = ctx.m_storage_memory.allocateMemory<uint>(m_info.data_size);
 
 			cmd.updateBuffer<VoxelInfo>(u_info.getInfo().buffer, u_info.getInfo().offset, m_info);
 
@@ -152,9 +152,9 @@ struct Voxel
 			{
 				b_map_top.getInfo(),
 				b_map_bottom.getInfo(),
-				b_material_counter.getInfo(),
-				b_material_id.getInfo(),
-				b_material.getInfo(),
+				b_index_map_counter.getInfo(),
+				b_index_map.getInfo(),
+				b_data.getInfo(),
 			};
 
 			vk::WriteDescriptorSet write[] =

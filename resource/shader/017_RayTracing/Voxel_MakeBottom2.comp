@@ -16,24 +16,25 @@ void main()
 	memoryBarrierShared();
 	barrier();
 
-	vec3 p = vec3(gl_GlobalInvocationID.xyz)+0.5;
-	float d = map(p-0.5);
 	bool ok = false;
-	for(int z = 0; z < 2; z++)
-	for(int y = 0; y < 2; y++)
-	for(int x = 0; x < 2; x++)
 	{
-		if(z==0 && y==0 && x==0){continue;}
-		if(sign(d) != sign(map(p + vec3(x, y, z)-0.5)))
+		vec3 p = vec3(gl_GlobalInvocationID.xyz)+0.5;
+		float d = map(p-0.5);
+		for(int z = 0; z < 2; z++)
+		for(int y = 0; y < 2; y++)
+		for(int x = 0; x < 2; x++)
 		{
-			ok = true;
-			z=2;
-			y=2;
-			x=2;
+			if(z==0 && y==0 && x==0){continue;}
+			if(sign(d) != sign(map(p + vec3(x, y, z)-0.5)))
+			{
+				ok = true;
+				z=2;
+				y=2;
+				x=2;
+			}
 		}
 	}
 
-	// 境界のみボクセル化する
 	if(ok)
 	{
 		uint index = gl_LocalInvocationID.x+ gl_LocalInvocationID.y*gl_WorkGroupSize.x+gl_LocalInvocationID.z*gl_WorkGroupSize.x*gl_WorkGroupSize.y;
@@ -44,7 +45,13 @@ void main()
 	barrier();
 	if(gl_LocalInvocationIndex==0)
 	{
+		int map_index = -1;
+		if(any(notEqual(s_map, uvec4(0))))
+		{
+			map_index = atomicAdd(b_map_index_counter, 1);
+			b_bottom[map_index] = s_map;
+		}
 		uint index = gl_WorkGroupID.x + gl_WorkGroupID.y*gl_NumWorkGroups.x + gl_WorkGroupID.z*gl_NumWorkGroups.x*gl_NumWorkGroups.y;
-		b_bottom[index] = s_map;
+		b_map_index[index] = map_index;		
 	}
 }
