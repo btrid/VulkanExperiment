@@ -1,8 +1,8 @@
 @echo off
 cd /d %~dp0
 
-SET exe=glslangValidator.exe --target-env vulkan1.2 -V -I./ -I../include -g
-SET output=-o ../binary/
+SET exe=glslangValidator.exe --target-env vulkan1.2 -V -I./ -I../../include -g
+SET output=-o ../../binary/
 
 rem %exe% %output%/Voxel_MakeBottom.comp.spv Voxel_MakeBottom.comp
 rem %exe% %output%/Voxel_MakeTop.comp.spv Voxel_MakeTop.comp
