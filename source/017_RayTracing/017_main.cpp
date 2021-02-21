@@ -520,7 +520,8 @@ struct Voxel2
 		begin_render_Info.setFramebuffer(m_render_framebuffer.get());
 		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
-		cmd.draw(m_info.reso.x * m_info.reso.y * m_info.reso.z, 1, 0, 0);
+		auto num = m_info.reso.xyz()>>uvec3(2)>>uvec3(2);
+		cmd.draw(num.x * num.y * num.z, 1, 0, 0);
 
 		cmd.endRenderPass();
 
@@ -584,20 +585,8 @@ int main()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				{
-					static int t = 0;
-					if (t>=0)
-					{
-						voxel.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
-					}
-					else
-					{
-//						voxel.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
-					}
-//					t++;
-//					if (t >= 100)
-//					{
-//						t -= 103;
-//					}
+//					voxel.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
+					voxel.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 				}
 
 				cmd.end();

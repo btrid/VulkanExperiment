@@ -44,24 +44,22 @@ void main()
 	int vi = in_param[0].VertexIndex;
 	if(b_hashmap[vi] < 0) { return; }
 
-	vi = b_hashmap[vi];
+//	vi = b_hashmap[vi];
 
 	ivec3 reso = u_info.reso.xyz>>ivec3(2)>>ivec3(2);
 	int x = vi % reso.x;
 	int y = (vi / reso.x) % reso.y;
 	int z = (vi / reso.x / reso.y) % reso.z;
+	float scale = 1<<4;
 
 	mat4 pv = u_camera[0].u_projection * u_camera[0].u_view;
-	vec4 check = pv * vec4(vec3(x, y, z), 1.);
-	check /= check.w;
-	if(any(lessThan(check.xy, vec2(-1.))) || any(greaterThan(check.xy, vec2(1.))))
-	{
-		return;
-	}
+//	vec4 check = pv * vec4(vec3(x, y, z), 1.);
+//	check /= check.w;
+//	if(any(lessThan(check.xy, vec2(-1.))) || any(greaterThan(check.xy, vec2(1.)))){return;}
 
 	for(int i = 0; i < cube_strip.length(); i++)
 	{
-		gl_Position = pv * vec4(vec3(cube_strip[i]+vec3(x, y, z)), 1.);
+		gl_Position = pv * vec4(vec3(cube_strip[i]+vec3(x, y, z)) *scale, 1.);
 		EmitVertex();
 	}
 	EndPrimitive();
