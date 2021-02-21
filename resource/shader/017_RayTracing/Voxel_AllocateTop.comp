@@ -22,8 +22,8 @@ void main()
 
 		p = pos;
 		p = p-((p>>2)<<2);
-		index = p.x+p.y*4+p.z*16;
-		atomicOr(b_interior[top_index].bitmask[index/32], 1u<<(index%32));
+		uint bit = p.x + p.y*4 + p.z*16;
+		atomicOr(b_interior[top_index].bitmask[bit/32], 1u<<(bit%32));
 	}
 
 }

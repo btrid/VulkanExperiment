@@ -47,7 +47,7 @@ void main()
 			uvec3 reso = u_info.reso.xyz>>uvec3(2)>>uvec3(2);
 			uvec3 p = gl_WorkGroupID>>2;
 			uint index = p.x+p.y*reso.x+p.z*reso.x*reso.y;
-			if(atomicExchange(b_hashmap[index], 0) == -1)
+			if(atomicCompSwap(b_hashmap[index], -1, 0) == -1)
 			{
 				int top_index = atomicAdd(b_interior_counter[0].w, 1);
 				if((top_index%64)==0){ atomicAdd(b_interior_counter[0].x, 1); }

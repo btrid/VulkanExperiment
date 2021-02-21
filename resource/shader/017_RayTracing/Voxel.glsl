@@ -17,6 +17,7 @@ struct InteriorNode
 {
 	uvec2 bitmask;
 	uint child;
+	uint _;
 };
 struct LeafNode
 {

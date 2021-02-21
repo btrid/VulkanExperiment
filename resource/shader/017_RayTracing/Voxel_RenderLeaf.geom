@@ -46,17 +46,13 @@ void main()
 	if(vi >= b_leaf_data_counter.w) { return; }
 	vec3 p = vec3(b_leaf_data[vi].pos_index.xyz);
 
-//	ivec3 reso = u_info.reso.xyz;
-//	int x = vi % reso.x;
-//	int y = (vi / reso.x) % reso.y;
-//	int z = (vi / reso.x / reso.y) % reso.z;
 	float scale = 1<<2;
 
 	mat4 pv = u_camera[0].u_projection * u_camera[0].u_view;
 
 	for(int i = 0; i < cube_strip.length(); i++)
 	{
-		gl_Position = pv * vec4((cube_strip[i]+p)*scale, 1.);
+		gl_Position = pv * vec4((cube_strip[i]*0.5+p*scale), 1.);
 		EmitVertex();
 	}
 	EndPrimitive();

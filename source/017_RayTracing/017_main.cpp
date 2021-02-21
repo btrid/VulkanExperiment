@@ -103,7 +103,7 @@ struct Voxel2
 	btr::BufferMemoryEx<uint> b_leaf_counter;
 	btr::BufferMemoryEx<InteriorNode> b_interior;
 	btr::BufferMemoryEx<LeafNode> b_leaf;
-	btr::BufferMemoryEx<uint> b_leaf_data_counter;
+	btr::BufferMemoryEx<uvec4> b_leaf_data_counter;
 	btr::BufferMemoryEx<LeafData> b_leaf_data;
 
 	VoxelInfo m_info;
@@ -139,10 +139,10 @@ struct Voxel2
 			u_info = ctx.m_uniform_memory.allocateMemory<VoxelInfo>(1);
 			b_interior_counter = ctx.m_storage_memory.allocateMemory<uvec4>(2);
 			b_leaf_counter = ctx.m_storage_memory.allocateMemory<uint>(1);
-			b_interior = ctx.m_storage_memory.allocateMemory<InteriorNode>(num/64/32);
-			b_leaf = ctx.m_storage_memory.allocateMemory<LeafNode>(num/64/32);
-			b_leaf_data_counter = ctx.m_storage_memory.allocateMemory<uint>(1);
-			b_leaf_data = ctx.m_storage_memory.allocateMemory<LeafData>(num / 64/32);
+			b_interior = ctx.m_storage_memory.allocateMemory<InteriorNode>(num/64/8);
+			b_leaf = ctx.m_storage_memory.allocateMemory<LeafNode>(num/64/8);
+			b_leaf_data_counter = ctx.m_storage_memory.allocateMemory<uvec4>(1);
+			b_leaf_data = ctx.m_storage_memory.allocateMemory<LeafData>(num / 64/8);
 				
 			cmd.updateBuffer<VoxelInfo>(u_info.getInfo().buffer, u_info.getInfo().offset, m_info);
 
@@ -411,6 +411,7 @@ struct Voxel2
 	{
 		DebugLabel _label(cmd, __FUNCTION__);
 
+		_label.insert("Clear Voxel");
 		{
 
 			{
@@ -443,7 +444,7 @@ struct Voxel2
 			}
 		}
 
-		_label.insert("Make Voxel");
+		_label.insert("Make Leaf");
 		{
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeVoxelLeaf].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL[PipelineLayout_MakeVoxel].get(), 0, { m_DS[DSL_Voxel].get() }, {});
@@ -520,7 +521,7 @@ struct Voxel2
 		begin_render_Info.setFramebuffer(m_render_framebuffer.get());
 		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
-		auto num = m_info.reso.xyz()>>uvec3(2) >> uvec3(2);
+		auto num = m_info.reso.xyz()>>uvec3(2)>>uvec3(2);
 		cmd.draw(num.x * num.y * num.z, 1, 0, 0);
 
 		cmd.endRenderPass();
