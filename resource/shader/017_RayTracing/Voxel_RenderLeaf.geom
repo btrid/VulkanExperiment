@@ -7,8 +7,8 @@
 #define SETPOINT_CAMERA 1
 #include "btrlib/camera.glsl"
 
-layout(points, invocations = 32) in;
-layout(triangle_strip, max_vertices = 14*2) out;
+layout(points, invocations = 1) in;
+layout(triangle_strip, max_vertices = 14) out;
 
 const vec3 cube_strip[] = 
 {
@@ -42,33 +42,22 @@ layout(location=0)out gl_PerVertex
 void main() 
 {
 	int vi = in_param[0].VertexIndex;
-	if(b_hashmap[vi] < 0) { return; }
 
-	uvec2 child = b_interior[b_hashmap[vi]].bitmask;
+	if(vi >= b_leaf_data_counter.w) { return; }
+	vec3 p = vec3(b_leaf_data[vi].pos_index.xyz);
+
+//	ivec3 reso = u_info.reso.xyz;
+//	int x = vi % reso.x;
+//	int y = (vi / reso.x) % reso.y;
+//	int z = (vi / reso.x / reso.y) % reso.z;
+	float scale = 1<<2;
+
 	mat4 pv = u_camera[0].u_projection * u_camera[0].u_view;
 
-
-
-	ivec3 reso = u_info.reso.xyz>>ivec3(2)>>ivec3(2);
-	int x = vi % reso.x;
-	int y = (vi / reso.x) % reso.y;
-	int z = (vi / reso.x / reso.y) % reso.z;
-	vec3 p = vec3(x, y, z)*16;
-
-	for(int g = 0; g < 2; g++)
+	for(int i = 0; i < cube_strip.length(); i++)
 	{
-		int gi = gl_InvocationID*2+g;
-		if((child[gi/32] & (1<<(gi%32))) == 0) { continue;}
-		vec3 lp = vec3(gi%4, (gi/4)%4, gi/16%4);
-		lp *= 4;
-
-		for(int i = 0; i < cube_strip.length(); i++)
-		{
-			gl_Position = pv * vec4(cube_strip[i]+p+lp, 1.);
-			EmitVertex();
-		}
-		EndPrimitive();
-
+		gl_Position = pv * vec4((cube_strip[i]+p)*scale, 1.);
+		EmitVertex();
 	}
-
+	EndPrimitive();
 }

@@ -20,4 +20,7 @@ rem %exe% %output%/Voxel_Rendering.comp.spv Voxel_Rendering_Bottom3.comp
 
 %exe% %output%/Voxel_Render.vert.spv Voxel_Render.vert
 %exe% %output%/Voxel_Render.geom.spv Voxel_Render.geom
+rem %exe% %output%/Voxel_Render.geom.spv Voxel_RenderTop.geom
+rem %exe% %output%/Voxel_Render.geom.spv Voxel_RenderLeaf.geom
+%exe% %output%/Voxel_Render.geom.spv Voxel_RenderLeafChild.geom
 %exe% %output%/Voxel_Render.frag.spv Voxel_Render.frag

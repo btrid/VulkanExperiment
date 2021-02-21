@@ -458,7 +458,7 @@ struct Voxel2
  			{
  				vk::BufferMemoryBarrier barrier[] =
  				{
-					b_interior_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
+					b_leaf_data_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
  				};
  				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, { array_size(barrier), barrier }, {});
  			}
@@ -466,7 +466,7 @@ struct Voxel2
  			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeVoxelTop].get());
  			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL[PipelineLayout_MakeVoxel].get(), 0, { m_DS[DSL_Voxel].get() }, {});
  
- 			cmd.dispatchIndirect(b_interior_counter.getInfo().buffer, b_interior_counter.getInfo().offset);
+ 			cmd.dispatchIndirect(b_leaf_data_counter.getInfo().buffer, b_leaf_data_counter.getInfo().offset);
 
 		}
 	}
@@ -520,7 +520,7 @@ struct Voxel2
 		begin_render_Info.setFramebuffer(m_render_framebuffer.get());
 		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
-		auto num = m_info.reso.xyz()>>uvec3(2)>>uvec3(2);
+		auto num = m_info.reso.xyz()>>uvec3(2) >> uvec3(2);
 		cmd.draw(num.x * num.y * num.z, 1, 0, 0);
 
 		cmd.endRenderPass();

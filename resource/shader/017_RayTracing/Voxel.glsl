@@ -65,14 +65,14 @@ float sdf(in vec3 p)
 
 bool map(in vec3 p)
 {
-//	vec3 p = vec3(gl_GlobalInvocationID.xyz)+0.5;
-	float d = sdf(p-0.5);
+	p-=0.5;
+	float d = sdf(p);
 	for(int z = 0; z < 2; z++)
 	for(int y = 0; y < 2; y++)
 	for(int x = 0; x < 2; x++)
 	{
 		if(z==0 && y==0 && x==0){continue;}
-		if(sign(d) != sign(sdf(p + vec3(x, y, z)-0.5)))
+		if(sign(d) != sign(sdf(p + vec3(x, y, z))))
 		{
 			return true;
 		}

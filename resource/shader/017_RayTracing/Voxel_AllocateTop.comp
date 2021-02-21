@@ -8,7 +8,7 @@ layout (local_size_x = 64) in;
 
 void main() 
 {
-	if(gl_GlobalInvocationID.x >= b_leaf_data_counter.x)
+	if(gl_GlobalInvocationID.x >= b_leaf_data_counter.w)
 	{
 		return;
 	}
@@ -20,9 +20,10 @@ void main()
 		uint index = p.x+p.y*reso.x+p.z*reso.x*reso.y;
 		int top_index = b_hashmap[index];
 
-		uvec3 p2 = p-((p>>2)<<2);
-		uint index2 = p2.x+p2.y*4+p2.z*16;
-		atomicOr(b_interior[top_index].bitmask[index2/32], 1<<(index2%32));
+		p = pos;
+		p = p-((p>>2)<<2);
+		index = p.x+p.y*4+p.z*16;
+		atomicOr(b_interior[top_index].bitmask[index/32], 1u<<(index%32));
 	}
 
 }
