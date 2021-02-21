@@ -1,0 +1,35 @@
+#version 460
+
+#extension GL_GOOGLE_include_directive : require
+#define USE_Voxel 0
+#include "Voxel.glsl"
+
+layout (local_size_x = 64) in;
+
+void main() 
+{
+	if(gl_GlobalInvocationID.x >= b_leaf_data_counter.x)
+	{
+		return;
+	}
+	
+	uvec3 pos = uvec3(b_leaf_data[gl_GlobalInvocationID.x].pos_index.xyz);
+	{
+		uvec3 reso = u_info.reso.xyz>>uvec3(2)>>uvec3(2);
+		uvec3 p = pos>>uvec3(2);
+		uint index = p.x+p.y*reso.x+p.z*reso.x*reso.y;
+		int top_index = b_hashmap[index];
+
+		p = p-(p>>uvec3(2)<<uvec3(2));
+		uint bit = p.x + p.y*4 + p.y*16;
+		uvec2 mask = uvec2((u64vec2(1ul)<<clamp(ivec2(bit)-ivec2(32, 0), 0, 32))-1ul);
+
+		uvec2 c = bitCount(b_interior[top_index].bitmask & mask);
+		uint mid_index = b_interior[top_index].child+c.x+c.y;
+
+		b_interior[mid_index].bitmask = b_leaf_data[gl_GlobalInvocationID.x].bitmask;
+		b_interior[mid_index].child = uint(b_leaf_data[gl_GlobalInvocationID.x].pos_index.w);
+
+	}
+
+}

@@ -167,6 +167,7 @@ App::App(const AppDescriptor& desc)
 			VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
 			VK_KHR_RAY_QUERY_EXTENSION_NAME,
 			VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
+			VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME, 
 		};
 
 		auto gpu_propaty = m_physical_device.getProperties();
@@ -245,6 +246,9 @@ App::App(const AppDescriptor& desc)
  		DescriptorIndexing_Feature.descriptorBindingVariableDescriptorCount = VK_TRUE;
  		ScalarBlock_Feature.setPNext(&DescriptorIndexing_Feature);
 
+		vk::PhysicalDeviceSubgroupSizeControlFeaturesEXT Subgroup_Feature;
+		Subgroup_Feature.subgroupSizeControl = VK_TRUE;
+		ScalarBlock_Feature.setPNext(&Subgroup_Feature);
 
 		m_device = m_physical_device.createDeviceUnique(device_info, nullptr);
 	}

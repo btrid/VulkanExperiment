@@ -42,6 +42,7 @@ void main()
 
 	memoryBarrierShared();
 	barrier();
+
 	if(gl_LocalInvocationIndex==0)
 	{
 		uint index = gl_WorkGroupID.x + gl_WorkGroupID.y*gl_NumWorkGroups.x + gl_WorkGroupID.z*gl_NumWorkGroups.x*gl_NumWorkGroups.y;
