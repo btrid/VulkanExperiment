@@ -18,10 +18,11 @@ rem %exe% %output%/Voxel_Rendering.comp.spv Voxel_Rendering_Bottom.comp
 rem %exe% %output%/Voxel_Rendering.comp.spv Voxel_Rendering_Bottom2.comp
 rem %exe% %output%/Voxel_Rendering.comp.spv Voxel_Rendering_Bottom3.comp
 
-%exe% %output%/Voxel_Render.vert.spv Voxel_Render.vert
-%exe% %output%/Voxel_Render.frag.spv Voxel_Render.frag
+%exe% %output%/VoxelDebug_Render.vert.spv VoxelDebug_Render.vert
+%exe% %output%/VoxelDebug_Render.frag.spv VoxelDebug_Render.frag
 
-%exe% %output%/Voxel_Render.geom.spv Voxel_Render.geom
-rem %exe% %output%/Voxel_Render.geom.spv Voxel_RenderTop.geom
-rem %exe% %output%/Voxel_Render.geom.spv Voxel_RenderLeaf.geom
-rem %exe% %output%/Voxel_Render.geom.spv Voxel_RenderLeafChild.geom
+%exe% %output%/VoxelDebug_Render.geom.spv VoxelDebug_Render.geom
+rem %exe% %output%/VoxelDebug_Render.geom.spv VoxelDebug_RenderTop.geom
+rem %exe% %output%/VoxelDebug_Render.geom.spv VoxelDebug_RenderLeaf.geom
+rem %exe% %output%/VoxelDebug_Render.geom.spv VoxelDebug_RenderLeafChild.geom
+%exe% %output%/VoxelDebug_Render.geom.spv VoxelDebug_RenderMid.geom

@@ -325,9 +325,9 @@ struct Voxel2
 			}
 			struct { const char* name; vk::ShaderStageFlagBits flag; } shader_param[] =
 			{
-				{"Voxel_Render.vert.spv", vk::ShaderStageFlagBits::eVertex},
-				{"Voxel_Render.geom.spv", vk::ShaderStageFlagBits::eGeometry},
-				{"Voxel_Render.frag.spv", vk::ShaderStageFlagBits::eFragment},
+				{"VoxelDebug_Render.vert.spv", vk::ShaderStageFlagBits::eVertex},
+				{"VoxelDebug_Render.geom.spv", vk::ShaderStageFlagBits::eGeometry},
+				{"VoxelDebug_Render.frag.spv", vk::ShaderStageFlagBits::eFragment},
 
 			};
 			std::array<vk::UniqueShaderModule, array_length(shader_param)> shader;
@@ -454,21 +454,51 @@ struct Voxel2
 
 		}
 
-		_label.insert("Make Voxel Top");
+		_label.insert("Make Top");
 		{
- 			{
- 				vk::BufferMemoryBarrier barrier[] =
- 				{
+			{
+				vk::BufferMemoryBarrier barrier[] =
+				{
 					b_leaf_data_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
- 				};
- 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, { array_size(barrier), barrier }, {});
- 			}
- 
- 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeVoxelTop].get());
- 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL[PipelineLayout_MakeVoxel].get(), 0, { m_DS[DSL_Voxel].get() }, {});
- 
- 			cmd.dispatchIndirect(b_leaf_data_counter.getInfo().buffer, b_leaf_data_counter.getInfo().offset);
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, { array_size(barrier), barrier }, {});
+			}
 
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeVoxelTop].get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL[PipelineLayout_MakeVoxel].get(), 0, { m_DS[DSL_Voxel].get() }, {});
+
+			cmd.dispatchIndirect(b_leaf_data_counter.getInfo().buffer, b_leaf_data_counter.getInfo().offset);
+		}
+		_label.insert("Make Top Child");
+		{
+			{
+				vk::BufferMemoryBarrier barrier[] =
+				{
+					b_interior.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
+			}
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeVoxelTopChild].get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL[PipelineLayout_MakeVoxel].get(), 0, { m_DS[DSL_Voxel].get() }, {});
+
+			cmd.dispatchIndirect(b_interior_counter.getInfo().buffer, b_interior_counter.getInfo().offset);
+		}
+
+		_label.insert("Make Mid");
+		{
+			{
+				vk::BufferMemoryBarrier barrier[] =
+				{
+					b_interior.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
+			}
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeVoxelMid].get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL[PipelineLayout_MakeVoxel].get(), 0, { m_DS[DSL_Voxel].get() }, {});
+
+			cmd.dispatchIndirect(b_leaf_data_counter.getInfo().buffer, b_leaf_data_counter.getInfo().offset);
 		}
 	}
 	void execute_RenderVoxel(vk::CommandBuffer cmd, RenderTarget& rt)
@@ -534,7 +564,20 @@ struct Voxel2
 
 int main()
 {
-	voxel_test();
+	{
+		uvec2 bitmask = glm::linearRand(uvec2(1), uvec2(9999999999));
+
+		for (int bit=0; bit < 64; bit++)
+		{
+			uvec2 mask = uvec2((i64vec2(1l) << clamp(i64vec2(bit+1) - i64vec2(0, 32), i64vec2(0), i64vec2(32))) - i64vec2(1l));
+			uvec2 c = bitCount(bitmask & mask);
+			printf("bit=%3d, count=%3d\n",bit, c.x + c.y);
+
+//			bool isOn = (bitmask[bit/32] & (1<<bit)) != 0;
+		}
+
+	}
+
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = vec3(-400.f, 1500.f, -1430.f);
 	camera->getData().m_target = vec3(800.f, 0.f, 1000.f);

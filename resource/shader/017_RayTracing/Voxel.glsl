@@ -80,4 +80,17 @@ bool map(in vec3 p)
 	}
 	return false;
 }
+
+//uvec2 bitmask(in int bit){return uvec2((i64vec2(1l) << clamp(i64vec2(bit+1) - i64vec2(0, 32), i64vec2(0), i64vec2(32))) - i64vec2(1l));}
+uint bitcount(in uvec2 bitmask, in int bit)
+{
+	uvec2 mask = uvec2((i64vec2(1l) << clamp(i64vec2(bit+1) - i64vec2(0, 32), i64vec2(0), i64vec2(32))) - i64vec2(1l));
+	uvec2 c = bitCount(bitmask & mask);
+	return c.x+c.y;
+}
+bool isOn(in uvec2 bitmask, in int bit)
+{
+	return (bitmask[bit/32] & (bit%32)) != 0;
+}
+
 #endif // VOXEL_H_
