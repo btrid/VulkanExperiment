@@ -90,7 +90,7 @@ uint bitcount(in uvec2 bitmask, in int bit)
 }
 bool isBitOn(in uvec2 bitmask, in int bit)
 {
-	return (bitmask[bit/32] & (bit%32)) != 0;
+	return (bitmask[bit/32] & (1<<(bit%32))) != 0;
 }
 
 #endif // VOXEL_H_

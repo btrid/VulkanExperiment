@@ -53,7 +53,7 @@ int To1D(in ivec3 p, in ivec4 s){ return p.x + p.y*s.x + p.z*s.x*s.y; }
 ivec3 ToTopIndex(in ivec3 p){ return p >> 4; }
 ivec3 ToMidIndex(in ivec3 p){ return p >> 2; }
 ivec3 ToTopBit(in ivec3 p){ return (p>>2)-(p>>4<<2); }
-ivec3 ToMidBit(in ivec3 p){ return p - (p>>2); }
+ivec3 ToMidBit(in ivec3 p){ return p - (p>>2<<2); }
 
 void main() 
 {	
@@ -87,9 +87,6 @@ void main()
 			continue;
 		}
 
-				c = f16vec4(1.);
-				pos = vec3(99999);
-				break;
 
 		InteriorNode top = b_interior[hash];
 		do
@@ -106,6 +103,10 @@ void main()
 				pos = fma(dir, vec3(f), pos);
 				continue;
 			}
+
+//		c = f16vec4(1.);
+//		pos = vec3(99999);
+//		break;
 
 			InteriorNode mid = b_interior[top.child+bitcount(top.bitmask,tb)];
 			do

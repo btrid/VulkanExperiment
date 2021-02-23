@@ -34,9 +34,8 @@ void main()
 	for(int g = 0; g < 2; g++)
 	{
 		int gi = gl_InvocationID*2+g;
-		if((child[gi/32] & (1<<(gi%32))) == 0) { continue;}
+		if(!isBitOn(child, gi)) { continue;}
 		vec3 lp = vec3(gi%4, (gi/4)%4, gi/16);
-//		lp *= 2;
 
 		gl_Position = pv * vec4(p+lp, 1.);
 		gl_PointSize = 10. / gl_Position.w;
