@@ -601,6 +601,7 @@ int main()
 	PresentPipeline present_pipeline(context, render_target, context->m_window->getSwapchain());
 
 	Voxel2 voxel(*context, *app.m_window->getFrontBuffer());
+//	Voxel voxel(*context, *app.m_window->getFrontBuffer());
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 		voxel.execute_MakeVoxel(cmd);
@@ -629,8 +630,8 @@ int main()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				{
-					voxel.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
-//					voxel.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
+//					voxel.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
+					voxel.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 				}
 
 				cmd.end();

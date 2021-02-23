@@ -27,7 +27,7 @@ void main()
 	int vi = in_param[0].VertexIndex;
 
 	if(vi >= b_leaf_data_counter.w) { return; }
-	vec3 p = vec3(b_leaf_data[vi].pos_index.xyz)*16;
+	vec3 p = vec3(b_leaf_data[vi].pos_index.xyz)*4;
 	uvec2 child = b_leaf_data[vi].bitmask;
 	mat4 pv = u_camera[0].u_projection * u_camera[0].u_view;
 
@@ -36,7 +36,7 @@ void main()
 		int gi = gl_InvocationID*2+g;
 		if((child[gi/32] & (1<<(gi%32))) == 0) { continue;}
 		vec3 lp = vec3(gi%4, (gi/4)%4, gi/16);
-		lp *= 2;
+//		lp *= 2;
 
 		gl_Position = pv * vec4(p+lp, 1.);
 		gl_PointSize = 10. / gl_Position.w;

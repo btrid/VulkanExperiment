@@ -87,6 +87,10 @@ void main()
 			continue;
 		}
 
+				c = f16vec4(1.);
+				pos = vec3(99999);
+				break;
+
 		InteriorNode top = b_interior[hash];
 		do
 		{
@@ -107,7 +111,7 @@ void main()
 			do
 			{
 				count++;
-				ivec3 mid_bit = ivec3(pos) - (ivec3(pos)>>2<<2);
+				ivec3 mid_bit = ToMidBit(ivec3(pos));
 				int bb = mid_bit.x+mid_bit.y*4+mid_bit.z*16;
 				if(!isBitOn(mid.bitmask, bb))
 				{
@@ -123,9 +127,5 @@ void main()
 		}
 		while(all(greaterThanEqual(pos, vec3(0))) && all(equal(top_index, ToTopIndex(ivec3(pos)))));
 	}
-//	float _b = count % 10;
-//	float _g = (count / 200.)*100.;
-//	float _r = (count / 500)*1000.;
-//	if(count != 0){ c = f16vec4(normalize(vec3(_r, _g, _b+0.1)), 1.);}
 	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), c);
 }
