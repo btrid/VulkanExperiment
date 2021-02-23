@@ -50,10 +50,10 @@ void MakeRay(out vec3 pos, out vec3 dir, out vec3 inv_dir)
 int To1D(in ivec3 p, in ivec3 s){ return p.x + p.y*s.x + p.z*s.x*s.y; }
 int To1D(in ivec3 p, in ivec4 s){ return p.x + p.y*s.x + p.z*s.x*s.y; }
 
-ivec3 ToTopIndex(in ivec3 p){ return p >> (u_info.top_brick_sqrt + u_info.bottom_brick_sqrt).xyz; }
-ivec3 ToBottomIndex(in ivec3 p){ return p >> u_info.top_brick_sqrt.xyz; }
-ivec3 ToTopBit(in ivec3 p){ return (p>>u_info.top_brick_sqrt.xyz)-(ToTopIndex(p)<<u_info.top_brick_sqrt.xyz); }
-ivec3 ToBottomBit(in ivec3 p){ return p - ToBottomIndex(p); }
+ivec3 ToTopIndex(in ivec3 p){ return p >> 4; }
+ivec3 ToMidIndex(in ivec3 p){ return p >> 2; }
+ivec3 ToTopBit(in ivec3 p){ return (p>>2)-(p>>4<<2); }
+ivec3 ToMidBit(in ivec3 p){ return p - (p>>2); }
 
 void main() 
 {	
@@ -75,42 +75,43 @@ void main()
 	{
 		count++;
 		ivec3 top_index = ToTopIndex(ivec3(pos));
-		uvec4 top = b_top[To1D(top_index, u_info.top_reso)];
+		int hash = b_hashmap[To1D(top_index, u_info.reso>>4)];
 
-		if(all(equal(top, uvec4(0))))
+		if(hash<0)
 		{
 			// skip
-			vec3 min = (top_index<<(u_info.top_brick_sqrt+u_info.bottom_brick_sqrt).xyz)-0.01;
-			vec3 max = ((top_index+1)<<(u_info.top_brick_sqrt+u_info.bottom_brick_sqrt).xyz)+0.01;
+			vec3 min = (top_index<<4)-0.01;
+			vec3 max = ((top_index+1)<<4)+0.01;
 			intersection(min, max, pos, inv_dir, n, f);
 			pos = fma(dir, vec3(f), pos);
 			continue;
 		}
 
+		InteriorNode top = b_interior[hash];
 		do
 		{
 			count++;
-			ivec3 bottom_index = ToBottomIndex(ivec3(pos));
+			ivec3 mid_index = ToMidIndex(ivec3(pos));
 			ivec3 top_bit = ToTopBit(ivec3(pos));
-			int tb = To1D(top_bit, u_info.top_brick);
-			if((top[tb>>5] & (1<<(tb-((tb>>5)<<5)))) == 0)
+			int tb = top_bit.x+top_bit.y*4+top_bit.z*16;
+			if(!isBitOn(top.bitmask, tb))
 			{
-				vec3 min = (bottom_index<<u_info.bottom_brick_sqrt.xyz)-0.01;
-				vec3 max = ((bottom_index+1)<<u_info.bottom_brick_sqrt.xyz)+0.01;
+				vec3 min = (mid_index<<2)-0.01;
+				vec3 max = ((mid_index+1)<<2)+0.01;
 				intersection(min, max, pos, inv_dir, n, f);
 				pos = fma(dir, vec3(f), pos);
 				continue;
 			}
 
-			uvec4 bottom = b_bottom[b_map_index[To1D(bottom_index, u_info.bottom_reso)]];
+			InteriorNode mid = b_interior[top.child+bitcount(top.bitmask,tb)];
 			do
 			{
 				count++;
-				ivec3 bottom_bit = ivec3(pos) - (ivec3(pos)>>u_info.bottom_brick_sqrt.xyz<<u_info.bottom_brick_sqrt.xyz);
-				int bb = To1D(bottom_bit, u_info.bottom_brick);
-				if((bottom[bb>>5] & (1<<(bb-((bb>>5)<<5)))) == 0)
+				ivec3 mid_bit = ivec3(pos) - (ivec3(pos)>>2<<2);
+				int bb = mid_bit.x+mid_bit.y*4+mid_bit.z*16;
+				if(!isBitOn(mid.bitmask, bb))
 				{
-					pos += dir;				
+					pos += dir;
 					continue;
 				}
 
@@ -118,7 +119,7 @@ void main()
 				pos = vec3(99999);
 				break;
 
-			} while(all(greaterThanEqual(pos, vec3(0))) && all(equal(bottom_index, ToBottomIndex(ivec3(pos)))));
+			} while(all(greaterThanEqual(pos, vec3(0))) && all(equal(mid_index, ToMidIndex(ivec3(pos)))));
 		}
 		while(all(greaterThanEqual(pos, vec3(0))) && all(equal(top_index, ToTopIndex(ivec3(pos)))));
 	}

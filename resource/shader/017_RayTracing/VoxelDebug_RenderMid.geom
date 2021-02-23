@@ -10,23 +10,6 @@
 layout(points, invocations = 32) in;
 layout(points, max_vertices = 2*64) out;
 
-const vec3 cube_strip[] = 
-{
-vec3(0.f, 1.f, 1.f),    // Front-top-left
-vec3(1.f, 1.f, 1.f),    // Front-top-right
-//vec3(0.f, 0.f, 1.f),    // Front-bottom-left
-//vec3(1.f, 0.f, 1.f),    // Front-bottom-right
-//vec3(1.f, 0.f, 0.f),    // Back-bottom-right
-//vec3(1.f, 1.f, 1.f),    // Front-top-right
-//vec3(1.f, 1.f, 0.f),    // Back-top-right
-//vec3(0.f, 1.f, 1.f),    // Front-top-left
-//vec3(0.f, 1.f, 0.f),    // Back-top-left
-//vec3(0.f, 0.f, 1.f),    // Front-bottom-left
-//vec3(0.f, 0.f, 0.f),    // Back-bottom-left
-//vec3(1.f, 0.f, 0.f),    // Back-bottom-right
-//vec3(0.f, 1.f, 0.f),    // Back-top-left
-//vec3(1.f, 1.f, 0.f),    // Back-top-right
-};
 
 layout(location=1) in Vertex
 {
@@ -57,9 +40,9 @@ void main()
 	for(int g = 0; g < 2; g++)
 	{
 		int gi = gl_InvocationID*2+g;
-		if(!isOn(bitmask, gi)) { continue;}
+		if(!isBitOn(bitmask, gi)) { continue;}
 		vec3 lp = vec3(gi%4, (gi/4)%4, (gi/16)%4);
-		lp *= 4;
+		lp *= 8;
 
 		uint offset = bitcount(bitmask, gi);
 		InteriorNode node = b_interior[b_interior[b_hashmap[vi]].child + offset];
@@ -68,7 +51,7 @@ void main()
 			if((node.bitmask[m/32] & (1<<(m%32))) == 0) { continue;}
 			vec3 cp = vec3(m%4, (m/4)%4, (m/16)%4);
 			cp *= 2;
-//			for(int i = 0; i < cube_strip.length(); i++)
+
 			{
 				gl_Position = pv * vec4(p+lp+cp, 1.);
 				gl_PointSize = 10. / gl_Position.w;

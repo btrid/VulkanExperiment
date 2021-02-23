@@ -629,8 +629,8 @@ int main()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				{
-//					voxel.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
-					voxel.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
+					voxel.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
+//					voxel.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 				}
 
 				cmd.end();

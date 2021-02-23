@@ -88,7 +88,7 @@ uint bitcount(in uvec2 bitmask, in int bit)
 	uvec2 c = bitCount(bitmask & mask);
 	return c.x+c.y;
 }
-bool isOn(in uvec2 bitmask, in int bit)
+bool isBitOn(in uvec2 bitmask, in int bit)
 {
 	return (bitmask[bit/32] & (bit%32)) != 0;
 }
