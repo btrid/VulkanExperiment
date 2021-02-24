@@ -21,8 +21,9 @@ struct InteriorNode
 };
 struct LeafNode
 {
-	uint16_t normal;
+//	uint16_t normal;
 	uint32_t albedo;
+	vec3 normal;
 };
 
 struct LeafData

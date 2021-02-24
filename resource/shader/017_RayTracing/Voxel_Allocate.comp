@@ -6,6 +6,7 @@
 
 layout (local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
 shared uvec4 s_map;
+shared int s_leaf_index;
 
 void main() 
 {
@@ -16,13 +17,14 @@ void main()
 	memoryBarrierShared();
 	barrier();
 
+	uint index = gl_LocalInvocationID.x
+		+ gl_LocalInvocationID.y*gl_WorkGroupSize.x
+		+ gl_LocalInvocationID.z*gl_WorkGroupSize.x*gl_WorkGroupSize.y;
+
 	// 境界のみボクセル化する
 	bool ok = map(vec3(gl_GlobalInvocationID.xyz));
 	if(ok)
 	{
-		uint index = gl_LocalInvocationID.x
-		+ gl_LocalInvocationID.y*gl_WorkGroupSize.x
-		+ gl_LocalInvocationID.z*gl_WorkGroupSize.x*gl_WorkGroupSize.y;
 		atomicOr(s_map[index/32], 1<<(index%32));
 	}
 
@@ -36,11 +38,10 @@ void main()
 		 return;
 	}
 
-	int leaf_index;
 	if(gl_LocalInvocationIndex==0)
 	{
 		{
-			leaf_index = atomicAdd(b_leaf_counter, int(leaf_count));
+			s_leaf_index = atomicAdd(b_leaf_counter, int(leaf_count));
 		}
 
 		{
@@ -62,17 +63,21 @@ void main()
 			int i = atomicAdd(b_leaf_data_counter.w, 1);
 			if(i%64==0){atomicAdd(b_leaf_data_counter.x, 1); }
 			b_leaf_data[i].bitmask = s_map.xy;
-			b_leaf_data[i].pos_index = uvec4(gl_WorkGroupID.xyz, leaf_index);			
+			b_leaf_data[i].pos_index = uvec4(gl_WorkGroupID.xyz, s_leaf_index);			
 		}
 	}
-	leaf_index = subgroupBroadcast(leaf_index,0);
+
+	memoryBarrierShared();
+	barrier();
 	if(ok)
 	{
-		uint local_index = subgroupBallotExclusiveBitCount(s_map);
+		uint local_index = bitcount(s_map.xy, int(index));
+//		subgroupBallotExclusiveBitCount(s_map);
 		LeafNode leaf;
-		leaf.normal = pack_normal(normal(vec3(gl_GlobalInvocationID.xyz)));
+//		leaf.normal = pack_normal(normal(vec3(gl_GlobalInvocationID.xyz)));
+		leaf.normal = normal(vec3(gl_GlobalInvocationID.xyz));
 		leaf.albedo = 0;
-		b_leaf[leaf_index+local_index] = leaf;
+		b_leaf[s_leaf_index+local_index] = leaf;
 	}
 
 }

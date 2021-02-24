@@ -42,7 +42,8 @@ void main()
 		if(!isBitOn(child, gi)) { continue;}
 
 		LeafNode leaf = b_leaf[b_leaf_data[vi].pos_index.w+bitcount(child,gi)];
-		gs_out.Color = abs(vec3(unpack_normal(leaf.normal)));
+//		gs_out.Color = abs(vec3(unpack_normal(leaf.normal)));
+		gs_out.Color = abs(leaf.normal);
 
 		vec3 lp = vec3(gi%4, (gi/4)%4, gi/16);
 
