@@ -104,10 +104,6 @@ void main()
 				continue;
 			}
 
-//		c = f16vec4(1.);
-//		pos = vec3(99999);
-//		break;
-
 			InteriorNode mid = b_interior[top.child+bitcount(top.bitmask,tb)];
 			do
 			{
@@ -120,7 +116,9 @@ void main()
 					continue;
 				}
 
-				c = f16vec4(1.);
+				LeafNode leaf = b_leaf[mid.child+bitcount(mid.bitmask,bb)];
+				c.xyz = f16vec3(abs(unpack_normal(leaf.normal)));
+				c.w = 1.hf;
 				pos = vec3(99999);
 				break;
 
