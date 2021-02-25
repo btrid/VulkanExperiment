@@ -63,7 +63,8 @@ void main()
 			int i = atomicAdd(b_leaf_data_counter.w, 1);
 			if(i%64==0){atomicAdd(b_leaf_data_counter.x, 1); }
 			b_leaf_data[i].bitmask = s_map.xy;
-			b_leaf_data[i].pos_index = uvec4(gl_WorkGroupID.xyz, s_leaf_index);			
+			b_leaf_data[i].pos = u16vec3(gl_WorkGroupID.xyz);
+			b_leaf_data[i].leaf_index = s_leaf_index;			
 		}
 	}
 
@@ -72,10 +73,8 @@ void main()
 	if(ok)
 	{
 		uint local_index = bitcount(s_map.xy, int(index));
-//		subgroupBallotExclusiveBitCount(s_map);
 		LeafNode leaf;
-//		leaf.normal = pack_normal(normal(vec3(gl_GlobalInvocationID.xyz)));
-		leaf.normal = normal(vec3(gl_GlobalInvocationID.xyz));
+		leaf.normal = pack_normal(normal(vec3(gl_GlobalInvocationID.xyz)));
 		leaf.albedo = 0;
 		b_leaf[s_leaf_index+local_index] = leaf;
 	}

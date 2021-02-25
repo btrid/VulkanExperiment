@@ -17,19 +17,18 @@ struct InteriorNode
 {
 	uvec2 bitmask;
 	uint child;
-	uint _;
 };
 struct LeafNode
 {
-//	uint16_t normal;
+	uint16_t normal;
 	uint32_t albedo;
-	vec3 normal;
 };
 
 struct LeafData
 {
 	uvec2 bitmask;
-	uvec4 pos_index;
+	u16vec3 pos;
+	uint leaf_index;
 };
 
 layout(set=USE_Voxel,binding=0, std140) uniform V0 {VoxelInfo u_info; };

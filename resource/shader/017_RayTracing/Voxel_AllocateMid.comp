@@ -13,7 +13,7 @@ void main()
 		return;
 	}
 	
-	uvec3 pos = uvec3(b_leaf_data[gl_GlobalInvocationID.x].pos_index.xyz);
+	uvec3 pos = uvec3(b_leaf_data[gl_GlobalInvocationID.x].pos);
 	{
 		uvec3 reso = u_info.reso.xyz>>uvec3(2)>>uvec3(2);
 		uvec3 p = pos>>uvec3(2);
@@ -28,7 +28,7 @@ void main()
 		uint mid_index = b_interior[top_index].child+count;
 
 		b_interior[mid_index].bitmask = b_leaf_data[gl_GlobalInvocationID.x].bitmask;
-		b_interior[mid_index].child = uint(b_leaf_data[gl_GlobalInvocationID.x].pos_index.w);
+		b_interior[mid_index].child = b_leaf_data[gl_GlobalInvocationID.x].leaf_index;
 
 	}
 

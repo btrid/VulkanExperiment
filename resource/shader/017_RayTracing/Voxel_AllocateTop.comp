@@ -13,7 +13,7 @@ void main()
 		return;
 	}
 
-	uvec3 pos = uvec3(b_leaf_data[gl_GlobalInvocationID.x].pos_index.xyz);
+	uvec3 pos = uvec3(b_leaf_data[gl_GlobalInvocationID.x].pos);
 	{
 		uvec3 reso = u_info.reso.xyz>>uvec3(2)>>uvec3(2);
 		uvec3 p = pos>>uvec3(2);

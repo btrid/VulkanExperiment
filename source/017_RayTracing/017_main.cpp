@@ -74,7 +74,6 @@ struct Voxel2
 	struct VoxelInfo
 	{
 		uvec4 reso;
-		uvec4 reso_brick[2];
 	};
 	struct Material
 	{
@@ -94,7 +93,8 @@ struct Voxel2
 	struct LeafData
 	{
 		uvec2 bitmask;
-		u16vec4 pos_index;
+		u16vec4 pos;
+		uint leaf_index;
 	};
 
 	btr::BufferMemoryEx<VoxelInfo> u_info;
@@ -134,6 +134,7 @@ struct Voxel2
 		// descriptor set
 		{
 			m_info.reso = uvec4(2048, 512, 2048, 1);
+			uvec4 hash_reso = m_info.reso >> 2u >> 2u;
 			uint num = m_info.reso.x* m_info.reso.y* m_info.reso.z;
 			b_hashmap = ctx.m_storage_memory.allocateMemory<int>(num / 64 / 64);
 			u_info = ctx.m_uniform_memory.allocateMemory<VoxelInfo>(1);
@@ -630,6 +631,7 @@ int main()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				{
+//					voxel.execute_MakeVoxel(cmd);
 					voxel.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 //					voxel.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 				}

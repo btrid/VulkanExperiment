@@ -117,8 +117,8 @@ void main()
 				}
 
 				LeafNode leaf = b_leaf[mid.child+bitcount(mid.bitmask,bb)];
-//				c.xyz = f16vec3(abs(unpack_normal(leaf.normal)));
-				c.xyz = f16vec3(abs(leaf.normal));
+				c.xyz = f16vec3(abs(unpack_normal(leaf.normal)));
+//				c.xyz = f16vec3(abs(leaf.normal));
 				c.w = 1.hf;
 				pos = vec3(99999);
 				break;

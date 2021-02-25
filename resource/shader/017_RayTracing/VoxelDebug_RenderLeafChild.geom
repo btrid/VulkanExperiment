@@ -32,7 +32,7 @@ void main()
 	int vi = in_param[0].VertexIndex;
 
 	if(vi >= b_leaf_data_counter.w) { return; }
-	vec3 p = vec3(b_leaf_data[vi].pos_index.xyz)*4;
+	vec3 p = vec3(b_leaf_data[vi].pos)*4;
 	uvec2 child = b_leaf_data[vi].bitmask;
 	mat4 pv = u_camera[0].u_projection * u_camera[0].u_view;
 
@@ -41,9 +41,9 @@ void main()
 		int gi = gl_InvocationID*2+g;
 		if(!isBitOn(child, gi)) { continue;}
 
-		LeafNode leaf = b_leaf[b_leaf_data[vi].pos_index.w+bitcount(child,gi)];
-//		gs_out.Color = abs(vec3(unpack_normal(leaf.normal)));
-		gs_out.Color = abs(leaf.normal);
+		LeafNode leaf = b_leaf[b_leaf_data[vi].leaf_index+bitcount(child,gi)];
+		gs_out.Color = abs(vec3(unpack_normal(leaf.normal)));
+//		gs_out.Color = abs(leaf.normal);
 
 		vec3 lp = vec3(gi%4, (gi/4)%4, gi/16);
 
