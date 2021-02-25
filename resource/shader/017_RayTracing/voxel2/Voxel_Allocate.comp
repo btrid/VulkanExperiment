@@ -1,0 +1,82 @@
+#version 460
+
+#extension GL_GOOGLE_include_directive : require
+#define USE_Voxel 0
+#include "Voxel.glsl"
+
+layout (local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
+shared uvec4 s_map;
+shared int s_leaf_index;
+
+void main() 
+{
+	if(gl_LocalInvocationIndex==0)
+	{
+		s_map = uvec4(0);
+	}
+	memoryBarrierShared();
+	barrier();
+
+	uint index = gl_LocalInvocationID.x
+		+ gl_LocalInvocationID.y*gl_WorkGroupSize.x
+		+ gl_LocalInvocationID.z*gl_WorkGroupSize.x*gl_WorkGroupSize.y;
+
+	// 境界のみボクセル化する
+	bool ok = map(vec3(gl_GlobalInvocationID.xyz));
+	if(ok)
+	{
+		atomicOr(s_map[index/32], 1<<(index%32));
+	}
+
+	memoryBarrierShared();
+	barrier();
+
+	uvec4 c = bitCount(s_map);
+	uint leaf_count = c.x+c.y;
+	if(leaf_count == 0 )
+	{
+		 return;
+	}
+
+	if(gl_LocalInvocationIndex==0)
+	{
+		{
+			s_leaf_index = atomicAdd(b_leaf_counter, int(leaf_count));
+		}
+
+		{
+			uvec3 reso = u_info.reso.xyz>>uvec3(2)>>uvec3(2);
+			uvec3 p = gl_WorkGroupID>>2;
+			uint index = p.x+p.y*reso.x+p.z*reso.x*reso.y;
+			if(atomicCompSwap(b_hashmap[index], -1, 0) == -1)
+			{
+				int top_index = atomicAdd(b_interior_counter[0].w, 1);
+				if((top_index%64)==0){ atomicAdd(b_interior_counter[0].x, 1); }
+
+				b_hashmap[index] = top_index;
+				b_interior[top_index].bitmask = uvec2(0);
+			}
+		}
+
+		{
+
+			int i = atomicAdd(b_leaf_data_counter.w, 1);
+			if(i%64==0){atomicAdd(b_leaf_data_counter.x, 1); }
+			b_leaf_data[i].bitmask = s_map.xy;
+			b_leaf_data[i].pos = u16vec3(gl_WorkGroupID.xyz);
+			b_leaf_data[i].leaf_index = s_leaf_index;			
+		}
+	}
+
+	memoryBarrierShared();
+	barrier();
+	if(ok)
+	{
+		uint local_index = bitcount(s_map.xy, int(index));
+		LeafNode leaf;
+		leaf.normal = pack_normal(normal(vec3(gl_GlobalInvocationID.xyz)));
+		leaf.albedo = 0;
+		b_leaf[s_leaf_index+local_index] = leaf;
+	}
+
+}
