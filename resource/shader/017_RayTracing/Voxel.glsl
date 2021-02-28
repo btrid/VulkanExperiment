@@ -39,6 +39,11 @@ layout(set=USE_Voxel,binding=4, scalar) buffer V4 { InteriorNode b_interior[]; }
 layout(set=USE_Voxel,binding=5, scalar) buffer V5 { LeafNode b_leaf[]; };
 layout(set=USE_Voxel,binding=6, scalar) buffer V6 { ivec4 b_leaf_data_counter; };
 layout(set=USE_Voxel,binding=7, scalar) buffer V7 { LeafData b_leaf_data[]; };
+
+layout(set=USE_Voxel,binding=10, scalar) buffer V10 { ivec4 b_fragment_counter; };
+layout(set=USE_Voxel,binding=11, scalar) buffer V11 { i16vec4 b_fragment_data[]; };
+
+layout(set=USE_Voxel,binding=20, std140) uniform V10 {mat4 u_voxelize_pvmat[3]; };
 #endif
 
 
@@ -90,7 +95,11 @@ vec3 normal(in vec3 p)
 	return normalize(vec3(x, y, z));
 }
 
-//uvec2 bitmask(in int bit){return uvec2((i64vec2(1l) << clamp(i64vec2(bit+1) - i64vec2(0, 32), i64vec2(0), i64vec2(32))) - i64vec2(1l));}
+ivec3 ToTopIndex(in ivec3 p){ return p >> 4; }
+ivec3 ToMidIndex(in ivec3 p){ return p >> 2; }
+ivec3 ToTopBit(in ivec3 p){ return (p>>2)-(p>>4<<2); }
+ivec3 ToMidBit(in ivec3 p){ return p - (p>>2<<2); }
+
 uint bitcount(in uvec2 bitmask, in int bit)
 {
 	uvec2 mask = uvec2((i64vec2(1l) << clamp(i64vec2(bit+1) - i64vec2(0, 32), i64vec2(0), i64vec2(32))) - i64vec2(1l));
@@ -101,6 +110,7 @@ bool isBitOn(in uvec2 bitmask, in int bit)
 {
 	return (bitmask[bit/32] & (1<<(bit%32))) != 0;
 }
+
 
 // http://jcgt.org/published/0003/02/01/paper.pdf
 // https://discourse.panda3d.org/t/glsl-octahedral-normal-packing/15233

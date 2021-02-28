@@ -50,10 +50,6 @@ void MakeRay(out vec3 pos, out vec3 dir, out vec3 inv_dir)
 int To1D(in ivec3 p, in ivec3 s){ return p.x + p.y*s.x + p.z*s.x*s.y; }
 int To1D(in ivec3 p, in ivec4 s){ return p.x + p.y*s.x + p.z*s.x*s.y; }
 
-ivec3 ToTopIndex(in ivec3 p){ return p >> 4; }
-ivec3 ToMidIndex(in ivec3 p){ return p >> 2; }
-ivec3 ToTopBit(in ivec3 p){ return (p>>2)-(p>>4<<2); }
-ivec3 ToMidBit(in ivec3 p){ return p - (p>>2<<2); }
 
 void main() 
 {	
