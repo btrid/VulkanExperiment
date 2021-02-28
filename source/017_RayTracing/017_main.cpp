@@ -588,13 +588,13 @@ struct Voxel3
 
 			vk::VertexInputAttributeDescription vi_attrib;
 			vi_attrib.binding = 0;
-			vi_attrib.format = vk::Format::eR32G32B32A32Sfloat;
+			vi_attrib.format = vk::Format::eR32G32B32Sfloat;
 			vi_attrib.location = 0;
 			vi_attrib.offset = 0;
 			vk::VertexInputBindingDescription vi_binding;
 			vi_binding.binding = 0;
 			vi_binding.inputRate = vk::VertexInputRate::eVertex;
-			vi_binding.stride = 16;
+			vi_binding.stride = 12;
 			vertex_input_info.vertexAttributeDescriptionCount = 1;
 			vertex_input_info.pVertexAttributeDescriptions = &vi_attrib;
 			vertex_input_info.vertexBindingDescriptionCount = 1;
@@ -802,7 +802,7 @@ struct Voxel3
 					b_leaf_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 					b_leaf_data_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(read), read }, {});
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, { array_size(read), read }, {});
 			}
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_MakeVoxel].get());
@@ -817,12 +817,11 @@ struct Voxel3
 
 			cmd.bindIndexBuffer(model.b_index.getInfo().buffer, model.b_index.getInfo().offset, vk::IndexType::eUint32);
 			cmd.bindVertexBuffers(0, model.b_vertex.getInfo().buffer, model.b_vertex.getInfo().offset);
-			cmd.draw(model.m_info.m_primitive_num*3, 1, 0, 0);
+			cmd.drawIndexed(model.m_info.m_primitive_num*3, 1, 0, 0, 0);
 
 			cmd.endRenderPass();
 
 		}
-		return;
 		_label.insert("Make Top");
 		{
 			{
@@ -831,7 +830,7 @@ struct Voxel3
 					b_hashmap.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 					b_interior.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(read), read }, {});
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, { array_size(read), read }, {});
 			}
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_MakeVoxel].get());
@@ -846,7 +845,7 @@ struct Voxel3
 
 			cmd.bindIndexBuffer(model.b_index.getInfo().buffer, model.b_index.getInfo().offset, vk::IndexType::eUint32);
 			cmd.bindVertexBuffers(0, model.b_vertex.getInfo().buffer, model.b_vertex.getInfo().offset);
-			cmd.draw(model.m_info.m_primitive_num * 3, 1, 0, 0);
+			cmd.drawIndexed(model.m_info.m_primitive_num * 3, 1, 0, 0, 0);
 
 			cmd.endRenderPass();
 
@@ -859,24 +858,10 @@ struct Voxel3
 				vk::BufferMemoryBarrier read[] =
 				{
 					b_interior.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(read), read }, {});
-			}
+					b_interior_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
 
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeVoxelTopChild].get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL[PipelineLayout_MakeVoxel].get(), 0, { m_DS[DSL_Voxel].get() }, {});
-
-			auto num = m_info.reso.xyz() >> uvec3(2);
-			cmd.dispatch(num.x, num.y, num.z);
-		}
-		_label.insert("Make Top Child");
-		{
-			{
-				vk::BufferMemoryBarrier barrier[] =
-				{
-					b_interior.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eDrawIndirect|vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(read), read }, {});
 			}
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeVoxelTopChild].get());
@@ -892,7 +877,7 @@ struct Voxel3
 				{
 					b_interior.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(read), read }, {});
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, { array_size(read), read }, {});
 			}
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_MakeVoxel].get());
@@ -907,7 +892,7 @@ struct Voxel3
 
 			cmd.bindIndexBuffer(model.b_index.getInfo().buffer, model.b_index.getInfo().offset, vk::IndexType::eUint32);
 			cmd.bindVertexBuffers(0, model.b_vertex.getInfo().buffer, model.b_vertex.getInfo().offset);
-			cmd.draw(model.m_info.m_primitive_num * 3, 1, 0, 0);
+			cmd.drawIndexed(model.m_info.m_primitive_num * 3, 1, 0, 0, 0);
 
 			cmd.endRenderPass();
 		}
@@ -918,8 +903,9 @@ struct Voxel3
 				vk::BufferMemoryBarrier barrier[] =
 				{
 					b_interior.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+					b_interior_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
 				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eDrawIndirect | vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
 			}
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeVoxelTopChild].get());
@@ -935,7 +921,7 @@ struct Voxel3
 				{
 					b_interior.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(read), read }, {});
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, { array_size(read), read }, {});
 			}
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_MakeVoxel].get());
@@ -950,7 +936,7 @@ struct Voxel3
 
 			cmd.bindIndexBuffer(model.b_index.getInfo().buffer, model.b_index.getInfo().offset, vk::IndexType::eUint32);
 			cmd.bindVertexBuffers(0, model.b_vertex.getInfo().buffer, model.b_vertex.getInfo().offset);
-			cmd.draw(model.m_info.m_primitive_num * 3, 1, 0, 0);
+			cmd.drawIndexed(model.m_info.m_primitive_num * 3, 1, 0, 0, 0);
 
 			cmd.endRenderPass();
 		}
@@ -1019,14 +1005,13 @@ int main()
 
 	{
  		mat4 pv[3];
-//		pv[0] = glm::ortho(0.f, 2048.f, 0.f, 512.f, 0.001f, 2048.f) * glm::lookAt(vec3(0, 256, 1024), vec3(0, 256, 1024)+vec3(2048, 0, 0), vec3(0.f, 1.f, 0.f));
 		pv[0] = glm::ortho(-1024.f, 1024.f, -256.f, 256.f, 0.f, 2048.f) * glm::lookAt(vec3(0, 256, 1024), vec3(0, 256, 1024) + vec3(2048, 0, 0), vec3(0.f, 1.f, 0.f));
 		pv[1] = glm::ortho(-1024.f, 1024.f, -1024.f, 1024.f, 0.f, 512.f) * glm::lookAt(vec3(1024, 0, 1024), vec3(1024, 0, 1024) + vec3(0, 512, 0), vec3(0.f, 0.f, -1.f));
  		pv[2] = glm::ortho(-1024.f, 1024.f, -256.f, 256.f, 0.f, 2048.f) * glm::lookAt(vec3(1024, 256, 0), vec3(1024, 256, 0) + vec3(0, 0, 2048), vec3(0.f, 1.f, 0.f));
  
-		vec3 p(100.f);
-		vec4 tp = pv[1] * vec4(p, 1.f);
-		tp /= tp.w;
+		vec4 t1 = pv[2] * vec4(vec3(100.f), 1.f);
+		vec4 t2 = pv[2] * vec4(vec3(200.f, 100, 100.), 1.f);
+		vec4 t3 = pv[2] * vec4(vec3(100.f, 200, 100.), 1.f);
 		int i = 0;
 
 	}
@@ -1084,7 +1069,7 @@ int main()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				{
-					voxel.execute_MakeVoxel(cmd, *model);
+//					voxel.execute_MakeVoxel(cmd, *model);
 //					voxel.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 					voxel.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 				}

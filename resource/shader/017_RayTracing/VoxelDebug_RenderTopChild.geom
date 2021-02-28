@@ -37,6 +37,10 @@ layout(location=0)out gl_PerVertex
 {
 	vec4 gl_Position;
 };
+layout(location=1) out Out
+{
+	vec3 Color;
+}gs_out;
 
 
 void main() 
@@ -64,6 +68,7 @@ void main()
 		for(int i = 0; i < cube_strip.length(); i++)
 		{
 			gl_Position = pv * vec4(cube_strip[i]+p+lp, 1.);
+			gs_out.Color = vec3(1.);
 			EmitVertex();
 		}
 		EndPrimitive();

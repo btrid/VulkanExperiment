@@ -21,7 +21,10 @@ layout(location=0)out gl_PerVertex
 	vec4 gl_Position;
 	float gl_PointSize;
 };
-
+layout(location=1) out Out
+{
+	vec3 Color;
+}gs_out;
 
 void main() 
 {
@@ -55,6 +58,7 @@ void main()
 			{
 				gl_Position = pv * vec4(p+lp+cp, 1.);
 				gl_PointSize = 10. / gl_Position.w;
+				gs_out.Color = vec3(1.);
 				EmitVertex();
 			}
 			
