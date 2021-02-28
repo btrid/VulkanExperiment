@@ -146,7 +146,10 @@ struct Model
 
 			for (uint32_t v = 0; v < mesh->mNumVertices; v++)
 			{
-				//				mesh->mVertices[v] += aiVector3D(1.f);
+				mesh->mVertices[v] += aiVector3D(1.f);
+				mesh->mVertices[v].x *= 500.f;
+				mesh->mVertices[v].y *= 200.f;
+				mesh->mVertices[v].z *= 500.f;
 				info.m_aabb_min.x = std::min(info.m_aabb_min.x, mesh->mVertices[v].x);
 				info.m_aabb_min.y = std::min(info.m_aabb_min.y, mesh->mVertices[v].y);
 				info.m_aabb_min.z = std::min(info.m_aabb_min.z, mesh->mVertices[v].z);
@@ -267,10 +270,9 @@ struct Voxel3
 
 	enum
 	{
-		Pipeline_MakeVoxelLeaf,
-		Pipeline_MakeVoxelTop,
+		Pipeline_MakeVoxel,
 		Pipeline_MakeVoxelTopChild,
-		Pipeline_MakeVoxelMid,
+		Pipeline_MakeVoxelMidChild,
 
 		Pipeline_RenderVoxel,
 		Pipeline_Debug_RenderVoxel,
@@ -327,6 +329,7 @@ struct Voxel3
 	btr::BufferMemoryEx<LeafNode> b_leaf;
 	btr::BufferMemoryEx<uvec4> b_leaf_data_counter;
 	btr::BufferMemoryEx<LeafData> b_leaf_data;
+	btr::BufferMemoryEx<mat4> u_pvmat;
 
 	VoxelInfo m_info;
 
@@ -346,6 +349,7 @@ struct Voxel3
 				vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(7, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(10, vk::DescriptorType::eUniformBuffer, 1, stage),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
@@ -358,16 +362,23 @@ struct Voxel3
 			m_info.reso = uvec4(2048, 512, 2048, 1);
 			uvec4 hash_reso = m_info.reso >> 2u >> 2u;
 			uint num = m_info.reso.x * m_info.reso.y * m_info.reso.z;
-			b_hashmap = ctx.m_ctx->m_storage_memory.allocateMemory<int>(num / 64 / 64);
 			u_info = ctx.m_ctx->m_uniform_memory.allocateMemory<VoxelInfo>(1);
-			b_interior_counter = ctx.m_ctx->m_storage_memory.allocateMemory<uvec4>(2);
+			b_hashmap = ctx.m_ctx->m_storage_memory.allocateMemory<int>(num / 64 / 64);
+			b_interior_counter = ctx.m_ctx->m_storage_memory.allocateMemory<uvec4>(3);
 			b_leaf_counter = ctx.m_ctx->m_storage_memory.allocateMemory<uint>(1);
 			b_interior = ctx.m_ctx->m_storage_memory.allocateMemory<InteriorNode>(num / 64 / 8);
 			b_leaf = ctx.m_ctx->m_storage_memory.allocateMemory<LeafNode>(num / 64 / 8);
 			b_leaf_data_counter = ctx.m_ctx->m_storage_memory.allocateMemory<uvec4>(1);
 			b_leaf_data = ctx.m_ctx->m_storage_memory.allocateMemory<LeafData>(num / 64 / 8);
 
+			u_pvmat = ctx.m_ctx->m_uniform_memory.allocateMemory<mat4>(3);
 			cmd.updateBuffer<VoxelInfo>(u_info.getInfo().buffer, u_info.getInfo().offset, m_info);
+
+			mat4 pv[3];
+			pv[0] = glm::ortho(-1024.f, 1024.f, -256.f, 256.f, 0.f, 2048.f) * glm::lookAt(vec3(0, 256, 1024), vec3(0, 256, 1024) + vec3(2048, 0, 0), vec3(0.f, 1.f, 0.f));
+			pv[1] = glm::ortho(-1024.f, 1024.f, -1024.f, 1024.f, 0.f, 512.f) * glm::lookAt(vec3(1024, 0, 1024), vec3(1024, 0, 1024) + vec3(0, 512, 0), vec3(0.f, 0.f, -1.f));
+			pv[2] = glm::ortho(-1024.f, 1024.f, -256.f, 256.f, 0.f, 2048.f) * glm::lookAt(vec3(1024, 256, 0), vec3(1024, 256, 0) + vec3(0, 0, 2048), vec3(0.f, 1.f, 0.f));
+			cmd.updateBuffer<mat4[3]>(u_pvmat.getInfo().buffer, u_pvmat.getInfo().offset, pv);
 
 
 			vk::DescriptorSetLayout layouts[] =
@@ -394,6 +405,10 @@ struct Voxel3
 				b_leaf_data_counter.getInfo(),
 				b_leaf_data.getInfo(),
 			};
+			vk::DescriptorBufferInfo uniforms2[] =
+			{
+				u_pvmat.getInfo(),
+			};
 
 			vk::WriteDescriptorSet write[] =
 			{
@@ -409,6 +424,12 @@ struct Voxel3
 				.setPBufferInfo(storages)
 				.setDstBinding(1)
 				.setDstSet(m_DS[DS_Voxel].get()),
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+				.setDescriptorCount(array_length(uniforms2))
+				.setPBufferInfo(uniforms2)
+				.setDstBinding(10)
+				.setDstSet(m_DS[DS_Voxel].get()),
 			};
 			ctx.m_ctx->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
 
@@ -420,9 +441,15 @@ struct Voxel3
 				{
 					m_DSL[DSL_Voxel].get(),
 				};
+				vk::PushConstantRange ranges[] =
+				{
+					vk::PushConstantRange().setStageFlags(vk::ShaderStageFlagBits::eFragment).setSize(4)
+				};
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 				pipeline_layout_info.setPSetLayouts(layouts);
+				pipeline_layout_info.setPushConstantRangeCount(array_length(ranges));
+				pipeline_layout_info.setPPushConstantRanges(ranges);
 				m_PL[PipelineLayout_MakeVoxel] = ctx.m_ctx->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 			}
 			{
@@ -444,10 +471,8 @@ struct Voxel3
 		{
 			struct { const char* name; vk::ShaderStageFlagBits flag; } shader_param[] =
 			{
-//				{"Voxel_Allocate.comp.spv", vk::ShaderStageFlagBits::eCompute},
-				{"Voxel_AllocateTop.comp.spv", vk::ShaderStageFlagBits::eCompute},
 				{"Voxel_AllocateTopChild.comp.spv", vk::ShaderStageFlagBits::eCompute},
-				{"Voxel_AllocateMid.comp.spv", vk::ShaderStageFlagBits::eCompute},
+				{"Voxel_AllocateMidChild.comp.spv", vk::ShaderStageFlagBits::eCompute},
 				{"Voxel_Rendering.comp.spv", vk::ShaderStageFlagBits::eCompute},
 			};
 			std::array<vk::UniqueShaderModule, array_length(shader_param)> shader;
@@ -469,18 +494,10 @@ struct Voxel3
 				vk::ComputePipelineCreateInfo()
 				.setStage(shaderStages[2])
 				.setLayout(m_PL[PipelineLayout_RenderVoxel].get()),
-				vk::ComputePipelineCreateInfo()
-				.setStage(shaderStages[3])
-				.setLayout(m_PL[PipelineLayout_RenderVoxel].get()),
-// 				vk::ComputePipelineCreateInfo()
-// 				.setStage(shaderStages[4])
-// 				.setLayout(m_PL[PipelineLayout_RenderVoxel].get()),
 			};
-//			m_pipeline[Pipeline_MakeVoxelLeaf] = ctx.m_ctx->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[0]).value;
-			m_pipeline[Pipeline_MakeVoxelTop] = ctx.m_ctx->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[0]).value;
-			m_pipeline[Pipeline_MakeVoxelTopChild] = ctx.m_ctx->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[1]).value;
-			m_pipeline[Pipeline_MakeVoxelMid] = ctx.m_ctx->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[2]).value;
-			m_pipeline[Pipeline_RenderVoxel] = ctx.m_ctx->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[3]).value;
+			m_pipeline[Pipeline_MakeVoxelTopChild] = ctx.m_ctx->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[0]).value;
+			m_pipeline[Pipeline_MakeVoxelMidChild] = ctx.m_ctx->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[1]).value;
+			m_pipeline[Pipeline_RenderVoxel] = ctx.m_ctx->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[2]).value;
 		}
 
 		// graphics pipeline render
@@ -512,10 +529,7 @@ struct Voxel3
 			{
 				{"ModelVoxelize.vert.spv", vk::ShaderStageFlagBits::eVertex},
 				{"ModelVoxelize.geom.spv", vk::ShaderStageFlagBits::eGeometry},
-				{"ModelVoxelize_0.frag.spv", vk::ShaderStageFlagBits::eFragment},
-//				{"ModelVoxelize_1.frag.spv", vk::ShaderStageFlagBits::eFragment},
-//				{"ModelVoxelize_2.frag.spv", vk::ShaderStageFlagBits::eFragment},
-//				{"ModelVoxelize_data.frag.spv", vk::ShaderStageFlagBits::eFragment},
+				{"ModelVoxelize.frag.spv", vk::ShaderStageFlagBits::eFragment},
 
 			};
 			std::array<vk::UniqueShaderModule, array_length(shader_param)> shader;
@@ -534,15 +548,15 @@ struct Voxel3
 			// viewport
 			vk::Viewport viewport[] = 
 			{
+				vk::Viewport(0.f, 0.f, (float)2048, (float)512, 0.f, 1.f),
 				vk::Viewport(0.f, 0.f, (float)2048, (float)2048, 0.f, 1.f),
-				vk::Viewport(0.f, 0.f, (float)2048, (float)2048, 0.f, 1.f),
-				vk::Viewport(0.f, 0.f, (float)2048, (float)2048, 0.f, 1.f),
+				vk::Viewport(0.f, 0.f, (float)2048, (float)512, 0.f, 1.f),
 			};
 			vk::Rect2D scissor[] =
 			{
+				vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(2048, 512)),
 				vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(2048, 2048)),
-				vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(2048, 2048)),
-				vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(2048, 2048)),
+				vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(2048, 512)),
 			};
 			vk::PipelineViewportStateCreateInfo viewportInfo;
 			viewportInfo.setViewportCount(3);
@@ -572,6 +586,20 @@ struct Voxel3
 			vk::PipelineColorBlendStateCreateInfo blend_info;
 			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
 
+			vk::VertexInputAttributeDescription vi_attrib;
+			vi_attrib.binding = 0;
+			vi_attrib.format = vk::Format::eR32G32B32A32Sfloat;
+			vi_attrib.location = 0;
+			vi_attrib.offset = 0;
+			vk::VertexInputBindingDescription vi_binding;
+			vi_binding.binding = 0;
+			vi_binding.inputRate = vk::VertexInputRate::eVertex;
+			vi_binding.stride = 16;
+			vertex_input_info.vertexAttributeDescriptionCount = 1;
+			vertex_input_info.pVertexAttributeDescriptions = &vi_attrib;
+			vertex_input_info.vertexBindingDescriptionCount = 1;
+			vertex_input_info.pVertexBindingDescriptions = &vi_binding;
+
 			vk::GraphicsPipelineCreateInfo graphics_pipeline_info =
 				vk::GraphicsPipelineCreateInfo()
 				.setStageCount(shaderStages.size())
@@ -581,11 +609,11 @@ struct Voxel3
 				.setPViewportState(&viewportInfo)
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
-				.setLayout(m_PL[PipelineLayout_RenderVoxel].get())
-				.setRenderPass(m_RP_debugvoxel.get())
+				.setLayout(m_PL[PipelineLayout_MakeVoxel].get())
+				.setRenderPass(m_RP_makevoxel.get())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info);
-			m_pipeline[Pipeline_MakeVoxelLeaf] = ctx.m_ctx->m_device.createGraphicsPipelineUnique(vk::PipelineCache(), graphics_pipeline_info).value;
+			m_pipeline[Pipeline_MakeVoxel] = ctx.m_ctx->m_device.createGraphicsPipelineUnique(vk::PipelineCache(), graphics_pipeline_info).value;
 
 		}
 
@@ -737,7 +765,7 @@ struct Voxel3
 		}
 	}
 
-	void execute_MakeVoxel(vk::CommandBuffer cmd)
+	void execute_MakeVoxel(vk::CommandBuffer cmd, Model& model)
 	{
 		DebugLabel _label(cmd, __FUNCTION__);
 
@@ -757,11 +785,15 @@ struct Voxel3
 
 			{
 				cmd.fillBuffer(b_hashmap.getInfo().buffer, b_hashmap.getInfo().offset, b_hashmap.getInfo().range, -1);
-				cmd.updateBuffer<ivec4>(b_interior_counter.getInfo().buffer, b_interior_counter.getInfo().offset, { ivec4{0,1,1,0}, ivec4{0,1,1,0} });
+				cmd.updateBuffer<ivec4>(b_interior_counter.getInfo().buffer, b_interior_counter.getInfo().offset, { ivec4{0,1,1,0}, ivec4{0,1,1,0}, ivec4{0,1,1,0} });
 				cmd.fillBuffer(b_leaf_counter.getInfo().buffer, b_leaf_counter.getInfo().offset, b_leaf_counter.getInfo().range, 0);
 				cmd.updateBuffer<ivec4>(b_leaf_data_counter.getInfo().buffer, b_leaf_data_counter.getInfo().offset, ivec4(0, 1, 1, 0));
 			}
 
+		}
+
+		_label.insert("Make Hash");
+		{
 			{
 				vk::BufferMemoryBarrier read[] =
 				{
@@ -772,32 +804,70 @@ struct Voxel3
 				};
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(read), read }, {});
 			}
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_MakeVoxel].get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_MakeVoxel].get(), 0, { m_DS[DSL_Voxel].get() }, {});
+			cmd.pushConstants<int>(m_PL[PipelineLayout_MakeVoxel].get(), vk::ShaderStageFlagBits::eFragment, 0, 0);
+
+			vk::RenderPassBeginInfo begin_render_Info;
+			begin_render_Info.setRenderPass(m_RP_makevoxel.get());
+			begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(m_info.reso.x, m_info.reso.z)));
+			begin_render_Info.setFramebuffer(m_FB_makevoxel.get());
+			cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
+
+			cmd.bindIndexBuffer(model.b_index.getInfo().buffer, model.b_index.getInfo().offset, vk::IndexType::eUint32);
+			cmd.bindVertexBuffers(0, model.b_vertex.getInfo().buffer, model.b_vertex.getInfo().offset);
+			cmd.draw(model.m_info.m_primitive_num*3, 1, 0, 0);
+
+			cmd.endRenderPass();
+
+		}
+		return;
+		_label.insert("Make Top");
+		{
+			{
+				vk::BufferMemoryBarrier read[] =
+				{
+					b_hashmap.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+					b_interior.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(read), read }, {});
+			}
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_MakeVoxel].get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_MakeVoxel].get(), 0, { m_DS[DSL_Voxel].get() }, {});
+			cmd.pushConstants<int>(m_PL[PipelineLayout_MakeVoxel].get(), vk::ShaderStageFlagBits::eFragment, 0, 1);
+
+			vk::RenderPassBeginInfo begin_render_Info;
+			begin_render_Info.setRenderPass(m_RP_makevoxel.get());
+			begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(m_info.reso.x, m_info.reso.z)));
+			begin_render_Info.setFramebuffer(m_FB_makevoxel.get());
+			cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
+
+			cmd.bindIndexBuffer(model.b_index.getInfo().buffer, model.b_index.getInfo().offset, vk::IndexType::eUint32);
+			cmd.bindVertexBuffers(0, model.b_vertex.getInfo().buffer, model.b_vertex.getInfo().offset);
+			cmd.draw(model.m_info.m_primitive_num * 3, 1, 0, 0);
+
+			cmd.endRenderPass();
+
 		}
 
-		_label.insert("Make Leaf");
+
+		_label.insert("Alloc Top Child");
 		{
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeVoxelLeaf].get());
+			{
+				vk::BufferMemoryBarrier read[] =
+				{
+					b_interior.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(read), read }, {});
+			}
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeVoxelTopChild].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL[PipelineLayout_MakeVoxel].get(), 0, { m_DS[DSL_Voxel].get() }, {});
 
 			auto num = m_info.reso.xyz() >> uvec3(2);
 			cmd.dispatch(num.x, num.y, num.z);
-
-		}
-
-		_label.insert("Make Top");
-		{
-			{
-				vk::BufferMemoryBarrier barrier[] =
-				{
-					b_leaf_data_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
-				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, { array_size(barrier), barrier }, {});
-			}
-
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeVoxelTop].get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL[PipelineLayout_MakeVoxel].get(), 0, { m_DS[DSL_Voxel].get() }, {});
-
-			cmd.dispatchIndirect(b_leaf_data_counter.getInfo().buffer, b_leaf_data_counter.getInfo().offset);
 		}
 		_label.insert("Make Top Child");
 		{
@@ -818,6 +888,33 @@ struct Voxel3
 		_label.insert("Make Mid");
 		{
 			{
+				vk::BufferMemoryBarrier read[] =
+				{
+					b_interior.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(read), read }, {});
+			}
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_MakeVoxel].get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_MakeVoxel].get(), 0, { m_DS[DSL_Voxel].get() }, {});
+			cmd.pushConstants<int>(m_PL[PipelineLayout_MakeVoxel].get(), vk::ShaderStageFlagBits::eFragment, 0, 2);
+
+			vk::RenderPassBeginInfo begin_render_Info;
+			begin_render_Info.setRenderPass(m_RP_makevoxel.get());
+			begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(m_info.reso.x, m_info.reso.z)));
+			begin_render_Info.setFramebuffer(m_FB_makevoxel.get());
+			cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
+
+			cmd.bindIndexBuffer(model.b_index.getInfo().buffer, model.b_index.getInfo().offset, vk::IndexType::eUint32);
+			cmd.bindVertexBuffers(0, model.b_vertex.getInfo().buffer, model.b_vertex.getInfo().offset);
+			cmd.draw(model.m_info.m_primitive_num * 3, 1, 0, 0);
+
+			cmd.endRenderPass();
+		}
+
+		_label.insert("Make Mid Child");
+		{
+			{
 				vk::BufferMemoryBarrier barrier[] =
 				{
 					b_interior.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
@@ -825,11 +922,39 @@ struct Voxel3
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
 			}
 
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeVoxelMid].get());
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeVoxelTopChild].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL[PipelineLayout_MakeVoxel].get(), 0, { m_DS[DSL_Voxel].get() }, {});
 
-			cmd.dispatchIndirect(b_leaf_data_counter.getInfo().buffer, b_leaf_data_counter.getInfo().offset);
+			cmd.dispatchIndirect(b_interior_counter.getInfo().buffer, b_interior_counter.getInfo().offset+16);
 		}
+
+		_label.insert("Make Data");
+		{
+			{
+				vk::BufferMemoryBarrier read[] =
+				{
+					b_interior.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(read), read }, {});
+			}
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_MakeVoxel].get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_MakeVoxel].get(), 0, { m_DS[DSL_Voxel].get() }, {});
+			cmd.pushConstants<int>(m_PL[PipelineLayout_MakeVoxel].get(), vk::ShaderStageFlagBits::eFragment, 0, 3);
+
+			vk::RenderPassBeginInfo begin_render_Info;
+			begin_render_Info.setRenderPass(m_RP_makevoxel.get());
+			begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(m_info.reso.x, m_info.reso.z)));
+			begin_render_Info.setFramebuffer(m_FB_makevoxel.get());
+			cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
+
+			cmd.bindIndexBuffer(model.b_index.getInfo().buffer, model.b_index.getInfo().offset, vk::IndexType::eUint32);
+			cmd.bindVertexBuffers(0, model.b_vertex.getInfo().buffer, model.b_vertex.getInfo().offset);
+			cmd.draw(model.m_info.m_primitive_num * 3, 1, 0, 0);
+
+			cmd.endRenderPass();
+		}
+
 	}
 	void execute_RenderVoxel(vk::CommandBuffer cmd, RenderTarget& rt)
 	{
@@ -892,6 +1017,19 @@ struct Voxel3
 int main()
 {
 
+	{
+ 		mat4 pv[3];
+//		pv[0] = glm::ortho(0.f, 2048.f, 0.f, 512.f, 0.001f, 2048.f) * glm::lookAt(vec3(0, 256, 1024), vec3(0, 256, 1024)+vec3(2048, 0, 0), vec3(0.f, 1.f, 0.f));
+		pv[0] = glm::ortho(-1024.f, 1024.f, -256.f, 256.f, 0.f, 2048.f) * glm::lookAt(vec3(0, 256, 1024), vec3(0, 256, 1024) + vec3(2048, 0, 0), vec3(0.f, 1.f, 0.f));
+		pv[1] = glm::ortho(-1024.f, 1024.f, -1024.f, 1024.f, 0.f, 512.f) * glm::lookAt(vec3(1024, 0, 1024), vec3(1024, 0, 1024) + vec3(0, 512, 0), vec3(0.f, 0.f, -1.f));
+ 		pv[2] = glm::ortho(-1024.f, 1024.f, -256.f, 256.f, 0.f, 2048.f) * glm::lookAt(vec3(1024, 256, 0), vec3(1024, 256, 0) + vec3(0, 0, 2048), vec3(0.f, 1.f, 0.f));
+ 
+		vec3 p(100.f);
+		vec4 tp = pv[1] * vec4(p, 1.f);
+		tp /= tp.w;
+		int i = 0;
+
+	}
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = vec3(-400.f, 1500.f, -1430.f);
 	camera->getData().m_target = vec3(800.f, 0.f, 1000.f);
@@ -914,13 +1052,13 @@ int main()
 	ClearPipeline clear_pipeline(context, render_target);
 	PresentPipeline present_pipeline(context, render_target, context->m_window->getSwapchain());
 
-	std::shared_ptr<Model> model = Model::LoadModel(*ctx, "C:/Users/logos/source/repos/VulkanExperiment/resource/Duck.dae");
+	std::shared_ptr<Model> model = Model::LoadModel(*ctx, "C:/Users/logos/source/repos/VulkanExperiment/resource/Box.dae");
 	Voxel3 voxel(*ctx, *app.m_window->getFrontBuffer());
 //	Voxel2 voxel(*context, *app.m_window->getFrontBuffer());
 	//	Voxel voxel(*context, *app.m_window->getFrontBuffer());
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-		voxel.execute_MakeVoxel(cmd);
+		voxel.execute_MakeVoxel(cmd, *model);
 	}
 	app.setup();
 
@@ -946,9 +1084,9 @@ int main()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				{
-//					voxel.execute_MakeVoxel(cmd);
-					voxel.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
-//					voxel.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
+					voxel.execute_MakeVoxel(cmd, *model);
+//					voxel.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
+					voxel.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 				}
 
 				cmd.end();

@@ -40,10 +40,10 @@ layout(set=USE_Voxel,binding=5, scalar) buffer V5 { LeafNode b_leaf[]; };
 layout(set=USE_Voxel,binding=6, scalar) buffer V6 { ivec4 b_leaf_data_counter; };
 layout(set=USE_Voxel,binding=7, scalar) buffer V7 { LeafData b_leaf_data[]; };
 
-layout(set=USE_Voxel,binding=10, scalar) buffer V10 { ivec4 b_fragment_counter; };
-layout(set=USE_Voxel,binding=11, scalar) buffer V11 { i16vec4 b_fragment_data[]; };
+//layout(set=USE_Voxel,binding=10, scalar) buffer V10 { ivec4 b_fragment_counter; };
+//layout(set=USE_Voxel,binding=11, scalar) buffer V11 { i16vec4 b_fragment_data[]; };
 
-layout(set=USE_Voxel,binding=20, std140) uniform V10 {mat4 u_voxelize_pvmat[3]; };
+layout(set=USE_Voxel,binding=10, std140) uniform V10 {mat4 u_voxelize_pvmat[3]; };
 #endif
 
 

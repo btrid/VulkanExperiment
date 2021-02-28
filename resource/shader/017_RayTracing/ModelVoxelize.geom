@@ -32,6 +32,8 @@ layout(location=1)out Transform{
 
 void main() 
 {
+//	for(int i = 0; i<99999999; i++){ i = 0;}
+
 	vec3 n = normalize(cross(In[1].Position-In[0].Position, In[2].Position-In[0].Position));
 	float x = dot(n, vec3(1., 0., 0.));
 	float y = dot(n, vec3(0., 1., 0.));
@@ -56,11 +58,13 @@ void main()
 	transform.Albedo = In[0].Albedo;
 	transform.Normal = n;
 	EmitVertex();
+
 	gl_Position = pv * vec4(In[1].Position, 1.);
 	transform.Position = In[1].Position;
 	transform.Albedo = In[1].Albedo;
 	transform.Normal = n;
 	EmitVertex();
+
 	gl_Position = pv * vec4(In[2].Position, 1.);
 	transform.Position = In[2].Position;
 	transform.Albedo = In[2].Albedo;
