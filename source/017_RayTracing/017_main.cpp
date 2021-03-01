@@ -314,12 +314,6 @@ struct Voxel3
 		uint16_t normal;
 		uint albedo;
 	};
-	struct LeafData
-	{
-		uvec2 bitmask;
-		u16vec4 pos;
-		uint leaf_index;
-	};
 
 	btr::BufferMemoryEx<VoxelInfo> u_info;
 	btr::BufferMemoryEx<int> b_hashmap;
@@ -327,8 +321,6 @@ struct Voxel3
 	btr::BufferMemoryEx<uint> b_leaf_counter;
 	btr::BufferMemoryEx<InteriorNode> b_interior;
 	btr::BufferMemoryEx<LeafNode> b_leaf;
-	btr::BufferMemoryEx<uvec4> b_leaf_data_counter;
-	btr::BufferMemoryEx<LeafData> b_leaf_data;
 	btr::BufferMemoryEx<mat4> u_pvmat;
 
 	VoxelInfo m_info;
@@ -347,8 +339,6 @@ struct Voxel3
 				vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(7, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(10, vk::DescriptorType::eUniformBuffer, 1, stage),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
@@ -368,8 +358,6 @@ struct Voxel3
 			b_leaf_counter = ctx.m_ctx->m_storage_memory.allocateMemory<uint>(1);
 			b_interior = ctx.m_ctx->m_storage_memory.allocateMemory<InteriorNode>(num / 64 / 8);
 			b_leaf = ctx.m_ctx->m_storage_memory.allocateMemory<LeafNode>(num / 64 / 8);
-			b_leaf_data_counter = ctx.m_ctx->m_storage_memory.allocateMemory<uvec4>(1);
-			b_leaf_data = ctx.m_ctx->m_storage_memory.allocateMemory<LeafData>(num / 64 / 8);
 
 			u_pvmat = ctx.m_ctx->m_uniform_memory.allocateMemory<mat4>(3);
 			cmd.updateBuffer<VoxelInfo>(u_info.getInfo().buffer, u_info.getInfo().offset, m_info);
@@ -402,8 +390,6 @@ struct Voxel3
 				b_leaf_counter.getInfo(),
 				b_interior.getInfo(),
 				b_leaf.getInfo(),
-				b_leaf_data_counter.getInfo(),
-				b_leaf_data.getInfo(),
 			};
 			vk::DescriptorBufferInfo uniforms2[] =
 			{
@@ -778,7 +764,6 @@ struct Voxel3
 					b_hashmap.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
 					b_interior_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
 					b_leaf_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
-					b_leaf_data_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
 				};
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, { array_size(write), write }, {});
 			}
@@ -787,7 +772,6 @@ struct Voxel3
 				cmd.fillBuffer(b_hashmap.getInfo().buffer, b_hashmap.getInfo().offset, b_hashmap.getInfo().range, -1);
 				cmd.updateBuffer<ivec4>(b_interior_counter.getInfo().buffer, b_interior_counter.getInfo().offset, { ivec4{0,1,1,0}, ivec4{0,1,1,0}, ivec4{0,1,1,0} });
 				cmd.fillBuffer(b_leaf_counter.getInfo().buffer, b_leaf_counter.getInfo().offset, b_leaf_counter.getInfo().range, 0);
-				cmd.updateBuffer<ivec4>(b_leaf_data_counter.getInfo().buffer, b_leaf_data_counter.getInfo().offset, ivec4(0, 1, 1, 0));
 			}
 
 		}
@@ -800,7 +784,6 @@ struct Voxel3
 					b_hashmap.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 					b_interior_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 					b_leaf_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-					b_leaf_data_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 				};
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, { array_size(read), read }, {});
 			}
@@ -1070,7 +1053,7 @@ int main()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				{
-//					voxel.execute_MakeVoxel(cmd, *model);
+					voxel.execute_MakeVoxel(cmd, *model);
 					voxel.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 //					voxel.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 				}
