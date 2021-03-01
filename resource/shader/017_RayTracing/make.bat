@@ -18,6 +18,6 @@ SET output=-o ../binary/
 
 rem %exe% %output%/VoxelDebug_Render.geom.spv VoxelDebug_RenderTop.geom
 rem %exe% %output%/VoxelDebug_Render.geom.spv VoxelDebug_RenderTopChild.geom
+ %exe% %output%/VoxelDebug_Render.geom.spv VoxelDebug_RenderMid.geom
 rem %exe% %output%/VoxelDebug_Render.geom.spv VoxelDebug_RenderLeaf.geom
 rem %exe% %output%/VoxelDebug_Render.geom.spv VoxelDebug_RenderLeafChild.geom
-%exe% %output%/VoxelDebug_Render.geom.spv VoxelDebug_RenderMid.geom

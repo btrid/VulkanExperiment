@@ -11,15 +11,12 @@ void main()
 	int top_index = int(gl_GlobalInvocationID.x);
 	if(top_index >= b_interior_counter[1].w) { return; }
 	
+	top_index += b_interior_counter[0].w;
 	uvec2 c = bitCount(b_interior[top_index].bitmask);
 	uint count = c.x+c.y;
 
-	int mid_index = atomicAdd(b_interior_counter[2].w, int(count));
-	if((mid_index%64)==0){atomicAdd(b_interior_counter[2].x, 1);}
+	int leaf_index = atomicAdd(b_leaf_counter, int(count));
 
-	mid_index+=b_interior_counter[0].w;
-	mid_index+=b_interior_counter[1].w;
-	b_interior[top_index].child = mid_index;
-	for(int i = 0; i < count; i++){ b_interior[mid_index + i].bitmask = uvec2(0); }
+	b_interior[top_index].child = leaf_index;
 
 }

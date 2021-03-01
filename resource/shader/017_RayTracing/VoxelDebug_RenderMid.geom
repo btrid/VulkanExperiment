@@ -31,10 +31,10 @@ void main()
 	int vi = in_param[0].VertexIndex;
 	if(b_hashmap[vi] < 0) { return; }
 
-	uvec2 bitmask = b_interior[b_hashmap[vi]].bitmask;
+	InteriorNode top = b_interior[b_hashmap[vi]];
 	mat4 pv = u_camera[0].u_projection * u_camera[0].u_view;
 
-	ivec3 reso = u_info.reso.xyz>>ivec3(2)>>ivec3(2);
+	ivec3 reso = u_info.reso.xyz>>4;
 	int x = vi % reso.x;
 	int y = (vi / reso.x) % reso.y;
 	int z = (vi / (reso.x * reso.y)) % reso.z;
@@ -43,17 +43,17 @@ void main()
 	for(int g = 0; g < 2; g++)
 	{
 		int gi = gl_InvocationID*2+g;
-		if(!isBitOn(bitmask, gi)) { continue;}
+		if(!isBitOn(top.bitmask, gi)) { continue;}
 		vec3 lp = vec3(gi%4, (gi/4)%4, (gi/16)%4);
-		lp *= 8;
+		lp *= 4;
 
-		uint offset = bitcount(bitmask, gi);
-		InteriorNode node = b_interior[b_interior[b_hashmap[vi]].child + offset];
+		uint offset = bitcount(top.bitmask, gi);
+		InteriorNode node = b_interior[top.child + offset];
 		for(int m = 0; m < 64; m++)
 		{			
 			if((node.bitmask[m/32] & (1<<(m%32))) == 0) { continue;}
 			vec3 cp = vec3(m%4, (m/4)%4, (m/16)%4);
-			cp *= 2;
+			cp *= 1;
 
 			{
 				gl_Position = pv * vec4(p+lp+cp, 1.);
@@ -64,6 +64,6 @@ void main()
 			
 		}
 	}
-		EndPrimitive();
+	EndPrimitive();
 
 }

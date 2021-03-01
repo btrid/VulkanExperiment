@@ -48,34 +48,39 @@ void main()
 		{
 			int top_index = b_hashmap[index];
 			ivec3 top_bit = ToTopBit(pos);
-			int tb = top_bit.x + top_bit.y*4+ top_bit.z*16;
+			int tb = top_bit.x + top_bit.y*4 + top_bit.z*16;
 			atomicOr(b_interior[top_index].bitmask[tb/32], 1<<(tb%32));
 		}
 		break;
+
+		// make mid
 		case 2:
 		{
 			int top_index = b_hashmap[index];
 			ivec3 top_bit = ToTopBit(pos);
-			int tb = top_bit.x + top_bit.y*4+ top_bit.z*16;
+			int tb = top_bit.x + top_bit.y*4 + top_bit.z*16;
 
-			uint mid_index = b_interior[b_interior[top_index].child + bitcount(b_interior[top_index].bitmask, tb)].child;
+			uint mid_index = b_interior[top_index].child + bitcount(b_interior[top_index].bitmask, tb);
 			ivec3 mid_bit = ToMidBit(pos);
-			int mb = mid_bit.x+mid_bit.y*4+mid_bit.z*16;
+			int mb = mid_bit.x+ mid_bit.y*4 +mid_bit.z*16;
 
 			atomicOr(b_interior[mid_index].bitmask[mb/32], 1<<(mb%32));
 		}
 		break;
+
+		// make leaf
 		case 3:
 		{
 			int top_index = b_hashmap[index];
 			ivec3 top_bit = ToTopBit(pos);
 			int tb = top_bit.x + top_bit.y*4+ top_bit.z*16;
 
-			uint mid_index = b_interior[b_interior[top_index].child + bitcount(b_interior[top_index].bitmask, tb)].child;
+			uint mid_index = b_interior[top_index].child + bitcount(b_interior[top_index].bitmask, tb);
 			ivec3 mid_bit = ToMidBit(pos);
 			int mb = mid_bit.x+mid_bit.y*4+mid_bit.z*16;
 
-			uint leaf_index = b_interior[b_interior[mid_index].child + bitcount(b_interior[mid_index].bitmask, mb)].child;
+			uint leaf_index = b_interior[mid_index].child + bitcount(b_interior[mid_index].bitmask, mb);
+
 			b_leaf[leaf_index].normal = pack_normal(transform.Normal);
 			b_leaf[leaf_index].albedo = 0u;
 		}

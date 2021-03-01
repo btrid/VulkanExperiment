@@ -908,7 +908,7 @@ struct Voxel3
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eDrawIndirect | vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
 			}
 
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeVoxelTopChild].get());
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeVoxelMidChild].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL[PipelineLayout_MakeVoxel].get(), 0, { m_DS[DSL_Voxel].get() }, {});
 
 			cmd.dispatchIndirect(b_interior_counter.getInfo().buffer, b_interior_counter.getInfo().offset+16);
@@ -920,6 +920,7 @@ struct Voxel3
 				vk::BufferMemoryBarrier read[] =
 				{
 					b_interior.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+					b_leaf_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderWrite),
 				};
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, { array_size(read), read }, {});
 			}
@@ -1070,8 +1071,8 @@ int main()
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				{
 //					voxel.execute_MakeVoxel(cmd, *model);
-//					voxel.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
-					voxel.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
+					voxel.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
+//					voxel.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 				}
 
 				cmd.end();
