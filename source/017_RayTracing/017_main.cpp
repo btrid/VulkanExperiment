@@ -356,8 +356,8 @@ struct Voxel3
 			b_hashmap = ctx.m_ctx->m_storage_memory.allocateMemory<int>(num / 64 / 64);
 			b_interior_counter = ctx.m_ctx->m_storage_memory.allocateMemory<uvec4>(3);
 			b_leaf_counter = ctx.m_ctx->m_storage_memory.allocateMemory<uint>(1);
-			b_interior = ctx.m_ctx->m_storage_memory.allocateMemory<InteriorNode>(num / 64 / 8);
-			b_leaf = ctx.m_ctx->m_storage_memory.allocateMemory<LeafNode>(num / 64 / 8);
+			b_interior = ctx.m_ctx->m_storage_memory.allocateMemory<InteriorNode>(num / 64 / 4);
+			b_leaf = ctx.m_ctx->m_storage_memory.allocateMemory<LeafNode>(num / 64 / 4);
 
 			u_pvmat = ctx.m_ctx->m_uniform_memory.allocateMemory<mat4>(3);
 			cmd.updateBuffer<VoxelInfo>(u_info.getInfo().buffer, u_info.getInfo().offset, m_info);
