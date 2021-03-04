@@ -1,0 +1,32 @@
+#version 460
+
+#extension GL_GOOGLE_include_directive : require
+#define USE_Flowmap 0
+#include "Flowmap.glsl"
+
+layout (local_size_x=8, local_size_y=8) in;
+
+layout(push_constant, std430) uniform PC
+{
+	vec4 point[4];
+	int num;
+} constant;
+
+
+void main() 
+{
+	uint index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*u_info.reso.x;
+	float v = b_value[index];
+	for(int i = 0 ; i<constant.num; i++)
+	{
+		float dist = distance(vec2(gl_GlobalInvocationID.xy)+0.5, constant.point[i].xy);
+		float influence = constant.point[i].z/dist;
+		if(influence >= 1)
+		{
+			v += influence * constant.point[i].w;
+		}
+	}
+
+	b_value[index] = v;
+
+}

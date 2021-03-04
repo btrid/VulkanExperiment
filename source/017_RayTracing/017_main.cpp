@@ -35,7 +35,7 @@
 #pragma comment(lib, "vulkan-1.lib")
 #pragma comment(lib, "imgui.lib")
 
-#include <017_Raytracing/voxel.h>
+#include <017_Raytracing/voxel1.h>
 #include <017_Raytracing/voxel2.h>
 
 
@@ -1022,9 +1022,9 @@ int main()
 	PresentPipeline present_pipeline(context, render_target, context->m_window->getSwapchain());
 
 	std::shared_ptr<Model> model = Model::LoadModel(*ctx, "C:/Users/logos/source/repos/VulkanExperiment/resource/Box.dae");
-	Voxel3 voxel(*ctx, *app.m_window->getFrontBuffer());
+	Voxel voxel(*ctx, *app.m_window->getFrontBuffer());
 //	Voxel2 voxel(*context, *app.m_window->getFrontBuffer());
-	//	Voxel voxel(*context, *app.m_window->getFrontBuffer());
+	Voxel1 voxel(*context, *app.m_window->getFrontBuffer());
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 		voxel.execute_MakeVoxel(cmd, *model);

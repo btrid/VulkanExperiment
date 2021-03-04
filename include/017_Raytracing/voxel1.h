@@ -1,7 +1,7 @@
 #pragma once
 
 
-struct Voxel
+struct Voxel1
 {
 	enum
 	{
@@ -62,7 +62,7 @@ struct Voxel
 
 	VoxelInfo m_info;
 
-	Voxel(btr::Context& ctx, RenderTarget& rt)
+	Voxel1(btr::Context& ctx, RenderTarget& rt)
 	{
 		auto cmd = ctx.m_cmd_pool->allocCmdTempolary(0);
 

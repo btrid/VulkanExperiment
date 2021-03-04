@@ -1224,7 +1224,7 @@ struct GI2DRadiosity
 
 	void executePixelBasedRaytracing(const vk::CommandBuffer& cmd)
 	{
-		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
+		DebugLabel _label(cmd, __FUNCTION__);
 
 		// render_target‚É‘‚­
 		{
@@ -1254,7 +1254,7 @@ struct GI2DRadiosity
 
 	void executePixelBasedRaytracing2(const vk::CommandBuffer& cmd, const std::shared_ptr<GI2DSDF>& gi2d_sdf)
 	{
-		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
+		DebugLabel _label(cmd, __FUNCTION__);
 
 		// render_target‚É‘‚­
 		{

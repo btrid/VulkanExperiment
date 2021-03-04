@@ -13,7 +13,7 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\include\017_Raytracing\voxel.h" />
     <ClInclude Include="..\..\include\017_Raytracing\voxel2.h" />
+    <ClInclude Include="..\..\include\017_Raytracing\voxel1.h" />
   </ItemGroup>
 </Project>
