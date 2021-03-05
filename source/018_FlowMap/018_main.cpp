@@ -73,7 +73,7 @@ struct Flowmap
 	btr::BufferMemoryEx<float> b_value;
 
 	FlowmapInfo m_info;
-	std::vector<vec4> point;
+	std::vector<vec4> m_drops;
 
 	Flowmap(btr::Context& ctx)
 	{
@@ -104,7 +104,7 @@ struct Flowmap
 			b_value = ctx.m_storage_memory.allocateMemory<float>(num);
 
 			cmd.updateBuffer<FlowmapInfo>(u_info.getInfo().buffer, u_info.getInfo().offset, m_info);
-
+			cmd.fillBuffer(b_value.getInfo().buffer, b_value.getInfo().offset, b_value.getInfo().range, 0);
 
 			vk::DescriptorSetLayout layouts[] =
 			{
@@ -154,7 +154,7 @@ struct Flowmap
 				};
  				vk::PushConstantRange ranges[] =
  				{
- 					vk::PushConstantRange().setStageFlags(vk::ShaderStageFlagBits::eCompute).setSize(sizeof(vec4)*4+4)
+ 					vk::PushConstantRange().setStageFlags(vk::ShaderStageFlagBits::eCompute).setSize(sizeof(vec4)*4+8)
  				};
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
@@ -196,6 +196,12 @@ struct Flowmap
 
 	}
 
+	void AddDrop(vec4 drop)
+	{
+		m_drops.push_back(drop);
+
+	}
+
 	void execute_Update(vk::CommandBuffer cmd)
 	{
 		DebugLabel _label(cmd, __FUNCTION__);
@@ -211,16 +217,17 @@ struct Flowmap
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Update].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL[PipelineLayout_Flowmap].get(), 0, { m_DS[DSL_Flowmap].get() }, {});
- 			if (!point.empty())
- 			{
-				point.push_back(vec4(0.f));
-				point.push_back(vec4(123.f, 123.f, 123.f, 1));
-				point.push_back(vec4(0.f));
-				point.push_back(vec4(0.f));
-				cmd.pushConstants<vec4>(m_PL[PipelineLayout_Flowmap].get(), vk::ShaderStageFlagBits::eCompute, 0, point);
- 			}
- 			cmd.pushConstants<int>(m_PL[PipelineLayout_Flowmap].get(), vk::ShaderStageFlagBits::eCompute, sizeof(vec4)*4, point.size());
-			point.clear();
+
+			for (int i = m_drops.size(); i < 4; i++)
+			{
+				m_drops.push_back(vec4(0.f));
+			}
+			cmd.pushConstants<vec4>(m_PL[PipelineLayout_Flowmap].get(), vk::ShaderStageFlagBits::eCompute, 0, m_drops);
+			cmd.pushConstants<int>(m_PL[PipelineLayout_Flowmap].get(), vk::ShaderStageFlagBits::eCompute, sizeof(vec4) * 4, m_drops.size());
+
+			static int seed;
+			cmd.pushConstants<int>(m_PL[PipelineLayout_Flowmap].get(), vk::ShaderStageFlagBits::eCompute, sizeof(vec4) * 4+4, seed++%333333);
+			m_drops.clear();
 
 			auto num = app::calcDipatchGroups(uvec3(m_info.reso, 1), uvec3(8, 8, 1));
 			cmd.dispatch(num.x, num.y, num.z);
@@ -273,11 +280,11 @@ int main()
 	auto render_target = app.m_window->getFrontBuffer();
 	ClearPipeline clear_pipeline(context, render_target);
 	PresentPipeline present_pipeline(context, render_target, context->m_window->getSwapchain());
+
+	Flowmap flowmap(*context);
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 	}
-
-	Flowmap flowmap(*context);
 	app.setup();
 
 
@@ -302,6 +309,14 @@ int main()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				{
+					if (context->m_window->getInput().m_mouse.isOn(cMouse::BUTTON_RIGHT))
+					{
+						flowmap.AddDrop(vec4(context->m_window->getInput().m_mouse.xy, 200.f, 0));
+					}
+					if (context->m_window->getInput().m_mouse.isOn(cMouse::BUTTON_LEFT))
+					{
+						flowmap.AddDrop(vec4(context->m_window->getInput().m_mouse.xy, 100.f, 1));
+					}
 					flowmap.execute_Update(cmd);
 					flowmap.execute_Render(cmd, *app.m_window->getFrontBuffer());
 				}

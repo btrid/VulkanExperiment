@@ -9,15 +9,65 @@
 
 layout (local_size_x=8, local_size_y=8) in;
 
+layout(push_constant, std430) uniform PC
+{
+	vec4 point[4];
+	int num;
+	int seed;
+} constant;
+
+float FlowMap(vec3 p)
+{
+	float amplification = 1.2;
+	p*= 0.03;
+	float v = 0.;
+	float c = 0.;
+	for(int i = 0; i < 4; i++)
+	{
+		v = v*amplification + noise(p);
+		c = c*amplification + 1.;
+		p*=1.53;
+	}
+	return (v / c);
+}
+
+vec2 rand(vec2 n){return fract(sin(n) * vec2(43758.5453, 51375.6811));}
+vec2 noise(vec2 p)
+{
+	vec2 fl = floor(p);
+	vec2 fc = fract(p);
+	return mix(rand(fl), rand(fl + 1.0), fc);
+}
+
+vec2 rotate(in float angle)
+{
+	float c = cos(angle);
+	float s = sin(angle);
+	return vec2(c, s);
+}
 void main() 
 {
 	uint index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*u_info.reso.x;
 	float v = b_value[index];
+
+	float distortion = 1.-abs(v);
+	float flow = FlowMap(vec3(gl_GlobalInvocationID.xy+constant.seed*0.02, constant.seed*0.01));
+	ivec2 target = ivec2(gl_GlobalInvocationID.xy + rotate(flow*6.28)*v*20.);
+	int ti = target.x + target.y*u_info.reso.x;
+	v = b_value[ti];
+	
 	vec3 color1 = vec3(1.0, 0.5, 0.5);
 	vec3 color2 = vec3(0.5, 0.5, 1.0);
 	vec3 color = vec3(0.);
-	color = mix(color, color1, smoothstep(0.3, 0.5, v));
-	color = mix(color2, color, smoothstep(-0.5, -0.3, v));
+
+
+
+//	color = mix(color, color1, smoothstep(0., 0., v));
+//	color = mix(color2, color, smoothstep(0., 0., -v));
+	color = mix(color1, color2, step(v, 0.));
+
+//	color = mix(color, color1, v);
+//	color = mix(color, color2, v);
 
 	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1.));
 }
