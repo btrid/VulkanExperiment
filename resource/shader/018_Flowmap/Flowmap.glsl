@@ -18,6 +18,7 @@ struct FlowmapInfo
 
 layout(set=USE_Flowmap,binding=0, std140) uniform V0 {FlowmapInfo u_info; };
 layout(set=USE_Flowmap,binding=1, scalar) buffer V1 { float b_value[]; };
+layout(set=USE_Flowmap,binding=2) uniform sampler2D t_floor;
 
 #endif
 

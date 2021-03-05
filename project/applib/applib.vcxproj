@@ -76,6 +76,7 @@
     <ClInclude Include="..\..\include\applib\AppModel\AppModel.h" />
     <ClInclude Include="..\..\include\applib\AppModel\AppModelPipeline.h" />
     <ClInclude Include="..\..\include\applib\AppPipeline.h" />
+    <ClInclude Include="..\..\include\applib\AppTexture.h" />
     <ClInclude Include="..\..\include\applib\cLightPipeline.h" />
     <ClInclude Include="..\..\include\applib\DrawHelper.h" />
     <ClInclude Include="..\..\include\applib\Geometry.h" />

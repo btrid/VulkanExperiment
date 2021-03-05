@@ -22,7 +22,9 @@
 
 #include <applib/App.h>
 #include <applib/AppPipeline.h>
+#include <applib/AppTexture.h>
 #include <btrlib/Context.h>
+#include <applib/GraphicsResource.h>
 
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
@@ -75,6 +77,7 @@ struct Flowmap
 	FlowmapInfo m_info;
 	std::vector<vec4> m_drops;
 
+	AppTexture t_floor;
 	Flowmap(btr::Context& ctx)
 	{
 		auto cmd = ctx.m_cmd_pool->allocCmdTempolary(0);
@@ -85,10 +88,7 @@ struct Flowmap
 			vk::DescriptorSetLayoutBinding binding[] = {
 				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eUniformBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eCombinedImageSampler, 1, stage),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
@@ -102,6 +102,7 @@ struct Flowmap
 			uint num = m_info.reso.x * m_info.reso.y;
 			u_info = ctx.m_uniform_memory.allocateMemory<FlowmapInfo>(1);
 			b_value = ctx.m_storage_memory.allocateMemory<float>(num);
+			t_floor = AppTexture::read_png_file(ctx, "../../resource/test.png");
 
 			cmd.updateBuffer<FlowmapInfo>(u_info.getInfo().buffer, u_info.getInfo().offset, m_info);
 			cmd.fillBuffer(b_value.getInfo().buffer, b_value.getInfo().offset, b_value.getInfo().range, 0);
@@ -124,6 +125,10 @@ struct Flowmap
 			{
 				b_value.getInfo(),
 			};
+			vk::DescriptorImageInfo images[] =
+			{
+				vk::DescriptorImageInfo().setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal).setSampler(sGraphicsResource::Order().getSampler(sGraphicsResource::BASIC_SAMPLER_LINER)).setImageView(t_floor.m_image_view.get()),
+			};
 
 			vk::WriteDescriptorSet write[] =
 			{
@@ -138,6 +143,12 @@ struct Flowmap
 				.setDescriptorCount(array_length(storages))
 				.setPBufferInfo(storages)
 				.setDstBinding(1)
+				.setDstSet(m_DS[DS_Flowmap].get()),
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+				.setDescriptorCount(array_length(images))
+				.setPImageInfo(images)
+				.setDstBinding(2)
 				.setDstSet(m_DS[DS_Flowmap].get()),
 			};
 			ctx.m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);

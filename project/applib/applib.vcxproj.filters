@@ -60,6 +60,9 @@
     <ClInclude Include="..\..\include\applib\sAppImGui.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\applib\AppTexture.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\applib\App.cpp">
