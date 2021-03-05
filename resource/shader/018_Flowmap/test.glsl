@@ -25,10 +25,6 @@ float noise(vec3 p)
 	return o4.y * d.y + o4.x * (1.0 - d.y);
 }
 
-float remap(float value, float inputMin, float inputMax, float outputMin, float outputMax)
-{
-    return (value - inputMin) * ((outputMax - outputMin) / (inputMax - inputMin)) + outputMin;
-}
 
 float DropMap(vec3 p)
 {
@@ -84,12 +80,9 @@ void main()
 
 			influence *= smoothstep(0.5, 0.5, influence*dropmap);
 
-			// 違うところへ塗るには影響力を小さくする?
-//			float is_same = float(v!=0. || sign(v) == sign(drop.w));
-//			influence *= ((1.-is_same)*0.5+0.5);
-			if(influence > 0.1)
+			if(influence > 0.001)
 			{
-				v = influence * drop.w;
+				v += influence * drop.w;
 			}
 
 		}
@@ -101,8 +94,8 @@ void main()
 		vec3 color2 = vec3(0.5, 0.5, 1.0);
 		vec3 color = vec3(0.);
 
-		color = mix(color, color1, smoothstep(0., 0., v));
-		color = mix(color, color2, smoothstep(0., 0., -v));
+		color = mix(color2, color1, step(v, 0.));
+//		color = mix(color, color2, smoothstep(0., 0., -v));
 
 		float flowmap = FlowMap(vec3(vec2(uv)+vec2(iTime)*10., iTime*5.));
 

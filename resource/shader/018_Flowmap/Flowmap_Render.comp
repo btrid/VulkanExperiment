@@ -47,14 +47,10 @@ vec2 rotate(in float angle)
 }
 void main() 
 {
-	uint index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*u_info.reso.x;
-	float v = b_value[index];
-
-	float distortion = 1.-abs(v);
 	float flow = FlowMap(vec3(gl_GlobalInvocationID.xy+constant.seed*0.02, constant.seed*0.01));
-	ivec2 target = ivec2(gl_GlobalInvocationID.xy + rotate(flow*6.28)*v*20.);
+	ivec2 target = ivec2(gl_GlobalInvocationID.xy + rotate(flow*6.28)*10.);
 	int ti = target.x + target.y*u_info.reso.x;
-	v = b_value[ti];
+	float v = b_value[ti];
 	
 	vec3 color1 = vec3(1.0, 0.5, 0.5);
 	vec3 color2 = vec3(0.5, 0.5, 1.0);

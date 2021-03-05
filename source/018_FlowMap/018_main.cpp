@@ -311,7 +311,7 @@ int main()
 				{
 					if (context->m_window->getInput().m_mouse.isOn(cMouse::BUTTON_RIGHT))
 					{
-						flowmap.AddDrop(vec4(context->m_window->getInput().m_mouse.xy, 200.f, 0));
+						flowmap.AddDrop(vec4(context->m_window->getInput().m_mouse.xy, 100.f, 0));
 					}
 					if (context->m_window->getInput().m_mouse.isOn(cMouse::BUTTON_LEFT))
 					{
