@@ -273,6 +273,18 @@ struct Flowmap
 int main()
 {
 
+	{
+		auto rotate = [](vec2 v, float angle)->vec2
+		{
+			float c = cos(angle);
+			float s = sin(angle);
+			return vec2(c * v.x - s * v.y, s * v.x + c * v.y);
+		};
+
+		vec2 Wind = rotate(vec2(1.f, 0.f), 0.2f);
+		Wind = normalize(Wind);
+		int a = 0;
+	}
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = vec3(-400.f, 1500.f, -1430.f);
 	camera->getData().m_target = vec3(800.f, 0.f, 1000.f);

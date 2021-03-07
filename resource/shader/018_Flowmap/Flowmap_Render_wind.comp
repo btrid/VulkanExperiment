@@ -16,25 +16,41 @@ layout(push_constant, std430) uniform PC
 	int seed;
 } constant;
 
-vec2 FlowMap(vec3 p)
+
+float FlowMap(vec3 p)
 {
 	float amplification = 1.2;
-	p *= 0.03;
-	vec2 v = vec2(0.);
-	vec2 c = vec2(0.);
+	p*= 0.03;
+	float v = 0.;
+	float c = 0.;
 	for(int i = 0; i < 4; i++)
 	{
-		v = v*amplification + vec2(noise(p), noise(p+100.));
+		v = v*amplification + noise(p);
 		c = c*amplification + 1.;
 		p*=1.53;
 	}
-	return (v / c) * 2. - 1.;
+	return (v / c)*2.-1.;
 }
 
-void main() 
+vec2 rotate(in float angle)
 {
-	vec2 flow = FlowMap(vec3(gl_GlobalInvocationID.xy+constant.seed*0.02, constant.seed*0.01));
-	ivec2 target = ivec2(gl_GlobalInvocationID.xy + flow*50.);
+	float c = cos(angle);
+	float s = sin(angle);
+	return vec2(c, s);
+}
+vec2 rotate(in vec2 v, in float angle)
+{
+	float c = cos(angle);
+	float s = sin(angle);
+	return vec2(c*v.x - s*v.y, s*v.x + c*v.y);
+}
+
+vec2 Wind = vec2(1., 0.);
+
+void main()
+{
+	float flow = FlowMap(vec3(gl_GlobalInvocationID.xy+Wind*constant.seed*0.02, constant.seed*0.005));
+	ivec2 target = ivec2(gl_GlobalInvocationID.xy - rotate(Wind,flow*0.4*6.28)*50.);
 	int ti = target.x + target.y*u_info.reso.x;
 	float v = b_value[ti];
 	
@@ -42,7 +58,7 @@ void main()
 	vec3 color2 = vec3(0.5, 0.5, 1.0);
 	vec3 color = mix(color1, color2, step(v, 0.));
 
-	color = texture(t_floor, vec2(target)/u_info.reso.xy).xyz;
+	color = texture(t_floor, vec2(target)/u_info.reso.xy).rgb;
 
 	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1.));
 }
