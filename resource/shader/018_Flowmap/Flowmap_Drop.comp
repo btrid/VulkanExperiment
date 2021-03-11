@@ -1,0 +1,68 @@
+#version 460
+
+#extension GL_GOOGLE_include_directive : require
+#define USE_Flowmap 0
+#include "Flowmap.glsl"
+
+layout (local_size_x=8, local_size_y=8) in;
+
+float DropMap(vec3 p, float time)
+{
+	float amplification = 1.;
+	p += 10000.53;
+	p*=0.2;
+	float v = 0.;
+	float c = 0.;
+	for(int i = 0; i < 4; i++)
+	{
+		v = v*amplification + noise(p);
+		c = c*amplification + 1.;
+		p*=1.3;
+	}
+	return (v / c);
+}
+
+vec2 rotate(float angle, vec2 v)
+{
+//	vec2 v = vec2(-1., 0.);
+	float c = cos(angle);
+	float s = sin(angle);
+	return vec2(v.x*c-v.y*s, v.x*s+v.y*c);
+}
+
+void main() 
+{
+	uint index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*u_info.reso.x;
+	if(index < 1)
+	{
+		b_drop[index].time += 0.001;
+	}
+
+	vec2 uv = vec2(gl_GlobalInvocationID.xy)+ 0.5;
+	float v = 0.;
+
+	for(int i = 0; i < 1; i++)
+	{
+		DropParam drop = b_drop[i];
+		if(drop.time>= 10.){ continue; }
+
+		float dropmap = DropMap(vec3(uv*0.1, drop.time*0.), 0.01);
+		vec2 offset = rotate(dropmap*6.28-3.14, normalize(drop.pos - uv));
+		uv+=offset*drop.time*30.*dropmap;
+
+		float influence = drop.size/distance(uv, drop.pos);
+
+		if(influence < 30.5){ continue; }
+
+		dropmap = DropMap(vec3(uv*0.1, 0.), 0.01);
+		influence = smoothstep(0.5, 0.5, influence*dropmap);
+
+		if(influence < 0.001){ continue; }
+
+		v = influence * drop.type;
+	}
+
+	b_value[index] += v;
+
+
+}

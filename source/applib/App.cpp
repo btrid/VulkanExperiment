@@ -20,7 +20,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_messenger_callback(
 	void* userData)
 {
 	char prefix[64];
-	auto message_size = strlen(callbackData->pMessage) + 500;
+	auto message_size = strlen(callbackData->pMessage) + 2000;
 	char *message = (char *)malloc(message_size);
 	assert(message);
 	if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)
@@ -62,7 +62,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_messenger_callback(
 		callbackData->pMessageIdName,
 		callbackData->pMessage);
 
-	char tmp_message[500];
+	char tmp_message[2000];
 	if (callbackData->objectCount > 0)
 	{
 		sprintf_s(tmp_message, "\n Object Num is %d\n", callbackData->objectCount);

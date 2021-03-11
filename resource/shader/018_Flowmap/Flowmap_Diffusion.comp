@@ -1,0 +1,72 @@
+#version 460
+
+#extension GL_GOOGLE_include_directive : require
+#define USE_Flowmap 0
+#include "Flowmap.glsl"
+
+layout (local_size_x=8, local_size_y=8) in;
+
+vec2 rotate(float angle)
+{
+	vec2 v = vec2(-1., 0.);
+	float c = cos(angle);
+	float s = sin(angle);
+	return vec2(v.x*c-v.y*s, v.x*s+v.y*c);
+}
+vec2 _DiffusionMap(vec3 p)
+{
+	float amplification = 1.;
+	p*= 0.03;
+	float v = 0.;
+	float c = 0.;
+	for(int i = 0; i < 4; i++)
+	{
+		v = v*amplification + noise(p);
+		c = c*amplification + 1.;
+		p*=2.3;
+	}
+	return rotate((v / c) * 6.28*10.);
+}
+
+vec2 DiffusionMap(vec3 p)
+{
+	float amplification = 4.;
+	p*= 0.2;
+	vec2 v = vec2(0.);
+	vec2 c = vec2(0.);
+	for(int i = 0; i < 4; i++)
+	{
+		v = v*amplification + vec2(noise(p), noise(p+100.));
+		c = c*amplification + 1.;
+		p*=1.3;
+	}
+	return v / c * 2. - 1.;
+}
+
+void main()
+{
+	ivec2 uv = ivec2(gl_GlobalInvocationID.xy);
+	uint index = uv.x + uv.y*u_info.reso.x;
+
+	vec2 d = DiffusionMap(vec3(gl_GlobalInvocationID.xy, 0.0));
+
+	vec2 offset = d*20.;
+	ivec2 target_uv = ivec2((vec2(uv)+0.5) + offset);
+	if(all(equal(uv, target_uv))){ return; }
+	
+	float target_v = 0.;
+	if(any(lessThan(target_uv, ivec2(0))) || any(greaterThanEqual(target_uv, u_info.reso.xy)))
+	{
+		return;
+	}
+	uint target_index = target_uv.x + target_uv.y*u_info.reso.x;
+	float v = b_value[target_index];
+
+//	if(abs(v)<=1.){ return; }
+//	v = sign(v)*log(abs(v));
+
+	v*=0.1;
+	b_diffusion[index] += v;
+
+
+}

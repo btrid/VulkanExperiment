@@ -26,72 +26,49 @@ float noise(vec3 p)
 }
 
 
-float DropMap(vec3 p)
+vec2 rotate(float angle)
 {
-	p*=0.2 * smoothstep(0., 10., iTime);
+	vec2 v = vec2(-1., 0.);
+	float c = cos(angle);
+	float s = sin(angle);
+	return vec2(v.x*c-v.y*s, v.x*s+v.y*c);
+}
+vec2 DiffusionMap(vec3 p)
+{
+//	return vec2(0., 1.);
 	float amplification = 1.;
+	p*= 0.03;
 	float v = 0.;
 	float c = 0.;
 	for(int i = 0; i < 4; i++)
 	{
 		v = v*amplification + noise(p);
 		c = c*amplification + 1.;
-		p*=1.3;
+		p*=2.3;
 	}
-	return (v / c)*0.8+0.2;
-}
-
-float getData()
-{
-	vec4 drop = vec4(333.,333.,182.,1.);
-	uvec2 uv = uvec2(gl_FragCoord.xy);
-	float v = 0.;
-
-	float bounds = smoothstep(10., 0., iTime);
-
-	float dist = distance(vec2(uv)+0.5, drop.xy);
-	float influence = drop.z/dist - bounds;
-	
-	if(influence >= 0.5)
-	{
-		float dropmap = DropMap(vec3(vec2(uv)+vec2(iTime)*1.5, iTime*1.5));
-		influence *= smoothstep(0.5, 0.5, influence*dropmap);
-
-		if(influence > 0.001)
-		{
-			v += influence * drop.w;
-		}
-	}		
-	return v;
+	return rotate(v / c * 6.28);
 
 }
 
-float FlowMap(vec3 p)
+float _DiffusionMap(vec3 p)
 {
 	float amplification = 1.;
-	p*= 0.09;
+	p*= 0.05;
 	float v = 0.;
 	float c = 0.;
 	for(int i = 0; i < 4; i++)
 	{
 		v = v*amplification + noise(p);
 		c = c*amplification + 1.;
-		p*=1.3;
+		p*=2.51;
 	}
 	return (v / c)*2.-1.;
+
 }
-
-
 void main() 
 {
-	float v = getData();
-	uvec2 uv = uvec2(gl_FragCoord.xy);
-	{
-		float flowmap = FlowMap(vec3(vec2(uv), iTime*5.));
-		gl_FragColor = vec4(vec3(v)*flowmap, 1.);
-//		gl_FragColor = vec4(vec3(flowmap), 1.);		
-	}
-	gl_FragColor = vec4(vec3(step(0.01, v)), 1.);
+	uvec2 uv = uvec2(gl_FragCoord.xy + 1000.);
+	float v = _DiffusionMap(vec3(uv, 0));;
 
-
+	gl_FragColor = vec4(vec3(v), 1.);
 }

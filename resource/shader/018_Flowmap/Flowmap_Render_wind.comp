@@ -32,12 +32,6 @@ float FlowMap(vec3 p)
 	return (v / c)*2.-1.;
 }
 
-vec2 rotate(in float angle)
-{
-	float c = cos(angle);
-	float s = sin(angle);
-	return vec2(c, s);
-}
 vec2 rotate(in vec2 v, in float angle)
 {
 	float c = cos(angle);

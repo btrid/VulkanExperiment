@@ -12,13 +12,22 @@
 struct FlowmapInfo
 {
 	ivec2 reso;
-
 };
-
+struct DropParam
+{
+	vec2 pos;
+	float size;
+	float type;
+	float time;
+//	float seed;
+};
 
 layout(set=USE_Flowmap,binding=0, std140) uniform V0 {FlowmapInfo u_info; };
 layout(set=USE_Flowmap,binding=1, scalar) buffer V1 { float b_value[]; };
-layout(set=USE_Flowmap,binding=2) uniform sampler2D t_floor;
+layout(set=USE_Flowmap,binding=2, scalar) buffer V2 { DropParam b_drop[]; };
+layout(set=USE_Flowmap,binding=3, scalar) buffer V3 { float b_diffusion[]; };
+//layout(set=USE_Flowmap,binding=4, scalar) buffer V4 { int b_drop_num;}
+layout(set=USE_Flowmap,binding=10) uniform sampler2D t_floor;
 
 #endif
 

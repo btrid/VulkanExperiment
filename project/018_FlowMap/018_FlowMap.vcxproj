@@ -87,6 +87,17 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\external\imgui.vcxproj">
+      <Project>{d7234b59-605e-448a-8e53-d7e19c6cf2b6}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\applib\applib.vcxproj">
+      <Project>{4c880ffd-9ea8-4e57-a6cd-fe406e798948}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\btrlib\btrlib.vcxproj">
+      <Project>{6ab61332-963c-4d53-b5ff-04b3a9689e23}</Project>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="..\..\packages\glm.0.9.9.700\build\native\glm.targets" Condition="Exists('..\..\packages\glm.0.9.9.700\build\native\glm.targets')" />
