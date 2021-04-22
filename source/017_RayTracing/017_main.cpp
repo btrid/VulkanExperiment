@@ -255,7 +255,7 @@ struct Model
 
 };
 
-struct Voxel3
+struct Voxel_With_Model
 {
 	enum
 	{
@@ -325,7 +325,7 @@ struct Voxel3
 
 	VoxelInfo m_info;
 
-	Voxel3(Context& ctx, RenderTarget& rt)
+	Voxel_With_Model(Context& ctx, RenderTarget& rt)
 	{
 		auto cmd = ctx.m_ctx->m_cmd_pool->allocCmdTempolary(0);
 
@@ -1021,13 +1021,15 @@ int main()
 	ClearPipeline clear_pipeline(context, render_target);
 	PresentPipeline present_pipeline(context, render_target, context->m_window->getSwapchain());
 
-	std::shared_ptr<Model> model = Model::LoadModel(*ctx, "C:/Users/logos/source/repos/VulkanExperiment/resource/Box.dae");
-	Voxel voxel(*ctx, *app.m_window->getFrontBuffer());
 //	Voxel2 voxel(*context, *app.m_window->getFrontBuffer());
 	Voxel1 voxel(*context, *app.m_window->getFrontBuffer());
+
+//	std::shared_ptr<Model> model = Model::LoadModel(*ctx, "C:/Users/logos/source/repos/btrid/VulkanExperiment/resource/Box.dae");
+//	Voxel_With_Model voxel_with_model(*ctx, *app.m_window->getFrontBuffer());
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-		voxel.execute_MakeVoxel(cmd, *model);
+//		voxel_with_model.execute_MakeVoxel(cmd, *model);
+		voxel.execute_MakeVoxel(cmd);
 	}
 	app.setup();
 
@@ -1053,7 +1055,7 @@ int main()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				{
-					voxel.execute_MakeVoxel(cmd, *model);
+//					voxel_with_model.execute_MakeVoxel(cmd, *model);
 					voxel.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 //					voxel.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 				}

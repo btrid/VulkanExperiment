@@ -18,8 +18,6 @@ SET output=-o ../binary
 %exe% %include% %option% %output%/GI2DDebug_DrawFragment.comp.spv GI2DDebug_DrawFragment.comp
 %exe% %include% %option% %output%/GI2DDebug_DrawFragmentMap.comp.spv GI2DDebug_DrawFragmentMap.comp
 %exe% %include% %option% %output%/GI2DDebug_MakeLight.comp.spv GI2DDebug_MakeLight.comp
-rem %exe% %include% %option% %output%/GI2DDebug_DrawReachMap.comp.spv GI2DDebug_DrawReachMap_fast.comp
-%exe% %include% %option% %output%/GI2DDebug_DrawReachMap.comp.spv GI2DDebug_DrawReachMap.comp
 
 
 

@@ -146,7 +146,7 @@ struct GI2DModelRender
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			m_pipeline[PipelineRendering] = std::move(context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info)[0]);
+			m_pipeline[PipelineRendering] = context->m_device.createGraphicsPipelineUnique(vk::PipelineCache(), graphics_pipeline_info[0]).value;
 		}
 
 	}

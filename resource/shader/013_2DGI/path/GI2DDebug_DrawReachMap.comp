@@ -20,7 +20,7 @@ void main()
 	if((fragment_map & (1ul<<(bit.x+bit.y*8))) == 0)
 	{ 
 		uint i = point.x + point.y*u_gi2d_info.m_resolution.x;
-#if 0
+#if 1
 	vec3 colors[] ={
 		vec3(0., 0., 1.),
 		vec3(0., 1., 1.),

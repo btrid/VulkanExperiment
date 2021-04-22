@@ -38,7 +38,7 @@ struct OpenNode
 	uint data;
 };
 
-shared OpenNode s_open[1024*3];
+shared OpenNode s_open[1024*4];
 shared uvec2 s_open_counter;
 
 void explore(in OpenNode parent)

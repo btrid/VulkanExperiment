@@ -80,7 +80,7 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 		name_info.pObjectName = "PipelineLayout_ToFluid";
 		name_info.objectType = vk::ObjectType::ePipelineLayout;
 		name_info.objectHandle = reinterpret_cast<uint64_t &>(m_pipeline_layout[PipelineLayout_ToFluid].get());
-		m_context->m_device.setDebugUtilsObjectNameEXT(name_info, m_context->m_dispach);
+		m_context->m_device.setDebugUtilsObjectNameEXT(name_info);
 #endif
 	}
 	{
@@ -105,7 +105,7 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 		name_info.pObjectName = "PipelineLayout_MakeRigidbody";
 		name_info.objectType = vk::ObjectType::ePipelineLayout;
 		name_info.objectHandle = reinterpret_cast<uint64_t &>(m_pipeline_layout[PipelineLayout_MakeRB].get());
-		m_context->m_device.setDebugUtilsObjectNameEXT(name_info, m_context->m_dispach);
+		m_context->m_device.setDebugUtilsObjectNameEXT(name_info);
 #endif
 	}
 
@@ -145,20 +145,19 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 			.setStage(shader_info[4])
 			.setLayout(m_pipeline_layout[PipelineLayout_MakeRB].get()),
 		};
-		auto compute_pipeline = m_context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
-#if USE_DEBUG_REPORT
-		vk::DebugUtilsObjectNameInfoEXT name_info;
-		name_info.pObjectName = "Pipeline_ToFluid";
-		name_info.objectType = vk::ObjectType::ePipeline;
-		name_info.objectHandle = reinterpret_cast<uint64_t &>(compute_pipeline[0].get());
-		m_context->m_device.setDebugUtilsObjectNameEXT(name_info, m_context->m_dispach);
-#endif
+// #if USE_DEBUG_REPORT
+// 		vk::DebugUtilsObjectNameInfoEXT name_info;
+// 		name_info.pObjectName = "Pipeline_ToFluid";
+// 		name_info.objectType = vk::ObjectType::ePipeline;
+// 		name_info.objectHandle = reinterpret_cast<uint64_t &>(compute_pipeline[0].get());
+// 		m_context->m_device.setDebugUtilsObjectNameEXT(name_info, m_context->m_dispach);
+// #endif
 
-		m_pipeline[Pipeline_ToFluid] = std::move(compute_pipeline[0]);
-		m_pipeline[Pipeline_ToFluidWall] = std::move(compute_pipeline[1]);
-		m_pipeline[Pipeline_MakeRB_SetupRigidbody] = std::move(compute_pipeline[2]);
-		m_pipeline[Pipeline_MakeRB_MakeJFCell] = std::move(compute_pipeline[3]);
-		m_pipeline[Pipeline_MakeRB_SetupParticle] = std::move(compute_pipeline[4]);
+		m_pipeline[Pipeline_ToFluid] = m_context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[0]).value;
+		m_pipeline[Pipeline_ToFluidWall] = m_context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[1]).value;
+		m_pipeline[Pipeline_MakeRB_SetupRigidbody] = m_context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[2]).value;
+		m_pipeline[Pipeline_MakeRB_MakeJFCell] = m_context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[3]).value;
+		m_pipeline[Pipeline_MakeRB_SetupParticle] = m_context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[4]).value;
 	}
 
 	{
@@ -339,7 +338,7 @@ void GI2DPhysics::execute(vk::CommandBuffer cmd)
 }
 void GI2DPhysics::make(vk::CommandBuffer cmd, const GI2DRB_MakeParam& param)
 {
-	DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
+	DebugLabel _label(cmd, __FUNCTION__);
 	const auto& box = param.aabb;
 
 	auto particle_num = box.z * box.w;
@@ -504,7 +503,7 @@ void GI2DPhysics::getRBID(vk::CommandBuffer cmd, const vk::DescriptorBufferInfo&
 void GI2DPhysics::_make(vk::CommandBuffer &cmd)
 {
 	{
-		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
+		DebugLabel _label(cmd, __FUNCTION__);
 
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MakeRB].get(), 0, getDescriptorSet(GI2DPhysics::DescLayout_Data), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MakeRB].get(), 1, m_gi2d_context->getDescriptorSet(), {});

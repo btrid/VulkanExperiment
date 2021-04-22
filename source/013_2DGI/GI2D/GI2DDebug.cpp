@@ -178,11 +178,10 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 			.setStage(shader_info[3])
 			.setLayout(m_pipeline_layout[PipelineLayout_DrawReachMap].get()),
 		};
-		auto compute_pipeline = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
-		m_pipeline[Pipeline_PointLight] = std::move(compute_pipeline[0]);
-		m_pipeline[Pipeline_DrawFragmentMap] = std::move(compute_pipeline[1]);
-		m_pipeline[Pipeline_DrawFragment] = std::move(compute_pipeline[2]);
-		m_pipeline[Pipeline_DrawReachMap] = std::move(compute_pipeline[3]);
+		m_pipeline[Pipeline_PointLight] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[0]).value;
+		m_pipeline[Pipeline_DrawFragmentMap] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[1]).value;
+		m_pipeline[Pipeline_DrawFragment] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[2]).value;
+		m_pipeline[Pipeline_DrawReachMap] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[3]).value;
 	}
 
 }
@@ -336,7 +335,7 @@ void GI2DDebug::executeMakeFragment(vk::CommandBuffer cmd)
 
 void GI2DDebug::executeDrawReachMap(vk::CommandBuffer cmd, const std::shared_ptr<GI2DPathContext>& gi2d_path_context, const std::shared_ptr<RenderTarget>& render_target)
 {
-	DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__, DebugLabel::k_color_debug);
+	DebugLabel _label(cmd, __FUNCTION__, DebugLabel::k_color_debug);
 
 	vk::BufferMemoryBarrier barrier[] = {
 		gi2d_path_context->b_closed.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),

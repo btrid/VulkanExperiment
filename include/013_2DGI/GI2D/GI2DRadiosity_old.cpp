@@ -500,15 +500,15 @@ GI2DRadiosity_old::GI2DRadiosity_old(const std::shared_ptr<btr::Context>& contex
 			.setPDepthStencilState(&depth_stencil_info)
 			.setPColorBlendState(&blend_info2),
 		};
-		auto graphics_pipeline = context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info);
-		m_pipeline[Pipeline_Radiosity] = std::move(graphics_pipeline[0]);
-		m_pipeline[Pipeline_Rendering] = std::move(graphics_pipeline[1]);
+
+		m_pipeline[Pipeline_Radiosity] = context->m_device.createGraphicsPipelineUnique(vk::PipelineCache(), graphics_pipeline_info[0]).value;
+		m_pipeline[Pipeline_Rendering] = context->m_device.createGraphicsPipelineUnique(vk::PipelineCache(), graphics_pipeline_info[1]).value;
 	}
 
 }
 void GI2DRadiosity_old::executeRadiosity(const vk::CommandBuffer& cmd)
 {
-	DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
+	DebugLabel _label(cmd, __FUNCTION__);
 
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
@@ -656,7 +656,7 @@ void GI2DRadiosity_old::executeRadiosity(const vk::CommandBuffer& cmd)
 void GI2DRadiosity_old::executeRendering(const vk::CommandBuffer& cmd)
 {
 
-	DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
+	DebugLabel _label(cmd, __FUNCTION__);
 
 	// render_target‚É‘‚­
 	{

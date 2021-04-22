@@ -444,24 +444,28 @@ struct AllocatedMemory
 	}
 	BufferMemory allocateMemory(uint32_t size, bool is_reverse)
 	{
-		assert(size != 0);
-
-		auto zone = m_resource->m_free_zone->alloc(size, is_reverse);
-
-		// allocできた？
-		assert(zone.isValid());
+//		assert(size != 0);
 
 		BufferMemory alloc;
 		alloc.m_resource = std::make_shared<BufferMemory::Resource>();
 		alloc.m_resource->m_buffer_info.buffer = m_resource->m_buffer.get();
-		alloc.m_resource->m_buffer_info.offset = zone.m_start;
-		alloc.m_resource->m_buffer_info.range = size;
-		alloc.m_resource->m_allocater = m_resource->m_free_zone;
 
-		alloc.m_resource->m_mapped_memory = nullptr;
-		if (m_resource->m_mapped_memory)
+		if (size != 0)
 		{
-			alloc.m_resource->m_mapped_memory = (char*)m_resource->m_mapped_memory + zone.m_start;
+			auto zone = m_resource->m_free_zone->alloc(size, is_reverse);
+
+			// allocできた？
+			assert(zone.isValid());
+
+			alloc.m_resource->m_buffer_info.offset = zone.m_start;
+			alloc.m_resource->m_buffer_info.range = size;
+			alloc.m_resource->m_allocater = m_resource->m_free_zone;
+
+			alloc.m_resource->m_mapped_memory = nullptr;
+			if (m_resource->m_mapped_memory)
+			{
+				alloc.m_resource->m_mapped_memory = (char*)m_resource->m_mapped_memory + zone.m_start;
+			}
 		}
 		return alloc;
 	}
@@ -469,25 +473,29 @@ struct AllocatedMemory
 	template<typename T>
 	BufferMemoryEx<T> allocateMemory(const BufferMemoryDescriptorEx<T>& desc)
 	{
-		assert(desc.element_num != 0);// size0はおかしいよね
-
-		auto zone = m_resource->m_free_zone->alloc(desc.element_num * sizeof(T), btr::isOn(desc.attribute, BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT));
-		assert(zone.isValid());// allocできた？
+//		assert(desc.element_num != 0);// size0はおかしいよね
 
 		BufferMemoryEx<T> alloc;
 		alloc.m_resource = std::make_shared<BufferMemoryEx<T>::Resource>();
-		alloc.m_resource->m_allocater = m_resource->m_free_zone;
 		alloc.m_resource->m_buffer_info.buffer = m_resource->m_buffer.get();
-		alloc.m_resource->m_buffer_info.offset = zone.m_start;
-		alloc.m_resource->m_buffer_info.range = zone.range();
-		alloc.m_resource->m_buffer_descriptor = desc;
 
-		alloc.m_resource->m_mapped_memory = nullptr;
-		if (m_resource->m_mapped_memory)
+		if (desc.element_num != 0)
 		{
-			alloc.m_resource->m_mapped_memory = (T*)((char*)m_resource->m_mapped_memory + zone.m_start);
+			auto zone = m_resource->m_free_zone->alloc(desc.element_num * sizeof(T), btr::isOn(desc.attribute, BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT));
+			assert(zone.isValid());// allocできた？
+
+			alloc.m_resource->m_allocater = m_resource->m_free_zone;
+			alloc.m_resource->m_buffer_info.offset = zone.m_start;
+			alloc.m_resource->m_buffer_info.range = zone.range();
+			alloc.m_resource->m_buffer_descriptor = desc;
+
+			alloc.m_resource->m_mapped_memory = nullptr;
+			if (m_resource->m_mapped_memory)
+			{
+				alloc.m_resource->m_mapped_memory = (T*)((char*)m_resource->m_mapped_memory + zone.m_start);
+			}
+			alloc.m_resource->m_device_address = m_resource->m_device_address + zone.m_start;
 		}
-		alloc.m_resource->m_device_address = m_resource->m_device_address + zone.m_start;
 		return alloc;
 
 	}

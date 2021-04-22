@@ -115,12 +115,11 @@ struct Crowd_Procedure
 				.setStage(shader_info[4])
 				.setLayout(m_pipeline_layout[PipelineLayout_Crowd].get()),
 			};
-			auto compute_pipeline = context->m_context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
-			m_pipeline[Pipeline_UnitUpdate] = std::move(compute_pipeline[0]);
-			m_pipeline[Pipeline_MakeLinkList] = std::move(compute_pipeline[1]);
-			m_pipeline[Pipeline_MakeDensity] = std::move(compute_pipeline[2]);
-			m_pipeline[Pipeline_DrawDensity] = std::move(compute_pipeline[3]);
-			m_pipeline[Pipeline_Render] = std::move(compute_pipeline[4]);
+			m_pipeline[Pipeline_UnitUpdate] = context->m_context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[0]).value;
+			m_pipeline[Pipeline_MakeLinkList] = context->m_context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[1]).value;
+			m_pipeline[Pipeline_MakeDensity] = context->m_context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[2]).value;
+			m_pipeline[Pipeline_DrawDensity] = context->m_context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[3]).value;
+			m_pipeline[Pipeline_Render] = context->m_context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[4]).value;
 		}
 	}
 

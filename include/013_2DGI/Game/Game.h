@@ -235,19 +235,18 @@ struct GameProcedure
 				.setStage(shader_info[2])
 				.setLayout(m_pipeline_layout[PipelineLayout_MovableUpdate].get()),
 			};
-			auto compute_pipeline = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 
-#if USE_DEBUG_REPORT
-			vk::DebugUtilsObjectNameInfoEXT name_info;
-			name_info.pObjectName = "Pipeline_MovableUpdate";
-			name_info.objectType = vk::ObjectType::ePipeline;
-			name_info.objectHandle = reinterpret_cast<uint64_t &>(compute_pipeline[0].get());
-			context->m_device.setDebugUtilsObjectNameEXT(name_info);
-#endif
+// #if USE_DEBUG_REPORT
+// 			vk::DebugUtilsObjectNameInfoEXT name_info;
+// 			name_info.pObjectName = "Pipeline_MovableUpdate";
+// 			name_info.objectType = vk::ObjectType::ePipeline;
+// 			name_info.objectHandle = reinterpret_cast<uint64_t &>(compute_pipeline[0].get());
+// 			context->m_device.setDebugUtilsObjectNameEXT(name_info);
+// #endif
 
-			m_pipeline[PipelinePlayer_Update] = std::move(compute_pipeline[0]);
-			m_pipeline[PipelineMovable_UpdatePrePhysics] = std::move(compute_pipeline[1]);
-			m_pipeline[PipelineMovable_UpdatePostPhysics] = std::move(compute_pipeline[2]);
+			m_pipeline[PipelinePlayer_Update] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[0]).value;
+			m_pipeline[PipelineMovable_UpdatePrePhysics] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[1]).value;
+			m_pipeline[PipelineMovable_UpdatePostPhysics] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[2]).value;
 		}
 
 	}

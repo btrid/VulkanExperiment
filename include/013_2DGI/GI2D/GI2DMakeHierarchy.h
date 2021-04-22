@@ -179,21 +179,20 @@ struct GI2DMakeHierarchy
 				.setStage(shader_info[7])
 				.setLayout(m_pipeline_layout[PipelineLayout_RenderSDF].get()),
 			};
-			auto compute_pipeline = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
-			m_pipeline[Pipeline_MakeFragmentMap] = std::move(compute_pipeline[0]);
-			m_pipeline[Pipeline_MakeFragmentMapAndSDF] = std::move(compute_pipeline[1]);
-			m_pipeline[Pipeline_MakeReachMap_Precompute] = std::move(compute_pipeline[2]);
-			m_pipeline[Pipeline_MakeReachMap] = std::move(compute_pipeline[3]);
-			m_pipeline[Pipeline_MakeJFA] = std::move(compute_pipeline[4]);
-			m_pipeline[Pipeline_MakeJFA_EX] = std::move(compute_pipeline[5]);
-			m_pipeline[Pipeline_MakeSDF] = std::move(compute_pipeline[6]);
-			m_pipeline[Pipeline_RenderSDF] = std::move(compute_pipeline[7]);
+			m_pipeline[Pipeline_MakeFragmentMap] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[0]).value;
+			m_pipeline[Pipeline_MakeFragmentMapAndSDF] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[1]).value;
+			m_pipeline[Pipeline_MakeReachMap_Precompute] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[2]).value;
+			m_pipeline[Pipeline_MakeReachMap] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[3]).value;
+			m_pipeline[Pipeline_MakeJFA] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[4]).value;
+			m_pipeline[Pipeline_MakeJFA_EX] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[5]).value;
+			m_pipeline[Pipeline_MakeSDF] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[6]).value;
+			m_pipeline[Pipeline_RenderSDF] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[7]).value;
 		}
 
 	}
 	void executeMakeFragmentMap(vk::CommandBuffer cmd)
 	{
-		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
+		DebugLabel _label(cmd, __FUNCTION__);
 
 		vk::DescriptorSet desc[] = {
 			m_gi2d_context->getDescriptorSet(),
@@ -218,7 +217,7 @@ struct GI2DMakeHierarchy
 	}
 	void executeMakeFragmentMapAndSDF(vk::CommandBuffer cmd, const std::shared_ptr<GI2DSDF>& sdf_context)
 	{
-		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
+		DebugLabel _label(cmd, __FUNCTION__);
 
 		vk::DescriptorSet desc[] = {
 			m_gi2d_context->getDescriptorSet(),
@@ -246,7 +245,7 @@ struct GI2DMakeHierarchy
 
 	void _executeMakeSDF(vk::CommandBuffer cmd, const std::shared_ptr<GI2DSDF>& sdf_context)
 	{
-		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
+		DebugLabel _label(cmd, __FUNCTION__);
 
 		vk::DescriptorSet desc[] = {
 			m_gi2d_context->getDescriptorSet(),
@@ -315,7 +314,7 @@ struct GI2DMakeHierarchy
 	}
 	void executeRenderSDF(vk::CommandBuffer cmd, const std::shared_ptr<GI2DSDF>& sdf_context, const std::shared_ptr<RenderTarget>& render_target)
 	{
-		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
+		DebugLabel _label(cmd, __FUNCTION__);
 
 		vk::DescriptorSet desc[] = {
 			m_gi2d_context->getDescriptorSet(),
@@ -345,7 +344,7 @@ struct GI2DMakeHierarchy
 
 	void executeMakeReachMap(vk::CommandBuffer cmd, const std::shared_ptr<GI2DPathContext>& path_context)
 	{
-		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
+		DebugLabel _label(cmd, __FUNCTION__);
 
 		vk::DescriptorSet desc[] = {
 			path_context->m_gi2d_context->getDescriptorSet(),

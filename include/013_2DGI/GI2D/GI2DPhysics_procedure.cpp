@@ -132,24 +132,23 @@ GI2DPhysics_procedure::GI2DPhysics_procedure(const std::shared_ptr<GI2DPhysics>&
 			.setStage(shader_info[10])
 			.setLayout(m_pipeline_layout[PipelineLayout_DrawParticle].get()),
 		};
-		auto compute_pipeline = physics_context->m_context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
-		m_pipeline[Pipeline_DrawParticle] = std::move(compute_pipeline[0]);
-		m_pipeline[Pipeline_RBMakeParticle] = std::move(compute_pipeline[1]);
-		m_pipeline[Pipeline_MakeCollision] = std::move(compute_pipeline[2]);
-		m_pipeline[Pipeline_MakeWallCollision] = std::move(compute_pipeline[3]);
-		m_pipeline[Pipeline_RBCollisionDetective] = std::move(compute_pipeline[4]);
-		m_pipeline[Pipeline_RBCalcPressure] = std::move(compute_pipeline[5]);
-		m_pipeline[Pipeline_RBCalcCenterMass] = std::move(compute_pipeline[6]);
-		m_pipeline[Pipeline_RBMakeTransformMatrix] = std::move(compute_pipeline[7]);
-		m_pipeline[Pipeline_RBUpdateParticleBlock] = std::move(compute_pipeline[8]);
-		m_pipeline[Pipeline_RBUpdateRigidbody] = std::move(compute_pipeline[9]);
-		m_pipeline[Pipeline_DrawCollisionHeatMap] = std::move(compute_pipeline[10]);
+		m_pipeline[Pipeline_DrawParticle] = physics_context->m_context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[0]).value;
+		m_pipeline[Pipeline_RBMakeParticle] = physics_context->m_context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[1]).value;
+		m_pipeline[Pipeline_MakeCollision] = physics_context->m_context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[2]).value;
+		m_pipeline[Pipeline_MakeWallCollision] = physics_context->m_context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[3]).value;
+		m_pipeline[Pipeline_RBCollisionDetective] = physics_context->m_context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[4]).value;
+		m_pipeline[Pipeline_RBCalcPressure] = physics_context->m_context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[5]).value;
+		m_pipeline[Pipeline_RBCalcCenterMass] = physics_context->m_context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[6]).value;
+		m_pipeline[Pipeline_RBMakeTransformMatrix] = physics_context->m_context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[7]).value;
+		m_pipeline[Pipeline_RBUpdateParticleBlock] = physics_context->m_context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[8]).value;
+		m_pipeline[Pipeline_RBUpdateRigidbody] = physics_context->m_context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[9]).value;
+		m_pipeline[Pipeline_DrawCollisionHeatMap] = physics_context->m_context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[10]).value;
 	}
 
 }
 void GI2DPhysics_procedure::execute(vk::CommandBuffer cmd, const std::shared_ptr<GI2DPhysics>& physics_context, const std::shared_ptr<GI2DSDF>& sdf)
 {
-	DebugLabel _label(cmd, physics_context->m_context->m_dispach, __FUNCTION__);
+	DebugLabel _label(cmd, __FUNCTION__);
 
 	physics_context->execute(cmd);
 
@@ -330,7 +329,7 @@ void GI2DPhysics_procedure::executeDrawParticle(vk::CommandBuffer cmd, const std
 
 void GI2DPhysics_procedure::executeDebugDrawCollisionHeatMap(vk::CommandBuffer cmd, const std::shared_ptr<GI2DPhysics>& physics_context, const std::shared_ptr<RenderTarget>& render_target)
 {
-	DebugLabel _label(cmd, physics_context->m_context->m_dispach, __FUNCTION__);
+	DebugLabel _label(cmd, __FUNCTION__);
 
 	{
 		// render_targetÇ…èëÇ´çûÇﬁ

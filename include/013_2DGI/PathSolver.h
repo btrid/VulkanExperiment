@@ -115,7 +115,7 @@ struct PathSolver
 		return result;
 	}
 
-	std::vector<uint32_t> executeMakeVectorField(const PathContextCPU& path)const
+	std::vector<int32_t> executeMakeVectorField(const PathContextCPU& path)const
 	{
 		cStopWatch time;
 		size_t open_maxsize = 0;
@@ -150,12 +150,12 @@ struct PathSolver
 		}
 
 		printf("solve time %6.4fms open_maxnum %zd\n", time.getElapsedTimeAsMilliSeconds(), open_maxsize);
-		std::vector<uint32_t> result(path.m_desc.m_size.x*path.m_desc.m_size.y);
-		for (uint32_t y = 0; y < path.m_desc.m_size.y; y++)
+		std::vector<int32_t> result(path.m_desc.m_size.x*path.m_desc.m_size.y);
+		for (int32_t y = 0; y < path.m_desc.m_size.y; y++)
 		{
 			for (uint32_t x = 0; x < path.m_desc.m_size.x; x++)
 			{
-				uint32_t i = y * path.m_desc.m_size.x + x;
+				int32_t i = y * path.m_desc.m_size.x + x;
 				result[i] = close[i].cost;
 			}
 		}

@@ -275,10 +275,9 @@ struct GI2DFluid
 				.setStage(shader_info[2])
 				.setLayout(m_pipeline_layout[PipelineLayout_Fluid].get()),
 			};
-			auto compute_pipeline = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
-			m_pipeline[Pipeline_Update] = std::move(compute_pipeline[0]);
-			m_pipeline[Pipeline_Pressure] = std::move(compute_pipeline[1]);
-			m_pipeline[Pipeline_ToFragment] = std::move(compute_pipeline[2]);
+			m_pipeline[Pipeline_Update] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[0]).value;
+			m_pipeline[Pipeline_Pressure] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[1]).value;
+			m_pipeline[Pipeline_ToFragment] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[2]).value;
 		}
 
 	}

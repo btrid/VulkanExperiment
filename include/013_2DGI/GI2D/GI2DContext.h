@@ -424,5 +424,4 @@ struct GI2DPathContext
 	vk::UniqueDescriptorSet m_descriptor_set;
 
 	vk::DescriptorSet getDescriptorSet()const { return m_descriptor_set.get(); }
-
 };

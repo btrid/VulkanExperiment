@@ -136,7 +136,7 @@ struct GI2DVoronoi
 			name_info.pObjectName = "PipelineLayout_DestructWall";
 			name_info.objectType = vk::ObjectType::ePipelineLayout;
 			name_info.objectHandle = reinterpret_cast<uint64_t &>(m_pipeline_layout[PipelineLayout_DestructWall].get());
-			m_context->m_device.setDebugUtilsObjectNameEXT(name_info, m_context->m_dispach);
+			m_context->m_device.setDebugUtilsObjectNameEXT(name_info);
 #endif
 		}
 		{
@@ -159,7 +159,7 @@ struct GI2DVoronoi
 			name_info.pObjectName = "PipelineLayout_Voronoi";
 			name_info.objectType = vk::ObjectType::ePipelineLayout;
 			name_info.objectHandle = reinterpret_cast<uint64_t &>(m_pipeline_layout[PipelineLayout_Voronoi].get());
-			m_context->m_device.setDebugUtilsObjectNameEXT(name_info, m_context->m_dispach);
+			m_context->m_device.setDebugUtilsObjectNameEXT(name_info);
 #endif
 		}
 
@@ -199,13 +199,12 @@ struct GI2DVoronoi
 				.setStage(shader_info[4])
 				.setLayout(m_pipeline_layout[PipelineLayout_Voronoi].get()),
 			};
-			auto compute_pipeline = m_context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 
-			m_pipeline[Pipeline_Voronoi_SetupJFA] = std::move(compute_pipeline[0]);
-			m_pipeline[Pipeline_Voronoi_MakeJFA] = std::move(compute_pipeline[1]);
-			m_pipeline[Pipeline_Voronoi_MakeTriangle] = std::move(compute_pipeline[2]);
-			m_pipeline[Pipeline_Voronoi_SortTriangleVertex] = std::move(compute_pipeline[3]);
-			m_pipeline[Pipeline_Voronoi_MakePath] = std::move(compute_pipeline[4]);
+			m_pipeline[Pipeline_Voronoi_SetupJFA] = m_context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[0]).value;
+			m_pipeline[Pipeline_Voronoi_MakeJFA] = m_context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[1]).value;
+			m_pipeline[Pipeline_Voronoi_MakeTriangle] = m_context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[2]).value;
+			m_pipeline[Pipeline_Voronoi_SortTriangleVertex] = m_context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[3]).value;
+			m_pipeline[Pipeline_Voronoi_MakePath] = m_context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[4]).value;
 		}
 
 		// graphics pipeline
@@ -316,8 +315,7 @@ struct GI2DVoronoi
 					.setPDepthStencilState(&depth_stencil_info)
 					.setPColorBlendState(&blend_info),
 				};
-				auto graphics_pipeline = context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info);
-				m_pipeline[Pipeline_MakeRB_DestructWall] = std::move(graphics_pipeline[0]);
+				m_pipeline[Pipeline_MakeRB_DestructWall] = context->m_device.createGraphicsPipelineUnique(vk::PipelineCache(), graphics_pipeline_info[0]).value;
 
 			}
 
@@ -366,7 +364,7 @@ struct GI2DVoronoi
 	}
 	void executeDestructWall(vk::CommandBuffer cmd)
 	{
-		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
+		DebugLabel _label(cmd, __FUNCTION__);
 
 		GI2DPhysics::Rigidbody rb;
 		{
@@ -454,7 +452,7 @@ struct GI2DVoronoi
 
 	void executeMakeVoronoi(vk::CommandBuffer cmd)
 	{
-		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
+		DebugLabel _label(cmd, __FUNCTION__);
 
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Voronoi].get(), 0, m_descset[DescLayout_Data].get(), {});
 

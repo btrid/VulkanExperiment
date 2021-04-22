@@ -257,7 +257,7 @@ struct GI2DPhysicsDebug
 			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
 			subpass.setInputAttachmentCount(0);
 			subpass.setPInputAttachments(nullptr);
-			subpass.setColorAttachmentCount(std::size(color_ref));
+			subpass.setColorAttachmentCount(array_size(color_ref));
 			subpass.setPColorAttachments(color_ref);
 
 			vk::AttachmentDescription attach_description[] =
@@ -387,9 +387,8 @@ struct GI2DPhysicsDebug
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			auto pipelines = context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info);
-			m_pipeline[Pipeline_DrawVoronoiTriangle] = std::move(pipelines[0]);
-			m_pipeline[Pipeline_DrawVoronoiPath] = std::move(pipelines[1]);
+			m_pipeline[Pipeline_DrawVoronoiTriangle] = context->m_device.createGraphicsPipelineUnique(vk::PipelineCache(), graphics_pipeline_info[0]).value;
+			m_pipeline[Pipeline_DrawVoronoiPath] = context->m_device.createGraphicsPipelineUnique(vk::PipelineCache(), graphics_pipeline_info[1]).value;
 		}
 	}
 

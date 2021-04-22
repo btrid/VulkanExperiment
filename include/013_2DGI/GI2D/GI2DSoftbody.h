@@ -133,10 +133,9 @@ struct GI2DSoftbody
 					.setStage(shader_info[2])
 					.setLayout(m_pipeline_layout[PipelineLayout_Softbody].get()),
 				};
-				auto compute_pipeline = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
-				m_pipeline[Pipeline_CalcCenter] = std::move(compute_pipeline[0]);
-				m_pipeline[Pipeline_CalcCenter_Post] = std::move(compute_pipeline[1]);
-				m_pipeline[Pipeline_CalcForce] = std::move(compute_pipeline[2]);
+				m_pipeline[Pipeline_CalcCenter] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[0]).value;
+				m_pipeline[Pipeline_CalcCenter_Post] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[1]).value;
+				m_pipeline[Pipeline_CalcForce] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[2]).value;
 			}
 
 		}
