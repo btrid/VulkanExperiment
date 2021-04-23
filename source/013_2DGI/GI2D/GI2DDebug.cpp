@@ -82,22 +82,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 	auto cmd = m_context->m_cmd_pool->allocCmdTempolary(0);
 	cmd.copyBuffer(staging.getInfo().buffer, m_map_data.getInfo().buffer, copy);
 
-	{
-		const char* name[] =
-		{
-			"GI2DDebug_MakeLight.comp.spv",
-			"GI2DDebug_DrawFragmentMap.comp.spv",
-			"GI2DDebug_DrawFragment.comp.spv",
-			"GI2DDebug_DrawReachMap.comp.spv",
-		};
-		static_assert(array_length(name) == Shader_Num, "not equal shader num");
 
-		std::string path = btr::getResourceShaderPath();
-		for (size_t i = 0; i < array_length(name); i++) {
-			m_shader[i] = loadShaderUnique(context->m_device, path + name[i]);
-		}
-
-	}
 
 	// pipeline layout
 	{
@@ -136,13 +121,30 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
-			m_pipeline_layout[PipelineLayout_DrawReachMap] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PipelineLayout_Path] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 
 		}
 	}
 
 
 	{
+		// shader
+		{
+			const char* name[] =
+			{
+				"GI2DDebug_MakeLight.comp.spv",
+				"GI2DDebug_DrawFragmentMap.comp.spv",
+				"GI2DDebug_DrawFragment.comp.spv",
+				"GI2DDebug_DrawReachableMap.comp.spv",
+				"GI2DDebug_DrawReachMap.comp.spv",
+			};
+			static_assert(array_length(name) == Shader_Num, "not equal shader num");
+
+			std::string path = btr::getResourceShaderPath();
+			for (size_t i = 0; i < array_length(name); i++) {
+				m_shader[i] = loadShaderUnique(context->m_device, path + name[i]);
+			}
+		}
 		vk::PipelineShaderStageCreateInfo shader_info[] =
 		{
 			vk::PipelineShaderStageCreateInfo()
@@ -155,6 +157,10 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 			.setStage(vk::ShaderStageFlagBits::eCompute),
 			vk::PipelineShaderStageCreateInfo()
 			.setModule(m_shader[Shader_DrawFragment].get())
+			.setPName("main")
+			.setStage(vk::ShaderStageFlagBits::eCompute),
+			vk::PipelineShaderStageCreateInfo()
+			.setModule(m_shader[Shader_DrawReachableMap].get())
 			.setPName("main")
 			.setStage(vk::ShaderStageFlagBits::eCompute),
 			vk::PipelineShaderStageCreateInfo()
@@ -176,12 +182,16 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 			.setLayout(m_pipeline_layout[PipelineLayout_DrawFragmentMap].get()),
 			vk::ComputePipelineCreateInfo()
 			.setStage(shader_info[3])
-			.setLayout(m_pipeline_layout[PipelineLayout_DrawReachMap].get()),
+			.setLayout(m_pipeline_layout[PipelineLayout_Path].get()),
+			vk::ComputePipelineCreateInfo()
+			.setStage(shader_info[4])
+			.setLayout(m_pipeline_layout[PipelineLayout_Path].get()),
 		};
 		m_pipeline[Pipeline_PointLight] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[0]).value;
 		m_pipeline[Pipeline_DrawFragmentMap] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[1]).value;
 		m_pipeline[Pipeline_DrawFragment] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[2]).value;
-		m_pipeline[Pipeline_DrawReachMap] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[3]).value;
+		m_pipeline[Pipeline_DrawReachableMap] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[3]).value;
+		m_pipeline[Pipeline_DrawReachMap] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[4]).value;
 	}
 
 }
@@ -333,6 +343,38 @@ void GI2DDebug::executeMakeFragment(vk::CommandBuffer cmd)
 	}
 }
 
+void GI2DDebug::executeDrawReachableMap(vk::CommandBuffer cmd, const std::shared_ptr<GI2DPathContext>& gi2d_path_context, const std::shared_ptr<RenderTarget>& render_target)
+{
+	DebugLabel _label(cmd, __FUNCTION__, DebugLabel::k_color_debug);
+
+	vk::BufferMemoryBarrier barrier[] = {
+		gi2d_path_context->b_closed.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+		gi2d_path_context->b_path_data.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+	};
+	vk::ImageMemoryBarrier image_barrier;
+	image_barrier.setImage(render_target->m_image);
+	image_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+	image_barrier.setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
+	image_barrier.setNewLayout(vk::ImageLayout::eGeneral);
+	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, { image_barrier });
+
+
+	vk::DescriptorSet descriptorsets[] = {
+		m_gi2d_context->getDescriptorSet(),
+		gi2d_path_context->getDescriptorSet(),
+		render_target->m_descriptor.get(),
+	};
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Path].get(), 0, array_length(descriptorsets), descriptorsets, 0, nullptr);
+
+	{
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_DrawReachableMap].get());
+
+		auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->m_desc.Resolution.x, m_gi2d_context->m_desc.Resolution.y, 1), uvec3(32, 32, 1));
+		cmd.dispatch(num.x, num.y, num.z);
+	}
+
+}
+
 void GI2DDebug::executeDrawReachMap(vk::CommandBuffer cmd, const std::shared_ptr<GI2DPathContext>& gi2d_path_context, const std::shared_ptr<RenderTarget>& render_target)
 {
 	DebugLabel _label(cmd, __FUNCTION__, DebugLabel::k_color_debug);
@@ -354,7 +396,7 @@ void GI2DDebug::executeDrawReachMap(vk::CommandBuffer cmd, const std::shared_ptr
 		gi2d_path_context->getDescriptorSet(),
 		render_target->m_descriptor.get(),
 	};
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_DrawReachMap].get(), 0, array_length(descriptorsets), descriptorsets, 0, nullptr);
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Path].get(), 0, array_length(descriptorsets), descriptorsets, 0, nullptr);
 
 	{
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_DrawReachMap].get());
