@@ -373,14 +373,14 @@ struct GI2DMakeHierarchy
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Path].get(), 0, array_length(desc), desc, 0, nullptr);
 
 		static int iter = 10;
-		iter = iter+10;
+		iter = iter+1;
 		iter %= 100000;
 		struct
 		{
 			i16vec2 target[10];
 			i16vec2 target_num;
 			i16vec2 reso;
-		} constant{ {i16vec2(11, 11), i16vec2(1002, 1002), i16vec2(144, 844), i16vec2(855, 255)}, i16vec2(1, iter / 10), path_context->m_gi2d_context->m_desc.Resolution };
+		} constant{ {i16vec2(171, 171), i16vec2(1002, 1002), i16vec2(144, 844), i16vec2(855, 255)}, i16vec2(1, iter / 100), path_context->m_gi2d_context->m_desc.Resolution };
 		cmd.pushConstants(m_pipeline_layout[PipelineLayout_Path].get(), vk::ShaderStageFlagBits::eCompute, 0, sizeof(constant), &constant);
 
 		vk::BufferMemoryBarrier barrier[] = {
@@ -431,14 +431,14 @@ struct GI2DMakeHierarchy
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Path].get(), 0, array_length(desc), desc, 0, nullptr);
 
 		static int iter = 10;
-		iter = iter + 10;
+		iter = iter + 1;
 		iter %= 100000;
 		struct
 		{
 			i16vec2 target[10];
 			i16vec2 target_num;
 			i16vec2 reso;
-		} constant{ {i16vec2(11, 11), i16vec2(1002, 1002), i16vec2(144, 844), i16vec2(855, 255)}, i16vec2(1, iter / 10), path_context->m_gi2d_context->m_desc.Resolution };
+		} constant{ {i16vec2(171, 171), i16vec2(1002, 1002), i16vec2(144, 844), i16vec2(855, 255)}, i16vec2(1, iter / 100), path_context->m_gi2d_context->m_desc.Resolution };
 		cmd.pushConstants(m_pipeline_layout[PipelineLayout_Path].get(), vk::ShaderStageFlagBits::eCompute, 0, sizeof(constant), &constant);
 
 		vk::BufferMemoryBarrier barrier[] = {

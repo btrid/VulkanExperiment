@@ -330,56 +330,11 @@ struct GI2DPathContext
 			b_closed = context->m_storage_memory.allocateMemory<uint32_t>({ gi2d_context->FragmentBufferSize / 32,{} });
 			b_neighbor = context->m_storage_memory.allocateMemory<uint8_t>({ gi2d_context->FragmentBufferSize,{} });
 			b_path_data = context->m_storage_memory.allocateMemory<uint32_t>(gi2d_context->FragmentBufferSize);
-			b_open_node = context->m_storage_memory.allocateMemory<OpenNode>(1024 * 16);
-			b_neighbor_table = context->m_storage_memory.allocateMemory<uint8_t>(2048);
+			b_parent = context->m_storage_memory.allocateMemory<uint8_t>({ gi2d_context->FragmentBufferSize,{} });
+			b_open = context->m_storage_memory.allocateMemory<i16vec2>(1024 * 16);
+			b_open_counter = context->m_storage_memory.allocateMemory<ivec4>(2);
 		}
 
-		// Ž–‘OŒvŽZ
-		{
-			std::array<uint8_t, 2048> neighbor_table;
-			uvec4 neighor_check_list[] =
-			{
-				uvec4(2,6,1,7), // diagonal_path 
-				uvec4(3,5,4,4), // diagonal_wall
-				uvec4(1,7,4,4), // straight_path
-				uvec4(2,6,4,4), // straight_wall
-			};
-
-			for (int dir = 0; dir < 8; dir++)
-			{
-				for (int neighbor = 0; neighbor<256; neighbor++)
-				{
-					uvec4 path_check = (uvec4(dir) + neighor_check_list[(dir % 2) * 2]) % uvec4(8);
-					uvec4 wall_check = (uvec4(dir) + neighor_check_list[(dir % 2) * 2 + 1]) % uvec4(8);
-					uvec4 path_bit = uvec4(1) << path_check;
-					uvec4 wall_bit = uvec4(1) << wall_check;
-
-					bvec4 is_path = notEqual((uvec4(~neighbor)) & path_bit, uvec4(0));
-					bvec4 is_wall = notEqual(uvec4(neighbor) & wall_bit, uvec4(0));
-					uvec4 is_open = uvec4(is_path) * uvec4(is_wall.xy(), 1 - ivec2(dir % 2));
-
-					uint is_advance = uint(((~neighbor) & (1u << dir)) != 0) * uint(any(is_path.zw()));
-					uint num = is_open.x + is_open.y + is_open.z + is_open.w + is_advance;
-
-					uint8_t neighbor_value = 0;
-					for (int i = 0; i < 4; i++)
-					{
-						if (is_open[i] == 0) { continue; }
-						neighbor_value |= path_bit[i];
-					}
-
-					if (is_advance != 0)
-					{
-						neighbor_value |= 1<<dir;
-					}
-
-					neighbor_table[dir*256+neighbor] = neighbor_value;
-				}
-			}
-			cmd.updateBuffer(b_neighbor_table.getInfo().buffer, b_neighbor_table.getInfo().offset, sizeof(uint8_t)*2048, neighbor_table.data());
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { b_neighbor_table.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead) }, {});
-
-		}
 		// descriptor set
 		{
 			{
@@ -397,8 +352,9 @@ struct GI2DPathContext
 					b_closed.getInfo(),
 					b_neighbor.getInfo(),
 					b_path_data.getInfo(),
-					b_open_node.getInfo(),
-					b_neighbor_table.getInfo(),
+					b_parent.getInfo(),
+					b_open_counter.getInfo(),
+					b_open.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] = {
@@ -412,6 +368,7 @@ struct GI2DPathContext
 				context->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
 			}
 		}
+
 	}
 	std::shared_ptr<GI2DContext> m_gi2d_context;
 
@@ -419,8 +376,9 @@ struct GI2DPathContext
 	btr::BufferMemoryEx<uint32_t> b_closed;
 	btr::BufferMemoryEx<uint8_t> b_neighbor;
 	btr::BufferMemoryEx<uint32_t> b_path_data;
-	btr::BufferMemoryEx<OpenNode> b_open_node;
-	btr::BufferMemoryEx<uint8_t> b_neighbor_table;
+	btr::BufferMemoryEx<uint8_t> b_parent;
+	btr::BufferMemoryEx<ivec4> b_open_counter;
+	btr::BufferMemoryEx<i16vec2> b_open;
 	vk::UniqueDescriptorSet m_descriptor_set;
 
 	vk::DescriptorSet getDescriptorSet()const { return m_descriptor_set.get(); }

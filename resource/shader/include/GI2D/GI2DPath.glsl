@@ -3,10 +3,10 @@
 
 #extension GL_EXT_shader_explicit_arithmetic_types : require
 #extension GL_EXT_shader_atomic_int64 : require
-
+#extension GL_EXT_scalar_block_layout : require
 #ifdef USE_GI2D_Path
 
-struct PathNode
+struct PathData_Work
 {
 	i16vec2 pos;
 //	uint dir_type:4;
@@ -52,17 +52,15 @@ layout(std430, set=USE_GI2D_Path, binding=2) restrict buffer PathNeibghborStateB
 layout(std430, set=USE_GI2D_Path, binding=3) restrict buffer PathCostBuffer {
 	PathData b_path_data[];
 };
-layout(std430, set=USE_GI2D_Path, binding=4) restrict buffer PathNodeBuffer {
-	PathNode b_node[];
-};
-layout(std430, set=USE_GI2D_Path, binding=5) buffer NeighborTableBuffer 
-{
-	// 壁ならbitが立つ
-	uint8_t b_neighbor_table[2048];
-};
-layout(std430, set=USE_GI2D_Path, binding=6) buffer PathBuffer 
+layout(set=USE_GI2D_Path, binding=4, scalar) buffer PathBuffer 
 {
 	uint8_t b_parent[];
+};
+layout(set=USE_GI2D_Path, binding=5, scalar) restrict buffer PathNodeOpenBuffer {
+	i16vec2 b_open[];
+};
+layout(std430, set=USE_GI2D_Path, binding=6) restrict buffer PathNodeOpenCounter {
+	ivec4 b_open_counter[2];
 };
 #endif
 

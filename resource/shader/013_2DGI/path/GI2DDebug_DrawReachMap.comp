@@ -30,9 +30,11 @@ void main()
 		vec3(1., 0., 1.),
 	};
 		uint cost = b_path_data[i].data;
-		uint color_index1 = (cost / 500) % colors.length();
+		cost = (cost>>4)&((1<<28)-1);
+
+		uint color_index1 = (cost / 50) % colors.length();
 		uint color_index2 = (color_index1+1) % colors.length();
-		float color_rate = (cost % 500) / 500.;
+		float color_rate = (cost % 50) / 50.;
 		color = mix(colors[color_index1], colors[color_index2], color_rate);
 #else
 	vec3 colors[] ={

@@ -1,4 +1,4 @@
-// 届くかどうかだけ計算
+// s_activeの使用量を減らすようにしてみたが、だいぶ遅いのでだめそう
 #version 450
 #extension GL_GOOGLE_include_directive : require
 #extension GL_KHR_shader_subgroup_ballot: enable
@@ -31,13 +31,22 @@ uvec4 neighor_check_list[] =
 	uvec4(2,6,4,4), // straight_wall
 };
 
-shared int s_active[1024*4];
+
+struct Node
+{
+	i16vec2 pos;
+//	uint dir_type:4;
+//	uint cost:28;
+	i16vec2 cost_dir;
+//	uint8_t dir_type;
+};
+shared Node s_active[1024*5];
 shared uvec2 s_active_counter;
 
 
-void tryPushOpen(ivec2 pos, int dir)
+void tryPushOpen(ivec2 pos, int dir_type, int cost)
 {
-	pos += g_neighbor[dir];
+	pos += g_neighbor[dir_type];
 	int idx = pos.x + pos.y * constant.reso.x;
 
 	{
@@ -47,18 +56,27 @@ void tryPushOpen(ivec2 pos, int dir)
 		{
 			return;
 		}
-		b_parent[idx] = uint8_t(dir);
+		b_parent[idx] = uint8_t(dir_type);
+
+		PathData node;
+		node.data = dir_type | ((cost + 1)<<4);
+		b_path_data[idx] = node;
+
 	}
 //	int active_index = atomicAdd(b_open_counter[0].w, 1);
 //	if((active_index%64)==0) { atomicAdd(b_open_counter[0].x, 1); }
 //	b_open[active_index] = i16vec2(pos);
 
 	uint active_index = atomicAdd(s_active_counter[0], 1);
-	s_active[active_index % s_active.length()] = pos.x | (pos.y<<14) | (dir << 28);
+//	s_active[active_index % s_active.length()] = pos.x | (pos.y<<14) | (dir << 28);
+	Node node;
+	node.pos = i16vec2(pos);
+	node.cost_dir = i16vec2(cost+1, dir_type);
+	s_active[active_index % s_active.length()] = node;
 
 }
 
-void explore(in ivec2 pos, in uint dir_type)
+void explore(in ivec2 pos, in uint dir_type, int cost)
 {
 //	pos += neighor_list[dir_type];
 	int index = pos.x + pos.y * constant.reso.x;
@@ -82,12 +100,12 @@ void explore(in ivec2 pos, in uint dir_type)
 		{
 			if(is_open[i]==0){ continue; }
 
-			tryPushOpen(pos, int(path_check[i]));
+			tryPushOpen(pos, int(path_check[i]), cost);
 		}
 
 		if(is_advance != 0)
 		{
-			tryPushOpen(pos, int(dir_type));
+			tryPushOpen(pos, int(dir_type), cost);
 		}
 	}
 }
@@ -114,12 +132,12 @@ void main()
 		uint neighbor = uint(b_neighbor[pos.x + pos.y * constant.reso.x]);
 		if((~neighbor & (1<<dir_type)) != 0)
 		{
-			explore(pos, dir_type);
+			explore(pos, dir_type, 1);
 		}
 	}
 
-	for(int i = 0; i < constant.target_num.y; i++)
-//	for(int i = 0; i < 5000; i++)
+//	for(int i = 0; i < constant.target_num.y; i++)
+	for(int i = 0; i < 5000; i++)
 	{
 		memoryBarrierShared();
 		barrier();
@@ -130,7 +148,6 @@ void main()
 		if(count == 0){ break; }
 
 		bool is_active = gl_LocalInvocationIndex < count;
-		int open = is_active ? s_active[(consume+gl_LocalInvocationIndex) % s_active.length()] : 0;
 
 		barrier();
 
@@ -141,9 +158,11 @@ void main()
 
 		if(is_active)
 		{
-			ivec2 pos = ivec2(open, open>>14) & ((1<<14)-1);
-			uint dir_type = uint((open>>28)&((1<<4)-1));
-			explore(pos, dir_type);
+			Node node = s_active[(consume+gl_LocalInvocationIndex) % s_active.length()];
+			ivec2 pos = ivec2(node.pos);
+			int dir_type = int(node.cost_dir.y);
+			int cost = int(node.cost_dir.x);
+			explore(pos, dir_type, cost);
 		}
 	}
 }

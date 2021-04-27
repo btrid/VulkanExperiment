@@ -49,10 +49,8 @@ void explore(in OpenNode parent)
 	int index = pos.x + pos.y * constant.reso.x;
 
 	{
-		uint prev_cost = atomicCompSwap(b_path_data[index].data, -1, parent.data);
-//		uint prev_cost = atomicMin(b_path_data[index].data, parent.data);
-		if(prev_cost != -1)
-//		if(prev_cost <= parent.data)
+		uint prev_cost = atomicMin(b_path_data[index].data, parent.data);
+		if(prev_cost <= parent.data)
 		{
 			return;
 		}
@@ -83,13 +81,13 @@ void explore(in OpenNode parent)
 			for(int i = 0; i < 4; i++)
 			{
 				if(is_open[i]==0){ continue; }
-				node.data = (path_check[i]) | ((cost+1)<<4);
+				node.data = (path_check[i]) | ((cost + ((path_check[i]%2)==0 ? 14 : 10))<<4);
 				s_open[active_index++ % s_open.length()] = node;
 			}
 
 			if(is_advance != 0)
 			{
-				node.data = (dir_type) | ((cost+1)<<4);
+				node.data = (dir_type) | ((cost + ((dir_type%2)==0 ? 14 : 10))<<4);
 				s_open[active_index++ % s_open.length()] = node;
 			}
 		}
@@ -127,8 +125,8 @@ void main()
 
 	}
 
-//	for(int i = 0; i < constant.target_num.y; i++)
-	for(int i = 0; i < 5000; i++)
+	for(int i = 0; i < constant.target_num.y; i++)
+//	for(int i = 0; i < 5000; i++)
 	{
 		memoryBarrierShared();
 		memoryBarrierBuffer();
