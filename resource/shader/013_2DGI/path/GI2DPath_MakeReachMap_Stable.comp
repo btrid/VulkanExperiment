@@ -111,8 +111,8 @@ void main()
 		}
 	}
 
-	for(int age = 1; age < constant.target_num.y; age++)
-//	for(int age = 1; age < 5000; age++)
+//	for(int age = 1; age < constant.target_num.y; age++)
+	for(int age = 1; age < 5000; age++)
 	{
 		uvec2 count = uvec2(9999);
 		for(int n = 0; n < 2; n++)
@@ -120,48 +120,48 @@ void main()
 			while(true)
 			{
 
-			memoryBarrierShared();
-			barrier();
+				memoryBarrierShared();
+				barrier();
 
-			uint accum = s_active_counter[n][0];
-			uint consume = s_active_counter[n][1];
-			count[n] = min(accum-consume, gl_WorkGroupSize.x);
-			if(count[n] == 0){ break; }
+				uint accum = s_active_counter[n][0];
+				uint consume = s_active_counter[n][1];
+				count[n] = min(accum-consume, gl_WorkGroupSize.x);
+				if(count[n] == 0){ break; }
 
-			bool is_active = gl_LocalInvocationIndex < count[n];
-			Node node = is_active ? s_active[n][(consume+gl_LocalInvocationIndex) % s_active[n].length()] : Node(i16vec2(0));
-			ivec2 pos = ivec2(node.pos);
-			int index = pos.x + pos.y * constant.reso.x;
-			int data = is_active ? int(b_path_data[index].data) : 0;
-			int dir_type = (data>>0)&((1<<4)-1);
-			int cost = (data>>4)&((1<<28)-1);
+				bool is_active = gl_LocalInvocationIndex < count[n];
+				Node node = is_active ? s_active[n][(consume+gl_LocalInvocationIndex) % s_active[n].length()] : Node(i16vec2(0));
+				ivec2 pos = ivec2(node.pos);
+				int index = pos.x + pos.y * constant.reso.x;
+				int data = is_active ? int(b_path_data[index].data) : 0;
+				int dir_type = (data>>0)&((1<<4)-1);
+				int cost = (data>>4)&((1<<28)-1);
 
-			if(gl_LocalInvocationIndex == 0)
-			{
-				s_consume =  count[n];
-			}
+				if(gl_LocalInvocationIndex == 0)
+				{
+					s_consume =  count[n];
+				}
 
-			memoryBarrierShared();
-			barrier();
+				memoryBarrierShared();
+				barrier();
 
-			if(is_active && age != cost)
-			{
-				atomicMin(s_consume, gl_LocalInvocationIndex);
-			}
-			memoryBarrierShared();
-			barrier();
+				if(is_active && age != cost)
+				{
+					atomicMin(s_consume, gl_LocalInvocationIndex);
+				}
+				memoryBarrierShared();
+				barrier();
 
-			if(gl_LocalInvocationIndex == 0)
-			{
-				s_active_counter[n][1] += s_consume;
-			}
+				if(gl_LocalInvocationIndex == 0)
+				{
+					s_active_counter[n][1] += s_consume;
+				}
 
-			if(is_active && age == cost)
-			{
-				explore(pos, dir_type, cost);
-			}
-			if(s_consume == count[n]){ continue; }
-			break;
+				if(is_active && age == cost)
+				{
+					explore(pos, dir_type, cost);
+				}
+				if(s_consume == count[n]){ continue; }
+				break;
 			}
 		}
 

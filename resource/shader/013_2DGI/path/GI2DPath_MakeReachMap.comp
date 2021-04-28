@@ -48,9 +48,7 @@ void explore(in ivec2 pos, uint dir_type, uint cost)
 
 	{
 		uint prev_cost = atomicCompSwap(b_path_data[index].data, -1, (dir_type) | (cost<<4));
-//		uint prev_cost = atomicMin(b_path_data[index].data, parent.data);
 		if(prev_cost != -1)
-//		if(prev_cost <= parent.data)
 		{
 			return;
 		}
@@ -125,8 +123,8 @@ void main()
 
 	}
 
-//	for(int i = 0; i < constant.target_num.y; i++)
-	for(int i = 0; i < 5000; i++)
+	for(int i = 0; i < constant.target_num.y; i++)
+//	for(int i = 0; i < 5000; i++)
 	{
 		memoryBarrierShared();
 		memoryBarrierBuffer();

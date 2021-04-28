@@ -3,7 +3,7 @@ cd /d %~dp0
 rem SET exe=glslc.exe
 rem SET include=-I ../include
 rem SET option=-w -x glsl
-SET exe=glslangValidator.exe -I../../include/ --target-env vulkan1.1 -V -g
+SET exe=glslangValidator.exe -I../../include/ -I./ --target-env vulkan1.1 -V -g
 SET output=-o ../../binary/
 
 %exe% %output%/GI2DPath_MakeReachableMap_Precompute.comp.spv GI2DPath_MakeReachableMap_Precompute.comp
@@ -18,6 +18,6 @@ rem %exe% %include% %option% %output%/GI2DPath_MakeReachMap.comp.spv GI2DPath_Ma
 rem %exe% %include% %option% %output%/GI2DPath_MakeReachMap.comp.spv GI2DPath_MakeReachMap2.comp
 %exe% %include% %option% %output%/GI2DPath_MakeReachMap.comp.spv GI2DPath_MakeReachMap_Stable.comp
 
-rem %exe% %include% %option% %output%/GI2DPath_MakeReachMap_Begin.comp.spv GI2DPath_MakeReachMap_Begin.comp
-rem %exe% %include% %option% %output%/GI2DPath_MakeReachMap_Loop.comp.spv GI2DPath_MakeReachMap_Loop.comp
+ %exe% %include% %option% %output%/GI2DPath_MakeReachMap_Begin.comp.spv GI2DPath_MakeReachMap_Begin.comp
+ %exe% %include% %option% %output%/GI2DPath_MakeReachMap_Loop.comp.spv GI2DPath_MakeReachMap_Loop.comp
 rem %exe% %include% %option% %output%/GI2DPath_MakeReachMap_End.comp.spv GI2DPath_MakeReachMap_End.comp

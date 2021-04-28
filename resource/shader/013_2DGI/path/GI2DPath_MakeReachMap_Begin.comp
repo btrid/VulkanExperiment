@@ -8,76 +8,9 @@
 #include "GI2D/GI2D.glsl"
 #include "GI2D/GI2DPath.glsl"
 
-layout (local_size_x = 32) in;
+#include "GI2DPath.glsl"
+layout (local_size_x = 64) in;
 
-// https://github.com/zerowidth/jps-explained
-// https://zerowidth.com/2013/05/05/jump-point-search-explained.html
-
-
-layout(push_constant, std430) uniform InputVertex
-{
-	i16vec2 target[10];
-	i16vec2 target_num;
-	i16vec2 reso;
-} constant;
-
-
-uvec4 neighor_check_list[] =
-{
-	uvec4(2,6,1,7), // diagonal_path 
-	uvec4(3,5,4,4), // diagonal_wall
-	uvec4(1,7,4,4), // straight_path
-	uvec4(2,6,4,4), // straight_wall
-};
-
-void explore(in ivec2 pos, uint dir_type, uint cost)
-{
-	int index = pos.x + pos.y * constant.reso.x;
-	{
-		uint prev_cost = atomicCompSwap(b_path_data[index].data, -1, parent.data);
-		if(prev_cost != -1)
-		{
-			return;
-		}
-	}
-
-	// 新しい探索のチェック
-	{
-		uint neighbor = uint(b_neighbor[index]);
-		uvec4 path_check = (dir_type.xxxx + neighor_check_list[(dir_type%2)*2]) % u8vec4(8);
-		uvec4 wall_check = (dir_type.xxxx + neighor_check_list[(dir_type%2)*2+1]) % u8vec4(8);
-		u8vec4 path_bit = u8vec4(1)<<path_check;
-		u8vec4 wall_bit = u8vec4(1)<<wall_check;
-
-		bvec4 is_path = notEqual((~neighbor.xxxx) & path_bit, uvec4(0));
-		bvec4 is_wall = notEqual(neighbor.xxxx & wall_bit, uvec4(0));
-		uvec4 is_open = uvec4(is_path) * uvec4(is_wall.xy, 1-ivec2(dir_type%2));
-
-		uint is_advance = uint(((~neighbor) & (1u << dir_type)) != 0) * uint(any(is_path.zw));
-
-
-		uint num = is_open.x+is_open.y+is_open.z+is_open.w + is_advance;
-		if(num != 0)
-		{
-			OpenNode node;
-			node.pos = i16vec2(pos);
-			
-			uint active_index = atomicAdd(s_open_counter[0], num);
-			for(int i = 0; i < 4; i++)
-			{
-				if(is_open[i]==0){ continue; }
-				node.data = (path_check[i]) | ((cost+1)<<4);
-				b_open[active_index++ % s_open.length()] = node;
-			}
-
-			if(is_advance != 0)
-			{
-				node.data = (dir_type) | ((cost+1)<<4);
-				b_open[active_index++ % s_open.length()] = node;
-			}
-		}
-	}
-}
 void main() 
 {	
 	if(gl_LocalInvocationIndex < constant.target_num.x*8)
@@ -86,18 +19,9 @@ void main()
 		uint dir_type = gl_LocalInvocationIndex%8;
 		int index = pos.x + pos.y * constant.reso.x;
 		uint neighbor = uint(b_neighbor[index]);
-		OpenNode node;
-		node.pos = i16vec2(pos);
-		node.data = dir_type;
 		if((~neighbor & (1<<dir_type)) != 0)
 		{
-			explore(node);
+			explore(pos, dir_type, 0);
 		}
-//		if((gl_LocalInvocationIndex %8) == 0 )
-//		{
-//			b_path_data[index].data = 0;
-//			b_parent[index] = uint8_t(0);
-//		}
-
 	}
 }

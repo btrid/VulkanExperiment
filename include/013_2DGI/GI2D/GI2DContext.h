@@ -332,7 +332,7 @@ struct GI2DPathContext
 			b_path_data = context->m_storage_memory.allocateMemory<uint32_t>(gi2d_context->FragmentBufferSize);
 			b_parent = context->m_storage_memory.allocateMemory<uint8_t>({ gi2d_context->FragmentBufferSize,{} });
 			b_open = context->m_storage_memory.allocateMemory<i16vec2>(1024 * 16);
-			b_open_counter = context->m_storage_memory.allocateMemory<ivec4>(2);
+			b_open_counter = context->m_storage_memory.allocateMemory<ivec4>(2*2);
 		}
 
 		// descriptor set
@@ -353,8 +353,8 @@ struct GI2DPathContext
 					b_neighbor.getInfo(),
 					b_path_data.getInfo(),
 					b_parent.getInfo(),
-					b_open_counter.getInfo(),
 					b_open.getInfo(),
+					b_open_counter.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] = {
