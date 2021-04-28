@@ -39,8 +39,8 @@ struct OpenNode
 };
 
 //shared OpenNode s_open[1024*4];
-shared OpenNode s_open[1024*4];
-shared uvec2 s_open_counter;
+shared OpenNode s_open[2][1024*4];
+shared uvec2 s_open_counter[2];
 shared uint s_age;
 shared uint s_consume;
 
@@ -141,6 +141,10 @@ void main()
 
 //	for(int i = 0; i < constant.target_num.y; i++)
 	for(int i = 0; i < 5000; i++)
+	{
+		uint 
+	}
+	for(int n = 0; n < 2; n++)
 	{
 		memoryBarrierShared();
 		memoryBarrierBuffer();

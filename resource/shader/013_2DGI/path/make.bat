@@ -16,7 +16,7 @@ SET output=-o ../../binary/
 
 rem %exe% %include% %option% %output%/GI2DPath_MakeReachMap.comp.spv GI2DPath_MakeReachMap1_old.comp
 rem %exe% %include% %option% %output%/GI2DPath_MakeReachMap.comp.spv GI2DPath_MakeReachMap2.comp
-%exe% %include% %option% %output%/GI2DPath_MakeReachMap.comp.spv GI2DPath_MakeReachMap2.comp
+%exe% %include% %option% %output%/GI2DPath_MakeReachMap.comp.spv GI2DPath_MakeReachMap_Stable.comp
 
 rem %exe% %include% %option% %output%/GI2DPath_MakeReachMap_Begin.comp.spv GI2DPath_MakeReachMap_Begin.comp
 rem %exe% %include% %option% %output%/GI2DPath_MakeReachMap_Loop.comp.spv GI2DPath_MakeReachMap_Loop.comp

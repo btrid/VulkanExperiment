@@ -1,4 +1,4 @@
-// s_activeの使用量を減らすようにしてみた
+// 安定的経路探索
 #version 450
 #extension GL_GOOGLE_include_directive : require
 #extension GL_KHR_shader_subgroup_ballot: enable
@@ -36,9 +36,9 @@ struct Node
 {
 	i16vec2 pos;
 };
-shared Node s_active[1024*5];
-shared uvec2 s_active_counter;
-
+shared Node s_active[2][1024*4];
+shared uvec2 s_active_counter[2];
+shared uint s_consume;
 
 void tryPushOpen(ivec2 pos, uint dir_type, uint cost)
 {
@@ -54,10 +54,8 @@ void tryPushOpen(ivec2 pos, uint dir_type, uint cost)
 		}
 	}
 
-	uint active_index = atomicAdd(s_active_counter[0], 1);
-	Node node;
-	node.pos = i16vec2(pos);
-	s_active[active_index % s_active.length()] = node;
+	uint active_index = atomicAdd(s_active_counter[dir_type%2][0], 1);
+	s_active[dir_type%2][active_index % s_active[0].length()].pos = i16vec2(pos);
 }
 
 void explore(in ivec2 pos, uint dir_type, uint cost)
@@ -81,12 +79,12 @@ void explore(in ivec2 pos, uint dir_type, uint cost)
 		for(int i = 0; i < 4; i++)
 		{
 			if(is_open[i]==0){ continue; }
-			tryPushOpen(pos, int(path_check[i]), cost);
+			tryPushOpen(pos, path_check[i], cost);
 		}
 
 		if(is_advance != 0)
 		{
-			tryPushOpen(pos, int(dir_type), cost);
+			tryPushOpen(pos, dir_type, cost);
 		}
 	}
 }
@@ -95,10 +93,10 @@ void main()
 {
 	if(gl_LocalInvocationIndex == 0)
 	{
-		s_active_counter = uvec2(0);
+		s_active_counter[0] = uvec2(0);
+		s_active_counter[1] = uvec2(0);
 	}
 
-	memoryBarrierBuffer();
 	memoryBarrierShared();
 	barrier();
 
@@ -109,39 +107,64 @@ void main()
 		uint neighbor = uint(b_neighbor[pos.x + pos.y * constant.reso.x]);
 		if((~neighbor & (1<<dir_type)) != 0)
 		{
-			explore(pos, dir_type, 1);
+			explore(pos, dir_type, 0);
 		}
 	}
 
-//	for(int i = 0; i < constant.target_num.y; i++)
-	for(int i = 0; i < 5000; i++)
+	for(int age = 1; age < constant.target_num.y; age++)
+//	for(int age = 1; age < 5000; age++)
 	{
-		memoryBarrierShared();
-		barrier();
-
-		uint accum = s_active_counter[0];
-		uint consume = s_active_counter[1];
-		uint count = min(accum-consume, gl_WorkGroupSize.x);
-		if(count == 0){ break; }
-
-		bool is_active = gl_LocalInvocationIndex < count;
-
-		barrier();
-
-		if(gl_LocalInvocationIndex == 0)
+		uvec2 count = uvec2(9999);
+		for(int n = 0; n < 2; n++)
 		{
-			s_active_counter[1] += count;
-		}
+			while(true)
+			{
 
-		if(is_active)
-		{
-			Node node = s_active[(consume+gl_LocalInvocationIndex) % s_active.length()];
+			memoryBarrierShared();
+			barrier();
+
+			uint accum = s_active_counter[n][0];
+			uint consume = s_active_counter[n][1];
+			count[n] = min(accum-consume, gl_WorkGroupSize.x);
+			if(count[n] == 0){ break; }
+
+			bool is_active = gl_LocalInvocationIndex < count[n];
+			Node node = is_active ? s_active[n][(consume+gl_LocalInvocationIndex) % s_active[n].length()] : Node(i16vec2(0));
 			ivec2 pos = ivec2(node.pos);
 			int index = pos.x + pos.y * constant.reso.x;
-			int data = int(b_path_data[index].data);
+			int data = is_active ? int(b_path_data[index].data) : 0;
 			int dir_type = (data>>0)&((1<<4)-1);
 			int cost = (data>>4)&((1<<28)-1);
-			explore(pos, dir_type, cost);
+
+			if(gl_LocalInvocationIndex == 0)
+			{
+				s_consume =  count[n];
+			}
+
+			memoryBarrierShared();
+			barrier();
+
+			if(is_active && age != cost)
+			{
+				atomicMin(s_consume, gl_LocalInvocationIndex);
+			}
+			memoryBarrierShared();
+			barrier();
+
+			if(gl_LocalInvocationIndex == 0)
+			{
+				s_active_counter[n][1] += s_consume;
+			}
+
+			if(is_active && age == cost)
+			{
+				explore(pos, dir_type, cost);
+			}
+			if(s_consume == count[n]){ continue; }
+			break;
+			}
 		}
+
+		if(all(equal(count, uvec2(0)))){ break; }
 	}
 }
