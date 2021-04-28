@@ -49,9 +49,17 @@ layout(set=USE_GI2D_Path, binding=4, scalar) buffer PathBuffer
 {
 	uint8_t b_parent[];
 };
+
+struct OpenNode
+{
+	i16vec2 pos;
+//	uint dir_type:4;
+//	uint cost:28;
+	uint data;
+};
 layout(set=USE_GI2D_Path, binding=5, scalar) restrict buffer PathNodeOpenBuffer {
 //	i16vec2 b_open[2][2][2048];
-	i16vec2 b_open[];
+	OpenNode b_open[];
 };
 layout(std430, set=USE_GI2D_Path, binding=6) restrict buffer PathNodeOpenCounter {
 	ivec4 b_open_counter[];

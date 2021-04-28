@@ -14,22 +14,24 @@ layout (local_size_x = 64) in;
 shared uint s_open_num;
 void main() 
 {	
-	int offset = constant.age;
+//	int offset = constant.age;
+	int offset = constant.age*2+constant.dir_type;
 	if(gl_LocalInvocationIndex == 0) s_open_num = b_open_counter[offset].w;
 
 	memoryBarrierShared();
 	barrier();
 	if(gl_GlobalInvocationID.x < s_open_num)
 	{
-		ivec2 pos = ivec2(b_open[offset*2048+gl_GlobalInvocationID.x]);
-		int index = pos.x + pos.y * constant.reso.x;
-		int data = int(b_path_data[index].data);
-		int dir_type = (data>>0)&((1<<4)-1);
-		int cost = (data>>4)&((1<<28)-1);
+//		ivec2 pos = ivec2(b_open[offset*2048+gl_GlobalInvocationID.x]);
+		OpenNode node = b_open[offset*2048+gl_GlobalInvocationID.x];
+//		int index = int(node.pos.x + node.pos.y * constant.reso.x);
+//		int data = int(node.data);
+		uint dir_type = (node.data>>0)&((1<<4)-1);
+		uint cost = (node.data>>4)&((1<<28)-1);
 
-		if((dir_type%2)==0)
-			explore(pos, dir_type, cost);
-		if((dir_type%2)==1)
-			explore(pos, dir_type, cost);
+//		if((dir_type%2)==0)
+			explore(node.pos, dir_type, cost);
+//		if((dir_type%2)==1)
+//			explore(node.pos, dir_type, cost);
 	}
 }

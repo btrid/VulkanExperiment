@@ -20,6 +20,7 @@ uvec4 g_neighor_check_list[] =
 	uvec4(2,6,4,4), // straight_wall
 };
 
+#if 0
 void tryPushOpen(ivec2 pos, uint dir_type, uint cost)
 {
 	pos += g_neighbor[dir_type];
@@ -70,3 +71,61 @@ void explore(in ivec2 pos, uint dir_type, uint cost)
 		}
 	}
 }
+#else
+void explore(in ivec2 pos, uint dir_type, uint cost)
+{
+	pos += g_neighbor[dir_type];
+	int index = pos.x + pos.y * constant.reso.x;
+	{
+		uint prev_cost = atomicCompSwap(b_path_data[index].data, -1, dir_type|((cost+1)<<4));
+		if(prev_cost != -1)
+		{
+			return;
+		}
+	}
+
+	// 新しい探索のチェック
+	{
+		uint neighbor = uint(b_neighbor[index]);
+		uvec4 path_check = (dir_type.xxxx + g_neighor_check_list[(dir_type%2)*2]) % u8vec4(8);
+		uvec4 wall_check = (dir_type.xxxx + g_neighor_check_list[(dir_type%2)*2+1]) % u8vec4(8);
+		u8vec4 path_bit = u8vec4(1)<<path_check;
+		u8vec4 wall_bit = u8vec4(1)<<wall_check;
+
+		bvec4 is_path = notEqual((~neighbor.xxxx) & path_bit, uvec4(0));
+		bvec4 is_wall = notEqual(neighbor.xxxx & wall_bit, uvec4(0));
+		uvec4 is_open = uvec4(is_path) * uvec4(is_wall.xy, 1-ivec2(dir_type%2));
+
+		uint is_advance = uint(((~neighbor) & (1u << dir_type)) != 0) * uint(any(is_path.zw));
+
+
+		uint num = is_open.x+is_open.y+is_open.z+is_open.w + is_advance;
+		if(num != 0)
+		{
+			OpenNode node;
+			node.pos = i16vec2(pos);
+			
+//			uint active_index = atomicAdd(s_open_counter[0], num);
+			for(int i = 0; i < 4; i++)
+			{
+				if(is_open[i]==0){ continue; }
+				int offset = int(((constant.age+1)%2)*2+(path_check[i]%2));
+				uint active_index = atomicAdd(b_open_counter[offset].w, 1);
+				if((active_index%64)==0) atomicAdd(b_open_counter[offset].x, 1);
+				node.data = (path_check[i]) | ((cost+1)<<4);
+
+				b_open[offset*2048+active_index] = node;
+			}
+
+			if(is_advance != 0)
+			{
+				int offset = int(((constant.age+1)%2)*2+(dir_type%2));
+				uint active_index = atomicAdd(b_open_counter[offset].w, 1);
+				if((active_index%64)==0) atomicAdd(b_open_counter[offset].x, 1);
+				node.data = (dir_type) | ((cost+1)<<4);
+				b_open[offset*2048+active_index] = node;
+			}
+		}
+	}
+}
+#endif

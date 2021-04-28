@@ -575,8 +575,8 @@ struct GI2DMakeHierarchy
 					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, { array_length(barrier), barrier }, {});
 
 				}
-				ivec4 clear_param[1] = { ivec4(0,1,1,0) };
-				cmd.updateBuffer(path_context->b_open_counter.getInfo().buffer, path_context->b_open_counter.getInfo().offset + s_age * sizeof(ivec4), sizeof(clear_param), clear_param);
+				ivec4 clear_param[2] = { ivec4(0,1,1,0),ivec4(0,1,1,0) };
+				cmd.updateBuffer(path_context->b_open_counter.getInfo().buffer, path_context->b_open_counter.getInfo().offset + s_age * sizeof(ivec4) * 2, sizeof(clear_param), clear_param);
 
 				vk::BufferMemoryBarrier barrier[] = {
 					path_context->b_path_data.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite| vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
@@ -591,12 +591,12 @@ struct GI2DMakeHierarchy
 				constant.age = s_age;
 
 
-//				for (int n = 0; n <2; n++)
+				for (int n = 0; n <2; n++)
 				{
-					constant.dir_type = 0;
+					constant.dir_type = n;
 					cmd.pushConstants(m_pipeline_layout[PipelineLayout_Path].get(), vk::ShaderStageFlagBits::eCompute, 0, sizeof(constant), &constant);
 
-					cmd.dispatchIndirect(path_context->b_open_counter.getInfo().buffer, path_context->b_open_counter.getInfo().offset + s_age*sizeof(ivec4));
+					cmd.dispatchIndirect(path_context->b_open_counter.getInfo().buffer, path_context->b_open_counter.getInfo().offset + (s_age*2+n)*sizeof(ivec4));
 				}
 
 			}
