@@ -14,7 +14,7 @@ layout (local_size_x = 64) in;
 shared uint s_open_num;
 void main() 
 {	
-	int offset = constant.age*2 + constant.dir_type;
+	int offset = constant.age;
 	if(gl_LocalInvocationIndex == 0) s_open_num = b_open_counter[offset].w;
 
 	memoryBarrierShared();
@@ -27,6 +27,9 @@ void main()
 		int dir_type = (data>>0)&((1<<4)-1);
 		int cost = (data>>4)&((1<<28)-1);
 
-		explore(pos, dir_type, cost);
+		if((dir_type%2)==0)
+			explore(pos, dir_type, cost);
+		if((dir_type%2)==1)
+			explore(pos, dir_type, cost);
 	}
 }

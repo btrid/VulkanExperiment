@@ -34,7 +34,7 @@ void tryPushOpen(ivec2 pos, uint dir_type, uint cost)
 		}
 	}
 
-	int offset = int(((constant.age+1)%2)*2 + (dir_type%2));
+	int offset = int((constant.age+1)%2);
 	uint active_index = atomicAdd(b_open_counter[offset].w, 1);
 	if((active_index%64)==0) atomicAdd(b_open_counter[offset].x, 1);
 	b_open[offset*2048+active_index] = i16vec2(pos);
