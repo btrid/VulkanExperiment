@@ -38,19 +38,19 @@ struct OpenNode
 	uint data;
 };
 
-shared OpenNode s_open[1024*4];
+shared OpenNode s_open[1024*3];
 shared uvec2 s_open_counter;
 
-void explore(in ivec2 pos, uint dir_type, uint cost)
+void explore(in OpenNode parent)
 {
-	pos += g_neighbor[dir_type];
+	uint dir_type = (parent.data>>0)&((1<<4)-1);
+	uint cost = (parent.data>>4)&((1<<28)-1);
+	ivec2 pos = parent.pos + g_neighbor[dir_type];
 	int index = pos.x + pos.y * constant.reso.x;
 
 	{
-		uint prev_cost = atomicCompSwap(b_path_data[index].data, -1, (dir_type) | (cost<<4));
-//		uint prev_cost = atomicMin(b_path_data[index].data, parent.data);
-		if(prev_cost != -1)
-//		if(prev_cost <= parent.data)
+		uint prev_cost = atomicMin(b_path_data[index].data, parent.data);
+		if(prev_cost <= parent.data)
 		{
 			return;
 		}
@@ -81,13 +81,13 @@ void explore(in ivec2 pos, uint dir_type, uint cost)
 			for(int i = 0; i < 4; i++)
 			{
 				if(is_open[i]==0){ continue; }
-				node.data = (path_check[i]) | ((cost+1)<<4);
+				node.data = (path_check[i]) | ((cost + ((path_check[i]%2)==0 ? 14 : 10))<<4);
 				s_open[active_index++ % s_open.length()] = node;
 			}
 
 			if(is_advance != 0)
 			{
-				node.data = (dir_type) | ((cost+1)<<4);
+				node.data = (dir_type) | ((cost + ((dir_type%2)==0 ? 14 : 10))<<4);
 				s_open[active_index++ % s_open.length()] = node;
 			}
 		}
@@ -110,12 +110,12 @@ void main()
 		uint dir_type = gl_LocalInvocationIndex%8;
 		int index = pos.x + pos.y * constant.reso.x;
 		uint neighbor = uint(b_neighbor[index]);
-//		OpenNode node;
-//		node.pos = i16vec2(pos);
-//		node.data = dir_type;
+		OpenNode node;
+		node.pos = i16vec2(pos);
+		node.data = dir_type;
 		if((~neighbor & (1<<dir_type)) != 0)
 		{
-			explore(pos, dir_type, 1);
+			explore(node);
 		}
 		if((gl_LocalInvocationIndex %8) == 0 )
 		{
@@ -152,10 +152,7 @@ void main()
 		if(is_open)
 		{
 			OpenNode node = s_open[(consume+gl_LocalInvocationIndex) % s_open.length()];
-			uint dir_type = (node.data>>0)&((1<<4)-1);
-			uint cost = (node.data>>4)&((1<<28)-1);
-
-			explore(node.pos, dir_type, cost);
+			explore(node);
 		}
 	}
 }

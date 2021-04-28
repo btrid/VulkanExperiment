@@ -35,27 +35,44 @@ struct OpenNode
 	i16vec2 pos;
 //	uint dir_type:4;
 //	uint cost:28;
-	uint data;
+//	uint data;
 };
 
+//shared OpenNode s_open[1024*4];
 shared OpenNode s_open[1024*4];
 shared uvec2 s_open_counter;
+shared uint s_age;
+shared uint s_consume;
 
-void explore(in ivec2 pos, uint dir_type, uint cost)
+void explore(in OpenNode node)
 {
-	pos += g_neighbor[dir_type];
+	uint dir_type = (node.data>>0)&((1<<4)-1);
+	uint cost = (node.data>>4)&((1<<28)-1);
+	ivec2 pos = node.pos + g_neighbor[dir_type];
 	int index = pos.x + pos.y * constant.reso.x;
 
+#if 0
 	{
-		uint prev_cost = atomicCompSwap(b_path_data[index].data, -1, (dir_type) | (cost<<4));
-//		uint prev_cost = atomicMin(b_path_data[index].data, parent.data);
+		uint prev_cost=-1;
+		if(dir_type%2 == 0)
+		{
+			prev_cost = atomicCompSwap(b_path_data[index].data, -1, node.data);
+		}
+
+		memoryBarrierBuffer();
+		barrier();
+
+		if(dir_type%2 == 1)
+		{
+			prev_cost = atomicCompSwap(b_path_data[index].data, -1, node.data);
+		}
+
 		if(prev_cost != -1)
-//		if(prev_cost <= parent.data)
 		{
 			return;
 		}
 	}
-
+#endif
 	// 新しい探索のチェック
 	{
 		uint neighbor = uint(b_neighbor[index]);
@@ -100,7 +117,6 @@ void main()
 	{
 		s_open_counter = uvec2(0);
 	}
-
 	memoryBarrierShared();
 	barrier();
 
@@ -110,19 +126,17 @@ void main()
 		uint dir_type = gl_LocalInvocationIndex%8;
 		int index = pos.x + pos.y * constant.reso.x;
 		uint neighbor = uint(b_neighbor[index]);
-//		OpenNode node;
-//		node.pos = i16vec2(pos);
-//		node.data = dir_type;
+		OpenNode node;
+		node.pos = i16vec2(pos);
+		node.data = dir_type;
 		if((~neighbor & (1<<dir_type)) != 0)
 		{
-			explore(pos, dir_type, 1);
+			explore(node);
 		}
 		if((gl_LocalInvocationIndex %8) == 0 )
 		{
 			b_path_data[index].data = 0;
-//			b_parent[index] = uint8_t(0);
 		}
-
 	}
 
 //	for(int i = 0; i < constant.target_num.y; i++)
@@ -135,27 +149,58 @@ void main()
 		uint accum = s_open_counter[0];
 		uint consume = s_open_counter[1];
 		uint count = min(accum-consume, gl_WorkGroupSize.x);
-		if(count == 0){ break; }
+		if(count == 0){ continue; }
 
 		bool is_open = gl_LocalInvocationIndex < count;
+		OpenNode node = is_open ? s_open[(consume+gl_LocalInvocationIndex) % s_open.length()] : OpenNode(i16vec2(0), 0);
 
+		uint cost = (node.data>>4)&((1<<28)-1);
+
+		if(gl_LocalInvocationIndex == 0)
+		{
+			s_age = cost;
+			s_consume = count;
+		}
+		memoryBarrierShared();
+		barrier();
+
+		if(is_open && s_age != cost)
+		{
+			atomicMin(s_consume, gl_LocalInvocationIndex);
+		}
+
+		memoryBarrierShared();
 		barrier();
 
 		if(gl_LocalInvocationIndex == 0)
 		{
-			s_open_counter[1] += count;
-
-			// 調査用
-			atomicMax(b_connect, accum-consume);
+			s_open_counter[1] += s_consume;
 		}
 
-		if(is_open)
+		uint dir_type = (node.data>>0)&((1<<4)-1);
+		uint prev_cost=-1;
 		{
-			OpenNode node = s_open[(consume+gl_LocalInvocationIndex) % s_open.length()];
-			uint dir_type = (node.data>>0)&((1<<4)-1);
-			uint cost = (node.data>>4)&((1<<28)-1);
+			ivec2 pos = node.pos + g_neighbor[dir_type];
+			int index = pos.x + pos.y * constant.reso.x;
 
-			explore(node.pos, dir_type, cost);
+			if(is_open && (s_age == cost) && ((dir_type%2) == 0))
+			{
+				prev_cost = atomicCompSwap(b_path_data[index].data, -1, node.data);
+			}
+
+			memoryBarrierBuffer();
+			barrier();
+
+			if(is_open && s_age == cost && ((dir_type%2) == 1))
+			{
+				prev_cost = atomicCompSwap(b_path_data[index].data, -1, node.data);
+			}
+
+			if(is_open && s_age == cost && prev_cost == -1)
+			{
+				explore(node);
+			}
 		}
+
 	}
 }

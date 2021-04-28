@@ -38,19 +38,19 @@ struct OpenNode
 	uint data;
 };
 
-shared OpenNode s_open[1024*4];
-shared uvec2 s_open_counter;
+shared OpenNode s_open[2][1024*2];
+shared uvec2 s_open_counter[2];
+shared uint s_age;
+shared uint s_consume;
 
-void explore(in ivec2 pos, uint dir_type, uint cost)
+void explore(ivec2 pos, uint dir_type, uint cost)
 {
-	pos += g_neighbor[dir_type];
+//	pos += g_neighbor[dir_type];
 	int index = pos.x + pos.y * constant.reso.x;
-
 	{
+
 		uint prev_cost = atomicCompSwap(b_path_data[index].data, -1, (dir_type) | (cost<<4));
-//		uint prev_cost = atomicMin(b_path_data[index].data, parent.data);
 		if(prev_cost != -1)
-//		if(prev_cost <= parent.data)
 		{
 			return;
 		}
@@ -77,30 +77,31 @@ void explore(in ivec2 pos, uint dir_type, uint cost)
 			OpenNode node;
 			node.pos = i16vec2(pos);
 			
-			uint active_index = atomicAdd(s_open_counter[0], num);
 			for(int i = 0; i < 4; i++)
 			{
 				if(is_open[i]==0){ continue; }
-				node.data = (path_check[i]) | ((cost+1)<<4);
-				s_open[active_index++ % s_open.length()] = node;
+				node.data = path_check[i] | ((cost+1)<<4);
+				uint active_index = atomicAdd(s_open_counter[path_check[i]%2][0], 1);
+				s_open[path_check[i]%2][active_index % s_open[path_check[i]%2].length()] = node;
 			}
 
 			if(is_advance != 0)
 			{
-				node.data = (dir_type) | ((cost+1)<<4);
-				s_open[active_index++ % s_open.length()] = node;
+				node.data = dir_type | ((cost+1)<<4);
+				uint active_index = atomicAdd(s_open_counter[dir_type%2][0], 1);
+				s_open[dir_type%2][active_index % s_open[dir_type%2].length()] = node;
 			}
 		}
 	}
 }
 
 void main() 
-{	
+{
 	if(gl_LocalInvocationIndex == 0)
 	{
-		s_open_counter = uvec2(0);
+		s_open_counter[0] = uvec2(0);
+		s_open_counter[1] = uvec2(0);
 	}
-
 	memoryBarrierShared();
 	barrier();
 
@@ -110,52 +111,70 @@ void main()
 		uint dir_type = gl_LocalInvocationIndex%8;
 		int index = pos.x + pos.y * constant.reso.x;
 		uint neighbor = uint(b_neighbor[index]);
-//		OpenNode node;
-//		node.pos = i16vec2(pos);
-//		node.data = dir_type;
 		if((~neighbor & (1<<dir_type)) != 0)
 		{
-			explore(pos, dir_type, 1);
+			pos += g_neighbor[dir_type];
+			explore(pos, dir_type, 0);
 		}
 		if((gl_LocalInvocationIndex %8) == 0 )
 		{
 			b_path_data[index].data = 0;
 //			b_parent[index] = uint8_t(0);
 		}
-
 	}
 
-//	for(int i = 0; i < constant.target_num.y; i++)
-	for(int i = 0; i < 5000; i++)
+
+	for(int age = 1; age < constant.target_num.y; age++)
 	{
-		memoryBarrierShared();
-		memoryBarrierBuffer();
-		barrier();
-
-		uint accum = s_open_counter[0];
-		uint consume = s_open_counter[1];
-		uint count = min(accum-consume, gl_WorkGroupSize.x);
-		if(count == 0){ break; }
-
-		bool is_open = gl_LocalInvocationIndex < count;
-
-		barrier();
-
-		if(gl_LocalInvocationIndex == 0)
+		uvec2 count = uvec2(0);
+		for(int n = 0; n < 2; n++)
 		{
-			s_open_counter[1] += count;
+			memoryBarrierShared();
+			memoryBarrierBuffer();
+			barrier();
 
-			// 調査用
-			atomicMax(b_connect, accum-consume);
-		}
+			uint accum = s_open_counter[n][0];
+			uint consume = s_open_counter[n][1];
+			count[n] = min(accum-consume, gl_WorkGroupSize.x);
+			if(count[n] == 0){ continue; }
 
-		if(is_open)
-		{
-			OpenNode node = s_open[(consume+gl_LocalInvocationIndex) % s_open.length()];
-			uint dir_type = (node.data>>0)&((1<<4)-1);
+
+			bool is_open = gl_LocalInvocationIndex < count[n];
+			OpenNode node = is_open ? s_open[n][(consume+gl_LocalInvocationIndex) % s_open[n].length()] : OpenNode(i16vec2(0), 0);
+
 			uint cost = (node.data>>4)&((1<<28)-1);
 
-			explore(node.pos, dir_type, cost);
+			if(gl_LocalInvocationIndex == 0)
+			{
+				s_consume = count[n];
+			}
+			memoryBarrierShared();
+			barrier();
+
+			if(is_open && age != cost)
+			{
+				atomicMin(s_consume, gl_LocalInvocationIndex);
+			}
+
+			memoryBarrierShared();
+			barrier();
+
+			if(gl_LocalInvocationIndex == 0)
+			{
+				s_open_counter[n][1] += s_consume;
+			}
+
+			if(is_open && age == cost)
+			{
+				uint dir_type = node.data&((1<<4)-1);
+//				uint cost = (parent.data>>4)&((1<<28)-1);
+				ivec2 pos = node.pos + g_neighbor[dir_type];
+
+				explore(pos, dir_type, cost);
+			}
+
+			if(s_consume != count[n]){ continue; }
 		}
+		if(all(equal(count, uvec2(0)))){ break; }
 	}
 }

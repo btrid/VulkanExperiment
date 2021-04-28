@@ -30,56 +30,54 @@ uvec4 neighor_check_list[] =
 	uvec4(2,6,4,4), // straight_wall
 };
 
-void explore(in PathData_Work parent)
+void explore(in ivec2 pos, uint dir_type, uint cost)
 {
-	uint dir_type = (parent.data>>0)&((1<<4)-1);
-	uint cost = (parent.data>>4)&((1<<28)-1);
-	uint neighbor = uint(b_neighbor[uint(parent.pos.x + parent.pos.y * constant.reso.x)]);
-
-	// 新しい探索のチェック
-	uvec4 path_check = (dir_type.xxxx + neighor_check_list[(dir_type%2)*2]) % u8vec4(8);
-	uvec4 wall_check = (dir_type.xxxx + neighor_check_list[(dir_type%2)*2+1]) % u8vec4(8);
-	u8vec4 path_bit = u8vec4(1)<<path_check;
-	u8vec4 wall_bit = u8vec4(1)<<wall_check;
-
-	bvec4 is_path = notEqual((~neighbor.xxxx) & path_bit, uvec4(0));
-	bvec4 is_wall = notEqual(neighbor.xxxx & wall_bit, uvec4(0));
-	uvec4 is_open = uvec4(is_path) * uvec4(is_wall.xy, 1-ivec2(dir_type%2));
-
+	int index = pos.x + pos.y * constant.reso.x;
 	{
-
-		for(int i = 0; i < 4; i++)
+		uint prev_cost = atomicCompSwap(b_path_data[index].data, -1, parent.data);
+		if(prev_cost != -1)
 		{
-			if(is_open[i]==0){ continue; }
-
-			ivec2 pos = parent.pos + g_neighbor[path_check[i]];
-			int index = pos.x + pos.y * constant.reso.x;
-			uint data = path_check[i] | ((cost + 1)<<4);
-			if(atomicCompSwap(b_path_data[index].data, -1, data)==-1){ continue; }
-
-			uint active_index = atomicAdd(b_open_counter[0].w, 1);
-			if((active_index%64)==0){ atomicAdd(b_open_counter[0].x, 1); }
-
-			b_open[active_index] = i16vec2(pos);
+			return;
 		}
 	}
+
+	// 新しい探索のチェック
 	{
+		uint neighbor = uint(b_neighbor[index]);
+		uvec4 path_check = (dir_type.xxxx + neighor_check_list[(dir_type%2)*2]) % u8vec4(8);
+		uvec4 wall_check = (dir_type.xxxx + neighor_check_list[(dir_type%2)*2+1]) % u8vec4(8);
+		u8vec4 path_bit = u8vec4(1)<<path_check;
+		u8vec4 wall_bit = u8vec4(1)<<wall_check;
+
+		bvec4 is_path = notEqual((~neighbor.xxxx) & path_bit, uvec4(0));
+		bvec4 is_wall = notEqual(neighbor.xxxx & wall_bit, uvec4(0));
+		uvec4 is_open = uvec4(is_path) * uvec4(is_wall.xy, 1-ivec2(dir_type%2));
+
 		uint is_advance = uint(((~neighbor) & (1u << dir_type)) != 0) * uint(any(is_path.zw));
-		if(is_advance != 0)
+
+
+		uint num = is_open.x+is_open.y+is_open.z+is_open.w + is_advance;
+		if(num != 0)
 		{
-			ivec2 pos = parent.pos + g_neighbor[dir_type];
-			int index = pos.x + pos.y * constant.reso.x;
-			uint data = dir_type | ((cost + 1)<<4);
-			if(atomicCompSwap(b_path_data[index].data, -1, data)==-1){ return; }
+			OpenNode node;
+			node.pos = i16vec2(pos);
+			
+			uint active_index = atomicAdd(s_open_counter[0], num);
+			for(int i = 0; i < 4; i++)
+			{
+				if(is_open[i]==0){ continue; }
+				node.data = (path_check[i]) | ((cost+1)<<4);
+				b_open[active_index++ % s_open.length()] = node;
+			}
 
-			uint active_index = atomicAdd(b_open_counter[0].w, 1);
-			if((active_index%64)==0){ atomicAdd(b_open_counter[0].x, 1); }
-
-			b_open[active_index] = i16vec2(pos);
+			if(is_advance != 0)
+			{
+				node.data = (dir_type) | ((cost+1)<<4);
+				b_open[active_index++ % s_open.length()] = node;
+			}
 		}
 	}
 }
-
 void main() 
 {	
 	if(gl_LocalInvocationIndex < constant.target_num.x*8)
@@ -95,11 +93,11 @@ void main()
 		{
 			explore(node);
 		}
-		if((gl_LocalInvocationIndex %8) == 0 )
-		{
-			b_path_data[index].data = 0;
+//		if((gl_LocalInvocationIndex %8) == 0 )
+//		{
+//			b_path_data[index].data = 0;
 //			b_parent[index] = uint8_t(0);
-		}
+//		}
 
 	}
 }

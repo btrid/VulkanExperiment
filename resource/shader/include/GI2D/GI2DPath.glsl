@@ -60,7 +60,7 @@ layout(set=USE_GI2D_Path, binding=5, scalar) restrict buffer PathNodeOpenBuffer 
 	i16vec2 b_open[];
 };
 layout(std430, set=USE_GI2D_Path, binding=6) restrict buffer PathNodeOpenCounter {
-	ivec4 b_open_counter[2];
+	ivec4 b_open_counter[4];
 };
 #endif
 
