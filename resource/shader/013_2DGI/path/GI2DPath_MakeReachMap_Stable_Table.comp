@@ -38,7 +38,7 @@ struct Node
 	i16vec2 pos;
 };
 shared Node s_active[2][1024*4];
-shared ivec2 s_active_counter[2];
+shared int s_active_counter[2];
 shared int s_age;
 
 void tryPushOpen(ivec2 pos, uint dir_type, uint cost)
@@ -52,8 +52,8 @@ void tryPushOpen(ivec2 pos, uint dir_type, uint cost)
 		uint prev_cost = atomicMin(b_path_data[index].data, dir_type|(int((dir_type%2)==0)<<4)|((cost+1)<<5));
 		if(prev_cost == -1)
 		{
-			uint active_index = atomicAdd(s_active_counter[(s_age+1)%2][0], 1);
-			s_active[(s_age+1)%2][active_index % s_active[(s_age+1)%2].length()].pos = i16vec2(pos);
+			uint active_index = atomicAdd(s_active_counter[(s_age+1)%2], 1);
+			s_active[(s_age+1)%2][active_index].pos = i16vec2(pos);
 		}
 		else
 		{
@@ -83,8 +83,8 @@ void main()
 {
 	if(gl_LocalInvocationIndex == 0)
 	{
-		s_active_counter[0] = ivec2(0);
-		s_active_counter[1] = ivec2(0);
+		s_active_counter[0] = 0;
+		s_active_counter[1] = 0;
 		s_age = 0;
 	}
 
@@ -107,36 +107,29 @@ void main()
 		memoryBarrierShared();
 		barrier();
 
-		int accum = s_active_counter[age%2][0];
-		int consume = s_active_counter[age%2][1];
-		int count = accum-consume;
-		if(count == 0){ break; }
+		int accum = s_active_counter[age%2];
+		if(accum == 0){ break; }
 
 		if(gl_LocalInvocationIndex == 0)
 		{
-			s_active_counter[age%2][1] = accum;
+			s_active_counter[age%2] = 0;
 			s_age = age;
 		}
 
 		memoryBarrierShared();
 		barrier();
-		while(count != 0)
+
+		int consume = int(gl_LocalInvocationIndex);
+		while(consume < accum)
 		{
-			bool is_active = gl_LocalInvocationIndex < count;
-			Node node = is_active ? s_active[age%2][(consume+gl_LocalInvocationIndex) % s_active[age%2].length()] : Node(i16vec2(0));
+			Node node = s_active[age%2][consume];
 			ivec2 pos = ivec2(node.pos);
 			int index = pos.x + pos.y * constant.reso.x;
-			int data = is_active ? int(b_path_data[index].data) : 0;
+			int data = int(b_path_data[index].data);
 			int dir_type = (data>>0)&((1<<4)-1);
-//			int cost = (data>>5)&((1<<27)-1);
+			explore(pos, dir_type, age);
 
-			if(is_active)
-			{
-				explore(pos, dir_type, age);
-			}
-
-			count = max(count - int(gl_WorkGroupSize.x), 0);
-			consume = min(int(gl_WorkGroupSize.x)+consume, accum);
+			consume += int(gl_WorkGroupSize.x);
 		}
 	}
 }
