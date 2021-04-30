@@ -65,6 +65,10 @@ layout(std430, set=USE_GI2D_Path, binding=6) restrict buffer PathNodeOpenCounter
 	ivec4 b_open_counter[];
 };
 
+layout(set=USE_GI2D_Path, binding=10, scalar) uniform PathNeighborTable {
+	uint8_t u_neighbor_table[2048];
+};
+
 #endif
 
 

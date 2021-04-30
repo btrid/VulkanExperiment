@@ -30,7 +30,7 @@ uvec4 neighor_check_list[] =
 	uvec4(2,6,4,4), // straight_wall
 };
 
-struct OpenNode
+struct Node
 {
 	i16vec2 pos;
 //	uint dir_type:4;
@@ -38,7 +38,7 @@ struct OpenNode
 	uint data;
 };
 
-shared OpenNode s_open[1024*4];
+shared Node s_open[1024*5];
 shared uvec2 s_open_counter;
 
 void explore(in ivec2 pos, uint dir_type, uint cost)
@@ -47,8 +47,10 @@ void explore(in ivec2 pos, uint dir_type, uint cost)
 	int index = pos.x + pos.y * constant.reso.x;
 
 	{
-		uint prev_cost = atomicCompSwap(b_path_data[index].data, -1, (dir_type) | (cost<<4));
-		if(prev_cost != -1)
+		// 斜め方向は優先
+		uint data = dir_type |((dir_type%2==0?1:0)<<4) | ((cost+(dir_type%2==0?1:1))<<5);
+		uint prev = atomicMin(b_path_data[index].data, data);
+		if(data >= prev)
 		{
 			return;
 		}
@@ -57,37 +59,14 @@ void explore(in ivec2 pos, uint dir_type, uint cost)
 	// 新しい探索のチェック
 	{
 		uint neighbor = uint(b_neighbor[index]);
-		uvec4 path_check = (dir_type.xxxx + neighor_check_list[(dir_type%2)*2]) % u8vec4(8);
-		uvec4 wall_check = (dir_type.xxxx + neighor_check_list[(dir_type%2)*2+1]) % u8vec4(8);
-		u8vec4 path_bit = u8vec4(1)<<path_check;
-		u8vec4 wall_bit = u8vec4(1)<<wall_check;
+		int dir_types = u_neighbor_table[int(neighbor+dir_type*256)];
+		uint active_index = atomicAdd(s_open_counter[0], bitCount(dir_types));
 
-		bvec4 is_path = notEqual((~neighbor.xxxx) & path_bit, uvec4(0));
-		bvec4 is_wall = notEqual(neighbor.xxxx & wall_bit, uvec4(0));
-		uvec4 is_open = uvec4(is_path) * uvec4(is_wall.xy, 1-ivec2(dir_type%2));
-
-		uint is_advance = uint(((~neighbor) & (1u << dir_type)) != 0) * uint(any(is_path.zw));
-
-
-		uint num = is_open.x+is_open.y+is_open.z+is_open.w + is_advance;
-		if(num != 0)
+		while(dir_types!=0)
 		{
-			OpenNode node;
-			node.pos = i16vec2(pos);
-			
-			uint active_index = atomicAdd(s_open_counter[0], num);
-			for(int i = 0; i < 4; i++)
-			{
-				if(is_open[i]==0){ continue; }
-				node.data = (path_check[i]) | ((cost+1)<<4);
-				s_open[active_index++ % s_open.length()] = node;
-			}
-
-			if(is_advance != 0)
-			{
-				node.data = (dir_type) | ((cost+1)<<4);
-				s_open[active_index++ % s_open.length()] = node;
-			}
+			int dir = findMSB(dir_types);
+			dir_types &= ~(1<<dir);
+			s_open[active_index++ % s_open.length()] = Node(i16vec2(pos), dir|((cost+((dir%2)==0?1:1))<<5));
 		}
 	}
 }
@@ -108,23 +87,19 @@ void main()
 		uint dir_type = gl_LocalInvocationIndex%8;
 		int index = pos.x + pos.y * constant.reso.x;
 		uint neighbor = uint(b_neighbor[index]);
-//		OpenNode node;
-//		node.pos = i16vec2(pos);
-//		node.data = dir_type;
 		if((~neighbor & (1<<dir_type)) != 0)
 		{
-			explore(pos, dir_type, 1);
+			explore(pos, dir_type, 0);
 		}
 		if((gl_LocalInvocationIndex %8) == 0 )
 		{
 			b_path_data[index].data = 0;
-//			b_parent[index] = uint8_t(0);
 		}
 
 	}
 
-	for(int i = 0; i < constant.target_num.y; i++)
-//	for(int i = 0; i < 5000; i++)
+//	for(int i = 0; i < constant.target_num.y; i++)
+	for(int i = 0; i < 5000; i++)
 	{
 		memoryBarrierShared();
 		memoryBarrierBuffer();
@@ -149,9 +124,9 @@ void main()
 
 		if(is_open)
 		{
-			OpenNode node = s_open[(consume+gl_LocalInvocationIndex) % s_open.length()];
+			Node node = s_open[(consume+gl_LocalInvocationIndex) % s_open.length()];
 			uint dir_type = (node.data>>0)&((1<<4)-1);
-			uint cost = (node.data>>4)&((1<<28)-1);
+			uint cost = (node.data>>5)&((1<<27)-1);
 
 			explore(node.pos, dir_type, cost);
 		}

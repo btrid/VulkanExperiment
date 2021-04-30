@@ -278,8 +278,8 @@ int pathFinding()
 				gi2d_context->execute(cmd);
 				gi2d_debug.executeMakeFragment(cmd);
 				gi2d_make_hierarchy.executeMakeFragmentMap(cmd);
-//				gi2d_make_hierarchy.executeMakeReachMap(cmd, gi2d_path_context);
-				gi2d_make_hierarchy.executeMakeReachMap_Multiframe(cmd, gi2d_path_context);
+				gi2d_make_hierarchy.executeMakeReachMap(cmd, gi2d_path_context);
+//				gi2d_make_hierarchy.executeMakeReachMap_Multiframe(cmd, gi2d_path_context);
 				gi2d_debug.executeDrawReachMap(cmd, gi2d_path_context, app.m_window->getFrontBuffer());
 
 				cmd.end();
