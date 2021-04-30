@@ -30,7 +30,7 @@ void main()
 		vec3(1., 0., 1.),
 	};
 		uint cost = b_path_data[i].data;
-		cost = (cost>>4)&((1<<28)-1);
+		cost = (cost>>5)&((1<<27)-1);
 
 		uint color_index1 = (cost / 50) % colors.length();
 		uint color_index2 = (color_index1+1) % colors.length();

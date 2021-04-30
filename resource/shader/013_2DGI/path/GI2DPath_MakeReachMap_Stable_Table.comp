@@ -38,8 +38,8 @@ struct Node
 	i16vec2 pos;
 };
 shared Node s_active[2][1024*4];
-shared uvec2 s_active_counter[2];
-shared uint s_consume;
+shared ivec2 s_active_counter[2];
+shared int s_age;
 
 void tryPushOpen(ivec2 pos, uint dir_type, uint cost)
 {
@@ -48,15 +48,18 @@ void tryPushOpen(ivec2 pos, uint dir_type, uint cost)
 
 	{
 		// すでにチェック済みなら終わり
-		uint prev_cost = atomicCompSwap(b_path_data[index].data, -1, dir_type|((cost+1)<<4));
-		if(prev_cost != -1)
+		// 斜めか直線かどっちかを優先する
+		uint prev_cost = atomicMin(b_path_data[index].data, dir_type|(int((dir_type%2)==0)<<4)|((cost+1)<<5));
+		if(prev_cost == -1)
 		{
-			return;
+			uint active_index = atomicAdd(s_active_counter[(s_age+1)%2][0], 1);
+			s_active[(s_age+1)%2][active_index % s_active[(s_age+1)%2].length()].pos = i16vec2(pos);
+		}
+		else
+		{
+
 		}
 	}
-
-	uint active_index = atomicAdd(s_active_counter[dir_type%2][0], 1);
-	s_active[dir_type%2][active_index % s_active[0].length()].pos = i16vec2(pos);
 }
 
 void explore(in ivec2 pos, uint dir_type, uint cost)
@@ -80,8 +83,9 @@ void main()
 {
 	if(gl_LocalInvocationIndex == 0)
 	{
-		s_active_counter[0] = uvec2(0);
-		s_active_counter[1] = uvec2(0);
+		s_active_counter[0] = ivec2(0);
+		s_active_counter[1] = ivec2(0);
+		s_age = 0;
 	}
 
 	memoryBarrierShared();
@@ -98,60 +102,41 @@ void main()
 		}
 	}
 
-	for(int age = 1; age < constant.target_num.y; age++)
-//	for(int age = 1; age < 5000; age++)
+	for(int age = 1; age < 5000; age++)
 	{
-		uvec2 count = uvec2(9999);
-		for(int n = 0; n < 2; n++)
+		memoryBarrierShared();
+		barrier();
+
+		int accum = s_active_counter[age%2][0];
+		int consume = s_active_counter[age%2][1];
+		int count = accum-consume;
+		if(count == 0){ break; }
+
+		if(gl_LocalInvocationIndex == 0)
 		{
-			while(true)
-			{
-
-				memoryBarrierShared();
-				barrier();
-
-				uint accum = s_active_counter[n][0];
-				uint consume = s_active_counter[n][1];
-				count[n] = min(accum-consume, gl_WorkGroupSize.x);
-				if(count[n] == 0){ break; }
-
-				bool is_active = gl_LocalInvocationIndex < count[n];
-				Node node = is_active ? s_active[n][(consume+gl_LocalInvocationIndex) % s_active[n].length()] : Node(i16vec2(0));
-				ivec2 pos = ivec2(node.pos);
-				int index = pos.x + pos.y * constant.reso.x;
-				int data = is_active ? int(b_path_data[index].data) : 0;
-				int dir_type = (data>>0)&((1<<4)-1);
-				int cost = (data>>4)&((1<<28)-1);
-
-				if(gl_LocalInvocationIndex == 0)
-				{
-					s_consume =  count[n];
-				}
-
-				memoryBarrierShared();
-				barrier();
-
-				if(is_active && age != cost)
-				{
-					atomicMin(s_consume, gl_LocalInvocationIndex);
-				}
-				memoryBarrierShared();
-				barrier();
-
-				if(gl_LocalInvocationIndex == 0)
-				{
-					s_active_counter[n][1] += s_consume;
-				}
-
-				if(is_active && age == cost)
-				{
-					explore(pos, dir_type, cost);
-				}
-				if(s_consume == count[n]){ continue; }
-				break;
-			}
+			s_active_counter[age%2][1] = accum;
+			s_age = age;
 		}
 
-		if(all(equal(count, uvec2(0)))){ break; }
+		memoryBarrierShared();
+		barrier();
+		while(count != 0)
+		{
+			bool is_active = gl_LocalInvocationIndex < count;
+			Node node = is_active ? s_active[age%2][(consume+gl_LocalInvocationIndex) % s_active[age%2].length()] : Node(i16vec2(0));
+			ivec2 pos = ivec2(node.pos);
+			int index = pos.x + pos.y * constant.reso.x;
+			int data = is_active ? int(b_path_data[index].data) : 0;
+			int dir_type = (data>>0)&((1<<4)-1);
+//			int cost = (data>>5)&((1<<27)-1);
+
+			if(is_active)
+			{
+				explore(pos, dir_type, age);
+			}
+
+			count = max(count - int(gl_WorkGroupSize.x), 0);
+			consume = min(int(gl_WorkGroupSize.x)+consume, accum);
+		}
 	}
 }
