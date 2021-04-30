@@ -119,17 +119,14 @@ void main()
 		memoryBarrierShared();
 		barrier();
 
-		int consume = int(gl_LocalInvocationIndex);
-		while(consume < accum)
+		for(int i = int(gl_LocalInvocationIndex); i < accum; i+=int(gl_WorkGroupSize.x))
 		{
-			Node node = s_active[age%2][consume];
+			Node node = s_active[age%2][i];
 			ivec2 pos = ivec2(node.pos);
 			int index = pos.x + pos.y * constant.reso.x;
 			int data = int(b_path_data[index].data);
 			int dir_type = (data>>0)&((1<<4)-1);
 			explore(pos, dir_type, age);
-
-			consume += int(gl_WorkGroupSize.x);
 		}
 	}
 }
