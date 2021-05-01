@@ -1,7 +1,9 @@
+// 安定的経路探索
 #version 450
 #extension GL_GOOGLE_include_directive : require
 #extension GL_KHR_shader_subgroup_ballot: enable
 #extension GL_KHR_shader_subgroup_arithmetic: enable
+#extension GL_EXT_nonuniform_qualifier : enable
 
 #define USE_GI2D 0
 #define USE_GI2D_Path 1
@@ -21,61 +23,81 @@ layout(push_constant, std430) uniform InputVertex
 	i16vec2 reso;
 } constant;
 
+shared i16vec2 s_active[1024*4];
+shared int s_active_counter;
 
-uvec4 neighor_check_list[] =
-{
-	uvec4(2,6,1,7), // diagonal_path 
-	uvec4(3,5,4,4), // diagonal_wall
-	uvec4(1,7,4,4), // straight_path
-	uvec4(2,6,4,4), // straight_wall
-};
-
-struct Node
-{
-	i16vec2 pos;
-//	uint dir_type:4;
-//	uint cost:28;
-	uint data;
-};
-
-shared Node s_open[1024*5];
-shared uvec2 s_open_counter;
-
-void explore(in ivec2 pos, uint dir_type, uint cost)
+void tryPushOpen(ivec2 pos, uint dir_type, uint data)
 {
 	pos += g_neighbor[dir_type];
 	int index = pos.x + pos.y * constant.reso.x;
 
 	{
-		// 斜め方向は優先
-		uint data = dir_type |((dir_type%2==0?1:0)<<4) | ((cost+(dir_type%2==0?1:1))<<5);
-		uint prev = atomicMin(b_path_data[index].data, data);
-		if(data >= prev)
+		// すでにチェック済みなら終わり
+		uint prev_data = atomicMin(b_path_data[index].data, data);
+		if(prev_data == -1)
 		{
-			return;
-		}
-	}
-
-	// 新しい探索のチェック
-	{
-		uint neighbor = uint(b_neighbor[index]);
-		int dir_types = u_neighbor_table[int(neighbor+dir_type*256)];
-		uint active_index = atomicAdd(s_open_counter[0], bitCount(dir_types));
-
-		while(dir_types!=0)
-		{
-			int dir = findMSB(dir_types);
-			dir_types &= ~(1<<dir);
-			s_open[active_index++ % s_open.length()] = Node(i16vec2(pos), dir|((cost+((dir%2)==0?1:1))<<5));
+			uint active_index = atomicAdd(s_active_counter, 1);
+			s_active[active_index%s_active.length()] = i16vec2(pos);
 		}
 	}
 }
 
+void explore(in ivec2 pos, uint dir_type, uint cost)
+{
+	int index = pos.x + pos.y * constant.reso.x;
+	uint neighbor = uint(b_neighbor[index]);
+	cost += 1;
+	// 新しい探索のチェック
+#if 0
+	{
+		int dir_types = u_neighbor_table[int(neighbor+dir_type*256)];
+		while(dir_types!=0)
+		{
+			int dir = findMSB(dir_types);
+			dir_types &= ~(1<<dir);
+			tryPushOpen(pos, dir, dir|(cost<<4));
+		}
+	}
+#else
+	{
+		uvec4 neighor_check_list[] =
+		{
+			uvec4(2,6,1,7), // diagonal_path 
+			uvec4(3,5,4,4), // diagonal_wall
+			uvec4(1,7,4,4), // straight_path
+			uvec4(2,6,4,4), // straight_wall
+		};
+
+		uvec4 path_check = (dir_type.xxxx + neighor_check_list[(dir_type%2)*2]) % uvec4(8);
+		uvec4 wall_check = (dir_type.xxxx + neighor_check_list[(dir_type%2)*2+1]) % uvec4(8);
+		uvec4 path_bit = uvec4(1)<<path_check;
+		uvec4 wall_bit = uvec4(1)<<wall_check;
+
+		bvec4 is_path = notEqual((~neighbor.xxxx) & path_bit, uvec4(0));
+		bvec4 is_wall = notEqual(neighbor.xxxx & wall_bit, uvec4(0));
+		uvec4 is_open = uvec4(is_path) * uvec4(is_wall.xy, 1-ivec2(dir_type%2));
+
+		uint is_advance = uint(((~neighbor) & (1u << dir_type)) != 0) * uint(any(is_path.zw));
+
+		for(int i = 0; i < 4; i++)
+		{
+			if(is_open[i]==0){ continue; }
+			tryPushOpen(pos, path_check[i], path_check[i]|(cost<<4));
+		}
+
+		if(is_advance != 0)
+		{
+			tryPushOpen(pos, dir_type, dir_type|(cost<<4));
+		}
+	}
+#endif
+}
+
 void main() 
-{	
+{
 	if(gl_LocalInvocationIndex == 0)
 	{
-		s_open_counter = uvec2(0);
+		s_active_counter = 0;
 	}
 
 	memoryBarrierShared();
@@ -85,50 +107,33 @@ void main()
 	{
 		ivec2 pos = ivec2(constant.target[gl_LocalInvocationIndex/8]);
 		uint dir_type = gl_LocalInvocationIndex%8;
-		int index = pos.x + pos.y * constant.reso.x;
-		uint neighbor = uint(b_neighbor[index]);
+		uint neighbor = uint(b_neighbor[pos.x + pos.y * constant.reso.x]);
 		if((~neighbor & (1<<dir_type)) != 0)
 		{
 			explore(pos, dir_type, 0);
 		}
-		if((gl_LocalInvocationIndex %8) == 0 )
-		{
-			b_path_data[index].data = 0;
-		}
-
 	}
 
-//	for(int i = 0; i < constant.target_num.y; i++)
-	for(int i = 0; i < 5000; i++)
+	int consume = 0;
+	int accum = 0;
+	for(int age = 1; age < 5000; age++)
 	{
 		memoryBarrierShared();
-		memoryBarrierBuffer();
 		barrier();
 
-		uint accum = s_open_counter[0];
-		uint consume = s_open_counter[1];
-		uint count = min(accum-consume, gl_WorkGroupSize.x);
-		if(count == 0){ break; }
+		consume += accum;
+		accum = s_active_counter-consume;
+		if(accum == 0){ break; }
 
-		bool is_open = gl_LocalInvocationIndex < count;
 
-		barrier();
-
-		if(gl_LocalInvocationIndex == 0)
+		for(int i = int(gl_LocalInvocationIndex); i < accum; i+=int(gl_WorkGroupSize.x))
 		{
-			s_open_counter[1] += count;
-
-			// 調査用
-			atomicMax(b_connect, accum-consume);
-		}
-
-		if(is_open)
-		{
-			Node node = s_open[(consume+gl_LocalInvocationIndex) % s_open.length()];
-			uint dir_type = (node.data>>0)&((1<<4)-1);
-			uint cost = (node.data>>5)&((1<<27)-1);
-
-			explore(node.pos, dir_type, cost);
+			ivec2 pos = ivec2(s_active[(i+consume)%s_active.length()]);
+			int index = pos.x + pos.y * constant.reso.x;
+			int data = int(b_path_data[index].data);
+			int dir_type = (data>>0)&((1<<4)-1);
+			int cost = (data>>4)&((1<<28)-1);
+			explore(pos, dir_type, cost);
 		}
 	}
 }

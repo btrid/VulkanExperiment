@@ -184,7 +184,7 @@ int crowd()
 				crowd_context->execute(cmd);
 				gi2d_debug.executeMakeFragment(cmd);
 				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
-				gi2d_make_hierarchy.executeMakeReachableMap(cmd, gi2d_path_context);
+//				gi2d_make_hierarchy.executeMakeReachableMap(cmd, gi2d_path_context);
 
 				crowd_procedure.executeUpdateUnit(cmd);
 
@@ -278,10 +278,7 @@ int pathFinding()
 				gi2d_debug.executeMakeFragment(cmd);
 				gi2d_make_hierarchy.executeMakeFragmentMap(cmd);
 				gi2d_make_hierarchy.executeMakeReachMap(cmd, gi2d_path_context);
-				gi2d_debug.executeDrawReachMap(cmd, gi2d_path_context, app.m_window->getFrontBuffer());
-
-//				gi2d_make_hierarchy.executeMakeReachableMap(cmd, gi2d_path_context);
-//				gi2d_debug.executeDrawReachableMap(cmd, gi2d_path_context, app.m_window->getFrontBuffer());
+				gi2d_make_hierarchy.executeDrawReachMap(cmd, gi2d_path_context, app.m_window->getFrontBuffer());
 
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;

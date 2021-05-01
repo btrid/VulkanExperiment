@@ -30,43 +30,12 @@ uint PathData_dirtype(in PathData d)
 {
 	return d.data&0x07;
 }
-#define NodeSize (1024 * 16)
-
-layout(std430, set=USE_GI2D_Path, binding=0) restrict buffer PathConnectBuffer {
-	uint b_connect;
-};
-layout(std430, set=USE_GI2D_Path, binding=1) restrict buffer PathAccessBuffer {
-	uint b_closed[];
-};
-layout(std430, set=USE_GI2D_Path, binding=2) restrict buffer PathNeibghborStateBuffer {
+layout(std430, set=USE_GI2D_Path, binding=0) restrict buffer PathNeibghborStateBuffer {
 	// 壁ならbitが立つ
 	uint8_t b_neighbor[];
 };
-layout(std430, set=USE_GI2D_Path, binding=3) restrict buffer PathCostBuffer {
+layout(std430, set=USE_GI2D_Path, binding=1) restrict buffer PathCostBuffer {
 	PathData b_path_data[];
-};
-layout(set=USE_GI2D_Path, binding=4, scalar) buffer PathBuffer 
-{
-	uint8_t b_parent[];
-};
-
-struct OpenNode
-{
-	i16vec2 pos;
-//	uint dir_type:4;
-//	uint cost:28;
-	uint data;
-};
-layout(set=USE_GI2D_Path, binding=5, scalar) restrict buffer PathNodeOpenBuffer {
-//	i16vec2 b_open[2][2][2048];
-	OpenNode b_open[];
-};
-layout(std430, set=USE_GI2D_Path, binding=6) restrict buffer PathNodeOpenCounter {
-	ivec4 b_open_counter[];
-};
-
-layout(set=USE_GI2D_Path, binding=10, scalar) uniform PathNeighborTable {
-	uint8_t u_neighbor_table[2048];
 };
 
 #endif
