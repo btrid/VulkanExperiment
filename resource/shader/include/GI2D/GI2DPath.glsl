@@ -30,12 +30,23 @@ uint PathData_dirtype(in PathData d)
 {
 	return d.data&0x07;
 }
-layout(std430, set=USE_GI2D_Path, binding=0) restrict buffer PathNeibghborStateBuffer {
+uint PathData_cost(in PathData d)
+{
+	return (d.data>>4)&((1<<28)-1);
+}
+
+layout(set=USE_GI2D_Path, binding=0, scalar) restrict buffer PathNeibghborStateBuffer {
 	// 壁ならbitが立つ
 	uint8_t b_neighbor[];
 };
-layout(std430, set=USE_GI2D_Path, binding=1) restrict buffer PathCostBuffer {
+layout(set=USE_GI2D_Path, binding=1, std430) restrict buffer PathCostBuffer {
 	PathData b_path_data[];
+};
+layout(set=USE_GI2D_Path, binding=2, std430) restrict buffer PathOpenBuffer {
+	i16vec2 b_open[];
+};
+layout(set=USE_GI2D_Path, binding=3, std430) restrict buffer PathOpenCount {
+	int b_open_counter;
 };
 
 #endif

@@ -118,6 +118,8 @@ struct GI2DContext
 				vk::DescriptorSetLayoutBinding binding[] = {
 					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -318,9 +320,14 @@ struct GI2DPathContext
 		{
 			b_neighbor = context->m_storage_memory.allocateMemory<uint8_t>({ gi2d_context->FragmentBufferSize,{} });
 			b_path_data = context->m_storage_memory.allocateMemory<uint32_t>(gi2d_context->FragmentBufferSize);
+			b_open = context->m_storage_memory.allocateMemory<i16vec2>(4096);
+			b_open_count = context->m_storage_memory.allocateMemory<int32_t>(1);
+
+			cmd.fillBuffer(b_open_count.getInfo().buffer, b_open_count.getInfo().offset, b_open_count.getInfo().range, 0);
+ 			cmd.fillBuffer(b_path_data.getInfo().buffer, b_path_data.getInfo().offset, b_path_data.getInfo().range, -1);
 		}
 
-		// Ž–‘OŒvŽZ
+		// cpu‚ÅŽ–‘OŒvŽZ
 #if 0
 		// 	btr::BufferMemoryEx<uint8_t> u_neighbor_table;
 		{
@@ -381,6 +388,8 @@ struct GI2DPathContext
 				vk::DescriptorBufferInfo storages[] = {
 					b_neighbor.getInfo(),
 					b_path_data.getInfo(),
+					b_open.getInfo(),
+					b_open_count.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] = {
@@ -399,6 +408,8 @@ struct GI2DPathContext
 
 	btr::BufferMemoryEx<uint8_t> b_neighbor;
 	btr::BufferMemoryEx<uint32_t> b_path_data;
+	btr::BufferMemoryEx<i16vec2> b_open;
+	btr::BufferMemoryEx<int32_t> b_open_count;
 
 	vk::UniqueDescriptorSet m_descriptor_set;
 

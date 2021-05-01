@@ -251,6 +251,8 @@ int pathFinding()
 	gi2d_debug.executeUpdateMap(cmd, pf.m_field),
 	app.setup();
 
+	gi2d_make_hierarchy.pushTarget({i16vec2(171,171)});
+
 	while (true)
 	{
 		cStopWatch time;
