@@ -23,25 +23,14 @@ layout(push_constant, std430) uniform InputVertex
 	i16vec2 reso;
 } constant;
 
-
-uvec4 neighor_check_list[] =
-{
-	uvec4(2,6,1,7), // diagonal_path 
-	uvec4(3,5,4,4), // diagonal_wall
-	uvec4(1,7,4,4), // straight_path
-	uvec4(2,6,4,4), // straight_wall
-};
-
-
 struct Node
 {
 	i16vec2 pos;
 };
-shared Node s_active[2][1024*4];
-shared int s_active_counter[2];
-shared int s_age;
+shared Node s_active[1024*4];
+shared int s_active_counter;
 
-void tryPushOpen(ivec2 pos, uint dir_type, uint cost)
+void tryPushOpen(ivec2 pos, uint dir_type, uint data)
 {
 	pos += g_neighbor[dir_type];
 	int index = pos.x + pos.y * constant.reso.x;
@@ -49,11 +38,11 @@ void tryPushOpen(ivec2 pos, uint dir_type, uint cost)
 	{
 		// すでにチェック済みなら終わり
 		// 斜めか直線かどっちかを優先する
-		uint prev_cost = atomicMin(b_path_data[index].data, dir_type|(int((dir_type%2)==0)<<4)|((cost+1)<<5));
-		if(prev_cost == -1)
+		uint prev_data = atomicMin(b_path_data[index].data, data);
+		if(prev_data == -1)
 		{
-			uint active_index = atomicAdd(s_active_counter[(s_age+1)%2], 1);
-			s_active[(s_age+1)%2][active_index].pos = i16vec2(pos);
+			uint active_index = atomicAdd(s_active_counter, 1);
+			s_active[active_index%s_active.length()].pos = i16vec2(pos);
 		}
 		else
 		{
@@ -65,7 +54,7 @@ void tryPushOpen(ivec2 pos, uint dir_type, uint cost)
 void explore(in ivec2 pos, uint dir_type, uint cost)
 {
 	int index = pos.x + pos.y * constant.reso.x;
-
+	cost += 1;
 	// 新しい探索のチェック
 	{
 		uint neighbor = uint(b_neighbor[index]);
@@ -74,7 +63,7 @@ void explore(in ivec2 pos, uint dir_type, uint cost)
 		{
 			int dir = findMSB(dir_types);
 			dir_types &= ~(1<<dir);
-			tryPushOpen(pos, dir, cost);
+			tryPushOpen(pos, dir, dir|(cost<<4));
 		}
 	}
 }
@@ -83,9 +72,7 @@ void main()
 {
 	if(gl_LocalInvocationIndex == 0)
 	{
-		s_active_counter[0] = 0;
-		s_active_counter[1] = 0;
-		s_age = 0;
+		s_active_counter = 0;
 	}
 
 	memoryBarrierShared();
@@ -102,26 +89,21 @@ void main()
 		}
 	}
 
+	int consume = 0;
+	int accum = 0;
 	for(int age = 1; age < 5000; age++)
 	{
 		memoryBarrierShared();
 		barrier();
 
-		int accum = s_active_counter[age%2];
+		consume += accum;
+		accum = s_active_counter-consume;
 		if(accum == 0){ break; }
 
-		if(gl_LocalInvocationIndex == 0)
-		{
-			s_active_counter[age%2] = 0;
-			s_age = age;
-		}
-
-		memoryBarrierShared();
-		barrier();
 
 		for(int i = int(gl_LocalInvocationIndex); i < accum; i+=int(gl_WorkGroupSize.x))
 		{
-			Node node = s_active[age%2][i];
+			Node node = s_active[(i+consume)%s_active.length()];
 			ivec2 pos = ivec2(node.pos);
 			int index = pos.x + pos.y * constant.reso.x;
 			int data = int(b_path_data[index].data);
