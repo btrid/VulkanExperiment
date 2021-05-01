@@ -23,11 +23,7 @@ layout(push_constant, std430) uniform InputVertex
 	i16vec2 reso;
 } constant;
 
-struct Node
-{
-	i16vec2 pos;
-};
-shared Node s_active[1024*4];
+shared i16vec2 s_active[1024*4];
 shared int s_active_counter;
 
 void tryPushOpen(ivec2 pos, uint dir_type, uint data)
@@ -37,16 +33,11 @@ void tryPushOpen(ivec2 pos, uint dir_type, uint data)
 
 	{
 		// すでにチェック済みなら終わり
-		// 斜めか直線かどっちかを優先する
 		uint prev_data = atomicMin(b_path_data[index].data, data);
 		if(prev_data == -1)
 		{
 			uint active_index = atomicAdd(s_active_counter, 1);
-			s_active[active_index%s_active.length()].pos = i16vec2(pos);
-		}
-		else
-		{
-
+			s_active[active_index%s_active.length()] = i16vec2(pos);
 		}
 	}
 }
@@ -103,12 +94,12 @@ void main()
 
 		for(int i = int(gl_LocalInvocationIndex); i < accum; i+=int(gl_WorkGroupSize.x))
 		{
-			Node node = s_active[(i+consume)%s_active.length()];
-			ivec2 pos = ivec2(node.pos);
+			ivec2 pos = ivec2(s_active[(i+consume)%s_active.length()]);
 			int index = pos.x + pos.y * constant.reso.x;
 			int data = int(b_path_data[index].data);
 			int dir_type = (data>>0)&((1<<4)-1);
-			explore(pos, dir_type, age);
+			int cost = (data>>4)&((1<<28)-1);
+			explore(pos, dir_type, cost);
 		}
 	}
 }
