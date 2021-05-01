@@ -30,7 +30,7 @@ struct Map
 	{
 		if (x < 0 || x >= m_x
 			|| y < 0 || y >= m_y) {
-			return -1;
+			return CELL_TYPE_WALL;
 		}
 		return m_data[y*m_x + x];
 	}
@@ -68,8 +68,8 @@ bool _generateSub(Map& map, int32_t x, int32_t y)
 		//	壁にぶつかったら、処理完了で戻す
 		if (map.dataSafe(x + px * 2, y + py * 2) >= 1)
 		{
-			map.data(x, y) = CELL_TYPE_WALL * (std::rand() % 5 + 1);
-			map.data(x + px, y + py) = CELL_TYPE_WALL * (std::rand() % 5 + 1);
+			map.data(x, y) = CELL_TYPE_WALL;
+			map.data(x + px, y + py) = CELL_TYPE_WALL;
 			return true;
 		}
 
@@ -82,8 +82,8 @@ bool _generateSub(Map& map, int32_t x, int32_t y)
 			if (_generateSub(map, x + px * 2, y + py * 2))
 			{
 				//	処理完了で戻ってきたら、「作りかけの壁」を「完成した壁」に変える
-				map.data(x, y) = CELL_TYPE_WALL * (std::rand() % 5 + 1);
-				map.data(x + px, y + py) = CELL_TYPE_WALL * (std::rand() % 5 + 1);
+				map.data(x, y) = CELL_TYPE_WALL;
+				map.data(x + px, y + py) = CELL_TYPE_WALL;
 				return true;
 
 			}
@@ -107,24 +107,20 @@ std::vector<char> pathmake_maze_(int sizex, int sizey)
 	map.m_y = sizey;
 	map.m_data.resize(sizex*sizey);
 
-	for (int x = 1; x < map.m_x - 1; x++)
+	for (int x = 0; x < map.m_x - 1; x++)
 	{
 		map.data(x, 0) = CELL_TYPE_WALL;
-		map.data(x, 1) = CELL_TYPE_WALL;
-		map.data(x, map.m_y - 2) = CELL_TYPE_WALL;
 		map.data(x, map.m_y - 1) = CELL_TYPE_WALL;
 	}
-	for (int y = 1; y < map.m_y - 1; y++)
+	for (int y = 0; y < map.m_y - 1; y++)
 	{
 		map.data(0, y) = CELL_TYPE_WALL;
-		map.data(1, y) = CELL_TYPE_WALL;
-		map.data(map.m_x - 2, y) = CELL_TYPE_WALL;
 		map.data(map.m_x - 1, y) = CELL_TYPE_WALL;
 	}
 
-	for (int y = 3; y < map.m_y - 3; y += 2)
+	for (int y = 1; y < map.m_y - 1; y += 2)
 	{
-		for (int x = 3; x < map.m_x - 3; x += 2)
+		for (int x = 1; x < map.m_x - 1 ; x += 2)
 		{
 			if (map.dataSafe(x, y) == CELL_TYPE_PATH)
 			{
