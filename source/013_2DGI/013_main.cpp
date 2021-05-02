@@ -119,13 +119,8 @@ int crowd()
 	pf.m_field = pathmake_noise(1024, 1024);
 //	pf = pathmake_file();
 	PathSolver solver;
-//  	auto solve1 = solver.executeMakeVectorField(pf);
-//   	auto solve2 = solver.executeMakeVectorField2(pf);
-	//	auto solve = solver.executeSolve(pf);
-//	solver.writeConsole(pf);
-//	solver.writeSolvePath(pf, solve, "hoge.txt");
-//	solver.writeConsole(pf, solve);
-//	solver.write(pf, solve2);
+	auto solve = solver.execute_solve_by_jps(pf);
+	solver.writefile_solvebyjps(pf, solve);
 
 	app::AppDescriptor app_desc;
 	app_desc.m_window_size = uvec2(1024, 1024);
@@ -243,7 +238,8 @@ int main()
 	camera->getData().m_far = 5000.f;
 	camera->getData().m_near = 0.01f;
 
-	return gi2d_path::path_finding();
+	return crowd();
+//	return gi2d_path::path_finding();
 //	return rigidbody();
 //	return radiosity_globalline();
 //	return radiosity_rightbased();

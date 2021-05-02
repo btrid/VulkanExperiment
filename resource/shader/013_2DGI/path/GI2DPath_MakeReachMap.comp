@@ -55,7 +55,7 @@ void explore(in ivec2 pos, uint dir_type, uint cost)
 		{
 			int dir = findMSB(dir_types);
 			dir_types &= ~(1<<dir);
-			tryPushOpen(pos, dir, dir|((dir%2==0)<<4)|(cost<<5));
+			tryPushOpen(pos, dir, dir|((dir%2)<<4)|(cost<<5));
 		}
 	}
 #else

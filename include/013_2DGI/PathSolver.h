@@ -220,7 +220,7 @@ struct PathSolver
 
 	};
 
-	std::array<i16vec2, 8> neighor_list =
+	std::array<i16vec2, 8> neighbor_pos =
 	{
 		i16vec2{-1, -1},
 		i16vec2{ 0, -1},
@@ -246,7 +246,7 @@ struct PathSolver
 	};
 	bool exploreStraight(const PathContextCPU& path, std::deque<OpenNode2>& open, std::vector<CloseNode2>& close, i16vec2 pos, Direction dir_type)const
 	{
-		const auto& dir = neighor_list[dir_type];
+		const auto& dir = neighbor_pos[dir_type];
 		CloseNode2* node = nullptr;
 		do
 		{
@@ -285,7 +285,7 @@ struct PathSolver
 	}
 	void exploreDiagonal(const PathContextCPU& path, std::deque<OpenNode2>& open, std::vector<CloseNode2>& close, i16vec2 pos, int dir_type)const
 	{
-		const auto& dir = neighor_list[dir_type];
+		const auto& dir = neighbor_pos[dir_type];
 		CloseNode2* node = nullptr;
 		do
 		{
@@ -370,7 +370,7 @@ struct PathSolver
 					i16vec2 pos = i16vec2(x, y);
 					for (char i = 0; i < 8; i++)
 					{
-						if (any(lessThan(neighor_list[i] + pos, i16vec2(0))) || any(greaterThanEqual(neighor_list[i] + pos, i16vec2(path.m_desc.m_size))))
+						if (any(lessThan(neighbor_pos[i] + pos, i16vec2(0))) || any(greaterThanEqual(neighbor_pos[i] + pos, i16vec2(path.m_desc.m_size))))
 						{
 							// map外は壁としておく
 							neighor |= 1 << i;
@@ -378,7 +378,7 @@ struct PathSolver
 						else
 						{
 							// 壁ならダメ
-							bool is_path = path.isPath(neighor_list[i] + pos);
+							bool is_path = path.isPath(neighbor_pos[i] + pos);
 							neighor |= !is_path ? (1 << i) : 0;
 						}
 
@@ -435,6 +435,183 @@ struct PathSolver
 		}
 		return result;
 	}
+
+	// jump-point-search
+	std::vector<uint32_t> execute_solve_by_jps(const PathContextCPU& path)const
+	{
+		cStopWatch time;
+		float precomp = 0.f;
+		float solvetime = 0.f;
+		int openmax = 0;
+
+		std::vector<uint32_t> close(path.m_desc.m_size.x * path.m_desc.m_size.y, -1);
+		std::vector<i16vec2> open;
+		std::vector<uint8_t> neighbors(path.m_desc.m_size.x * path.m_desc.m_size.y);
+		std::array<uint8_t, 2048> neighbor_table;
+
+
+		// table作成
+		{
+			uvec4 neighor_check_list[] =
+			{
+				uvec4(2,6,1,7), // diagonal_path 
+				uvec4(3,5,4,4), // diagonal_wall
+				uvec4(1,7,4,4), // straight_path
+				uvec4(2,6,4,4), // straight_wall
+			};
+
+			for (int dir_type = 0; dir_type < 8; dir_type++)
+			{
+				uvec4 path_check = (uvec4(dir_type) + neighor_check_list[(dir_type % 2) * 2]) % uvec4(8);
+				uvec4 wall_check = (uvec4(dir_type) + neighor_check_list[(dir_type % 2) * 2 + 1]) % uvec4(8);
+				uvec4 path_bit = uvec4(1) << path_check;
+				uvec4 wall_bit = uvec4(1) << wall_check;
+
+				for (int neighbor = 0; neighbor < 256; neighbor++)
+				{
+					bvec4 is_path = notEqual((uvec4(~neighbor)) & path_bit, uvec4(0));
+					bvec4 is_wall = notEqual(uvec4(neighbor) & wall_bit, uvec4(0));
+					uvec4 is_open = uvec4(is_path) * uvec4(is_wall.xy(), 1 - ivec2(dir_type % 2));
+
+					uint is_advance = uint(((~neighbor) & (1u << dir_type)) != 0) * uint(any(is_path.zw()));
+
+					uint8_t neighbor_value = 0;
+					for (int i = 0; i < 4; i++)
+					{
+						if (is_open[i] == 0) { continue; }
+						neighbor_value |= path_bit[i];
+					}
+
+					if (is_advance != 0)
+					{
+						neighbor_value |= 1 << dir_type;
+					}
+					neighbor_table[neighbor + dir_type * 256] = neighbor_value;
+				}
+			}
+		}
+		time.getElapsedTimeAsMilliSeconds();
+		// precompute
+		{
+			for (int y = 0; y < path.m_desc.m_size.y; y++)
+			{
+				for (int x = 0; x < path.m_desc.m_size.x; x++)
+				{
+					uint8_t neighor = 0;
+					i16vec2 pos = i16vec2(x, y);
+					for (char i = 0; i < 8; i++)
+					{
+						if (any(lessThan(neighbor_pos[i] + pos, i16vec2(0))) || any(greaterThanEqual(neighbor_pos[i] + pos, i16vec2(path.m_desc.m_size))))
+						{
+							// map外は壁としておく
+							neighor |= 1 << i;
+						}
+						else
+						{
+							// 壁ならダメ
+							bool is_path = path.isPath(neighbor_pos[i] + pos);
+							neighor |= !is_path ? (1 << i) : 0;
+						}
+
+					}
+					neighbors[x + y * path.m_desc.m_size.x] = neighor;
+				}
+			}
+			precomp = time.getElapsedTimeAsMilliSeconds();
+
+		}
+
+		auto explore = [&](const i16vec2& p, uint32_t dir_type, uint32_t cost)
+		{
+			int index = p.x + p.y * path.m_desc.m_size.x;
+			uint neighbor = uint(neighbors[index]);
+			cost += 1;
+
+			int dir_types = neighbor_table[int(neighbor + dir_type * 256)];
+			while (dir_types != 0)
+			{
+				int dir = glm::findMSB(dir_types);
+				dir_types &= ~(1 << dir);
+
+				auto next = p + neighbor_pos[dir];
+				int next_index = next.x + next.y * path.m_desc.m_size.x;
+
+				{
+					auto& data = close[next_index];
+					if (data == -1)
+					{
+						open.push_back(next);
+					}
+					data = glm::min(data, dir | ((dir % 2) << 4) | (cost + 1) << 5);
+				}
+			}
+		};
+
+		// initialize
+		{
+			auto p = path.m_desc.m_start;
+			int index = p.x + p.y * path.m_desc.m_size.x;
+			close[index] = 0;
+			uint8_t neighbor = neighbors[index];
+			uint8_t dir_types = uint8_t(~neighbor);
+
+			while (dir_types != 0)
+			{
+				int dir_type = glm::findMSB(dir_types);
+				dir_types &= ~(1 << dir_type);
+				explore(p, dir_type, 0);
+			}
+		}
+
+		// run
+		int age = 0;
+		while (!open.empty())
+		{
+			age++;
+			openmax = glm::max((int)open.size(), openmax);
+			auto work = std::move(open);
+			for (auto& p : work)
+			{
+				uint32_t data = close[p.x + p.y * path.m_desc.m_size.x];
+				uint32_t dir_type = data & 0x7;
+				uint32_t cost = (data >> 5) & ((1 << 27) - 1);
+
+				explore(p, dir_type, cost);
+			}
+		}
+
+		solvetime = time.getElapsedTimeAsMilliSeconds();
+		printf("precomp %6.4fms\nsolve   %6.4fms\n    all %6.4fms\n age=%d\n open_max=%d\n", precomp, solvetime, precomp + solvetime, age, openmax);
+		return close;
+	}
+
+	void writefile_solvebyjps(const PathContextCPU& path, const std::vector<uint32_t>& solve)
+	{
+		FILE* file;
+		fopen_s(&file, "test.txt", "w");
+		std::vector<char> output(path.m_desc.m_size.x + 1);
+
+		auto map_size = path.m_desc.m_size >> 3;
+		for (int32_t y = 0; y < path.m_desc.m_size.y; y++)
+		{
+			for (int32_t x = 0; x < path.m_desc.m_size.x; x++)
+			{
+				int value = solve[x + y * path.m_desc.m_size.x];
+				switch (value)
+				{
+				case -1: output[x] = '#'; break;
+				default:output[x] = ' '; break;
+				}
+
+				if (all(equal(ivec2(x, y), path.m_desc.m_start))) { output[x] = '@'; }
+				if (all(equal(ivec2(x, y), path.m_desc.m_finish))) { output[x] = 'x'; }
+			}
+			output[path.m_desc.m_size.x] = '\0';
+			fprintf(file, "%s\n", output.data());
+		}
+		fclose(file);
+	}
+
 
 	void writeConsole(const PathContextCPU& path)
 	{
@@ -523,7 +700,6 @@ struct PathSolver
 					ivec2 m = ivec2(x, y) >> 3;
 					ivec2 c = ivec2(x, y) - (m << 3);
 					output[x] = (path.m_field[m.x + m.y*map_size.x] & (1ull << (c.x + c.y * 8))) != 0 ? '#' : ' ';
-
 				}
 				break;
 				case 1:
@@ -539,6 +715,7 @@ struct PathSolver
 		}
 		fclose(file);
 	}
+
 
 	void writeSolvePath(const PathContextCPU& path, const std::vector<uint64_t>& solver, const std::string& filename)
 	{
