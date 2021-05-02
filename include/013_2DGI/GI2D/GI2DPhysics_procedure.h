@@ -70,3 +70,11 @@ struct GI2DPhysics_procedure
 
 };
 
+
+namespace gi2d_physics
+{
+	
+int rigidbody();
+
+
+}

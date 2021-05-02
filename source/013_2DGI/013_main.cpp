@@ -67,7 +67,6 @@ struct Collision
 	std::shared_ptr<CrowdContext> m_ctx_crowd;
 
 };
-#include <taskflow/taskflow.hpp>
 PathContextCPU pathmake_file()
 {
 	PathContextCPU::Description desc;
@@ -107,7 +106,7 @@ PathContextCPU pathmake_file()
 	pf.m_field = data;
 	return pf;
 }
-#include <glm/gtx/rotate_vector.hpp>
+
 int crowd()
 {
 
@@ -175,7 +174,6 @@ int crowd()
 			std::vector<vk::CommandBuffer> cmds(cmd_num);
 
 			{
-//				cmds[cmd_render_clear] = clear_pipeline.execute();
 				cmds[cmd_render_present] = present_pipeline.execute();
 			}
 
@@ -186,17 +184,12 @@ int crowd()
 				crowd_context->execute(cmd);
 				gi2d_debug.executeMakeFragment(cmd);
 				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
-//				gi2d_make_hierarchy.executeMakeReachableMap(cmd, gi2d_path_context);
+//				gi2d_make_hierarchy.executeMakeFragmentMap(cmd);
 
 				crowd_procedure.executeUpdateUnit(cmd);
 
 				gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
 				crowd_procedure.executeRendering(cmd, app.m_window->getFrontBuffer());
-				{
-//					gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
-//					gi2d_debug.executeDrawReachMap(cmd, gi2d_path_context, app.m_window->getFrontBuffer());
-					//					gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
-				}
 
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;
@@ -210,106 +203,6 @@ int crowd()
 
 	return 0;
 
-}
-
-
-int rigidbody()
-{
-
-	app::AppDescriptor app_desc;
-	app_desc.m_window_size = uvec2(1024, 1024);
-	app::App app(app_desc);
-
-	auto context = app.m_context;
-
-	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
-	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchain());
-
-	GI2DDescription gi2d_desc;
-	gi2d_desc.Resolution = uvec2(1024, 1024);
-	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
-	std::shared_ptr<GI2DSDF> gi2d_sdf_context = std::make_shared<GI2DSDF>(gi2d_context);
-	std::shared_ptr<GI2DPhysics> gi2d_physics_context = std::make_shared<GI2DPhysics>(context, gi2d_context);
-	std::shared_ptr<GI2DPhysicsDebug> gi2d_physics_debug = std::make_shared<GI2DPhysicsDebug>(gi2d_physics_context, app.m_window->getFrontBuffer());
-
-	GI2DDebug gi2d_debug(context, gi2d_context);
-	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
-	GI2DPhysics_procedure gi2d_physics_proc(gi2d_physics_context, gi2d_sdf_context);
-	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-
-	gi2d_debug.executeMakeFragment(cmd);
-//	gi2d_physics_context->executeMakeVoronoi(cmd);
-//	gi2d_physics_context->executeMakeVoronoiPath(cmd);
-	app.setup();
-
-	while (true)
-	{
-		cStopWatch time;
-		
-		app.preUpdate();
-		{
-			enum
-			{
-				cmd_model_update,
-				cmd_render_clear,
-				cmd_crowd,
-				cmd_gi2d,
-				cmd_render_present,
-				cmd_num
-			};
-			std::vector<vk::CommandBuffer> cmds(cmd_num);
-
-			{
-
-			}
-
-			{
-				//cmds[cmd_render_clear] = clear_pipeline.execute();
-				cmds[cmd_render_present] = present_pipeline.execute();
-			}
-			// crowd
-			{
-				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
-				cmd.end();
-				cmds[cmd_crowd] = cmd;
-			}
-
-			// gi2d
-			{
-				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
-				gi2d_context->execute(cmd);
-
-				if (context->m_window->getInput().m_keyboard.isOn('A'))
-				{
- 					for (int y = 0; y < 16; y++){
- 					for (int x = 0; x < 16; x++){
-						GI2DRB_MakeParam param;
-						param.aabb = uvec4(220 + x * 32, 620 - y * 16, 8, 8);
-						param.is_fluid = false;
-						param.is_usercontrol = false;
- 						gi2d_physics_context->make(cmd, param);
- 					}}
-				}
-
-				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
-//				gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
-
- 				gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
-				gi2d_physics_proc.execute(cmd, gi2d_physics_context, gi2d_sdf_context);
-				gi2d_physics_proc.executeDrawParticle(cmd, gi2d_physics_context, app.m_window->getFrontBuffer());
-//				gi2d_physics_proc.executeDebugDrawCollisionHeatMap(cmd, gi2d_physics_context, app.m_window->getFrontBuffer());
-
-				cmd.end();
-				cmds[cmd_gi2d] = cmd;
-			}
-			app.submit(std::move(cmds));
-			context->m_device.waitIdle();
-		}
-		app.postUpdate();
-		printf("%-6.4fms\n", time.getElapsedTimeAsMilliSeconds());
-	}
-
-	return 0;
 }
 
 
@@ -350,7 +243,7 @@ int main()
 	camera->getData().m_far = 5000.f;
 	camera->getData().m_near = 0.01f;
 
-	return path::path_finding();
+	return gi2d_path::path_finding();
 //	return rigidbody();
 //	return radiosity_globalline();
 //	return radiosity_rightbased();

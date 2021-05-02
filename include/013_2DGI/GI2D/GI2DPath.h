@@ -1,7 +1,7 @@
 #pragma once
 
 
-namespace path
+namespace gi2d_path
 {
 int path_finding();
 

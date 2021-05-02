@@ -6,7 +6,7 @@
 #include <applib/AppPipeline.h>
 
 
-int path::path_finding()
+int gi2d_path::path_finding()
 {
 	PathContextCPU::Description desc;
 	desc.m_size = ivec2(1024);
