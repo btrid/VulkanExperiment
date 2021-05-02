@@ -13,6 +13,13 @@ struct PathData
 	uint data;
 };
 
+uvec4 g_neighor_check_list[] =
+{
+	uvec4(2,6,1,7), // diagonal_path 
+	uvec4(3,5,4,4), // diagonal_wall
+	uvec4(1,7,4,4), // straight_path
+	uvec4(2,6,4,4), // straight_wall
+};
 const ivec2 g_neighbor[8] = 
 {
 	ivec2(-1,-1), 
@@ -26,13 +33,13 @@ const ivec2 g_neighbor[8] =
 };
 
 
-uint PathData_dirtype(in PathData d)
+uint PathData_dirtype(in uint d)
 {
-	return d.data&0x07;
+	return d&0x07;
 }
-uint PathData_cost(in PathData d)
+uint PathData_cost(in uint d)
 {
-	return (d.data>>4)&((1<<28)-1);
+	return (d>>5)&((1<<27)-1);
 }
 
 layout(set=USE_GI2D_Path, binding=0, scalar) restrict buffer PathNeibghborStateBuffer {

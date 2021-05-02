@@ -48,18 +48,8 @@ void explore(in ivec2 pos, uint dir_type, uint cost)
 	int index = pos.x + pos.y * constant.reso.x;
 	uint neighbor = uint(b_neighbor[index]);
 	cost += 1;
+
 	// 新しい探索のチェック
-#if 0
-	{
-		int dir_types = u_neighbor_table[int(neighbor+dir_type*256)];
-		while(dir_types!=0)
-		{
-			int dir = findMSB(dir_types);
-			dir_types &= ~(1<<dir);
-			tryPushOpen(pos, dir, dir|(cost<<4));
-		}
-	}
-#else
 	{
 		uvec4 neighor_check_list[] =
 		{
@@ -91,13 +81,11 @@ void explore(in ivec2 pos, uint dir_type, uint cost)
 			tryPushOpen(pos, dir_type, dir_type|(cost<<4));
 		}
 	}
-#endif
 }
 
 
 void main() 
 {
-//	int	b_open_counter = 0;
 	if(gl_LocalInvocationIndex == 0)
 	{
 		s_active_counter = 0;
@@ -108,17 +96,6 @@ void main()
 
 	memoryBarrierShared();
 	barrier();
-
-	if(gl_LocalInvocationIndex < constant.target_num.x*8)
-	{
-		ivec2 pos = ivec2(constant.target[gl_LocalInvocationIndex/8]);
-		uint dir_type = gl_LocalInvocationIndex%8;
-		uint neighbor = uint(b_neighbor[pos.x + pos.y * constant.reso.x]);
-		if((~neighbor & (1<<dir_type)) != 0)
-		{
-			explore(pos, dir_type, 0);
-		}
-	}
 
 	for(int i = int(gl_LocalInvocationIndex); i < s_open_counter; i+=int(gl_WorkGroupSize.x))
 	{
@@ -174,6 +151,7 @@ void main()
 	else
 	{
 		// 終わり
+		
 	}
 
 }

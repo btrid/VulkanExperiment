@@ -107,6 +107,36 @@ struct Segment2
 // 	}
 };
 
+
+// float Signed2DTriArea(vec2 a, vec2 b, vec2 c)
+// {
+// 	return (a.x - c.x)*(b.y - c.y) - (a.y - c.y)*(b.x - c.x);
+// }
+// // Test2DSegmentSegment
+// bool intersectSegmentSegment(vec2 a, vec2 b, vec2 c, vec2 d, float& t, vec2& p)
+// {
+// 	float a1 = Signed2DTriArea(a, b, d);
+// 	float a2 = Signed2DTriArea(a, b, c);
+// 
+// 	if (a1*a2 < 0.f)
+// 	{
+// 		float a3 = Signed2DTriArea(c, d, a);
+// 		float a4 = a3 + a2 - a1;
+// 		if (a3*a4 < 0.f)
+// 		{
+// 			if (abs((a3 - a4)) < 0.001)
+// 			{
+// 				int aa = 0;
+// 			}
+// 			t = a3 / (a3 - a4);
+// 			p = a + t * (b - a);
+// 			return true;
+// 		}
+// 	}
+// 	return false;
+// }
+
+
 struct Triangle2
 {
 	glm::vec2 a_, b_, c_;
@@ -568,3 +598,26 @@ struct AABB
 	const glm::vec3& getMin()const{ return min_; }
 	const glm::vec3& getMax()const{ return max_; }
 };
+
+
+vec2 nearestAABBPoint(const vec4& aabb, const vec2& p);
+bool containsAABBPoint(const vec4& aabb, const vec2& p);
+
+vec2 intersection(vec4 aabb, vec2 p, vec2 dir);
+
+vec2 intersectionAABBSegment(vec4 aabb, vec2 p, vec2 dir, vec2 inv_dir);
+
+vec2 closest(const vec4 seg, const vec2& p);
+
+vec2 inetsectLineCircle(const vec2& p, const vec2& d, const vec2& cp);
+
+namespace RayTracing
+{
+	// Bresenham's line algorithm
+// https://ja.wikipedia.org/wiki/%E3%83%96%E3%83%AC%E3%82%BC%E3%83%B3%E3%83%8F%E3%83%A0%E3%81%AE%E3%82%A2%E3%83%AB%E3%82%B4%E3%83%AA%E3%82%BA%E3%83%A0
+void dda();
+void dda_test();
+/* primitive Bresenham's-like algorithm */
+void makeCircle(int Ox, int Oy, int R);
+
+}

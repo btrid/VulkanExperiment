@@ -82,6 +82,7 @@
     <ClCompile Include="..\..\include\013_2DGI\GI2D\GI2DPhysics_procedure.cpp" />
     <ClCompile Include="..\..\source\013_2DGI\013_main.cpp" />
     <ClCompile Include="..\..\source\013_2DGI\GI2D\GI2DDebug.cpp" />
+    <ClCompile Include="..\..\source\013_2DGI\GI2D\GI2DPath.cpp" />
     <ClCompile Include="..\..\source\013_2DGI\PathContext.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -111,6 +112,7 @@
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DModelRender.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DDebug.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DFluid.h" />
+    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DPath.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DPhysics.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRadiosity_old.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DMakeHierarchy.h" />

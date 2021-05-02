@@ -15,6 +15,9 @@
     <ClCompile Include="..\..\include\013_2DGI\GI2D\GI2DRadiosity_old.cpp">
       <Filter>GI2D</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\source\013_2DGI\GI2D\GI2DPath.cpp">
+      <Filter>GI2D</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -91,6 +94,9 @@
       <Filter>GI2D</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRadiosity.h">
+      <Filter>GI2D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DPath.h">
       <Filter>GI2D</Filter>
     </ClInclude>
   </ItemGroup>

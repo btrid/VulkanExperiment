@@ -364,9 +364,10 @@ struct GI2DMakeHierarchy
 		}
 	}
 
-	void pushTarget(std::initializer_list<i16vec2>&& targets)
+	void setTarget(std::initializer_list<i16vec2>&& targets)
 	{
-		m_path_target.insert(m_path_target.end(), targets);
+//		m_path_target.insert(m_path_target.end(), targets);
+		m_path_target = targets;
 	}
 	void executeMakeReachMap_Multiframe(vk::CommandBuffer cmd, const std::shared_ptr<GI2DPathContext>& path_context)
 	{
@@ -380,7 +381,6 @@ struct GI2DMakeHierarchy
 
 		_label.insert("executeMakeReachMap_Init");
 		{
-
 			struct
 			{
 				i16vec2 target[10];
@@ -461,8 +461,6 @@ struct GI2DMakeHierarchy
 					break;
 				}
 			}
-//			m_path_target.clear();
-
 			cmd.pushConstants(m_pipeline_layout[PipelineLayout_Path].get(), vk::ShaderStageFlagBits::eCompute, 0, sizeof(constant), &constant);
 
 			vk::BufferMemoryBarrier barrier[] = {

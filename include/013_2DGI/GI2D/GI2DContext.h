@@ -322,6 +322,7 @@ struct GI2DPathContext
 			b_path_data = context->m_storage_memory.allocateMemory<uint32_t>(gi2d_context->FragmentBufferSize);
 			b_open = context->m_storage_memory.allocateMemory<i16vec2>(4096);
 			b_open_count = context->m_storage_memory.allocateMemory<int32_t>(1);
+			b_target = context->m_storage_memory.allocateMemory<i16vec2>(8);
 
 			cmd.fillBuffer(b_open_count.getInfo().buffer, b_open_count.getInfo().offset, b_open_count.getInfo().range, 0);
  			cmd.fillBuffer(b_path_data.getInfo().buffer, b_path_data.getInfo().offset, b_path_data.getInfo().range, -1);
@@ -410,6 +411,7 @@ struct GI2DPathContext
 	btr::BufferMemoryEx<uint32_t> b_path_data;
 	btr::BufferMemoryEx<i16vec2> b_open;
 	btr::BufferMemoryEx<int32_t> b_open_count;
+	btr::BufferMemoryEx<i16vec2> b_target;
 
 	vk::UniqueDescriptorSet m_descriptor_set;
 
