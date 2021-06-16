@@ -421,25 +421,29 @@ struct AllocatedMemory
 	{
 
 		// size0ÇÕÇ®Ç©ÇµÇ¢ÇÊÇÀ
-		assert(desc.size != 0);
-
-		auto zone = m_resource->m_free_zone->alloc(desc.size, btr::isOn(desc.attribute, BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT));
-
-		// allocÇ≈Ç´ÇΩÅH
-		assert(zone.isValid());
+//		assert(desc.size != 0);
 
 		BufferMemory alloc;
 		alloc.m_resource = std::make_shared<BufferMemory::Resource>();
 		alloc.m_resource->m_buffer_info.buffer = m_resource->m_buffer.get();
-		alloc.m_resource->m_buffer_info.offset = zone.m_start;
-		alloc.m_resource->m_buffer_info.range = desc.size;
-		alloc.m_resource->m_allocater = m_resource->m_free_zone;
 
-		alloc.m_resource->m_mapped_memory = nullptr;
-		if (m_resource->m_mapped_memory)
+		if (desc.size!=0)
 		{
-			alloc.m_resource->m_mapped_memory = (char*)m_resource->m_mapped_memory + zone.m_start;
+			auto zone = m_resource->m_free_zone->alloc(desc.size, btr::isOn(desc.attribute, BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT));
+			assert(zone.isValid());
+
+			alloc.m_resource->m_buffer_info.buffer = m_resource->m_buffer.get();
+			alloc.m_resource->m_buffer_info.offset = zone.m_start;
+			alloc.m_resource->m_buffer_info.range = desc.size;
+			alloc.m_resource->m_allocater = m_resource->m_free_zone;
+
+			alloc.m_resource->m_mapped_memory = nullptr;
+			if (m_resource->m_mapped_memory)
+			{
+				alloc.m_resource->m_mapped_memory = (char*)m_resource->m_mapped_memory + zone.m_start;
+			}
 		}
+
 		return alloc;
 	}
 	BufferMemory allocateMemory(uint32_t size, bool is_reverse)

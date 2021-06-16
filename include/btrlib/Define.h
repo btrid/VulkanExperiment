@@ -21,6 +21,19 @@
 
 #include <string>
 #include <cstring>
+#include <cstdlib>
+#include <vector>
+#include <utility>
+#include <array>
+#include <unordered_set>
+#include <vector>
+#include <functional>
+#include <thread>
+#include <future>
+#include <chrono>
+#include <memory>
+#include <filesystem>
+
 namespace btr {
 	std::string getResourceAppPath();
 	std::string getResourceLibPath();
