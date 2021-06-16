@@ -61,7 +61,7 @@ struct Context
 		// descriptor set layout
 		{
 			{
-				auto stage = vk::ShaderStageFlagBits::eCompute| vk::ShaderStageFlagBits::eVertex;
+				auto stage = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex;
 				vk::DescriptorSetLayoutBinding binding[] =
 				{
 					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eUniformBuffer, 1, stage),
@@ -532,7 +532,7 @@ struct Voxel_With_Model
 			assembly_info.setTopology(vk::PrimitiveTopology::eTriangleList);
 
 			// viewport
-			vk::Viewport viewport[] = 
+			vk::Viewport viewport[] =
 			{
 				vk::Viewport(0.f, 0.f, (float)2048, (float)512, 0.f, 1.f),
 				vk::Viewport(0.f, 0.f, (float)2048, (float)2048, 0.f, 1.f),
@@ -559,7 +559,7 @@ struct Voxel_With_Model
 
 			vk::PipelineRasterizationConservativeStateCreateInfoEXT conservativeRasterState_CI;
 			conservativeRasterState_CI.conservativeRasterizationMode = vk::ConservativeRasterizationModeEXT::eOverestimate;
-//			conservativeRasterState_CI.extraPrimitiveOverestimationSize = conservativeRasterProps.maxExtraPrimitiveOverestimationSize;
+			//			conservativeRasterState_CI.extraPrimitiveOverestimationSize = conservativeRasterProps.maxExtraPrimitiveOverestimationSize;
 			rasterization_info.pNext = &conservativeRasterState_CI;
 
 			vk::PipelineMultisampleStateCreateInfo sample_info;
@@ -800,7 +800,7 @@ struct Voxel_With_Model
 
 			cmd.bindIndexBuffer(model.b_index.getInfo().buffer, model.b_index.getInfo().offset, vk::IndexType::eUint32);
 			cmd.bindVertexBuffers(0, model.b_vertex.getInfo().buffer, model.b_vertex.getInfo().offset);
-			cmd.drawIndexed(model.m_info.m_primitive_num*3, 1, 0, 0, 0);
+			cmd.drawIndexed(model.m_info.m_primitive_num * 3, 1, 0, 0, 0);
 
 			cmd.endRenderPass();
 
@@ -844,7 +844,7 @@ struct Voxel_With_Model
 					b_interior_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
 
 				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eDrawIndirect|vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(read), read }, {});
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eDrawIndirect | vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(read), read }, {});
 			}
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeVoxelTopChild].get());
@@ -894,7 +894,7 @@ struct Voxel_With_Model
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeVoxelMidChild].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL[PipelineLayout_MakeVoxel].get(), 0, { m_DS[DSL_Voxel].get() }, {});
 
-			cmd.dispatchIndirect(b_interior_counter.getInfo().buffer, b_interior_counter.getInfo().offset+16);
+			cmd.dispatchIndirect(b_interior_counter.getInfo().buffer, b_interior_counter.getInfo().offset + 16);
 		}
 
 		_label.insert("Make Data");
@@ -984,15 +984,175 @@ struct Voxel_With_Model
 	}
 };
 
+
+void dda_f(vec3 P, vec3 Dir)
+{
+	ivec3 reso = ivec3(1000, 1000, 1);
+	vec3 CellSize = vec3(5.f,5.f,1000.f);
+	vec3 DirInv;
+	DirInv.x = abs(Dir.x) < 0.0001 ? (glm::step(Dir.x, 0.f) * 2. - 1.) * 10000. : (1. / Dir.x);
+	DirInv.y = abs(Dir.y) < 0.0001 ? (glm::step(Dir.y, 0.f) * 2. - 1.) * 10000. : (1. / Dir.y);
+	DirInv.z = abs(Dir.z) < 0.0001 ? (glm::step(Dir.z, 0.f) * 2. - 1.) * 10000. : (1. / Dir.z);
+
+	float n, f;
+	intersection(vec3(0.f), vec3(reso)*CellSize, P, DirInv, n, f);
+	vec3 P2 = P + Dir * f;
+
+//	P /= CellSize;
+	vec3 deltaT = CellSize * abs(DirInv);
+	vec3 t = ((floor(P/ CellSize) + step(vec3(0., 0., 0.), Dir))* CellSize - P) * DirInv;
+	ivec3 Cell = ivec3(P/ CellSize);
+
+//	while (all(greaterThanEqual(Cell, ivec3(0))) && all(lessThan(Cell, reso)))
+	while (any(notEqual(Cell.xy(), ivec3(P2/CellSize).xy())))
+	{
+		printf("%4d,%4d,%4d\n", Cell.x, Cell.y, Cell.z);
+
+		int comp = t[0] < t[1] ? 0 : 1;
+//		comp = t[comp] < t[2] ? comp : 2;
+		vec3 mask = vec3(equal(ivec3(0, 1, 2), ivec3(comp)));
+
+		Cell = sign(Dir)* mask+ vec3(Cell);
+		t = deltaT* mask+ t;
+
+	}
+//	auto p = closestPointOnLine(vec3(Cell.xy(), P.z) * vec3(CellSize.xy(), 1.f), P.xy(), P2.xy());
+	float tt = distance(P.xy(), (vec3(Cell)*CellSize).xy()) / distance(P.xy(), P2.xy());
+	auto PP = P + Dir * f*tt;
+// 	T LineLength = distance(a, b);
+// 	vec<2, T, Q> Vector = point - a;
+// 	vec<2, T, Q> LineDirection = (b - a) / LineLength;
+// 
+// 	// Project Vector to LineDirection to get the distance of point from a
+// 	T Distance = dot(Vector, LineDirection);
+// 
+// 	if (Distance <= T(0)) return a;
+// 	if (Distance >= LineLength) return b;
+// 	return a + LineDirection * Distance;
+	//	t /= deltaT;
+	int b = 0;
+}
 int main()
 {
+	{
+		vec3 eye = vec3(0.f);
+		vec3 p = vec3(-0.01f, -0.01f, 10.f);
+
+		auto dir = (p-eye);
+		
+		auto _d = normalize(vec3(0.f, 0.f, 1.f));
+		vec3 axis[] = { vec3(1., 0., 0.), vec3(0., 1., 0.),vec3(0., 0., 1.) };
+ 		auto rot = quat(axis[2], _d);
+		vec3 s = (rot * axis[0]);
+		vec3 u = (rot * axis[1]);
+		vec3 f = (rot * axis[2]);
+
+		auto fd = dot(dir, f);
+		auto sd = dot(dir, s);
+		auto ud = dot(dir, u);
+
+		float sdfd = sd / fd;
+		float sf = atan2(sd, fd);
+		float t = tan(sf);
+		mat3 shear(
+// 			vec3(1.f, ud/sd, fd/sd),
+// 			vec3(sd/ud, 1.f, fd/ud),
+// 			vec3(sd/fd, ud/fd, 1.f)
+			vec3(1.f, 0, 0),
+			vec3(0.f, 1, 0),
+			vec3(sd/fd, ud/fd, 1.f)
+// 			vec3(1.f, sd/ud, sd/fd),
+// 			vec3(ud/sd, 1.f, ud/fd),
+// 			vec3(fd/sd, fd/ud, 1.f)
+		);
+		glm::scale()
+		auto np = shear * p;
+
+		int a = 0;
+	}
+	{
+		auto ortho = glm::ortho(-1024.f, 1024.f, -1024.f, 1024.f, 0.f, 10000.f);
+		auto perspective = glm::perspective(glm::radians(90.f), 1.777f, 1.f, 10000.f);
+
+		vec3 axis[] = { vec3(1., 0., 0.), vec3(0., 1., 0.),vec3(0., 0., 1.) };
+		auto _d = -normalize(vec3(1.f, 1.f, 1.f));
+		auto rot = quat(axis[2], _d);
+
+		vec3 s = (rot * axis[0]);
+		vec3 u = (rot * axis[1]);
+		vec3 f = (rot * axis[2]);
+		vec3 eye = vec3(100.f);
+		mat4 view = transpose(mat4(vec4(s, -dot(eye, s)), vec4(u, -dot(eye, u)), vec4(f, -dot(eye, f)), vec4(0,0,0,1)));
+//		auto view = glm::lookAt(eye, eye+normalize(vec3(1.f,1.f,1.f)), vec3(0.f,1.f,0.f));
+		vec3 p = vec3(554.f, 337.f, 144.f);
+
+		vec4 vp_ = view * vec4(p, 1.f);
+		auto sp = ortho * vp_;
+
+// 		auto tvp = transpose(mat3(view));
+// 		auto f = tvp[2].xyz();
+// 		auto s = tvp[0].xyz();
+// 		auto u = tvp[1].xyz();
+
+		auto ortho_inv = inverse(ortho);
+		auto perspective_inv = inverse(perspective);
+		auto view_inv = inverse(view);
+
+		auto sp2 = sp* vec4(1024.f, 1024.f, 10000.f, 1.f);
+		auto vpp = vec3(sp2.x * s + sp2.y * u + f * sp2.z);
+		
+		float tan = glm::tan(glm::radians(90.f) * 0.5f);
+		auto dir = (f*sp2.z + s*sp2.x*tan*1.f + u*sp2.y*tan);
+		dir = normalize(dir) / dot(normalize(dir), f);
+
+		auto OrthoToP = eye + dir * sp2.z;
+		auto _pppasd = view_inv * vec4(OrthoToP, 1.f);
+
+		auto d2 = normalize(p - eye);
+		d2 /= dot(d2, f);
+		float fd = dot(d2, f);
+		float sd = dot(d2, s);
+		float ud = dot(d2, u);
+		auto ref = eye + d2 * sp.z * 10000.f;
+		auto ref2 = eye + (f*fd + s*sd + u*ud) * sp.z * 10000.f;
+
+		int a = 0;
+	}
+	{
+		auto f = normalize(vec3(0.f, 1.f, 1.f));
+		auto s = normalize(cross(f, vec3(0.f, 1.f, 0.f)));
+		auto u = normalize(cross(s, f));
+		auto m = transpose(mat3(vec3(1.f, 0.f, 0.f), u, f));
+		auto v = m * vec3(10.f, 20.f, 30.f);
+		auto a = glm::rotate(vec3(10.f, 20.f, 30.f), glm::radians(60.f), vec3(1.f, 0.f, 0.f));
+		int _ = 0;
+
+	}
+	{
+		auto x = vec3(1.f, 1.f, 1.f);
+		auto n = vec3(0.f, 1.f, 0.f);
+//		auto p = glm::proj(vec3(1.f, 1.f, 1.f), vec3(0.f, 1.f, 0.f));
+		auto d = dot(x, n) / glm::dot(n, n);
+		auto p = d *n;
+		int a = 0;
+
+	}
+	{
+		for (int i = 0; i < 1000; i++)
+		{
+//			dda_3D(ivec3(100, 50, 50), ivec3(1000, 50, 500));
+//			dda_3D(glm::linearRand(ivec3(10), ivec3(50)), glm::linearRand(ivec3(10), ivec3(50)));
+//			dda_f(glm::linearRand(vec3(1), vec3(1023)), glm::normalize(glm::ballRand(1.f)));
+			dda_f(vec3(500.234f), glm::normalize(vec3(0.1f, 0.1f, -1.f)));
+		}
+	}
 
 	{
- 		mat4 pv[3];
+		mat4 pv[3];
 		pv[0] = glm::ortho(-1024.f, 1024.f, -256.f, 256.f, 0.f, 2048.f) * glm::lookAt(vec3(0, 256, 1024), vec3(0, 256, 1024) + vec3(2048, 0, 0), vec3(0.f, 1.f, 0.f));
 		pv[1] = glm::ortho(-1024.f, 1024.f, -1024.f, 1024.f, 0.f, 512.f) * glm::lookAt(vec3(1024, 0, 1024), vec3(1024, 0, 1024) + vec3(0, 512, 0), vec3(0.f, 0.f, -1.f));
- 		pv[2] = glm::ortho(-1024.f, 1024.f, -256.f, 256.f, 0.f, 2048.f) * glm::lookAt(vec3(1024, 256, 0), vec3(1024, 256, 0) + vec3(0, 0, 2048), vec3(0.f, 1.f, 0.f));
- 
+		pv[2] = glm::ortho(-1024.f, 1024.f, -256.f, 256.f, 0.f, 2048.f) * glm::lookAt(vec3(1024, 256, 0), vec3(1024, 256, 0) + vec3(0, 0, 2048), vec3(0.f, 1.f, 0.f));
+
 		vec4 t1 = pv[2] * vec4(vec3(100.f), 1.f);
 		vec4 t2 = pv[2] * vec4(vec3(200.f, 100, 100.), 1.f);
 		vec4 t3 = pv[2] * vec4(vec3(100.f, 200, 100.), 1.f);
@@ -1002,8 +1162,8 @@ int main()
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = vec3(-400.f, 1500.f, -1430.f);
 	camera->getData().m_target = vec3(800.f, 0.f, 1000.f);
-//	camera->getData().m_position = vec3(1000.f, 220.f, -200.f);
-//	camera->getData().m_target = vec3(1000.f, 220.f, 0.f);
+	//	camera->getData().m_position = vec3(1000.f, 220.f, -200.f);
+	//	camera->getData().m_target = vec3(1000.f, 220.f, 0.f);
 	camera->getData().m_up = vec3(0.f, -1.f, 0.f);
 	camera->getData().m_width = 1024;
 	camera->getData().m_height = 1024;
@@ -1021,14 +1181,14 @@ int main()
 	ClearPipeline clear_pipeline(context, render_target);
 	PresentPipeline present_pipeline(context, render_target, context->m_window->getSwapchain());
 
-//	Voxel2 voxel(*context, *app.m_window->getFrontBuffer());
+	//	Voxel2 voxel(*context, *app.m_window->getFrontBuffer());
 	Voxel1 voxel(*context, *app.m_window->getFrontBuffer());
 
-//	std::shared_ptr<Model> model = Model::LoadModel(*ctx, "C:/Users/logos/source/repos/btrid/VulkanExperiment/resource/Box.dae");
-//	Voxel_With_Model voxel_with_model(*ctx, *app.m_window->getFrontBuffer());
+	//	std::shared_ptr<Model> model = Model::LoadModel(*ctx, "C:/Users/logos/source/repos/btrid/VulkanExperiment/resource/Box.dae");
+	//	Voxel_With_Model voxel_with_model(*ctx, *app.m_window->getFrontBuffer());
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-//		voxel_with_model.execute_MakeVoxel(cmd, *model);
+		//		voxel_with_model.execute_MakeVoxel(cmd, *model);
 		voxel.execute_MakeVoxel(cmd);
 	}
 	app.setup();
@@ -1055,9 +1215,9 @@ int main()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				{
-//					voxel_with_model.execute_MakeVoxel(cmd, *model);
+					//					voxel_with_model.execute_MakeVoxel(cmd, *model);
 					voxel.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
-//					voxel.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
+					//					voxel.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 				}
 
 				cmd.end();

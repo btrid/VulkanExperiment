@@ -128,12 +128,10 @@ vec2 inetsectLineCircle(const vec2& p, const vec2& d, const vec2& cp)
 #include <glm/gtx/rotate_vector.hpp>
 #include <array>
 #include <vector>
-void RayTracing::dda()
+void RayTracing::dda(const ivec2& begin, const ivec2& end)
 {
-	ivec2 target(0, 256);
-	ivec2 pos0(333, 333);
-	ivec2 delta = abs(target - pos0);
-	ivec3 _dir = glm::sign(ivec3(target, 0) - ivec3(pos0, 0));
+	ivec2 delta = abs(end - begin);
+	ivec3 _dir = glm::sign(ivec3(end, 0) - ivec3(begin, 0));
 
 	int axis = delta.x >= delta.y ? 0 : 1;
 	ivec2 dir[2];
@@ -142,7 +140,7 @@ void RayTracing::dda()
 
 	{
 		int	D = 2 * delta[1 - axis] - delta[axis];
-		ivec2 pos = pos0;
+		ivec2 pos = begin;
 		for (; true;)
 		{
 			if (D > 0)
@@ -157,16 +155,16 @@ void RayTracing::dda()
 			}
 
 			printf("pos=[%3d,%3d]\n", pos.x, pos.y);
-			if (all(glm::equal(pos, target)))
+			if (all(glm::equal(pos, begin)))
 			{
 				break;
 			}
 		}
 		printf("pos\n");
 	}
-	float dist = distance(vec2(target), vec2(pos0));
+	float dist = distance(vec2(end), vec2(begin));
 	float p = 1. / (1. + dist * dist * 0.01);
-	target = vec2(pos0) + vec2(target - pos0) * p * 100.f;
+	auto target = vec2(begin) + vec2(end - begin) * p * 100.f;
 	dist += 1.;
 }
 
@@ -206,7 +204,6 @@ void RayTracing::dda_test()
 						D = D + 2 * delta[1 - axis];
 					}
 
-					//					printf("pos=[%3d,%3d]\n", pos.x, pos.y);
 					data[y * reso.x + x]++;
 					if (any(glm::lessThan(pos, ivec2(0))) || any(glm::greaterThanEqual(pos, reso.xy())))
 					{

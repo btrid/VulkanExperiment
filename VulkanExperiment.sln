@@ -122,6 +122,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "017_RayTracing", "project\0
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "018_FlowMap", "project\018_FlowMap\018_FlowMap.vcxproj", "{988A2ED8-83E2-44F1-BF14-C5F7B9B30F1D}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "019_Ortho", "project\019_Ortho\019_Ortho.vcxproj", "{D3AAFF1B-475C-467F-B25A-51F2E1999C50}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -270,6 +272,14 @@ Global
 		{988A2ED8-83E2-44F1-BF14-C5F7B9B30F1D}.Release|x64.ActiveCfg = Release|x64
 		{988A2ED8-83E2-44F1-BF14-C5F7B9B30F1D}.Release|x64.Build.0 = Release|x64
 		{988A2ED8-83E2-44F1-BF14-C5F7B9B30F1D}.Release|x86.ActiveCfg = Release|x64
+		{D3AAFF1B-475C-467F-B25A-51F2E1999C50}.Debug|x64.ActiveCfg = Debug|x64
+		{D3AAFF1B-475C-467F-B25A-51F2E1999C50}.Debug|x64.Build.0 = Debug|x64
+		{D3AAFF1B-475C-467F-B25A-51F2E1999C50}.Debug|x86.ActiveCfg = Debug|Win32
+		{D3AAFF1B-475C-467F-B25A-51F2E1999C50}.Debug|x86.Build.0 = Debug|Win32
+		{D3AAFF1B-475C-467F-B25A-51F2E1999C50}.Release|x64.ActiveCfg = Release|x64
+		{D3AAFF1B-475C-467F-B25A-51F2E1999C50}.Release|x64.Build.0 = Release|x64
+		{D3AAFF1B-475C-467F-B25A-51F2E1999C50}.Release|x86.ActiveCfg = Release|Win32
+		{D3AAFF1B-475C-467F-B25A-51F2E1999C50}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

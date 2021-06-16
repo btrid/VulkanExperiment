@@ -1,4 +1,4 @@
-﻿#include <btrlib/Define.h>
+#include <btrlib/Define.h>
 #include <cstdlib>
 #include <string>
 #include <vector>

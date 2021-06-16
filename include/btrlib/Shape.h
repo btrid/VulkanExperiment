@@ -615,7 +615,7 @@ namespace RayTracing
 {
 	// Bresenham's line algorithm
 // https://ja.wikipedia.org/wiki/%E3%83%96%E3%83%AC%E3%82%BC%E3%83%B3%E3%83%8F%E3%83%A0%E3%81%AE%E3%82%A2%E3%83%AB%E3%82%B4%E3%83%AA%E3%82%BA%E3%83%A0
-void dda();
+void dda(const ivec2& begin, const ivec2& end);
 void dda_test();
 /* primitive Bresenham's-like algorithm */
 void makeCircle(int Ox, int Oy, int R);

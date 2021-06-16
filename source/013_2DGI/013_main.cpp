@@ -115,12 +115,9 @@ int crowd()
 	desc.m_start = ivec2(11, 11);
 	desc.m_finish = ivec2(1002, 1000);
 	PathContextCPU pf(desc);
-//	pf.m_field = pathmake_maze(1024, 1024);
 	pf.m_field = pathmake_noise(1024, 1024);
-//	pf = pathmake_file();
 	PathSolver solver;
 	auto solve = solver.execute_solve_by_jps(pf);
-	solver.writefile_solvebyjps(pf, solve);
 
 	app::AppDescriptor app_desc;
 	app_desc.m_window_size = uvec2(1024, 1024);
@@ -209,24 +206,6 @@ struct Player
 
 int main()
 {
-// 	for(;;)
-// 	{ 
-//		double a = glm::linearRand(UINT_MAX - 3, UINT_MAX) / double(UINT_MAX);
-// 		float a = glm::linearRand((UINT_MAX&0x7fffff) - 3, (UINT_MAX & 0x7fffff)) / float(UINT_MAX & 0x7fffff);
-// 		printf("%36.24f\n", a);
-// 	}
-
-// 	for (;;)
-// 	{
-// 		float a = glm::linearRand(-glm::pi<float>(), glm::pi<float>());
-// 		float b = glm::linearRand(-glm::pi<float>(), glm::pi<float>());
-// 		float d = b - a;
-// 		d = d > 3.14f ? 6.28f - d : d;
-// 		d = d < -3.14f ? 6.28f + d : d;
-// 		printf("a=%8.3f, b=%8.3f, d=%8.3f\n", a, b, d);
-// 	}
-
-//	dda_test();
 
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
