@@ -288,13 +288,61 @@ struct Renderer
 int main()
 {
 	auto camera = cCamera::sCamera::Order().create();
-	camera->getData().m_position = glm::vec3(0.f, 0.f, -100.f);
-	camera->getData().m_target = glm::vec3(0.f, 0.f, 0.f);
+	camera->getData().m_position = glm::vec3(0.f, 0.f, -50.f);
+	camera->getData().m_target = glm::vec3(0.001f, 0.001f, 0.001f);
 	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
 	camera->getData().m_width = 640;
 	camera->getData().m_height = 480;
 	camera->getData().m_far = 5000.f;
 	camera->getData().m_near = 0.01f;
+	camera->control(cInput(), 0.f);
+	{
+		auto R = transpose(mat3(camera->getData().m_view));
+		vec3 s = R[0];
+		vec3 u = R[1];
+		vec3 f = R[2];
+
+		vec3 e = camera->getPosition();
+		vec3 p = vec3(10.f, 0, 0);
+		vec3 V[8] =
+		{
+			vec3(-1.f, -1.f, -1.f),
+			vec3( 1.f, -1.f, -1.f),
+			vec3(-1.f,  1.f, -1.f),
+			vec3( 1.f,  1.f, -1.f),
+			vec3(-1.f, -1.f,  1.f),
+			vec3( 1.f, -1.f,  1.f),
+			vec3(-1.f,  1.f,  1.f),
+			vec3( 1.f,  1.f,  1.f),
+		};
+
+
+		for (int i = 0; i < 8; i++)
+		{
+			auto v = V[i]*10.f+p;
+			printf("%5.1f,%5.1f,%5.1f\n", v.x, v.y, v.z);
+			vec3 dir = p-e;
+
+			float sd = dot(dir, s);
+			float ud = dot(dir, u);
+			float fd = dot(dir, f);
+
+			mat3 h = mat3(
+// 				vec3(1, 0, abs(sd) <= 0.001 ? 0 : fd/sd),
+// 				vec3(0, 1, 0/*abs(ud) <= 0.001 ? 0 : fd / ud*/),
+// 				vec3(0, 0, 1)
+ 				vec3(1, 0, 0),
+ 				vec3(0, 1, 0),
+ 				vec3(sd / fd, 0, 1)
+			);
+
+			v = h*(dir) + e;
+			printf("%8.4f,%8.4f,%8.4f\n", v.x, v.y, v.z);
+			printf("\n");
+		}
+
+		int a = 0;
+	}
 
 	app::AppDescriptor app_desc;
 	app_desc.m_window_size = uvec2(1024, 1024);

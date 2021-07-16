@@ -48,7 +48,43 @@ void main()
 {
 	uint id = gl_VertexIndex%3;
 	vec3 v = _v[_i[gl_VertexIndex/3][gl_VertexIndex%3]];
-	gl_Position = vec4(v, 1.0);
+	gl_Position = vec4(v*300., 1.0);
 	Camera cam = u_camera[0];
-	gl_Position = cam.u_projection * cam.u_view * gl_Position;
+
+
+	mat3 R = transpose(mat3(cam.u_view));
+	vec3 s = R[0];
+	vec3 u = R[1];
+	vec3 f = R[2];
+
+	vec3 dir = vec3(0.)-cam.u_eye.xyz;
+
+	float fd = dot(dir, f);
+	float sd = dot(dir, s);
+	float ud = dot(dir, u);
+
+	mat3 h = mat3(
+		vec3(1, 0,0),
+		vec3(0, 1,0),
+		vec3(sd/fd, 0, 1)
+	);
+
+	v = h*(dir);
+	gl_Position = cam.u_projection * cam.u_view * vec4(v, 1.);
+	return;
+
+
+	mat3 shear = mat3
+	(
+		vec3(1,0,0),
+		vec3(0,1,0),
+		vec3(sd/fd,0,1)
+	);
+/*		auto hf = mat3(
+		vec3(1, 0, 0),
+		vec3(0, 1, 0),
+		vec3(sd/fd, ud/fd, 1)
+	);
+*/
+	gl_Position = cam.u_projection * cam.u_view * vec4(shear * gl_Position.xyz, 1.);
 }
