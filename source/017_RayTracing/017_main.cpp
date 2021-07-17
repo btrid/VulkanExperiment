@@ -1034,117 +1034,15 @@ void dda_f(vec3 P, vec3 Dir)
 }
 int main()
 {
+
 	{
-		vec3 eye = vec3(0.f);
-		vec3 p = vec3(-0.01f, -0.01f, 10.f);
-
-		auto dir = (p-eye);
-		
-		auto _d = normalize(vec3(0.f, 0.f, 1.f));
-		vec3 axis[] = { vec3(1., 0., 0.), vec3(0., 1., 0.),vec3(0., 0., 1.) };
- 		auto rot = quat(axis[2], _d);
-		vec3 s = (rot * axis[0]);
-		vec3 u = (rot * axis[1]);
-		vec3 f = (rot * axis[2]);
-
-		auto fd = dot(dir, f);
-		auto sd = dot(dir, s);
-		auto ud = dot(dir, u);
-
-		float sdfd = sd / fd;
-		float sf = atan2(sd, fd);
-		float t = tan(sf);
-		mat3 shear(
-// 			vec3(1.f, ud/sd, fd/sd),
-// 			vec3(sd/ud, 1.f, fd/ud),
-// 			vec3(sd/fd, ud/fd, 1.f)
-			vec3(1.f, 0, 0),
-			vec3(0.f, 1, 0),
-			vec3(sd/fd, ud/fd, 1.f)
-// 			vec3(1.f, sd/ud, sd/fd),
-// 			vec3(ud/sd, 1.f, ud/fd),
-// 			vec3(fd/sd, fd/ud, 1.f)
-		);
-		glm::scale()
-		auto np = shear * p;
-
-		int a = 0;
-	}
-	{
-		auto ortho = glm::ortho(-1024.f, 1024.f, -1024.f, 1024.f, 0.f, 10000.f);
-		auto perspective = glm::perspective(glm::radians(90.f), 1.777f, 1.f, 10000.f);
-
-		vec3 axis[] = { vec3(1., 0., 0.), vec3(0., 1., 0.),vec3(0., 0., 1.) };
-		auto _d = -normalize(vec3(1.f, 1.f, 1.f));
-		auto rot = quat(axis[2], _d);
-
-		vec3 s = (rot * axis[0]);
-		vec3 u = (rot * axis[1]);
-		vec3 f = (rot * axis[2]);
-		vec3 eye = vec3(100.f);
-		mat4 view = transpose(mat4(vec4(s, -dot(eye, s)), vec4(u, -dot(eye, u)), vec4(f, -dot(eye, f)), vec4(0,0,0,1)));
-//		auto view = glm::lookAt(eye, eye+normalize(vec3(1.f,1.f,1.f)), vec3(0.f,1.f,0.f));
-		vec3 p = vec3(554.f, 337.f, 144.f);
-
-		vec4 vp_ = view * vec4(p, 1.f);
-		auto sp = ortho * vp_;
-
-// 		auto tvp = transpose(mat3(view));
-// 		auto f = tvp[2].xyz();
-// 		auto s = tvp[0].xyz();
-// 		auto u = tvp[1].xyz();
-
-		auto ortho_inv = inverse(ortho);
-		auto perspective_inv = inverse(perspective);
-		auto view_inv = inverse(view);
-
-		auto sp2 = sp* vec4(1024.f, 1024.f, 10000.f, 1.f);
-		auto vpp = vec3(sp2.x * s + sp2.y * u + f * sp2.z);
-		
-		float tan = glm::tan(glm::radians(90.f) * 0.5f);
-		auto dir = (f*sp2.z + s*sp2.x*tan*1.f + u*sp2.y*tan);
-		dir = normalize(dir) / dot(normalize(dir), f);
-
-		auto OrthoToP = eye + dir * sp2.z;
-		auto _pppasd = view_inv * vec4(OrthoToP, 1.f);
-
-		auto d2 = normalize(p - eye);
-		d2 /= dot(d2, f);
-		float fd = dot(d2, f);
-		float sd = dot(d2, s);
-		float ud = dot(d2, u);
-		auto ref = eye + d2 * sp.z * 10000.f;
-		auto ref2 = eye + (f*fd + s*sd + u*ud) * sp.z * 10000.f;
-
-		int a = 0;
-	}
-	{
-		auto f = normalize(vec3(0.f, 1.f, 1.f));
-		auto s = normalize(cross(f, vec3(0.f, 1.f, 0.f)));
-		auto u = normalize(cross(s, f));
-		auto m = transpose(mat3(vec3(1.f, 0.f, 0.f), u, f));
-		auto v = m * vec3(10.f, 20.f, 30.f);
-		auto a = glm::rotate(vec3(10.f, 20.f, 30.f), glm::radians(60.f), vec3(1.f, 0.f, 0.f));
-		int _ = 0;
-
-	}
-	{
-		auto x = vec3(1.f, 1.f, 1.f);
-		auto n = vec3(0.f, 1.f, 0.f);
-//		auto p = glm::proj(vec3(1.f, 1.f, 1.f), vec3(0.f, 1.f, 0.f));
-		auto d = dot(x, n) / glm::dot(n, n);
-		auto p = d *n;
-		int a = 0;
-
-	}
-	{
-		for (int i = 0; i < 1000; i++)
-		{
+// 		for (int i = 0; i < 1000; i++)
+// 		{
 //			dda_3D(ivec3(100, 50, 50), ivec3(1000, 50, 500));
 //			dda_3D(glm::linearRand(ivec3(10), ivec3(50)), glm::linearRand(ivec3(10), ivec3(50)));
 //			dda_f(glm::linearRand(vec3(1), vec3(1023)), glm::normalize(glm::ballRand(1.f)));
-			dda_f(vec3(500.234f), glm::normalize(vec3(0.1f, 0.1f, -1.f)));
-		}
+//			dda_f(vec3(500.234f), glm::normalize(vec3(0.1f, 0.1f, -1.f)));
+//		}
 	}
 
 	{
@@ -1181,15 +1079,15 @@ int main()
 	ClearPipeline clear_pipeline(context, render_target);
 	PresentPipeline present_pipeline(context, render_target, context->m_window->getSwapchain());
 
-	//	Voxel2 voxel(*context, *app.m_window->getFrontBuffer());
-	Voxel1 voxel(*context, *app.m_window->getFrontBuffer());
+//	Voxel2 voxel(*context, *app.m_window->getFrontBuffer());
+//	Voxel1 voxel(*context, *app.m_window->getFrontBuffer());
 
-	//	std::shared_ptr<Model> model = Model::LoadModel(*ctx, "C:/Users/logos/source/repos/btrid/VulkanExperiment/resource/Box.dae");
-	//	Voxel_With_Model voxel_with_model(*ctx, *app.m_window->getFrontBuffer());
+	std::shared_ptr<Model> model = Model::LoadModel(*ctx, btr::getResourceAppPath()+"Box.dae");
+	Voxel_With_Model voxel_with_model(*ctx, *app.m_window->getFrontBuffer());
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-		//		voxel_with_model.execute_MakeVoxel(cmd, *model);
-		voxel.execute_MakeVoxel(cmd);
+		voxel_with_model.execute_MakeVoxel(cmd, *model);
+//		voxel.execute_MakeVoxel(cmd);
 	}
 	app.setup();
 
@@ -1215,8 +1113,10 @@ int main()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				{
-					//					voxel_with_model.execute_MakeVoxel(cmd, *model);
-					voxel.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
+					voxel_with_model.execute_MakeVoxel(cmd, *model);
+					voxel_with_model.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
+//					voxel_with_model.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
+					//					voxel.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 					//					voxel.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 				}
 

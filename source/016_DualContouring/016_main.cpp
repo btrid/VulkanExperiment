@@ -1554,7 +1554,7 @@ struct Renderer
 int main()
 {
 //	return booleanOp::main();
-//	return csg::main();
+	return csg::main();
 
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
