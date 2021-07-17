@@ -12,10 +12,10 @@ struct TextureResource
 	vk::UniqueDeviceMemory m_memory;
 	vk::UniqueSampler m_sampler;
 
-	static TextureResource read_png_file(btr::Context& ctx, const char* file_name)
+	static TextureResource read_png_file(btr::Context& ctx, const std::string file_name)
 	{
 		FILE* fp;
-		fopen_s(&fp, file_name, "rb");
+		fopen_s(&fp, file_name.c_str(), "rb");
 		assert(fp);
 
 		png_byte sig[4];

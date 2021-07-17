@@ -687,9 +687,9 @@ int main()
 	auto context = app.m_context;
 	auto dc_ctx = std::make_shared<DCContext>(context);
 
-	auto model_box = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Box.dae", { 100.f });
-	auto model = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Duck.dae", { 2.5f });
-
+	auto model_box = ::Model::LoadModel(*context, *dc_ctx, btr::getResourceAppPath() + "Box.dae", { 100.f });
+	auto model = ::Model::LoadModel(*context, *dc_ctx, btr::getResourceAppPath() + "Duck.dae", { 2.5f });
+	
 	csg::Renderer renderer(*context, *dc_ctx, *app.m_window->getFrontBuffer());
 
 	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());

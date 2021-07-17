@@ -315,8 +315,8 @@ int main()
 	auto dc_ctx = std::make_shared<DCContext>(context);
 	auto boolean_ctx = std::make_shared<booleanOp::Context>(*context);
 
-	auto model_box = ::Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Box.dae", { 300.f });
-	auto model = ::Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Duck.dae", { 5.5f });
+	auto model_box = ::Model::LoadModel(*context, *dc_ctx, btr::getResourceAppPath() + "Box.dae", { 300.f });
+	auto model = ::Model::LoadModel(*context, *dc_ctx, btr::getResourceAppPath() + "Duck.dae", { 5.5f });
 
 	Model boolean_model;
 

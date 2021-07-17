@@ -312,6 +312,7 @@ struct Model
 		cStopWatch timer;
 		Assimp::Importer importer;
 		const aiScene* scene = importer.ReadFile(filename, OREORE_PRESET);
+		assert(scene);
 		if (!scene) { return nullptr; }
 
 		unsigned numIndex = 0;
@@ -1123,8 +1124,7 @@ struct Renderer
 		}
 
 		{
-
-			auto tex = TextureResource::read_png_file(ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\renga_pattern.png");
+			auto tex = TextureResource::read_png_file(ctx, btr::getResourceAppPath() + "renga_pattern.png");
 			m_world_material[0].albedo_texture = std::move(tex);
 
 			auto def = vk::DescriptorImageInfo(sGraphicsResource::Order().getSampler(sGraphicsResource::BASIC_SAMPLER_LINER), sGraphicsResource::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal);
@@ -1548,13 +1548,13 @@ struct Renderer
 
 	}
 };
-//#include <016_DualContouring/BooleanOp.h>
+#include <016_DualContouring/BooleanOp.h>
 #include <016_DualContouring/CSG.h>
 #include <016_DualContouring/test.h>
 int main()
 {
 //	return booleanOp::main();
-	return csg::main();
+//	return csg::main();
 
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
@@ -1574,8 +1574,8 @@ int main()
 	auto dc_ctx = std::make_shared<DCContext>(context);
 	FunctionLibrary dc_fl(*context, *dc_ctx);
 
-	auto model_box = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Box.dae", { 100.f });
-	auto model = Model::LoadModel(*context, *dc_ctx, "C:\\Users\\logos\\source\\repos\\VulkanExperiment\\resource\\Duck.dae", { 2.5f });
+	auto model_box = ::Model::LoadModel(*context, *dc_ctx, btr::getResourceAppPath() + "Box.dae", { 300.f });
+	auto model = ::Model::LoadModel(*context, *dc_ctx, btr::getResourceAppPath() + "Duck.dae", { 5.5f });
 
 
 	auto dc_model = DCModel::Construct(*context, *dc_ctx);
@@ -1590,7 +1590,7 @@ int main()
  		DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
 	}
 
-	ModelInstance instance_list[30];
+	ModelInstance instance_list[3];
 	for (auto& i : instance_list) { i = { vec4(glm::linearRand(vec3(0.f), vec3(500.f)), 0.f), vec4(glm::ballRand(1.f), 100.f) }; }
 
 	app.setup();
