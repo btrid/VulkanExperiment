@@ -39,38 +39,28 @@ void main()
 	float y = dot(n, vec3(0., 1., 0.));
 	float z = dot(n, vec3(0., 0., 1.));
 
-	if(abs(x) > abs(y) && abs(x) > abs(z))
+	mat4 pv = u_voxelize_pvmat[0];
+	for(int i = 0; i < 3; i++)
 	{
-		gl_ViewportIndex = 0;
-	}
-	else if(abs(y) > abs(z))
-	{
-		gl_ViewportIndex = 1;
-	}
-	else
-	{
-		gl_ViewportIndex = 2;
-	}
+		gl_Position = vec4(In[i].Position, 1.);
+		if(abs(x) > abs(y) && abs(x) > abs(z))
+		{
+			gl_Position.xyz = gl_Position.zyx;
+		}
+		else if(abs(y) > abs(z))
+		{		
+			gl_Position.xyz = gl_Position.xzy;
+		}
+		else
+		{
+		}
 
-	mat4 pv = u_voxelize_pvmat[gl_ViewportIndex];
-	gl_Position = pv * vec4(In[0].Position, 1.);
-	transform.Position = In[0].Position;
-	transform.Albedo = In[0].Albedo;
-	transform.Normal = n;
-	EmitVertex();
-
-	gl_Position = pv * vec4(In[1].Position, 1.);
-	transform.Position = In[1].Position;
-	transform.Albedo = In[1].Albedo;
-	transform.Normal = n;
-	EmitVertex();
-
-	gl_Position = pv * vec4(In[2].Position, 1.);
-	transform.Position = In[2].Position;
-	transform.Albedo = In[2].Albedo;
-	transform.Normal = n;
-	EmitVertex();
-	
+		gl_Position = pv * gl_Position;
+		transform.Position = In[i].Position;
+		transform.Albedo = In[i].Albedo;
+		transform.Normal = n;
+		EmitVertex();
+	}	
 	EndPrimitive();
 
 }

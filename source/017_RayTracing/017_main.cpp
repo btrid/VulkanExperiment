@@ -116,7 +116,7 @@ struct Model
 		cStopWatch timer;
 		Assimp::Importer importer;
 		const aiScene* scene = importer.ReadFile(filename, OREORE_PRESET);
-		if (!scene) { return nullptr; }
+		if (!scene) { assert(false); return nullptr; }
 
 		unsigned numIndex = 0;
 		unsigned numVertex = 0;
@@ -133,8 +133,10 @@ struct Model
 
 		uint32_t index_offset = 0;
 		uint32_t vertex_offset = 0;
-		Info info{ .m_aabb_min = vec4{999.f}, .m_aabb_max = vec4{-999.f}, .m_voxel_reso = uvec3(256) };
-
+		Info info{};
+		info.m_aabb_min = vec4{ 999.f };
+		info.m_aabb_max = vec4{ -999.f };
+		info.m_voxel_reso = uvec3(256);
 		for (size_t i = 0; i < scene->mNumMeshes; i++)
 		{
 			aiMesh* mesh = scene->mMeshes[i];
@@ -146,10 +148,10 @@ struct Model
 
 			for (uint32_t v = 0; v < mesh->mNumVertices; v++)
 			{
-				mesh->mVertices[v] += aiVector3D(1.f);
-				mesh->mVertices[v].x *= 500.f;
-				mesh->mVertices[v].y *= 200.f;
-				mesh->mVertices[v].z *= 500.f;
+ 				mesh->mVertices[v] += aiVector3D(100.f, 0.f, 100.f);
+ 				mesh->mVertices[v].x *= 3.f;
+ 				mesh->mVertices[v].y *= 3.f;
+ 				mesh->mVertices[v].z *= 3.f;
 				info.m_aabb_min.x = std::min(info.m_aabb_min.x, mesh->mVertices[v].x);
 				info.m_aabb_min.y = std::min(info.m_aabb_min.y, mesh->mVertices[v].y);
 				info.m_aabb_min.z = std::min(info.m_aabb_min.z, mesh->mVertices[v].z);
@@ -257,6 +259,10 @@ struct Model
 
 struct Voxel_With_Model
 {
+	enum 
+	{
+		VoxelReso = 512,
+	};
 	enum
 	{
 		DSL_Voxel,
@@ -349,7 +355,7 @@ struct Voxel_With_Model
 
 		// descriptor set
 		{
-			m_info.reso = uvec4(2048, 512, 2048, 1);
+			m_info.reso = uvec4(VoxelReso, VoxelReso, VoxelReso, 1);
 			uvec4 hash_reso = m_info.reso >> 2u >> 2u;
 			uint num = m_info.reso.x * m_info.reso.y * m_info.reso.z;
 			u_info = ctx.m_ctx->m_uniform_memory.allocateMemory<VoxelInfo>(1);
@@ -364,10 +370,12 @@ struct Voxel_With_Model
 
 			mat4 pv[3];
 			pv[0] = glm::ortho(-1024.f, 1024.f, -256.f, 256.f, 0.f, 2048.f) * glm::lookAt(vec3(0, 256, 1024), vec3(0, 256, 1024) + vec3(2048, 0, 0), vec3(0.f, 1.f, 0.f));
+			pv[0] = glm::ortho(0.f, (float)VoxelReso, 0.f, (float)VoxelReso, 0.f, (float)VoxelReso);// * glm::lookAt(vec3(0, 256, 256), vec3(0, 256, 256) + vec3(512, 0, 0), vec3(0.f, 1.f, 0.f));
 			pv[1] = glm::ortho(-1024.f, 1024.f, -1024.f, 1024.f, 0.f, 512.f) * glm::lookAt(vec3(1024, 0, 1024), vec3(1024, 0, 1024) + vec3(0, 512, 0), vec3(0.f, 0.f, -1.f));
 			pv[2] = glm::ortho(-1024.f, 1024.f, -256.f, 256.f, 0.f, 2048.f) * glm::lookAt(vec3(1024, 256, 0), vec3(1024, 256, 0) + vec3(0, 0, 2048), vec3(0.f, 1.f, 0.f));
 			cmd.updateBuffer<mat4[3]>(u_pvmat.getInfo().buffer, u_pvmat.getInfo().offset, pv);
 
+			auto a = pv[0] * vec4(100.f, 100.f, 100.f, 1.f);
 
 			vk::DescriptorSetLayout layouts[] =
 			{
@@ -504,8 +512,8 @@ struct Voxel_With_Model
 				{
 					vk::FramebufferCreateInfo framebuffer_info;
 					framebuffer_info.setRenderPass(m_RP_makevoxel.get());
-					framebuffer_info.setWidth(2048);
-					framebuffer_info.setHeight(2048);
+					framebuffer_info.setWidth(VoxelReso);
+					framebuffer_info.setHeight(VoxelReso);
 					framebuffer_info.setLayers(1);
 
 					m_FB_makevoxel = ctx.m_ctx->m_device.createFramebufferUnique(framebuffer_info);
@@ -534,20 +542,20 @@ struct Voxel_With_Model
 			// viewport
 			vk::Viewport viewport[] =
 			{
-				vk::Viewport(0.f, 0.f, (float)2048, (float)512, 0.f, 1.f),
-				vk::Viewport(0.f, 0.f, (float)2048, (float)2048, 0.f, 1.f),
-				vk::Viewport(0.f, 0.f, (float)2048, (float)512, 0.f, 1.f),
+				vk::Viewport(0.f, 0.f, VoxelReso, VoxelReso, 0.f, 1.f),
+//				vk::Viewport(0.f, 0.f, (float)2048, (float)2048, 0.f, 1.f),
+//				vk::Viewport(0.f, 0.f, (float)2048, (float)512, 0.f, 1.f),
 			};
 			vk::Rect2D scissor[] =
 			{
-				vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(2048, 512)),
-				vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(2048, 2048)),
-				vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(2048, 512)),
+				vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(VoxelReso, VoxelReso)),
+//				vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(2048, 2048)),
+//				vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(2048, 512)),
 			};
 			vk::PipelineViewportStateCreateInfo viewportInfo;
-			viewportInfo.setViewportCount(3);
+			viewportInfo.setViewportCount(array_length(viewport));
 			viewportInfo.setPViewports(viewport);
-			viewportInfo.setScissorCount(3);
+			viewportInfo.setScissorCount(array_length(scissor));
 			viewportInfo.setPScissors(scissor);
 
 
@@ -557,9 +565,11 @@ struct Voxel_With_Model
 			rasterization_info.setCullMode(vk::CullModeFlagBits::eNone);
 			rasterization_info.setLineWidth(1.f);
 
+			auto prop = ctx.m_ctx->m_physical_device.getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceConservativeRasterizationPropertiesEXT>();
+			auto conservativeRasterProps= prop.get<vk::PhysicalDeviceConservativeRasterizationPropertiesEXT>();
 			vk::PipelineRasterizationConservativeStateCreateInfoEXT conservativeRasterState_CI;
 			conservativeRasterState_CI.conservativeRasterizationMode = vk::ConservativeRasterizationModeEXT::eOverestimate;
-			//			conservativeRasterState_CI.extraPrimitiveOverestimationSize = conservativeRasterProps.maxExtraPrimitiveOverestimationSize;
+			conservativeRasterState_CI.extraPrimitiveOverestimationSize = conservativeRasterProps.maxExtraPrimitiveOverestimationSize;
 			rasterization_info.pNext = &conservativeRasterState_CI;
 
 			vk::PipelineMultisampleStateCreateInfo sample_info;
@@ -976,7 +986,7 @@ struct Voxel_With_Model
 		begin_render_Info.setFramebuffer(m_FB_debugvoxel.get());
 		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
-		auto num = m_info.reso.xyz() >> uvec3(2) >> uvec3(2);
+		auto num = m_info.reso.xyz();
 		cmd.draw(num.x * num.y * num.z, 1, 0, 0);
 
 		cmd.endRenderPass();
@@ -1032,22 +1042,28 @@ void dda_f(vec3 P, vec3 Dir)
 	//	t /= deltaT;
 	int b = 0;
 }
+
+void dda_test()
+{
+	for (int i = 0; i < 1000; i++)
+	{
+// 		dda_3D(ivec3(100, 50, 50), ivec3(1000, 50, 500));
+// 		dda_3D(glm::linearRand(ivec3(10), ivec3(50)), glm::linearRand(ivec3(10), ivec3(50)));
+// 		dda_f(glm::linearRand(vec3(1), vec3(1023)), glm::normalize(glm::ballRand(1.f)));
+// 		dda_f(vec3(500.234f), glm::normalize(vec3(0.1f, 0.1f, -1.f)));
+	}
+}
+
 int main()
 {
 
-	{
-// 		for (int i = 0; i < 1000; i++)
-// 		{
-//			dda_3D(ivec3(100, 50, 50), ivec3(1000, 50, 500));
-//			dda_3D(glm::linearRand(ivec3(10), ivec3(50)), glm::linearRand(ivec3(10), ivec3(50)));
-//			dda_f(glm::linearRand(vec3(1), vec3(1023)), glm::normalize(glm::ballRand(1.f)));
-//			dda_f(vec3(500.234f), glm::normalize(vec3(0.1f, 0.1f, -1.f)));
-//		}
-	}
+//	dda_test();
+
 
 	{
 		mat4 pv[3];
 		pv[0] = glm::ortho(-1024.f, 1024.f, -256.f, 256.f, 0.f, 2048.f) * glm::lookAt(vec3(0, 256, 1024), vec3(0, 256, 1024) + vec3(2048, 0, 0), vec3(0.f, 1.f, 0.f));
+		pv[0] = glm::ortho(-256.f, 256.f, -256.f, 256.f, 0.f, 512.f) * glm::lookAt(vec3(0, 256, 256), vec3(0, 256, 256) + vec3(512, 0, 0), vec3(0.f, 1.f, 0.f));
 		pv[1] = glm::ortho(-1024.f, 1024.f, -1024.f, 1024.f, 0.f, 512.f) * glm::lookAt(vec3(1024, 0, 1024), vec3(1024, 0, 1024) + vec3(0, 512, 0), vec3(0.f, 0.f, -1.f));
 		pv[2] = glm::ortho(-1024.f, 1024.f, -256.f, 256.f, 0.f, 2048.f) * glm::lookAt(vec3(1024, 256, 0), vec3(1024, 256, 0) + vec3(0, 0, 2048), vec3(0.f, 1.f, 0.f));
 
@@ -1058,8 +1074,8 @@ int main()
 
 	}
 	auto camera = cCamera::sCamera::Order().create();
-	camera->getData().m_position = vec3(-400.f, 1500.f, -1430.f);
-	camera->getData().m_target = vec3(800.f, 0.f, 1000.f);
+	camera->getData().m_position = vec3(-1000.f, 500.f, -666.f);
+	camera->getData().m_target = vec3(0.f, 200.f, 0.f);
 	//	camera->getData().m_position = vec3(1000.f, 220.f, -200.f);
 	//	camera->getData().m_target = vec3(1000.f, 220.f, 0.f);
 	camera->getData().m_up = vec3(0.f, -1.f, 0.f);
@@ -1082,7 +1098,8 @@ int main()
 //	Voxel2 voxel(*context, *app.m_window->getFrontBuffer());
 //	Voxel1 voxel(*context, *app.m_window->getFrontBuffer());
 
-	std::shared_ptr<Model> model = Model::LoadModel(*ctx, btr::getResourceAppPath()+"Box.dae");
+//	std::shared_ptr<Model> model = Model::LoadModel(*ctx, btr::getResourceAppPath() + "Box.dae");
+	std::shared_ptr<Model> model = Model::LoadModel(*ctx, btr::getResourceAppPath() + "Duck.dae");
 	Voxel_With_Model voxel_with_model(*ctx, *app.m_window->getFrontBuffer());
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
@@ -1113,11 +1130,11 @@ int main()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				{
-					voxel_with_model.execute_MakeVoxel(cmd, *model);
-					voxel_with_model.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
-//					voxel_with_model.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
-					//					voxel.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
-					//					voxel.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
+ 					voxel_with_model.execute_MakeVoxel(cmd, *model);
+// 					voxel_with_model.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
+					voxel_with_model.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
+//					voxel.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
+//					voxel.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 				}
 
 				cmd.end();

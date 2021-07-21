@@ -40,6 +40,7 @@ ivec3 ToMidIndex(in ivec3 p){ return p >> 2; }
 ivec3 ToTopBit(in ivec3 p){ return (p>>2)-(p>>4<<2); }
 ivec3 ToMidBit(in ivec3 p){ return p - (p>>2<<2); }
 
+//#define ToHierarchyIndex(in ivec3 p, in int level) { return p >> (level*2)}
 uint bitcount(in uvec2 bitmask, in int bit)
 {
 	uvec2 mask = uvec2((i64vec2(1l) << clamp(i64vec2(bit+1) - i64vec2(0, 32), i64vec2(0), i64vec2(32))) - i64vec2(1l));

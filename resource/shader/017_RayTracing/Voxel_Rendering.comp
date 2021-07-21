@@ -97,9 +97,6 @@ void main()
 				continue;
 			}
 
-//			c = f16vec4(1.hf);
-//			pos = vec3(99999);
-//			break;
 
 			InteriorNode mid = b_interior[top.child+bitcount(top.bitmask,tb)];
 			do

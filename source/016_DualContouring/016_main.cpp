@@ -1554,7 +1554,7 @@ struct Renderer
 int main()
 {
 //	return booleanOp::main();
-	return csg::main();
+//	return csg::main();
 
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
@@ -1575,7 +1575,7 @@ int main()
 	FunctionLibrary dc_fl(*context, *dc_ctx);
 
 	auto model_box = ::Model::LoadModel(*context, *dc_ctx, btr::getResourceAppPath() + "Box.dae", { 300.f });
-	auto model = ::Model::LoadModel(*context, *dc_ctx, btr::getResourceAppPath() + "Duck.dae", { 5.5f });
+	auto model_duck = ::Model::LoadModel(*context, *dc_ctx, btr::getResourceAppPath() + "Duck.dae", { 2.5f });
 
 
 	auto dc_model = DCModel::Construct(*context, *dc_ctx);
@@ -1640,10 +1640,12 @@ int main()
 				{
 
 					dc_fl.executClear(cmd, *dc_model);
-					for (auto& i : instance_list) dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_box, i);
 
-//					dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model, dynamic_instance.get());
- 					DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
+					dc_fl.executeBooleanAdd(cmd, *dc_ctx, *dc_model, *model_duck, ModelInstance{ vec4(255.f, 0.f, 255.f, 0.f), vec4(0.f, 0.f, 1.f, 0.f) });
+					for (auto& i : instance_list)
+						dc_fl.executeBooleanSub(cmd, *dc_ctx, *dc_model, *model_box, i);
+
+					DCModel::CreateDCModel(cmd, *dc_ctx, *dc_model);
 
 					renderer.ExecuteRenderDCModel(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());
 					renderer.ExecuteTestRender(cmd, *dc_ctx, *dc_model, *app.m_window->getFrontBuffer());

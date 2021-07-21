@@ -15,9 +15,10 @@ SET output=-o ../binary/
 
 %exe% %output%/VoxelDebug_Render.vert.spv VoxelDebug_Render.vert
 %exe% %output%/VoxelDebug_Render.frag.spv VoxelDebug_Render.frag
+%exe% %output%/VoxelDebug_Render.geom.spv VoxelDebug_Render.geom
 
 rem %exe% %output%/VoxelDebug_Render.geom.spv VoxelDebug_RenderTop.geom
 rem %exe% %output%/VoxelDebug_Render.geom.spv VoxelDebug_RenderTopChild.geom
- %exe% %output%/VoxelDebug_Render.geom.spv VoxelDebug_RenderMid.geom
+rem %exe% %output%/VoxelDebug_Render.geom.spv VoxelDebug_RenderMid.geom
 rem %exe% %output%/VoxelDebug_Render.geom.spv VoxelDebug_RenderLeaf.geom
-rem %exe% %output%/VoxelDebug_Render.geom.spv VoxelDebug_RenderLeafChild.geom
+%exe% %output%/VoxelDebug_Render.geom.spv VoxelDebug_RenderLeafChild.geom
