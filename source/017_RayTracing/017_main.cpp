@@ -1131,8 +1131,8 @@ int main()
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				{
  					voxel_with_model.execute_MakeVoxel(cmd, *model);
-// 					voxel_with_model.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
-					voxel_with_model.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
+ 					voxel_with_model.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
+//					voxel_with_model.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 //					voxel.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 //					voxel.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 				}
