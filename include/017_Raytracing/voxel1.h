@@ -464,7 +464,7 @@ bool intersection(vec3 aabb_min, vec3 aabb_max, vec3 pos, vec3 inv_dir, float& n
 
 	n = glm::max(glm::max(tmin.x, tmin.y), tmin.z);
 	f = glm::min(glm::min(tmax.x, tmax.y), tmax.z);
-
+	f = glm::max(f, 0.f);
 	return f > n;
 }
 

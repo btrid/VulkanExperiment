@@ -36,28 +36,22 @@ void MakeRay(out vec3 pos, out vec3 dir, out vec3 inv_dir)
 	dir = normalize(axis[2] + axis[0] * screen.x * u_camera[0].u_aspect + axis[1] * screen.y);
 	pos = u_camera[0].u_eye.xyz;
 
-	inv_dir.x = abs(dir.x) < 0.00001 ? 100000. : (1./dir.x);
-	inv_dir.y = abs(dir.y) < 0.00001 ? 100000. : (1./dir.y);
-	inv_dir.z = abs(dir.z) < 0.00001 ? 100000. : (1./dir.z);
+	inv_dir = 1./dir;
+	
+	inv_dir.x = abs(dir.x) < 0.00001 ? 10000. : (1./dir.x);
+	inv_dir.y = abs(dir.y) < 0.00001 ? 10000. : (1./dir.y);
+	inv_dir.z = abs(dir.z) < 0.00001 ? 10000. : (1./dir.z);
+
+//	int a = abs(dir.x) > abs(dir.y) ? 0 : 1;
+//	a = abs(dir[a]) > abs(dir.z) ? a : 2;
+//	dir *= abs(inv_dir[a]);
+//	inv_dir /= abs(inv_dir[a]);
 
 }
 
 uint To1D(in uvec3 p, in uvec3 s){ return p.x + p.y*s.x + p.z*s.x*s.y; }
 uint To1D(in uvec3 p, in uvec4 s){ return p.x + p.y*s.x + p.z*s.x*s.y; }
 
-void march(inout ivec3 Cell, inout vec3 t, in vec3 dir, in vec3 deltaT)
-{
-//	int comp = t[0] < t[1] ? 0 : 1;
-//	comp = t[comp] < t[2] ? comp : 2;
-//	vec3 mask = vec3(equal(ivec3(0, 1, 2), comp.xxx));
-
-	float tmin = min(min(t.x, t.y), t.z);
-	vec3 mask = vec3(lessThanEqual(t, vec3(tmin)));
-
-	Cell += ivec3(sign(dir)*mask);
-	t = fma(deltaT, mask, t);
-
-}
 
 void main() 
 {	
@@ -74,10 +68,12 @@ void main()
 	}
 
 	vec3 deltaT = abs(inv_dir);
-	vec3 t = mix(fract(pos), 1.f-fract(pos), sign(dir)*0.5+0.5) * abs(inv_dir);
-	ivec3 Cell = ivec3(floor(pos));
+	vec3 t = (floor(pos) + step(dir, vec3(0.)) - pos) * inv_dir;
+	ivec3 Cell = ivec3(pos);
+	vec3 mask = vec3(0,0,1);
 
 	f16vec4 c = f16vec4(0.);
+	int count = 0;
 	while(all(greaterThanEqual(Cell, ivec3(0))) && all(lessThan(Cell, u_info.reso.xyz)))
 	{
 		uvec3 top_index = ToTopIndex(Cell);
@@ -86,12 +82,18 @@ void main()
 		if(hash<0)
 		{
 			// skip
-			while(all(greaterThanEqual(Cell, ivec3(0))) && all(equal(top_index, ToTopIndex(Cell))))
-			{
-				march(Cell, t, dir, deltaT);
-			}
-			continue;
+			vec3 min = (top_index<<4)-0.01;
+			vec3 max = ((top_index+1)<<4)+0.01;
+			bool b = intersection(min, max, pos, inv_dir, n, f);
+//			if(!b){ break; }
 
+			pos = fma(dir, vec3(f), pos);
+			t = (floor(pos) + step(dir, vec3(0.)) - pos) * inv_dir;
+
+//			if(all(equal(Cell, uvec3(floor(pos))))){ break;}
+			Cell = ivec3(floor(pos));
+
+			continue;
 		}
 		InteriorNode top = b_interior[hash];
 
@@ -102,11 +104,14 @@ void main()
 			uint tb = top_bit.x+top_bit.y*4+top_bit.z*16;
 			if(!isBitOn(top.bitmask, tb))
 			{
-				// skip
-				while(all(greaterThanEqual(Cell, ivec3(0))) && all(equal(mid_index, ToMidIndex(Cell))))
-				{
-					march(Cell, t, dir, deltaT);
-				}
+				vec3 min = (mid_index<<2)-0.01;
+				vec3 max = ((mid_index+1)<<2)+0.01;
+				intersection(min, max, pos, inv_dir, n, f);
+				pos = fma(dir, vec3(f), pos);
+
+				t = (floor(pos) + step(dir, vec3(0.)) - pos) * inv_dir;
+			Cell = ivec3(floor(pos));
+
 				continue;
 			}
 
@@ -118,14 +123,19 @@ void main()
 				uint bb = mid_bit.x+mid_bit.y*4+mid_bit.z*16;
 				if(!isBitOn(mid.bitmask, bb))
 				{
-					march(Cell, t, dir, deltaT);
+					int comp = t[0] < t[1] ? 0 : 1;
+					comp = t[comp] < t[2] ? comp : 2;
+					mask = vec3(equal(ivec3(0, 1, 2), comp.xxx));
+
+					Cell += ivec3(sign(dir)*mask);
+					t = fma(deltaT, mask, t);
 					continue;
 				}
 
 				LeafNode leaf = b_leaf[mid.child+bitcount(mid.bitmask,bb)];
 				c.xyz = f16vec3(abs(unpack_normal(leaf.normal)));
 				c.w = 1.hf;
-				Cell = ivec3(-99999);
+				Cell = ivec3(99999);
 				break;
 
 			}

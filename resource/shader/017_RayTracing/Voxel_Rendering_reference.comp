@@ -11,7 +11,7 @@
 #include "applib/System.glsl"
 layout (local_size_x = 8, local_size_y = 8) in;
 
-bool intersection(vec3 aabb_min, vec3 aabb_max, vec3 pos, vec3 inv_dir, out float n, out float f)
+bool intersection(vec3 aabb_min, vec3 aabb_max, vec3 pos, vec3 inv_dir, out float n, out float f, out vec3 comp_mask)
 {
 	// https://tavianator.com/fast-branchless-raybounding-box-intersections/
 	vec3 t1 = (aabb_min - pos) * inv_dir;
@@ -22,6 +22,9 @@ bool intersection(vec3 aabb_min, vec3 aabb_max, vec3 pos, vec3 inv_dir, out floa
 
 	n = max(max(tmin.x, tmin.y), tmin.z);
 	f = min(min(tmax.x, tmax.y), tmax.z);
+
+	comp_mask = vec3(lessThanEqual(tmax, vec3(f)));
+	f = max(f, 0.);
 
 	return f > n;
 }
@@ -36,14 +39,22 @@ void MakeRay(out vec3 pos, out vec3 dir, out vec3 inv_dir)
 	dir = normalize(axis[2] + axis[0] * screen.x * u_camera[0].u_aspect + axis[1] * screen.y);
 	pos = u_camera[0].u_eye.xyz;
 
+//	inv_dir = 1./dir;
+	
 	inv_dir.x = abs(dir.x) < 0.00001 ? 100000. : (1./dir.x);
 	inv_dir.y = abs(dir.y) < 0.00001 ? 100000. : (1./dir.y);
 	inv_dir.z = abs(dir.z) < 0.00001 ? 100000. : (1./dir.z);
+
+//	int a = abs(dir.x) > abs(dir.y) ? 0 : 1;
+//	a = abs(dir[a]) > abs(dir.z) ? a : 2;
+//	dir *= abs(inv_dir[a]);
+//	inv_dir /= abs(inv_dir[a]);
 
 }
 
 uint To1D(in uvec3 p, in uvec3 s){ return p.x + p.y*s.x + p.z*s.x*s.y; }
 uint To1D(in uvec3 p, in uvec4 s){ return p.x + p.y*s.x + p.z*s.x*s.y; }
+
 
 void march(inout ivec3 Cell, inout vec3 t, in vec3 dir, in vec3 deltaT)
 {
@@ -59,13 +70,23 @@ void march(inout ivec3 Cell, inout vec3 t, in vec3 dir, in vec3 deltaT)
 
 }
 
+ivec3 select(ivec3 s, ivec3 p, ivec3 r)
+{
+	return s * p + (1 - s) * ((r-1) - p);
+}
+vec3 select(vec3 s, vec3 p, vec3 r)
+{
+	return s * p + (1.f - s) * ((r) - p);
+}
+
 void main() 
 {	
 	vec3 dir,pos, inv_dir;
 	MakeRay(pos, dir, inv_dir);
 
 	float n, f;
-	intersection(vec3(0.01), vec3(u_info.reso.xyz)-0.01, pos, inv_dir, n, f);
+	vec3 comp_mask;
+	intersection(vec3(0.01), vec3(u_info.reso.xyz)-0.01, pos, inv_dir, n, f, comp_mask);
 	pos = pos + max(n, 0.) * dir;
 	if(!all(lessThan(pos, u_info.reso.xyz)) || !all(greaterThanEqual(pos, ivec3(0))))
 	{
@@ -73,52 +94,54 @@ void main()
 		return;	
 	}
 
+	vec3 dir_sign = sign(dir)*0.5f+0.5f;
+
+	vec3 pos_origin = select(dir_sign, pos, vec3(u_info.reso.xyz));
 	vec3 deltaT = abs(inv_dir);
-	vec3 t = mix(fract(pos), 1.f-fract(pos), sign(dir)*0.5+0.5) * abs(inv_dir);
+	pos = pos_origin;
 	ivec3 Cell = ivec3(floor(pos));
+	vec3 t = (1.f-fract(pos)) * abs(inv_dir);
 
 	f16vec4 c = f16vec4(0.);
 	while(all(greaterThanEqual(Cell, ivec3(0))) && all(lessThan(Cell, u_info.reso.xyz)))
 	{
-		uvec3 top_index = ToTopIndex(Cell);
-		int hash = b_hashmap[To1D(top_index, u_info.reso>>4)];
+		ivec3 top_index = ToTopIndex(Cell);
+		int hash = b_hashmap[To1D(select(ivec3(dir_sign), top_index, u_info.reso.xyz>>4), u_info.reso>>4)];
 
 		if(hash<0)
 		{
 			// skip
 			while(all(greaterThanEqual(Cell, ivec3(0))) && all(equal(top_index, ToTopIndex(Cell))))
 			{
-				march(Cell, t, dir, deltaT);
+				march(Cell, t, abs(dir), deltaT);
 			}
 			continue;
-
 		}
 		InteriorNode top = b_interior[hash];
 
 		while(all(greaterThanEqual(Cell, ivec3(0))) && all(equal(top_index, ToTopIndex(Cell))))
 		{
 			uvec3 mid_index = ToMidIndex(Cell);
-			uvec3 top_bit = ToTopBit(Cell);
+			uvec3 top_bit = ToTopBit(select(ivec3(dir_sign), Cell, u_info.reso.xyz));
 			uint tb = top_bit.x+top_bit.y*4+top_bit.z*16;
+
 			if(!isBitOn(top.bitmask, tb))
 			{
-				// skip
 				while(all(greaterThanEqual(Cell, ivec3(0))) && all(equal(mid_index, ToMidIndex(Cell))))
 				{
-					march(Cell, t, dir, deltaT);
+					march(Cell, t, abs(dir), deltaT);
 				}
 				continue;
 			}
-
 			InteriorNode mid = b_interior[top.child+bitcount(top.bitmask,tb)];
-			
+
 			while(all(greaterThanEqual(Cell, ivec3(0))) && all(equal(mid_index, ToMidIndex(Cell))))
 			{
-				uvec3 mid_bit = ToMidBit(Cell);
+				uvec3 mid_bit = ToMidBit(select(ivec3(dir_sign), Cell, u_info.reso.xyz));
 				uint bb = mid_bit.x+mid_bit.y*4+mid_bit.z*16;
 				if(!isBitOn(mid.bitmask, bb))
 				{
-					march(Cell, t, dir, deltaT);
+					march(Cell, t, abs(dir), deltaT);
 					continue;
 				}
 

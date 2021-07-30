@@ -1043,15 +1043,105 @@ void dda_f(vec3 P, vec3 Dir)
 	int b = 0;
 }
 
+void march(ivec3& Cell, vec3& t, vec3 dir, vec3 deltaT)
+{
+//	int comp = t[0] < t[1] ? 0 : 1;
+//	comp = t[comp] < t[2] ? comp : 2;
+//	vec3 mask = vec3(equal(ivec3(0, 1, 2), ivec3(comp)));
+
+	float tmin = glm::min(glm::min(t.x, t.y), t.z);
+	vec3 mask = vec3(lessThanEqual(t, vec3(tmin)));
+
+	Cell += ivec3(sign(dir) * mask);
+	t = deltaT*mask+t;
+
+}
+
+bool MyIntersection(vec3 aabb_min, vec3 aabb_max, vec3 pos, vec3 inv_dir, float& n, float& f, int& dim)
+{
+	// https://tavianator.com/fast-branchless-raybounding-box-intersections/
+	vec3 t1 = (aabb_min - pos) * inv_dir;
+	vec3 t2 = (aabb_max - pos) * inv_dir;
+
+	vec3 tmin = min(t1, t2);
+	vec3 tmax = max(t1, t2);
+
+	n = glm::max(glm::max(tmin.x, tmin.y), tmin.z);
+	f = glm::min(glm::min(tmax.x, tmax.y), tmax.z);
+	f = glm::max(f, 0.f);
+
+	int comp = tmax[0] < tmax[1] ? 0 : 1;
+	comp = tmax[comp] < tmax[2] ? comp : 2;
+	dim = comp;
+
+	return f > n;
+}
+
+
+ivec3 select(ivec3 s, ivec3 p, ivec3 r)
+{
+	return s * p + (1 - s) * ((r - 1) - p);
+}
+vec3 select(vec3 s, vec3 p, vec3 r)
+{
+	return s * p + (1.f - s) * ((r) - p);
+}
 void dda_test()
 {
-	for (int i = 0; i < 1000; i++)
+	glm::ballRand(550.f);
+	glm::ballRand(550.f);
+	glm::ballRand(550.f);
+	glm::ballRand(550.f);
+	glm::ballRand(550.f);
+	for (int i = 0; i < 5000000; i++)
 	{
 // 		dda_3D(ivec3(100, 50, 50), ivec3(1000, 50, 500));
 // 		dda_3D(glm::linearRand(ivec3(10), ivec3(50)), glm::linearRand(ivec3(10), ivec3(50)));
 // 		dda_f(glm::linearRand(vec3(1), vec3(1023)), glm::normalize(glm::ballRand(1.f)));
 // 		dda_f(vec3(500.234f), glm::normalize(vec3(0.1f, 0.1f, -1.f)));
+
+		vec3 p_orig = glm::ballRand(100.f) + 100.f;
+		vec3 dir = normalize(glm::ballRand(1.f));
+
+		vec3 inv_dir = 1.f / dir;
+		vec3 pos = p_orig;
+		vec3 deltaT = abs(inv_dir);
+		ivec3 Cell = ivec3(pos);
+		ivec3 Reso = ivec3(200);
+		auto pos_r = select(sign(dir) * 0.5f + 0.5f, p_orig, vec3(Reso));
+		Cell = ivec3(floor(pos_r));
+//		Cell = select(ivec3((sign(dir) * 0.5f + 0.5f)), Cell, Reso);
+
+
+		while (all(greaterThanEqual(Cell, ivec3(0))) && all(lessThan(Cell, Reso)))
+		{
+			ivec3 top_index = Cell >> ivec3(4);
+			vec3 min = vec3(top_index << ivec3(4));
+			vec3 max = vec3((top_index + ivec3(1)) << ivec3(4));
+
+			float n, f;
+			int comp;
+			bool b = MyIntersection(min, max, pos_r, abs(inv_dir), n, f, comp);
+			if(!b)
+			{
+				int a = 0.f;
+			}
+
+			pos = abs(dir) * vec3(f) + pos_r;
+			Cell = ivec3(floor(pos));
+			vec3 t = (1.f-fract(pos)) * abs(inv_dir);
+
+			while(all(greaterThanEqual(Cell, ivec3(0))) && all(equal(Cell>>ivec3(4), top_index)))
+			{
+				march(Cell, t, abs(dir), deltaT);
+			}
+
+		}
+		if((i%1000) == 0)
+		printf("%d\n", i);
 	}
+
+
 }
 
 int main()
@@ -1060,19 +1150,6 @@ int main()
 //	dda_test();
 
 
-	{
-		mat4 pv[3];
-		pv[0] = glm::ortho(-1024.f, 1024.f, -256.f, 256.f, 0.f, 2048.f) * glm::lookAt(vec3(0, 256, 1024), vec3(0, 256, 1024) + vec3(2048, 0, 0), vec3(0.f, 1.f, 0.f));
-		pv[0] = glm::ortho(-256.f, 256.f, -256.f, 256.f, 0.f, 512.f) * glm::lookAt(vec3(0, 256, 256), vec3(0, 256, 256) + vec3(512, 0, 0), vec3(0.f, 1.f, 0.f));
-		pv[1] = glm::ortho(-1024.f, 1024.f, -1024.f, 1024.f, 0.f, 512.f) * glm::lookAt(vec3(1024, 0, 1024), vec3(1024, 0, 1024) + vec3(0, 512, 0), vec3(0.f, 0.f, -1.f));
-		pv[2] = glm::ortho(-1024.f, 1024.f, -256.f, 256.f, 0.f, 2048.f) * glm::lookAt(vec3(1024, 256, 0), vec3(1024, 256, 0) + vec3(0, 0, 2048), vec3(0.f, 1.f, 0.f));
-
-		vec4 t1 = pv[2] * vec4(vec3(100.f), 1.f);
-		vec4 t2 = pv[2] * vec4(vec3(200.f, 100, 100.), 1.f);
-		vec4 t3 = pv[2] * vec4(vec3(100.f, 200, 100.), 1.f);
-		int i = 0;
-
-	}
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = vec3(-1000.f, 500.f, -666.f);
 	camera->getData().m_target = vec3(0.f, 200.f, 0.f);

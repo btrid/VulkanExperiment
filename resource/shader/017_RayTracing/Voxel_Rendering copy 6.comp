@@ -36,9 +36,16 @@ void MakeRay(out vec3 pos, out vec3 dir, out vec3 inv_dir)
 	dir = normalize(axis[2] + axis[0] * screen.x * u_camera[0].u_aspect + axis[1] * screen.y);
 	pos = u_camera[0].u_eye.xyz;
 
-	inv_dir.x = abs(dir.x) < 0.00001 ? 100000. : (1./dir.x);
-	inv_dir.y = abs(dir.y) < 0.00001 ? 100000. : (1./dir.y);
-	inv_dir.z = abs(dir.z) < 0.00001 ? 100000. : (1./dir.z);
+	inv_dir = 1./dir;
+	
+	inv_dir.x = abs(dir.x) < 0.00001 ? 10000. : (1./dir.x);
+	inv_dir.y = abs(dir.y) < 0.00001 ? 10000. : (1./dir.y);
+	inv_dir.z = abs(dir.z) < 0.00001 ? 10000. : (1./dir.z);
+
+//	int a = abs(dir.x) > abs(dir.y) ? 0 : 1;
+//	a = abs(dir[a]) > abs(dir.z) ? a : 2;
+//	dir *= abs(inv_dir[a]);
+//	inv_dir /= abs(inv_dir[a]);
 
 }
 
@@ -75,9 +82,10 @@ void main()
 
 	vec3 deltaT = abs(inv_dir);
 	vec3 t = mix(fract(pos), 1.f-fract(pos), sign(dir)*0.5+0.5) * abs(inv_dir);
-	ivec3 Cell = ivec3(floor(pos));
+	ivec3 Cell = ivec3(pos);
 
 	f16vec4 c = f16vec4(0.);
+	int count = 0;
 	while(all(greaterThanEqual(Cell, ivec3(0))) && all(lessThan(Cell, u_info.reso.xyz)))
 	{
 		uvec3 top_index = ToTopIndex(Cell);
@@ -119,13 +127,12 @@ void main()
 				if(!isBitOn(mid.bitmask, bb))
 				{
 					march(Cell, t, dir, deltaT);
-					continue;
 				}
 
 				LeafNode leaf = b_leaf[mid.child+bitcount(mid.bitmask,bb)];
 				c.xyz = f16vec3(abs(unpack_normal(leaf.normal)));
 				c.w = 1.hf;
-				Cell = ivec3(-99999);
+				Cell = ivec3(99999);
 				break;
 
 			}
