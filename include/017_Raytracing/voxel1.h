@@ -468,20 +468,35 @@ bool intersection(vec3 aabb_min, vec3 aabb_max, vec3 pos, vec3 inv_dir, float& n
 	return f > n;
 }
 
+bool intersection2(vec3 aabb_min, vec3 aabb_max, vec3 pos, vec3 inv_dir, float& n, float& f, int& dim)
+{
+	// https://tavianator.com/fast-branchless-raybounding-box-intersections/
+	vec3 t1 = (aabb_min - pos) * inv_dir;
+	vec3 t2 = (aabb_max - pos) * inv_dir;
+
+	vec3 tmin = min(t1, t2);
+	vec3 tmax = max(t1, t2);
+
+	n = glm::max(glm::max(tmin.x, tmin.y), tmin.z);
+	f = glm::min(glm::min(tmax.x, tmax.y), tmax.z);
+	f = glm::max(f, 0.f);
+
+	int comp = tmax[0] < tmax[1] ? 0 : 1;
+	comp = tmax[comp] < tmax[2] ? comp : 2;
+	dim = comp;
+
+	return f >= n;
+}
 void voxel_test()
 {
 	// http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.42.3443&rep=rep1&type=pdf
-	vec3 p = vec3(0, 600, 160);
-	vec3 d = normalize(vec3(10, -200, 0));
+	ivec3 reso = ivec3(512);
+	vec3 p = glm::ballRand(250.f) + 250.f;
+	vec3 d = normalize(glm::ballRand(250.f));
 	vec3 inv_d;
 	inv_d.x = abs(d.x) < 0.000001 ? 999999.f : 1. / d.x;
 	inv_d.y = abs(d.y) < 0.000001 ? 999999.f : 1. / d.y;
 	inv_d.z = abs(d.z) < 0.000001 ? 999999.f : 1. / d.z;
-
-	int axis = abs(d).x > abs(d).y ? 0 : 1;
-	axis = abs(d)[axis] > abs(d).z ? axis : 2;
-	d *= abs(inv_d)[axis];
-	inv_d /= abs(inv_d)[axis];
 
 #if 0
 	float n, f;
@@ -503,7 +518,7 @@ void voxel_test()
 		error = fract(error);
 
 	}
-#elif 1
+#elif 0
 	float n, f;
 	intersection(vec3(0), vec3(512), p, inv_d, n, f);
 	ivec3 ipos = ivec3(p + glm::max(n, 0.f) * d);
@@ -541,17 +556,97 @@ void voxel_test()
 	}
 	assert(all(equal(ipos, igoal)));
 
-#else
+#elif 0
 	// 1voxel”Å
 	vec3 error = mix(fract(p), vec3(1.) - fract(p), step(d, vec3(0.))) * abs(inv_d);
-	while (all(lessThan(p, vec3(512.f))) && all(greaterThanEqual(p, vec3(0.f))))
+	auto cell = ivec3(floor(p));
+	while (all(lessThan(cell, reso)) && all(greaterThanEqual(cell, ivec3(0))))
 	{
-		printf("%6.2f,%6.2f,%6.2f\n", p.x, p.y, p.z);
+		printf("%4d,%4d,%4d\n", cell.x, cell.y, cell.z);
 		int axis = (error.x < error.y) ? 0 : 1;
 		axis = error[axis] < error.z ? axis : 2;
-		p[axis] += glm::sign(d[axis]);
+		cell[axis] += glm::sign(d[axis]);
 		error[axis] += abs(inv_d[axis]);
 	}
+#elif 1
+	// 1voxel”Å
+	vec3 error = mix(fract(p), vec3(1.) - fract(p), step(d, vec3(0.))) * abs(inv_d);
+	auto ipos = ivec3(floor(p));
+	while (all(lessThan(ipos, reso)) && all(greaterThanEqual(ipos, ivec3(0))))
+	{
+		float n, f;
+		int comp;
+		ivec3 a = ipos >> 4;
+		ivec3 b = a + 1;
+		auto _b = intersection2((a << 2), b << 2, p, inv_d, n, f, comp);
+		if (!_b) { 
+			int _a = 0; 
+		}
+
+		auto target_pos = d * vec3(f-0.01f) + p;
+		vec3 mask = vec3(equal(ivec3(0, 1, 2), ivec3(comp)));
+		auto target = ivec3(floor(target_pos + d * mask * 0.5f));
+		auto diff = target - ipos;
+		ipos += diff;
+		error += abs(inv_d * vec3(diff));
+
+
+//		printf("%4d,%4d,%4d\n", ipos.x, ipos.y, ipos.z);
+//		int axis = (error.x < error.y) ? 0 : 1;
+//		axis = error[axis] < error.z ? axis : 2;
+//		ipos += glm::sign(d) ;
+	}
+
+#elif 1
+	float n, f;
+	int comp;
+	intersection(vec3(-1), vec3(reso), p, inv_d, n, f);
+	ivec3 ipos = ivec3(p + glm::max(n, 0.f) * d);
+	ivec3 igoal = ivec3(p + glm::max(f, 0.f) * d);
+	ivec3 idir = igoal - ipos;
+	ivec3 isign = sign(idir);
+
+	int dominant = abs(idir.x) > abs(idir.y) ? 0 : 1;
+	dominant = abs(idir[dominant]) > abs(idir.z) ? dominant : 2;
+
+	ivec3 delta = 2 * abs(idir) - abs(idir[dominant]);
+
+//	for (; ipos[dominant] != igoal[dominant];)
+	while (all(greaterThanEqual(ipos, ivec3(0))) && all(lessThan(ipos, reso)))
+	{
+		printf("%3d,%3d,%3d\n", ipos.x, ipos.y, ipos.z);
+
+		ivec3 a = ipos >> 2;
+		ivec3 b = a+1;
+		intersection2((a<<2), b<<2, p, inv_d, n, f, comp);
+
+		auto target_pos = d * vec3(f) + p;
+		vec3 mask = vec3(equal(ivec3(0, 1, 2), ivec3(comp)));
+		auto target = ivec3(floor(target_pos + d*mask*0.5f));
+		auto diff = target - ipos;
+		ipos += diff;
+		delta += 2 * abs(idir)*abs(diff[comp]);
+		delta -= 2 * abs(idir[dominant]) * abs(diff[comp]);
+
+		if (delta[(dominant + 1) % 3] >= 0)
+		{
+			ipos[(dominant+1)%3] += isign[(dominant + 1) % 3];
+			delta[(dominant+1)%3] -= 2 * abs(idir[dominant]);
+		}
+		else if (delta[(dominant+2)%3] >= 0)
+		{
+			ipos[(dominant+2) % 3] += isign[(dominant + 2) % 3];
+			delta[(dominant+2) % 3] -= 2 * abs(idir[dominant]);
+		}
+		else
+		{
+			ipos[dominant] += isign[dominant];
+			delta += 2 * abs(idir);
+		}
+
+	}
+	assert(all(equal(ipos, igoal)));
+#else
 #endif
 	int a = 0;
 }

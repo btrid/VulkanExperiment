@@ -1,3 +1,5 @@
+// こっちのほうが早い
+
 #version 460
 
 #extension GL_GOOGLE_include_directive : require
@@ -26,7 +28,7 @@ bool intersection(vec3 aabb_min, vec3 aabb_max, vec3 pos, vec3 inv_dir, out floa
 	comp_mask = vec3(lessThanEqual(tmax, vec3(f)));
 	f = max(f, 0.);
 
-	return f > n;
+	return f >= n;
 }
 
 void MakeRay(out vec3 pos, out vec3 dir, out vec3 inv_dir)
@@ -45,11 +47,6 @@ void MakeRay(out vec3 pos, out vec3 dir, out vec3 inv_dir)
 	inv_dir.y = abs(dir.y) < 0.00001 ? 100000. : (1./dir.y);
 	inv_dir.z = abs(dir.z) < 0.00001 ? 100000. : (1./dir.z);
 
-//	int a = abs(dir.x) > abs(dir.y) ? 0 : 1;
-//	a = abs(dir[a]) > abs(dir.z) ? a : 2;
-//	dir *= abs(inv_dir[a]);
-//	inv_dir /= abs(inv_dir[a]);
-
 }
 
 uint To1D(in uvec3 p, in uvec3 s){ return p.x + p.y*s.x + p.z*s.x*s.y; }
@@ -58,10 +55,6 @@ uint To1D(in uvec3 p, in uvec4 s){ return p.x + p.y*s.x + p.z*s.x*s.y; }
 
 void march(inout ivec3 Cell, inout vec3 t, in vec3 dir, in vec3 deltaT)
 {
-//	int comp = t[0] < t[1] ? 0 : 1;
-//	comp = t[comp] < t[2] ? comp : 2;
-//	vec3 mask = vec3(equal(ivec3(0, 1, 2), comp.xxx));
-
 	float tmin = min(min(t.x, t.y), t.z);
 	vec3 mask = vec3(lessThanEqual(t, vec3(tmin)));
 
@@ -70,15 +63,11 @@ void march(inout ivec3 Cell, inout vec3 t, in vec3 dir, in vec3 deltaT)
 
 }
 
-ivec3 select(ivec3 s, ivec3 p, ivec3 r)
-{
-	return s * p + (1 - s) * ((r-1) - p);
-}
-vec3 select(vec3 s, vec3 p, vec3 r)
-{
-	return s * p + (1.f - s) * ((r) - p);
-}
 
+ivec3 mixi(ivec3 a, ivec3 b,  vec3 x)
+{
+	return ivec3(mix(vec3(a), vec3(b), x));
+}
 void main() 
 {	
 	vec3 dir,pos, inv_dir;
@@ -96,7 +85,7 @@ void main()
 
 	vec3 dir_sign = sign(dir)*0.5f+0.5f;
 
-	vec3 pos_origin = select(dir_sign, pos, vec3(u_info.reso.xyz));
+	vec3 pos_origin = mix(vec3(u_info.reso.xyz)-pos, pos, dir_sign);
 	vec3 deltaT = abs(inv_dir);
 	pos = pos_origin;
 	ivec3 Cell = ivec3(floor(pos));
@@ -106,25 +95,20 @@ void main()
 	while(all(greaterThanEqual(Cell, ivec3(0))) && all(lessThan(Cell, u_info.reso.xyz)))
 	{
 		ivec3 top_index = ToTopIndex(Cell);
-		int hash = b_hashmap[To1D(select(ivec3(dir_sign), top_index, u_info.reso.xyz>>4), u_info.reso>>4)];
+		int hash = b_hashmap[To1D(mixi(((u_info.reso.xyz>>4)-1)-top_index, top_index, dir_sign), u_info.reso>>4)];
 
 		if(hash<0)
 		{
 			// skip
-			vec3 min_ = (top_index<<4);
-			vec3 max_ = ((top_index+1)<<4);
+			vec3 min_ = top_index<<4;
+			vec3 max_ = (top_index+1)<<4;
 			bool b = intersection(min_, max_, pos_origin, abs(inv_dir), n, f, comp_mask);
 			if(!b){ imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(1., 1., 0.,1.)); return; }
 			
 			pos = abs(dir) * vec3(f) + pos_origin;
 			Cell = max(ivec3(floor(pos+comp_mask*0.5)), Cell);
-			t = (1.f-fract(pos)) * abs(inv_dir);
+			t = mix(1.f-fract(pos), vec3(1.), comp_mask) * abs(inv_dir);
 
-			// skip
-//			while(all(greaterThanEqual(Cell, ivec3(0))) && all(equal(top_index, ToTopIndex(Cell))))
-//			{
-//				march(Cell, t, abs(dir), deltaT);
-//			}
 			continue;
 		}
 		InteriorNode top = b_interior[hash];
@@ -132,32 +116,28 @@ void main()
 		while(all(greaterThanEqual(Cell, ivec3(0))) && all(equal(top_index, ToTopIndex(Cell))))
 		{
 			uvec3 mid_index = ToMidIndex(Cell);
-			uvec3 top_bit = ToTopBit(select(ivec3(dir_sign), Cell, u_info.reso.xyz));
+			uvec3 top_bit = ToTopBit(mixi((u_info.reso.xyz-1)-Cell, Cell, dir_sign));
 			uint tb = top_bit.x+top_bit.y*4+top_bit.z*16;
 
 			if(!isBitOn(top.bitmask, tb))
 			{
-				vec3 min_ = (mid_index<<2);
-				vec3 max_ = ((mid_index+1)<<2);
+				// skip
+				vec3 min_ = mid_index<<2;
+				vec3 max_ = (mid_index+1)<<2;
 				bool b = intersection(min_, max_, pos_origin, abs(inv_dir), n, f, comp_mask);
-				if(!b){ imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(1., 1., 0.,1.)); return; }
+				if(!b){ imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(1., 0., 0.,1.)); return; }
 				
 				pos = abs(dir) * vec3(f) + pos_origin;
 				Cell = max(ivec3(floor(pos+comp_mask*0.5)), Cell);
-				t = (1.f-fract(pos)) * abs(inv_dir);
+				t = mix(1.f-fract(pos), vec3(1.), comp_mask) * abs(inv_dir);
 
-				// skip
-//				while(all(greaterThanEqual(Cell, ivec3(0))) && all(equal(mid_index, ToMidIndex(Cell))))
-//				{
-//					march(Cell, t, abs(dir), deltaT);
-//				}
 				continue;
 			}
 			InteriorNode mid = b_interior[top.child+bitcount(top.bitmask,tb)];
 
 			while(all(greaterThanEqual(Cell, ivec3(0))) && all(equal(mid_index, ToMidIndex(Cell))))
 			{
-				uvec3 mid_bit = ToMidBit(select(ivec3(dir_sign), Cell, u_info.reso.xyz));
+				uvec3 mid_bit = ToMidBit(mixi((u_info.reso.xyz-1)-Cell, Cell, dir_sign));
 				uint bb = mid_bit.x+mid_bit.y*4+mid_bit.z*16;
 				if(!isBitOn(mid.bitmask, bb))
 				{
@@ -165,7 +145,8 @@ void main()
 					continue;
 				}
 
-				return;
+//				return;
+
 
 				LeafNode leaf = b_leaf[mid.child+bitcount(mid.bitmask,bb)];
 				c.xyz = f16vec3(abs(unpack_normal(leaf.normal)));

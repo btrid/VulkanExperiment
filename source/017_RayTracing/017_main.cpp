@@ -1045,10 +1045,6 @@ void dda_f(vec3 P, vec3 Dir)
 
 void march(ivec3& Cell, vec3& t, vec3 dir, vec3 deltaT)
 {
-//	int comp = t[0] < t[1] ? 0 : 1;
-//	comp = t[comp] < t[2] ? comp : 2;
-//	vec3 mask = vec3(equal(ivec3(0, 1, 2), ivec3(comp)));
-
 	float tmin = glm::min(glm::min(t.x, t.y), t.z);
 	vec3 mask = vec3(lessThanEqual(t, vec3(tmin)));
 
@@ -1074,71 +1070,57 @@ bool MyIntersection(vec3 aabb_min, vec3 aabb_max, vec3 pos, vec3 inv_dir, float&
 	comp = tmax[comp] < tmax[2] ? comp : 2;
 	dim = comp;
 
-	return f > n;
+	return f >= n;
 }
 
-
-ivec3 select(ivec3 s, ivec3 p, ivec3 r)
-{
-	return s * p + (1 - s) * ((r - 1) - p);
-}
-vec3 select(vec3 s, vec3 p, vec3 r)
-{
-	return s * p + (1.f - s) * ((r) - p);
-}
 void dda_test()
 {
-	glm::ballRand(550.f);
-	glm::ballRand(550.f);
-	glm::ballRand(550.f);
-	glm::ballRand(550.f);
-	glm::ballRand(550.f);
 	for (int i = 0; i < 5000000; i++)
 	{
-// 		dda_3D(ivec3(100, 50, 50), ivec3(1000, 50, 500));
-// 		dda_3D(glm::linearRand(ivec3(10), ivec3(50)), glm::linearRand(ivec3(10), ivec3(50)));
-// 		dda_f(glm::linearRand(vec3(1), vec3(1023)), glm::normalize(glm::ballRand(1.f)));
-// 		dda_f(vec3(500.234f), glm::normalize(vec3(0.1f, 0.1f, -1.f)));
+		if ((i % 1000) == 0)
+			printf("%d\n", i);
 
-		vec3 p_orig = glm::ballRand(100.f) + 100.f;
+//		voxel_test();
+//		continue;
+
+		float n, f;
+		int comp;
+
+		vec3 p_orig = glm::ballRand(250.f) + 250.f;
 		vec3 dir = normalize(glm::ballRand(1.f));
 
 		vec3 inv_dir = 1.f / dir;
 		vec3 pos = p_orig;
 		vec3 deltaT = abs(inv_dir);
-		ivec3 Cell = ivec3(pos);
-		ivec3 Reso = ivec3(200);
-		auto pos_r = select(sign(dir) * 0.5f + 0.5f, p_orig, vec3(Reso));
-		Cell = ivec3(floor(pos_r));
-//		Cell = select(ivec3((sign(dir) * 0.5f + 0.5f)), Cell, Reso);
+		ivec3 Reso = ivec3(500);
 
+
+		vec3 dir_sign = sign(dir) * 0.5f + 0.5f;
+		vec3 p_origin = mix(vec3(Reso)-pos, pos, dir_sign);
+		pos = p_origin;
+		ivec3 Cell = ivec3(floor(pos));
+		vec3 t = (1.f - fract(pos)) * abs(inv_dir);
 
 		while (all(greaterThanEqual(Cell, ivec3(0))) && all(lessThan(Cell, Reso)))
 		{
-			ivec3 top_index = Cell >> ivec3(4);
-			vec3 min = vec3(top_index << ivec3(4));
-			vec3 max = vec3((top_index + ivec3(1)) << ivec3(4));
+			ivec3 top_index = Cell >> ivec3(2);
+			vec3 min_ = vec3(top_index << ivec3(2));
+			vec3 max_ = vec3((top_index + ivec3(1)) << ivec3(2));
 
-			float n, f;
-			int comp;
-			bool b = MyIntersection(min, max, pos_r, abs(inv_dir), n, f, comp);
-			if(!b)
+			bool b = MyIntersection(min_, max_, p_origin, abs(inv_dir), n, f, comp);
+			if (!b)
 			{
-				int a = 0.f;
+				int aaa = 0;
 			}
+			vec3 comp_mask = vec3(equal(ivec3(0, 1, 2), ivec3(comp)));
 
-			pos = abs(dir) * vec3(f) + pos_r;
-			Cell = ivec3(floor(pos));
-			vec3 t = (1.f-fract(pos)) * abs(inv_dir);
+			pos = abs(dir) * vec3(f) + p_origin;
+			Cell = max(ivec3(floor(pos + comp_mask * 0.5)), Cell);
+			t = mix(1.f-fract(pos), vec3(1.), comp_mask) * abs(inv_dir);
 
-			while(all(greaterThanEqual(Cell, ivec3(0))) && all(equal(Cell>>ivec3(4), top_index)))
-			{
-				march(Cell, t, abs(dir), deltaT);
-			}
+			printf("%3d,%3d,%3d\n", Cell.x, Cell.y, Cell.z);
 
 		}
-		if((i%1000) == 0)
-		printf("%d\n", i);
 	}
 
 
@@ -1148,7 +1130,7 @@ int main()
 {
 
 //	dda_test();
-
+//	voxel_test();
 
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = vec3(-1000.f, 500.f, -666.f);
