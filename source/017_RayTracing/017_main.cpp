@@ -323,6 +323,7 @@ struct Voxel_With_Model
 
 	btr::BufferMemoryEx<VoxelInfo> u_info;
 	btr::BufferMemoryEx<int> b_hashmap;
+	btr::BufferMemoryEx<uvec2> b_hashmap_mask;
 	btr::BufferMemoryEx<uvec4> b_interior_counter;
 	btr::BufferMemoryEx<uint> b_leaf_counter;
 	btr::BufferMemoryEx<InteriorNode> b_interior;
@@ -345,6 +346,7 @@ struct Voxel_With_Model
 				vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
+//				vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(10, vk::DescriptorType::eUniformBuffer, 1, stage),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
@@ -1080,9 +1082,6 @@ void dda_test()
 		if ((i % 1000) == 0)
 			printf("%d\n", i);
 
-//		voxel_test();
-//		continue;
-
 		float n, f;
 		int comp;
 
@@ -1094,8 +1093,9 @@ void dda_test()
 		vec3 deltaT = abs(inv_dir);
 		ivec3 Reso = ivec3(500);
 
-
+/*
 		vec3 dir_sign = sign(dir) * 0.5f + 0.5f;
+		bvec3 dir_sign_b = greaterThan(dir, vec3(0.f));
 		vec3 p_origin = mix(vec3(Reso)-pos, pos, dir_sign);
 		pos = p_origin;
 		ivec3 Cell = ivec3(floor(pos));
@@ -1121,6 +1121,37 @@ void dda_test()
 			printf("%3d,%3d,%3d\n", Cell.x, Cell.y, Cell.z);
 
 		}
+*/
+
+		vec3 dir_sign = sign(dir) * 0.5f + 0.5f;
+		bvec3 dir_sign_b = greaterThan(dir, vec3(0.f));
+		vec3 p_origin = pos;
+		ivec3 Cell = ivec3(floor(pos));
+		vec3 t = mix(fract(pos), 1.f-fract(pos), dir_sign) * abs(inv_dir);
+
+		while (all(greaterThanEqual(Cell, ivec3(0))) && all(lessThan(Cell, Reso)))
+		{
+			ivec3 top_index = Cell >> ivec3(2);
+			vec3 min_ = vec3(top_index << ivec3(2));
+			vec3 max_ = vec3((top_index + ivec3(1)) << ivec3(2));
+
+			bool b = MyIntersection(min_, max_, p_origin, inv_dir, n, f, comp);
+			if (!b)
+			{
+				int aaa = 0;
+			}
+			vec3 comp_mask = vec3(equal(ivec3(0, 1, 2), ivec3(comp)));
+
+			pos = dir * vec3(f) + p_origin;
+			auto Cell_New = ivec3(floor(pos + dir*comp_mask * 0.5));
+			Cell = mix(min(Cell_New, Cell), max(Cell_New, Cell), dir_sign_b);
+			t = mix(fract(pos), 1.f - fract(pos), dir_sign);
+			t = mix(t, vec3(1.), comp_mask) * abs(inv_dir);
+
+//			printf("%3d,%3d,%3d\n", Cell.x, Cell.y, Cell.z);
+
+		}
+
 	}
 
 
