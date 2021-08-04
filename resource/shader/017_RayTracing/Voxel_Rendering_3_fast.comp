@@ -63,7 +63,19 @@ void march(inout uvec3 Cell, inout vec3 t, in vec3 dir, in vec3 deltaT)
 
 }
 
+void skip(inout uvec3 Cell, out vec3 t, in vec3 min_, in vec3 max_, in vec3 pos_origin, in vec3 dir, in vec3 inv_dir)
+{
+	float n, f;
+	vec3 comp_mask;
+	intersection(min_, max_, pos_origin, abs(inv_dir), n, f, comp_mask);
+	
+	vec3 pos = dir * vec3(f) + pos_origin;
+	Cell = max(uvec3(floor(pos+comp_mask*0.5)), Cell);
+	t = mix(1.f-fract(pos), vec3(1.), comp_mask) * abs(inv_dir);
 
+}
+
+uvec3 ToHashBit(in uvec3 p){ return (p>>4)-(p>>6<<2); }
 void main() 
 {	
 	vec3 dir,pos_origin, inv_dir;
@@ -91,66 +103,62 @@ void main()
 	f16vec4 c = f16vec4(0.);
 	while(all(lessThan(Cell, reso)))
 	{
-		uvec3 top_index = ToTopIndex(Cell);
-		int hash = b_hashmap[To1D(mix(((reso>>4)-1)-top_index, top_index, dir_sign), reso>>4)];
-
-		if(hash<0)
+		uvec3 hash_mask_index = Cell>>6;
+		uvec2 hash_mask = b_hashmap_mask[To1D(mix(((reso>>6)-1)-hash_mask_index, hash_mask_index, dir_sign), reso>>6)];
+//		uvec2 hash_mask = b_hashmap_mask[To1D(hash_mask_index, reso>>6)];
+		if(all(equal(hash_mask, uvec2(0))))
 		{
-			// skip
-			vec3 min_ = top_index<<4;
-			vec3 max_ = (top_index+1)<<4;
-			bool b = intersection(min_, max_, pos_origin, abs(inv_dir), n, f, comp_mask);
-//			if(!b){ imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(1., 1., 0.,1.)); return; }
-			
-			pos = abs(dir) * vec3(f) + pos_origin;
-			Cell = max(uvec3(floor(pos+comp_mask*0.5)), Cell);
-			t = mix(1.f-fract(pos), vec3(1.), comp_mask) * abs(inv_dir);
-
+			skip(Cell, t, hash_mask_index<<6, (hash_mask_index+1)<<6, pos_origin, abs(dir), inv_dir);
 			continue;
 		}
-		InteriorNode top = b_interior[hash];
 
-		while(all(equal(top_index, ToTopIndex(Cell))))
+		while(all(equal(hash_mask_index, Cell>>6)))
 		{
-			uvec3 mid_index = ToMidIndex(Cell);
-			uvec3 top_bit = ToTopBit(mix((reso-1)-Cell, Cell, dir_sign));
-			uint tb = top_bit.x+top_bit.y*4+top_bit.z*16;
+			uvec3 hash_pos_v3 = ToHashBit(mix((reso-1)-Cell, Cell, dir_sign));
+			uint hash_pos = To1D(hash_pos_v3, uvec3(4));
 
-			if(!isBitOn(top.bitmask, tb))
+			uvec3 top_index = ToTopIndex(Cell);
+			if((hash_mask[hash_pos/32] & (1<<(hash_pos%32))) == 0)
 			{
-				// skip
-				vec3 min_ = mid_index<<2;
-				vec3 max_ = (mid_index+1)<<2;
-				bool b = intersection(min_, max_, pos_origin, abs(inv_dir), n, f, comp_mask);
-//				if(!b){ imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(1., 0., 0.,1.)); return; }
-				
-				pos = abs(dir) * vec3(f) + pos_origin;
-				Cell = max(ivec3(floor(pos+comp_mask*0.5)), Cell);
-				t = mix(1.f-fract(pos), vec3(1.), comp_mask) * abs(inv_dir);
-
+				skip(Cell, t, top_index<<4, (top_index+1)<<4, pos_origin, abs(dir), inv_dir);
 				continue;
 			}
-			InteriorNode mid = b_interior[top.child+bitcount(top.bitmask,tb)];
+			int hash = b_hashmap[To1D(mix(((reso>>4)-1)-top_index, top_index, dir_sign), reso>>4)];
 
-			while(all(equal(mid_index, ToMidIndex(Cell))))
+			InteriorNode top = b_interior[hash];
+			while(all(equal(top_index, ToTopIndex(Cell))))
 			{
-				uvec3 mid_bit = ToMidBit(mix((reso-1)-Cell, Cell, dir_sign));
-				uint bb = mid_bit.x+mid_bit.y*4+mid_bit.z*16;
-				if(!isBitOn(mid.bitmask, bb))
+				uvec3 mid_index = ToMidIndex(Cell);
+				uvec3 top_bit = ToTopBit(mix((reso-1)-Cell, Cell, dir_sign));
+				uint tb = top_bit.x+top_bit.y*4+top_bit.z*16;
+
+				if(!isBitOn(top.bitmask, tb))
 				{
-					march(Cell, t, abs(dir), abs(inv_dir));
+					skip(Cell, t, mid_index<<2, (mid_index+1)<<2, pos_origin, abs(dir), inv_dir);
 					continue;
 				}
+				InteriorNode mid = b_interior[top.child+bitcount(top.bitmask,tb)];
 
-//				return;
+				while(all(equal(mid_index, ToMidIndex(Cell))))
+				{
+					uvec3 mid_bit = ToMidBit(mix((reso-1)-Cell, Cell, dir_sign));
+					uint bb = mid_bit.x+mid_bit.y*4+mid_bit.z*16;
+					if(!isBitOn(mid.bitmask, bb))
+					{
+						march(Cell, t, abs(dir), abs(inv_dir));
+						continue;
+					}
+
+	//				return;
 
 
-				LeafNode leaf = b_leaf[mid.child+bitcount(mid.bitmask,bb)];
-				c.xyz = f16vec3(abs(unpack_normal(leaf.normal)));
-				c.w = 1.hf;
-				Cell = uvec3(99999);
-				break;
+					LeafNode leaf = b_leaf[mid.child+bitcount(mid.bitmask,bb)];
+					c.xyz = f16vec3(abs(unpack_normal(leaf.normal)));
+					c.w = 1.hf;
+					Cell = uvec3(99999);
+					break;
 
+				}
 			}
 		}
 	}

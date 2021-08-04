@@ -27,10 +27,11 @@ struct LeafNode
 
 layout(set=USE_Voxel,binding=0, std140) uniform V0 {VoxelInfo u_info; };
 layout(set=USE_Voxel,binding=1, scalar) buffer V1 { int b_hashmap[]; };
-layout(set=USE_Voxel,binding=2, scalar) buffer V2 { ivec4 b_interior_counter[]; };
-layout(set=USE_Voxel,binding=3, scalar) buffer V3 { int b_leaf_counter; };
-layout(set=USE_Voxel,binding=4, scalar) buffer V4 { InteriorNode b_interior[]; };
-layout(set=USE_Voxel,binding=5, scalar) buffer V5 { LeafNode b_leaf[]; };
+layout(set=USE_Voxel,binding=2, scalar) buffer V2 { uvec2 b_hashmap_mask[]; };
+layout(set=USE_Voxel,binding=3, scalar) buffer V3 { ivec4 b_interior_counter[]; };
+layout(set=USE_Voxel,binding=4, scalar) buffer V4 { int b_leaf_counter; };
+layout(set=USE_Voxel,binding=5, scalar) buffer V5 { InteriorNode b_interior[]; };
+layout(set=USE_Voxel,binding=6, scalar) buffer V6 { LeafNode b_leaf[]; };
 
 layout(set=USE_Voxel,binding=10, std140) uniform V10 {mat4 u_voxelize_pvmat[3]; };
 #endif

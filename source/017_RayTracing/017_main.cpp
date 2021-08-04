@@ -279,6 +279,7 @@ struct Voxel_With_Model
 		Pipeline_MakeVoxel,
 		Pipeline_MakeVoxelTopChild,
 		Pipeline_MakeVoxelMidChild,
+		Pipeline_MakeHashMapMask,
 
 		Pipeline_RenderVoxel,
 		Pipeline_Debug_RenderVoxel,
@@ -346,7 +347,7 @@ struct Voxel_With_Model
 				vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
-//				vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(10, vk::DescriptorType::eUniformBuffer, 1, stage),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
@@ -362,6 +363,7 @@ struct Voxel_With_Model
 			uint num = m_info.reso.x * m_info.reso.y * m_info.reso.z;
 			u_info = ctx.m_ctx->m_uniform_memory.allocateMemory<VoxelInfo>(1);
 			b_hashmap = ctx.m_ctx->m_storage_memory.allocateMemory<int>(num / 64 / 64);
+			b_hashmap_mask = ctx.m_ctx->m_storage_memory.allocateMemory<uvec2>(num / 64 / 64 / 64);
 			b_interior_counter = ctx.m_ctx->m_storage_memory.allocateMemory<uvec4>(3);
 			b_leaf_counter = ctx.m_ctx->m_storage_memory.allocateMemory<uint>(1);
 			b_interior = ctx.m_ctx->m_storage_memory.allocateMemory<InteriorNode>(num / 64 / 4);
@@ -396,6 +398,7 @@ struct Voxel_With_Model
 			vk::DescriptorBufferInfo storages[] =
 			{
 				b_hashmap.getInfo(),
+				b_hashmap_mask.getInfo(),
 				b_interior_counter.getInfo(),
 				b_leaf_counter.getInfo(),
 				b_interior.getInfo(),
@@ -469,6 +472,7 @@ struct Voxel_With_Model
 			{
 				{"Voxel_AllocateTopChild.comp.spv", vk::ShaderStageFlagBits::eCompute},
 				{"Voxel_AllocateMidChild.comp.spv", vk::ShaderStageFlagBits::eCompute},
+				{"Voxel_MakeHashMapMask.comp.spv", vk::ShaderStageFlagBits::eCompute},
 				{"Voxel_Rendering.comp.spv", vk::ShaderStageFlagBits::eCompute},
 			};
 			std::array<vk::UniqueShaderModule, array_length(shader_param)> shader;
@@ -489,11 +493,15 @@ struct Voxel_With_Model
 				.setLayout(m_PL[PipelineLayout_MakeVoxel].get()),
 				vk::ComputePipelineCreateInfo()
 				.setStage(shaderStages[2])
+				.setLayout(m_PL[PipelineLayout_MakeVoxel].get()),
+				vk::ComputePipelineCreateInfo()
+				.setStage(shaderStages[3])
 				.setLayout(m_PL[PipelineLayout_RenderVoxel].get()),
 			};
 			m_pipeline[Pipeline_MakeVoxelTopChild] = ctx.m_ctx->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[0]).value;
 			m_pipeline[Pipeline_MakeVoxelMidChild] = ctx.m_ctx->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[1]).value;
-			m_pipeline[Pipeline_RenderVoxel] = ctx.m_ctx->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[2]).value;
+			m_pipeline[Pipeline_MakeHashMapMask] = ctx.m_ctx->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[2]).value;
+			m_pipeline[Pipeline_RenderVoxel] = ctx.m_ctx->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[3]).value;
 		}
 
 		// graphics pipeline render
@@ -568,7 +576,7 @@ struct Voxel_With_Model
 			rasterization_info.setLineWidth(1.f);
 
 			auto prop = ctx.m_ctx->m_physical_device.getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceConservativeRasterizationPropertiesEXT>();
-			auto conservativeRasterProps= prop.get<vk::PhysicalDeviceConservativeRasterizationPropertiesEXT>();
+			auto& conservativeRasterProps= prop.get<vk::PhysicalDeviceConservativeRasterizationPropertiesEXT>();
 			vk::PipelineRasterizationConservativeStateCreateInfoEXT conservativeRasterState_CI;
 			conservativeRasterState_CI.conservativeRasterizationMode = vk::ConservativeRasterizationModeEXT::eOverestimate;
 			conservativeRasterState_CI.extraPrimitiveOverestimationSize = conservativeRasterProps.maxExtraPrimitiveOverestimationSize;
@@ -935,6 +943,26 @@ struct Voxel_With_Model
 			cmd.drawIndexed(model.m_info.m_primitive_num * 3, 1, 0, 0, 0);
 
 			cmd.endRenderPass();
+		}
+
+		_label.insert("Make HashMapMask");
+		{
+			if(0)
+			{
+				vk::BufferMemoryBarrier barrier[] =
+				{
+					b_interior.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+					b_interior_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eDrawIndirect | vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
+			}
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeHashMapMask].get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL[PipelineLayout_MakeVoxel].get(), 0, { m_DS[DSL_Voxel].get() }, {});
+
+			auto num = uvec3(VoxelReso)>>uvec3(6);
+//			num = app::calcDipatchGroups(num, uvec3(4));
+			cmd.dispatch(num.x, num.y, num.z);
 		}
 
 	}
