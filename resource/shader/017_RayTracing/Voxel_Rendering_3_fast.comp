@@ -96,16 +96,14 @@ void main()
 
 	pos_origin = mix(vec3(reso)-pos_origin, pos_origin, dir_sign);
 //	vec3 deltaT = abs(inv_dir);
-	vec3 pos = pos_origin;
-	uvec3 Cell = uvec3(floor(pos));
-	vec3 t = (1.f-fract(pos)) * abs(inv_dir);
+	uvec3 Cell = uvec3(floor(pos_origin));
+	vec3 t = (1.f-fract(pos_origin)) * abs(inv_dir);
 
 	f16vec4 c = f16vec4(0.);
 	while(all(lessThan(Cell, reso)))
 	{
 		uvec3 hash_mask_index = Cell>>6;
 		uvec2 hash_mask = b_hashmap_mask[To1D(mix(((reso>>6)-1)-hash_mask_index, hash_mask_index, dir_sign), reso>>6)];
-//		uvec2 hash_mask = b_hashmap_mask[To1D(hash_mask_index, reso>>6)];
 		if(all(equal(hash_mask, uvec2(0))))
 		{
 			skip(Cell, t, hash_mask_index<<6, (hash_mask_index+1)<<6, pos_origin, abs(dir), inv_dir);
@@ -114,11 +112,11 @@ void main()
 
 		while(all(equal(hash_mask_index, Cell>>6)))
 		{
-			uvec3 hash_pos_v3 = ToHashBit(mix((reso-1)-Cell, Cell, dir_sign));
-			uint hash_pos = To1D(hash_pos_v3, uvec3(4));
+			uvec3 bit_v3 = ToHashBit(mix((reso-1)-Cell, Cell, dir_sign));
+			uint bit = To1D(bit_v3, uvec3(4));
 
 			uvec3 top_index = ToTopIndex(Cell);
-			if((hash_mask[hash_pos/32] & (1<<(hash_pos%32))) == 0)
+			if((hash_mask[bit/32] & (1<<(bit%32))) == 0)
 			{
 				skip(Cell, t, top_index<<4, (top_index+1)<<4, pos_origin, abs(dir), inv_dir);
 				continue;
@@ -129,30 +127,27 @@ void main()
 			while(all(equal(top_index, ToTopIndex(Cell))))
 			{
 				uvec3 mid_index = ToMidIndex(Cell);
-				uvec3 top_bit = ToTopBit(mix((reso-1)-Cell, Cell, dir_sign));
-				uint tb = top_bit.x+top_bit.y*4+top_bit.z*16;
+				bit_v3 = ToTopBit(mix((reso-1)-Cell, Cell, dir_sign));
+				bit = bit_v3.x+bit_v3.y*4+bit_v3.z*16;
 
-				if(!isBitOn(top.bitmask, tb))
+				if(!isBitOn(top.bitmask, bit))
 				{
 					skip(Cell, t, mid_index<<2, (mid_index+1)<<2, pos_origin, abs(dir), inv_dir);
 					continue;
 				}
-				InteriorNode mid = b_interior[top.child+bitcount(top.bitmask,tb)];
+				InteriorNode mid = b_interior[top.child+bitcount(top.bitmask,bit)];
 
 				while(all(equal(mid_index, ToMidIndex(Cell))))
 				{
-					uvec3 mid_bit = ToMidBit(mix((reso-1)-Cell, Cell, dir_sign));
-					uint bb = mid_bit.x+mid_bit.y*4+mid_bit.z*16;
-					if(!isBitOn(mid.bitmask, bb))
+					bit_v3 = ToMidBit(mix((reso-1)-Cell, Cell, dir_sign));
+					bit = bit_v3.x+bit_v3.y*4+bit_v3.z*16;
+					if(!isBitOn(mid.bitmask, bit))
 					{
 						march(Cell, t, abs(dir), abs(inv_dir));
 						continue;
 					}
 
-	//				return;
-
-
-					LeafNode leaf = b_leaf[mid.child+bitcount(mid.bitmask,bb)];
+					LeafNode leaf = b_leaf[mid.child+bitcount(mid.bitmask,bit)];
 					c.xyz = f16vec3(abs(unpack_normal(leaf.normal)));
 					c.w = 1.hf;
 					Cell = uvec3(99999);

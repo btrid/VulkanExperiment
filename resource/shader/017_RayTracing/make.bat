@@ -15,7 +15,8 @@ SET output=-o ../binary/
  %exe% %output%/Voxel_Rendering.comp.spv Voxel_Rendering.comp
  %exe% %output%/Voxel_Rendering.comp.spv Voxel_Rendering_2.comp
  %exe% %output%/Voxel_Rendering.comp.spv Voxel_Rendering_2_fast.comp
- %exe% %output%/Voxel_Rendering.comp.spv Voxel_Rendering_3_fast.comp
+%exe% %output%/Voxel_Rendering.comp.spv Voxel_Rendering_3_fast.comp
+rem %exe% %output%/Voxel_Rendering.comp.spv Voxel_Rendering_3.comp
 
 %exe% %output%/VoxelDebug_Render.vert.spv VoxelDebug_Render.vert
 %exe% %output%/VoxelDebug_Render.frag.spv VoxelDebug_Render.frag
