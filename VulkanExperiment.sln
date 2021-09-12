@@ -113,7 +113,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "imgui", "external\imgui.vcx
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "016_DualContouring", "project\016_DualContouring\016_DualContouring.vcxproj", "{FD6AC8FC-C235-4C2F-B1CC-7C0F1D04D247}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "017_RayTracing", "project\017_RayTracing\017_RayTracing.vcxproj", "{BE85004A-B86A-4E5E-851B-2523D82DC97C}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "017_RayTracing_SW", "project\017_RayTracing\017_RayTracing.vcxproj", "{BE85004A-B86A-4E5E-851B-2523D82DC97C}"
 	ProjectSection(ProjectDependencies) = postProject
 		{6AB61332-963C-4D53-B5FF-04B3A9689E23} = {6AB61332-963C-4D53-B5FF-04B3A9689E23}
 		{D7234B59-605E-448A-8E53-D7E19C6CF2B6} = {D7234B59-605E-448A-8E53-D7E19C6CF2B6}
@@ -123,6 +123,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "018_FlowMap", "project\018_FlowMap\018_FlowMap.vcxproj", "{988A2ED8-83E2-44F1-BF14-C5F7B9B30F1D}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "019_Ortho", "project\019_Ortho\019_Ortho.vcxproj", "{D3AAFF1B-475C-467F-B25A-51F2E1999C50}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "020_RT", "project\020_RT\020_RT.vcxproj", "{BC029E17-6DB2-482F-8FEE-196A3E30233D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -280,6 +282,12 @@ Global
 		{D3AAFF1B-475C-467F-B25A-51F2E1999C50}.Release|x64.Build.0 = Release|x64
 		{D3AAFF1B-475C-467F-B25A-51F2E1999C50}.Release|x86.ActiveCfg = Release|Win32
 		{D3AAFF1B-475C-467F-B25A-51F2E1999C50}.Release|x86.Build.0 = Release|Win32
+		{BC029E17-6DB2-482F-8FEE-196A3E30233D}.Debug|x64.ActiveCfg = Debug|x64
+		{BC029E17-6DB2-482F-8FEE-196A3E30233D}.Debug|x64.Build.0 = Debug|x64
+		{BC029E17-6DB2-482F-8FEE-196A3E30233D}.Debug|x86.ActiveCfg = Debug|x64
+		{BC029E17-6DB2-482F-8FEE-196A3E30233D}.Release|x64.ActiveCfg = Release|x64
+		{BC029E17-6DB2-482F-8FEE-196A3E30233D}.Release|x64.Build.0 = Release|x64
+		{BC029E17-6DB2-482F-8FEE-196A3E30233D}.Release|x86.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
