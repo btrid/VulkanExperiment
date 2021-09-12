@@ -2,7 +2,7 @@
 @echo off
 cd /d %~dp0
 SET include=-I../include/
-SET option=--target-env vulkan1.1 -V
+SET option=--target-env vulkan1.1
 SET exe=glslangValidator.exe
 SET output=-o ../binary/
 
@@ -15,4 +15,4 @@ SET output=-o ../binary/
 
 %exe% %include% %option% %output%/Render.vert.spv Render.vert
 %exe% %include% %option% %output%/Render.frag.spv Render.frag
-%exe% %include% %option% %output%/RenderFowardPlus.frag.spv RenderFowardPlus.frag
+rem %exe% %include% %option% %output%/RenderFowardPlus.frag.spv RenderFowardPlus.frag

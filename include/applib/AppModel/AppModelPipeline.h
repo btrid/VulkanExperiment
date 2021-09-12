@@ -98,60 +98,65 @@ struct AppModelAnimationStage
 			};
 			cmd->bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout.get(), 0, array_length(descriptors), descriptors, 0, {});
 
-			for (size_t i = 0; i < m_pipeline.size(); i++)
+			auto offset = sizeof(uvec3);
+			// SHADER_COMPUTE_CLEAR
 			{
+				vk::BufferMemoryBarrier barrier = render->b_draw_indirect.makeMemoryBarrier(vk::AccessFlagBits::eIndirectCommandRead, vk::AccessFlagBits::eShaderWrite);
+				cmd->pipelineBarrier(vk::PipelineStageFlagBits::eDrawIndirect, vk::PipelineStageFlagBits::eComputeShader, {}, {}, barrier, {});
 
-				if (i == SHADER_COMPUTE_CLEAR)
-				{
-					vk::BufferMemoryBarrier barrier = render->b_draw_indirect.makeMemoryBarrier(vk::AccessFlagBits::eIndirectCommandRead, vk::AccessFlagBits::eShaderWrite);
-					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eDrawIndirect, vk::PipelineStageFlagBits::eComputeShader,
-						vk::DependencyFlags(), {}, barrier, {});
-				}
-				if (i == SHADER_COMPUTE_CULLING)
-				{
-					vk::BufferMemoryBarrier barrier = render->b_draw_indirect.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead);
-					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, barrier, {});
-				}
-				if (i == SHADER_COMPUTE_MOTION_UPDATE)
-				{
-					vk::BufferMemoryBarrier barrier[] = {
-						render->b_animation_work.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-						render->b_node_transform.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite)
-					};
-					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
-						vk::DependencyFlags(), 0, nullptr, array_length(barrier), barrier, 0, nullptr);
-				}
-				if (i == SHADER_COMPUTE_NODE_TRANSFORM)
-				{
-					vk::BufferMemoryBarrier barrier[] = {
-						render->b_node_transform.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-						render->b_instance_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-					};
-					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
-						vk::DependencyFlags(), 0, nullptr, array_length(barrier), barrier, 0, nullptr);
-				}
-				if (i == SHADER_COMPUTE_BONE_TRANSFORM)
-				{
-					vk::BufferMemoryBarrier barrier[] = 
-					{
-						render->b_node_transform.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-						render->b_instance_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-						render->b_model_instancing_info.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-					};
-					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
-						vk::DependencyFlags(), 0, nullptr, array_length(barrier), barrier, 0, nullptr);
-				}
-
-				cmd->bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[i].get());
-				cmd->dispatchIndirect(render->b_animation_indirect.getInfo().buffer, render->b_animation_indirect.getInfo().offset + i * 12);
-
+				cmd->bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[SHADER_COMPUTE_CLEAR].get());
+				cmd->dispatchIndirect(render->b_animation_indirect.getInfo().buffer, render->b_animation_indirect.getInfo().offset + SHADER_COMPUTE_CLEAR*offset);
 			}
+			// SHADER_COMPUTE_CULLING
+			{
+				vk::BufferMemoryBarrier barrier = render->b_draw_indirect.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead);
+				cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, barrier, {});
+
+				cmd->bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[SHADER_COMPUTE_CULLING].get());
+				cmd->dispatchIndirect(render->b_animation_indirect.getInfo().buffer, render->b_animation_indirect.getInfo().offset + SHADER_COMPUTE_CULLING * offset);
+			}
+			// SHADER_COMPUTE_MOTION_UPDATE
+			{
+				vk::BufferMemoryBarrier barrier[] = {
+					render->b_animation_work.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+					render->b_node_transform.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite)
+				};
+				cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, array_length(barrier), barrier, 0, nullptr);
+
+				cmd->bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[SHADER_COMPUTE_MOTION_UPDATE].get());
+				cmd->dispatchIndirect(render->b_animation_indirect.getInfo().buffer, render->b_animation_indirect.getInfo().offset + SHADER_COMPUTE_MOTION_UPDATE * offset);
+			}
+			// SHADER_COMPUTE_NODE_TRANSFORM
+			{
+				vk::BufferMemoryBarrier barrier[] = {
+					render->b_node_transform.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+					render->b_instance_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+				};
+				cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, array_length(barrier), barrier, 0, nullptr);
+
+				cmd->bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[SHADER_COMPUTE_NODE_TRANSFORM].get());
+				cmd->dispatchIndirect(render->b_animation_indirect.getInfo().buffer, render->b_animation_indirect.getInfo().offset + SHADER_COMPUTE_NODE_TRANSFORM * offset);
+			}
+			// SHADER_COMPUTE_BONE_TRANSFORM
+			{
+				vk::BufferMemoryBarrier barrier[] = 
+				{
+					render->b_node_transform.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+					render->b_instance_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+					render->b_model_instancing_info.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				};
+				cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
+					vk::DependencyFlags(), 0, nullptr, array_length(barrier), barrier, 0, nullptr);
+
+				cmd->bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[SHADER_COMPUTE_BONE_TRANSFORM].get());
+				cmd->dispatchIndirect(render->b_animation_indirect.getInfo().buffer, render->b_animation_indirect.getInfo().offset + SHADER_COMPUTE_BONE_TRANSFORM * offset);
+			}
+
 			vk::BufferMemoryBarrier barrier[] = {
 				render->b_bone_transform.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				render->b_draw_indirect.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
 			};
-			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect|vk::PipelineStageFlagBits::eVertexShader,
-				{}, 0, {}, array_length(barrier), barrier, 0, {});
+			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect|vk::PipelineStageFlagBits::eVertexShader, {}, 0, {}, array_length(barrier), barrier, 0, {});
 			cmd->end();
 		}
 		return cmd;
@@ -365,7 +370,7 @@ struct AppModelRenderStage
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-//			m_pipeline = std::move(device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info).value[0]);
+			m_pipeline = std::move(device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info).value[0]);
 		}
 		m_render_target = render_target;
 	}

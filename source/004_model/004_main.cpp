@@ -55,7 +55,6 @@ int main()
 
 	cModel model;
 	model.load(context, btr::getResourceAppPath() + "tiny.x");
-//	model.load2(context, btr::getResourceAppPath() + "tiny.x");
 	std::shared_ptr<AppModel> player_model = std::make_shared<AppModel>(context, appmodel_context, model.getResource(), 1024);
 
 	auto anime_cmd = model_animater.createCmd(player_model);

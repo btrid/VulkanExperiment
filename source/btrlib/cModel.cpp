@@ -117,6 +117,7 @@ void _loadNodeRecurcive(RootNode& root, aiNode* ainode, int parent, uint32_t dep
 RootNode loadNode(const aiScene* scene)
 {
 	RootNode root;
+	root.m_depth_max = 0;
 	root.mNodeList.clear();
 	root.mNodeList.reserve(countAiNode(scene->mRootNode));
 	_loadNodeRecurcive(root, scene->mRootNode, -1, 0);
@@ -174,16 +175,6 @@ void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& r
 		}
 
 	}
-}
-
-void cModel::load2(const std::shared_ptr<btr::Context>& context, const std::string& filename)
-{
-// 	tinygltf::Model m;
-// 	tinygltf::TinyGLTF gltf_ctx;
-// 	std::string err;
-// 	std::string warn;
-// 	gltf_ctx.LoadASCIIFromFile(&m, &err, &warn, (btr::getResourceAppPath() + "tiny.x").c_str());
-
 }
 void cModel::load(const std::shared_ptr<btr::Context>& context, const std::string& filename)
 {
