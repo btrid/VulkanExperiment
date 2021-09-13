@@ -107,14 +107,18 @@ struct AppModelAnimationStage
 				cmd->bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[SHADER_COMPUTE_CLEAR].get());
 				cmd->dispatchIndirect(render->b_animation_indirect.getInfo().buffer, render->b_animation_indirect.getInfo().offset + SHADER_COMPUTE_CLEAR*offset);
 			}
-			// SHADER_COMPUTE_CULLING
+			// SHADER_COMPUTE_ANIMATION_UPDATE
 			{
-				vk::BufferMemoryBarrier barrier = render->b_draw_indirect.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead);
-				cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, barrier, {});
+// 				vk::BufferMemoryBarrier barrier[] = {
+// 					render->b_animation_work.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+// 					render->b_node_transform.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite)
+// 				};
+// 				cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, array_length(barrier), barrier, 0, nullptr);
 
-				cmd->bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[SHADER_COMPUTE_CULLING].get());
-				cmd->dispatchIndirect(render->b_animation_indirect.getInfo().buffer, render->b_animation_indirect.getInfo().offset + SHADER_COMPUTE_CULLING * offset);
+				cmd->bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[SHADER_COMPUTE_ANIMATION_UPDATE].get());
+				cmd->dispatchIndirect(render->b_animation_indirect.getInfo().buffer, render->b_animation_indirect.getInfo().offset + SHADER_COMPUTE_ANIMATION_UPDATE * offset);
 			}
+
 			// SHADER_COMPUTE_MOTION_UPDATE
 			{
 				vk::BufferMemoryBarrier barrier[] = {
@@ -136,6 +140,14 @@ struct AppModelAnimationStage
 
 				cmd->bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[SHADER_COMPUTE_NODE_TRANSFORM].get());
 				cmd->dispatchIndirect(render->b_animation_indirect.getInfo().buffer, render->b_animation_indirect.getInfo().offset + SHADER_COMPUTE_NODE_TRANSFORM * offset);
+			}
+			// SHADER_COMPUTE_CULLING
+			{
+				vk::BufferMemoryBarrier barrier = render->b_draw_indirect.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead);
+				cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, barrier, {});
+
+				cmd->bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[SHADER_COMPUTE_CULLING].get());
+				cmd->dispatchIndirect(render->b_animation_indirect.getInfo().buffer, render->b_animation_indirect.getInfo().offset + SHADER_COMPUTE_CULLING * offset);
 			}
 			// SHADER_COMPUTE_BONE_TRANSFORM
 			{
