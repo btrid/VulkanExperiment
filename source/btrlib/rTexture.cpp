@@ -3,7 +3,7 @@
 #include <memory>
 #include <functional>
 
-//#define USE_FREEIMAGE
+#define USE_FREEIMAGE
 //#define USE_DEVIL
 
 #ifdef USE_FREEIMAGE
@@ -45,30 +45,21 @@ rTexture::Data rTexture::LoadTexture(const std::string& file, const LoadParam& p
 	}
 
 	auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_Load(format, file.c_str()), FreeImage_Unload);
-	auto bitmapOld = bitmap;
-	bitmap = std::shared_ptr<FIBITMAP>(FreeImage_ConvertTo32Bits(bitmapOld.get()), FreeImage_Unload);
+	auto bf = FreeImage_ConvertToRGBAF(bitmap.get());
 
 	// Some basic image info - strip it out if you don't care
-	int bpp = FreeImage_GetBPP(bitmap.get());
-	int w = FreeImage_GetWidth(bitmap.get());
-	int h = FreeImage_GetHeight(bitmap.get());
+	int w = FreeImage_GetWidth(bf);
+	int h = FreeImage_GetHeight(bf);
+
 
 	rTexture::Data data;
 	data.m_data.resize(w*h);
 	data.m_size = glm::ivec3(w, h, 1);
 
-	auto* p = (unsigned*)FreeImage_GetBits(bitmap.get());
-	for (int y = 0; y < h; y++)
-	{
-		for (int x = 0; x < w; x++) {
-			int index = y*w + x;
-			data.m_data[index].r = ((p[index] & FI_RGBA_RED_MASK) >> FI_RGBA_RED_SHIFT) / 255.f;
-			data.m_data[index].g = ((p[index] & FI_RGBA_GREEN_MASK) >> FI_RGBA_GREEN_SHIFT) / 255.f;
-			data.m_data[index].b = ((p[index] & FI_RGBA_BLUE_MASK) >> FI_RGBA_BLUE_SHIFT) / 255.f;
-			data.m_data[index].a = ((p[index] & FI_RGBA_ALPHA_MASK) >> FI_RGBA_ALPHA_SHIFT) / 255.f;
-//			data.mData[index] = glm::vec4(p[index]) / 255.f;
-		}
-	}
+	auto* p = (unsigned*)FreeImage_GetBits(bf);
+	memcpy(data.m_data.data(), p, vector_sizeof(data.m_data));
+
+	FreeImage_Unload(bf);
 	return data;
 }
 #elif defined(USE_DEVIL)

@@ -90,7 +90,7 @@ public:
 		};
 		vec3		m_position;
 		uint32_t	m_normal;
-		uint32_t	m_texcoord0;
+		vec4		m_texcoord0;
 		u8vec4		m_bone_ID;	//!< 
 		u8vec4		m_weight;
 	};
@@ -200,19 +200,19 @@ public:
 			vk::VertexInputAttributeDescription()
 			.setBinding(0)
 			.setLocation(2)
-			.setFormat(vk::Format::eA2R10G10B10SnormPack32)
+			.setFormat(vk::Format::eR32G32B32A32Sfloat)
 			.setOffset(16),
 				// boneID
 			vk::VertexInputAttributeDescription()
 			.setBinding(0)
 			.setLocation(3)
 			.setFormat(vk::Format::eR8G8B8A8Uint)
-			.setOffset(20),
+			.setOffset(32),
 			vk::VertexInputAttributeDescription()
 			.setBinding(0)
 			.setLocation(4)
 			.setFormat(vk::Format::eR8G8B8A8Unorm)
-			.setOffset(24),
+			.setOffset(36),
 		};
 
 	}

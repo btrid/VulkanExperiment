@@ -107,11 +107,7 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 		cmd.copyBuffer(staging.getInfo().buffer, b_animation_indirect.getInfo().buffer, copy_info);
 
 		vk::BufferMemoryBarrier dispatch_barrier = b_animation_indirect.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eIndirectCommandRead);
-		cmd.pipelineBarrier(
-			vk::PipelineStageFlagBits::eTransfer,
-			vk::PipelineStageFlagBits::eDrawIndirect,
-			vk::DependencyFlags(),
-			{}, { dispatch_barrier }, {});
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, { dispatch_barrier }, {});
 	}
 
 	{
@@ -126,20 +122,14 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 			auto& animation = data[i];
 			animation.duration_ = (float)anim.m_motion[i]->m_duration;
 			animation.ticksPerSecond_ = (float)anim.m_motion[i]->m_ticks_per_second;
+			animation.numInfo_ = 0;
+			animation.offsetInfo_ = 0;
 		}
 
 		cmd.updateBuffer(b_animation_info.getInfo().buffer, b_animation_info.getInfo().offset, vector_sizeof(data), data.data());
 
-		vk::BufferMemoryBarrier barrier;
-		barrier.setBuffer(b_animation_info.getInfo().buffer);
-		barrier.setOffset(b_animation_info.getInfo().offset);
-		barrier.setSize(b_animation_info.getInfo().range);
-		barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-		cmd.pipelineBarrier(
-			vk::PipelineStageFlagBits::eTransfer,
-			vk::PipelineStageFlagBits::eComputeShader,
-			vk::DependencyFlags(),
-			{}, { barrier }, {});
+		vk::BufferMemoryBarrier barrier = b_animation_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite,vk::AccessFlagBits::eShaderRead);
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { barrier }, {});
 	}
 	// PlayingAnimation
 	{
@@ -150,7 +140,7 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 		{
 			worker[i].playingAnimationNo = 0;
 			worker[i].isLoop = true;
-			worker[i].time = (float)(std::rand() % 200);
+			worker[i].time = (float)(std::rand() % 1000);
 			worker[i]._p2 = 0;
 		}
 
@@ -184,8 +174,6 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 			material[i].mSpecular = resource->m_material[i].mSpecular;
 			material[i].mShininess = resource->m_material[i].mShininess;
 		}
-
-
 		cmd.updateBuffer(b_material.getInfo().buffer, b_material.getInfo().offset, vector_sizeof(material), material.data());
 	}
 
@@ -219,7 +207,7 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 			auto staging = context->m_staging_memory.allocateMemory<mat4>(m_instance_max_num, true);
 			for (uint32_t i = 0; i < m_instance_max_num; i++)
 			{
-				*staging.getMappedPtr(i) = glm::scale(glm::translate(glm::mat4(1.f), glm::ballRand(700.f)), vec3(.2f));
+				*staging.getMappedPtr(i) = glm::scale(glm::translate(glm::mat4(1.f), glm::ballRand(1500.f)), vec3(.2f));
 			}
 
 			vk::BufferCopy copy;

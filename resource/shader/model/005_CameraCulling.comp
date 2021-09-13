@@ -28,7 +28,8 @@ void main()
 	// @Todo メッシュ単位のカリング
 	uint index = atomicAdd(b_model_instancing_info.instanceNum, 1);
 	b_instance_map[index] = srcIndex;
-	for(int i=0; i<model_info.mesh_num; i++) {
+	for(int i=0; i<model_info.mesh_num; i++) 
+	{
 		atomicAdd(b_mesh[i].instanceCount, 1);
 	}
 

@@ -290,7 +290,8 @@ void cModel::load(const std::shared_ptr<btr::Context>& context, const std::strin
 		}
 		if (mesh->HasTextureCoords(0)) {
 			for (size_t v = 0; v < mesh->mNumVertices; v++) {
-				_vertex[v].m_texcoord0 = glm::packSnorm3x10_1x2(vec4(mesh->mTextureCoords[0][v].x, mesh->mTextureCoords[0][v].y, mesh->mTextureCoords[0][v].z, 0.f));
+//				_vertex[v].m_texcoord0 = glm::packSnorm3x10_1x2(vec4(mesh->mTextureCoords[0][v].x, mesh->mTextureCoords[0][v].y, mesh->mTextureCoords[0][v].z, 0.f));
+				_vertex[v].m_texcoord0 = vec4(mesh->mTextureCoords[0][v].x, mesh->mTextureCoords[0][v].y, mesh->mTextureCoords[0][v].z, 0.f);
 			}
 		}
 

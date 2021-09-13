@@ -26,19 +26,19 @@ vec3 LightSpecular = vec3(0.5);
 
 vec3 getColor()
 {
-/*	Material m = materials[FSIn.MaterialIndex];
+	uint material_index = 0;
 	vec3 pos = FSIn.Position;
 	vec3 norm = FSIn.Normal;
 	vec3 s = normalize(LightPosition.xyz - pos);
 	vec3 v = normalize(-pos.xyz);
 	vec3 r = reflect( -s, norm );
-	vec3 ambient = LightAmbient * (m.AmbientTex != 0 ? texture(sampler2D(m.AmbientTex), FSIn.Texcoord.xy).xyz : m.Ambient.xyz);
+//	vec3 ambient = LightAmbient * (m.AmbientTex != 0 ? texture(sampler2D(m.AmbientTex), FSIn.Texcoord.xy).xyz : m.Ambient.xyz);
 	float sDotN = max( dot(s,norm), 0.0 );
-	vec3 diffuse = LightDiffuse * (m.DiffuseTex != 0? texture(sampler2D(m.DiffuseTex), FSIn.Texcoord.xy).xyz : m.Diffuse.xyz) * (sDotN + 0.5);
-	return ambient + diffuse + spec;
-*/
-	vec3 diffuse = texture(t_albedo_texture[0], FSIn.Texcoord.xy).xyz;
-	return diffuse;
+//	vec3 diffuse = LightDiffuse * (m.DiffuseTex != 0? texture(sampler2D(m.DiffuseTex), FSIn.Texcoord.xy).xyz : m.Diffuse.xyz) * (sDotN + 0.5);
+	vec3 diffuse = /*LightDiffuse * */texture(t_albedo_texture[material_index], FSIn.Texcoord.xy).xyz;
+	return /*ambient +*/ diffuse /*+ spec*/;
+
+//	return diffuse;
 }
 
 void main()

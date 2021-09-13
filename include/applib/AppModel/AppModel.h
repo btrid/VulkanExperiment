@@ -72,8 +72,8 @@ struct AnimationInfo
 {
 	float duration_;
 	float ticksPerSecond_;
-	int _p2;
-	int _p3;
+	int numInfo_;
+	int offsetInfo_;
 };
 struct AnimationWorker
 {
