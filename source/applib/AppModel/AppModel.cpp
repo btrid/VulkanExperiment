@@ -184,13 +184,8 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 		auto& m = resource->m_material[i];
 		m_albedo_texture[i * 1 + 0] = m.mDiffuseTex.isReady() ? m.mDiffuseTex : ResourceTexture();
 	}
-
-	m_render.m_vertex_buffer = resource->m_mesh_resource.m_vertex_buffer;
-	m_render.m_index_buffer = resource->m_mesh_resource.m_index_buffer;
-	m_render.m_index_type = resource->m_mesh_resource.mIndexType;
+	m_render.m_data = resource;
 	m_render.m_indirect_buffer = b_draw_indirect.getInfo();
-	m_render.m_indirect_count = resource->m_mesh_resource.mIndirectCount;
-	m_render.m_indirect_stride = sizeof(cModel::Mesh);
 
 	// initialize
 	{
@@ -207,7 +202,7 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 			auto staging = context->m_staging_memory.allocateMemory<mat4>(m_instance_max_num, true);
 			for (uint32_t i = 0; i < m_instance_max_num; i++)
 			{
-				*staging.getMappedPtr(i) = glm::scale(glm::translate(glm::mat4(1.f), glm::ballRand(1500.f)), vec3(.2f));
+				*staging.getMappedPtr(i) = glm::scale(glm::translate(glm::mat4(1.f), glm::ballRand(700.f)), vec3(.2f));
 			}
 
 			vk::BufferCopy copy;

@@ -196,17 +196,17 @@ struct AppModel
 
 	struct AppModelRender : public Drawable
 	{
-		btr::BufferMemory m_vertex_buffer;
-		btr::BufferMemory m_index_buffer;
+		std::shared_ptr<cModel::Resource> m_data;
 		vk::DescriptorBufferInfo m_indirect_buffer;
-		vk::IndexType m_index_type;
-		int32_t m_indirect_count; //!< ƒƒbƒVƒ…‚Ì”
-		int32_t m_indirect_stride; //!< 
 		void draw(vk::CommandBuffer cmd)const override
 		{
-			cmd.bindVertexBuffers(0, m_vertex_buffer.getInfo().buffer, m_vertex_buffer.getInfo().offset);
-			cmd.bindIndexBuffer(m_index_buffer.getInfo().buffer, m_index_buffer.getInfo().offset, m_index_type);
-			cmd.drawIndexedIndirect(m_indirect_buffer.buffer, m_indirect_buffer.offset, m_indirect_count, m_indirect_stride);
+			cmd.bindVertexBuffers(0, m_data->m_mesh_resource.v_position.getInfo().buffer, m_data->m_mesh_resource.v_position.getInfo().offset);
+			cmd.bindVertexBuffers(1, m_data->m_mesh_resource.v_normal.getInfo().buffer, m_data->m_mesh_resource.v_normal.getInfo().offset);
+			cmd.bindVertexBuffers(2, m_data->m_mesh_resource.v_texcoord.getInfo().buffer, m_data->m_mesh_resource.v_texcoord.getInfo().offset);
+			cmd.bindVertexBuffers(3, m_data->m_mesh_resource.v_bone_id.getInfo().buffer, m_data->m_mesh_resource.v_bone_id.getInfo().offset);
+			cmd.bindVertexBuffers(4, m_data->m_mesh_resource.v_bone_weight.getInfo().buffer, m_data->m_mesh_resource.v_bone_weight.getInfo().offset);
+			cmd.bindIndexBuffer(m_data->m_mesh_resource.v_index.getInfo().buffer, m_data->m_mesh_resource.v_index.getInfo().offset, m_data->m_mesh_resource.mIndexType);
+			cmd.drawIndexedIndirect(m_indirect_buffer.buffer, m_indirect_buffer.offset, m_data->m_mesh_resource.mIndirectCount, sizeof(cModel::Mesh));
 		}
 	};
 	AppModelRender m_render;

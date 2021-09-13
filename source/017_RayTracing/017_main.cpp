@@ -190,14 +190,14 @@ struct Model
 		}
 
 		{
-			info.m_primitive_num = numIndex / 3;
+			info.m_primitive_num = numIndex;
 			model->m_info = info;
 			model->u_info = ctx.m_ctx->m_uniform_memory.allocateMemory<Info>(1);
 
 			cmd.updateBuffer<Info>(model->u_info.getInfo().buffer, model->u_info.getInfo().offset, info);
 
 			model->b_draw_cmd = ctx.m_ctx->m_storage_memory.allocateMemory<vk::DrawIndirectCommand>(1);
-			cmd.updateBuffer<vk::DrawIndirectCommand>(model->b_draw_cmd.getInfo().buffer, model->b_draw_cmd.getInfo().offset, vk::DrawIndirectCommand(numIndex, 1, 0, 0));
+			cmd.updateBuffer<vk::DrawIndirectCommand>(model->b_draw_cmd.getInfo().buffer, model->b_draw_cmd.getInfo().offset, vk::DrawIndirectCommand(numIndex*3, 1, 0, 0));
 		}
 
 

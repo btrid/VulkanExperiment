@@ -24,7 +24,7 @@ public:
 	int					m_bone_index;
 	std::vector<int>	mChildren;
 	std::string			mName;
-	glm::mat4			mTransformation;	///! 
+	mat4			mTransformation;	///! 
 	Node()
 		: mParent(-1)
 		, m_bone_index(-1)
@@ -65,15 +65,15 @@ public:
 
 struct ResourceVertex : public Drawable
 {
-	btr::BufferMemory m_vertex_buffer;
-	btr::BufferMemory m_index_buffer;
-	btr::BufferMemory m_indirect_buffer;
+	btr::BufferMemoryEx<vec3> v_position;
+	btr::BufferMemoryEx<uint32_t> v_normal;
+	btr::BufferMemoryEx<vec3> v_texcoord;
+	btr::BufferMemoryEx<u8vec4> v_bone_id;
+	btr::BufferMemoryEx<u8vec4> v_bone_weight;
+	btr::BufferMemoryEx<uvec3> v_index;
+	btr::BufferMemory v_indirect;
 	vk::IndexType mIndexType;
 	int32_t mIndirectCount; //!< ƒƒbƒVƒ…‚Ì”
-
-	std::vector<vk::VertexInputBindingDescription> m_vertex_input_binding;
-	std::vector<vk::VertexInputAttributeDescription> m_vertex_input_attribute;
-	vk::PipelineVertexInputStateCreateInfo m_vertex_input_info;
 
 	void draw(vk::CommandBuffer cmd)const override;
 };
@@ -84,18 +84,12 @@ class cModel
 protected:
 
 public:
-	struct Vertex {
-		enum {
-			BONE_NUM = 4,
-		};
-		vec3		m_position;
-		uint32_t	m_normal;
-		vec4		m_texcoord0;
-		u8vec4		m_bone_ID;	//!< 
-		u8vec4		m_weight;
+	enum {
+		BONE_NUM = 4,
 	};
 
-	struct Material {
+	struct Material 
+	{
 		glm::vec4		mAmbient;
 		glm::vec4		mDiffuse;
 		glm::vec4		mSpecular;
@@ -116,7 +110,7 @@ public:
 		s32 m_vertex_num;
 		s32 m_node_index;	//!< 
 		s32 m_material_index;
-		glm::vec4 mAABB;	// xyz: center w:radius
+		vec4 mAABB;	// xyz: center w:radius
 
 		Mesh()
 			: m_vertex_num(0)
@@ -126,9 +120,10 @@ public:
 	};
 
 
-	struct Bone {
+	struct Bone 
+	{
 		std::string mName;
-		glm::mat4 mOffset;
+		mat4 mOffset;
 		int mNodeIndex;
 
 		Bone()
@@ -138,14 +133,15 @@ public:
 			return mName.compare(name) == 0;
 		}
 	};
-	struct ModelInfo {
-		s32 mNodeNum;
-		s32 mBoneNum;
-		s32 mMeshNum;
-		s32 m_node_depth_max;
+	struct ModelInfo 
+	{
+		int32_t mNodeNum;
+		int32_t mBoneNum;
+		int32_t mMeshNum;
+		int32_t m_node_depth_max;
 
-		glm::vec4 mAabb;
-		glm::mat4 mInvGlobalMatrix;
+		vec4 mAabb;
+		mat4 mInvGlobalMatrix;
 	};
 
 public:
@@ -174,10 +170,11 @@ public:
 	{
 		return std::vector<vk::VertexInputBindingDescription>
 		{
-			vk::VertexInputBindingDescription()
-			.setBinding(0)
-			.setInputRate(vk::VertexInputRate::eVertex)
-			.setStride(sizeof(cModel::Vertex))
+			vk::VertexInputBindingDescription().setBinding(0).setInputRate(vk::VertexInputRate::eVertex).setStride(sizeof(vec3)),
+			vk::VertexInputBindingDescription().setBinding(1).setInputRate(vk::VertexInputRate::eVertex).setStride(sizeof(uint32_t)),
+			vk::VertexInputBindingDescription().setBinding(2).setInputRate(vk::VertexInputRate::eVertex).setStride(sizeof(vec3)),
+			vk::VertexInputBindingDescription().setBinding(3).setInputRate(vk::VertexInputRate::eVertex).setStride(sizeof(u8vec4)),
+			vk::VertexInputBindingDescription().setBinding(4).setInputRate(vk::VertexInputRate::eVertex).setStride(sizeof(u8vec4)),
 		};
 	}
 	static std::vector<vk::VertexInputAttributeDescription> GetVertexInputAttribute()
@@ -185,34 +182,14 @@ public:
 		return std::vector<vk::VertexInputAttributeDescription>
 		{
 			// pos
-			vk::VertexInputAttributeDescription()
-			.setBinding(0)
-			.setLocation(0)
-			.setFormat(vk::Format::eR32G32B32Sfloat)
-			.setOffset(0),
+			vk::VertexInputAttributeDescription().setBinding(0).setLocation(0).setFormat(vk::Format::eR32G32B32Sfloat).setOffset(0),
 			// normal
-			vk::VertexInputAttributeDescription()
-			.setBinding(0)
-			.setLocation(1)
-			.setFormat(vk::Format::eA2R10G10B10SnormPack32)
-			.setOffset(12),
+			vk::VertexInputAttributeDescription().setBinding(1).setLocation(1).setFormat(vk::Format::eA2R10G10B10SnormPack32).setOffset(0),
 			// texcoord
-			vk::VertexInputAttributeDescription()
-			.setBinding(0)
-			.setLocation(2)
-			.setFormat(vk::Format::eR32G32B32A32Sfloat)
-			.setOffset(16),
-				// boneID
-			vk::VertexInputAttributeDescription()
-			.setBinding(0)
-			.setLocation(3)
-			.setFormat(vk::Format::eR8G8B8A8Uint)
-			.setOffset(32),
-			vk::VertexInputAttributeDescription()
-			.setBinding(0)
-			.setLocation(4)
-			.setFormat(vk::Format::eR8G8B8A8Unorm)
-			.setOffset(36),
+			vk::VertexInputAttributeDescription().setBinding(2).setLocation(2).setFormat(vk::Format::eR32G32B32Sfloat).setOffset(0),
+			// boneID
+			vk::VertexInputAttributeDescription().setBinding(3).setLocation(3).setFormat(vk::Format::eR8G8B8A8Uint).setOffset(0),
+			vk::VertexInputAttributeDescription().setBinding(4).setLocation(4).setFormat(vk::Format::eR8G8B8A8Unorm).setOffset(0),
 		};
 
 	}

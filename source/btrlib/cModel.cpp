@@ -16,27 +16,8 @@
 namespace {
 	glm::mat4 AI_TO(aiMatrix4x4& from)
 	{
-		glm::mat4 to;
-		to[0].x = from.a1;
-		to[0].y = from.a2;
-		to[0].z = from.a3;
-		to[0].w = from.a4;
-
-		to[1].x = from.b1;
-		to[1].y = from.b2;
-		to[1].z = from.b3;
-		to[1].w = from.b4;
-
-		to[2].x = from.c1;
-		to[2].y = from.c2;
-		to[2].z = from.c3;
-		to[2].w = from.c4;
-
-		to[3].x = from.d1;
-		to[3].y = from.d2;
-		to[3].z = from.d3;
-		to[3].w = from.d4;
-
+		mat4 to;
+		memcpy(&to, &from, sizeof(to));
 		return glm::transpose(to);
 	}
 
@@ -221,7 +202,7 @@ void cModel::load(const std::shared_ptr<btr::Context>& context, const std::strin
 	for (size_t i = 0; i < scene->mNumMeshes; i++)
 	{
 		m_resource->m_mesh[i].m_draw_cmd.indexCount = scene->mMeshes[i]->mNumFaces * 3;
-		m_resource->m_mesh[i].m_draw_cmd.firstIndex = numIndex;
+		m_resource->m_mesh[i].m_draw_cmd.firstIndex = numIndex * 3;
 		m_resource->m_mesh[i].m_draw_cmd.instanceCount = 1;
 		m_resource->m_mesh[i].m_draw_cmd.vertexOffset = 0;
 		m_resource->m_mesh[i].m_draw_cmd.firstInstance = 0;
@@ -229,71 +210,48 @@ void cModel::load(const std::shared_ptr<btr::Context>& context, const std::strin
 		m_resource->m_mesh[i].m_material_index = scene->mMeshes[i]->mMaterialIndex;
 
 		numVertex += scene->mMeshes[i]->mNumVertices;
-		numIndex += scene->mMeshes[i]->mNumFaces * 3;
+		numIndex += scene->mMeshes[i]->mNumFaces;
 	}
 
-	btr::BufferMemoryDescriptor staging_vertex_desc;
-	staging_vertex_desc.size = sizeof(Vertex) * numVertex;
-	staging_vertex_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-	auto staging_vertex = context->m_staging_memory.allocateMemory(staging_vertex_desc);
 
-	auto index_type = numVertex < std::numeric_limits<uint16_t>::max() ? vk::IndexType::eUint16 : vk::IndexType::eUint32;
+	auto vertex = context->m_staging_memory.allocateMemory<aiVector3D>(numVertex, true);
+	auto normal = context->m_staging_memory.allocateMemory<uint32_t>(numVertex, true);
+	auto texcoord = context->m_staging_memory.allocateMemory<aiVector3D>(numVertex, true);
+	auto index = context->m_staging_memory.allocateMemory<uvec3>(numIndex, true);
 
-	btr::BufferMemoryDescriptor staging_index_desc;
-	staging_index_desc.size = (index_type == vk::IndexType::eUint16 ? sizeof(uint16_t) : sizeof(uint32_t)) * numIndex;
-	staging_index_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-	auto staging_index = context->m_staging_memory.allocateMemory(staging_index_desc);
-	auto index_stride = (index_type == vk::IndexType::eUint16 ? sizeof(uint16_t) : sizeof(uint32_t));
-	auto* index = static_cast<char*>(staging_index.getMappedPtr());
-	Vertex* vertex = static_cast<Vertex*>(staging_vertex.getMappedPtr());
-	memset(vertex, -1, staging_vertex.getInfo().range);
-	uint32_t v_count = 0;
+	auto bone_id = context->m_staging_memory.allocateMemory<u8vec4>(numVertex, true);
+	std::fill(bone_id.getMappedPtr(), bone_id.getMappedPtr()+ numVertex, u8vec4(-1ui8));
+	auto bone_weight = context->m_staging_memory.allocateMemory<u8vec4>(numVertex, true);
+
+	uint32_t index_offset = 0;
+	uint32_t vertex_offset = 0;
+
 	for (size_t i = 0; i < scene->mNumMeshes; i++)
 	{
 		aiMesh* mesh = scene->mMeshes[i];
- 
-		// ELEMENT_ARRAY_BUFFER
-		// 三角メッシュとして読み込む
-		for (u32 n = 0; n < mesh->mNumFaces; n++) {
-			(*(uint32_t*)index) = mesh->mFaces[n].mIndices[0] + v_count;
-			index += index_stride;
-			(*(uint32_t*)index) = mesh->mFaces[n].mIndices[1] + v_count;
-			index += index_stride;
-			(*(uint32_t*)index) = mesh->mFaces[n].mIndices[2] + v_count;
-			index += index_stride;
+		vec3 max(-10e10f);
+		vec3 min(10e10f);
+		for (u32 n = 0; n < mesh->mNumFaces; n++)
+		{
+			(*index.getMappedPtr(index_offset)) = uvec3(mesh->mFaces[n].mIndices[0], mesh->mFaces[n].mIndices[1], mesh->mFaces[n].mIndices[2]) + vertex_offset;
+			index_offset++;
 		}
-
-		// ARRAY_BUFFER
-		Vertex* _vertex = vertex + v_count;
-		v_count += mesh->mNumVertices;
-		for (uint32_t v = 0; v < mesh->mNumVertices; v++){
-			_vertex[v].m_position = glm::vec3(mesh->mVertices[v].x, mesh->mVertices[v].y, mesh->mVertices[v].z);
-		}
-		glm::vec3 max(-10e10f);
-		glm::vec3 min(10e10f);
 		for (unsigned i = 0; i < mesh->mNumVertices; i++)
 		{
-			auto& v = _vertex[i];
-			max.x = glm::max(max.x, v.m_position.x);
-			max.y = glm::max(max.y, v.m_position.y);
-			max.z = glm::max(max.z, v.m_position.z);
-			min.x = glm::min(min.x, v.m_position.x);
-			min.y = glm::min(min.y, v.m_position.y);
-			min.z = glm::min(min.z, v.m_position.z);
+			auto& v = mesh->mVertices[i];
+			max.x = glm::max(max.x, v.x);
+			max.y = glm::max(max.y, v.y);
+			max.z = glm::max(max.z, v.z);
+			min.x = glm::min(min.x, v.x);
+			min.y = glm::min(min.y, v.y);
+			min.z = glm::min(min.z, v.z);
 		}
 		m_resource->m_mesh[i].mAABB = glm::vec4((max - min).xyz, glm::length((max - min)));
 
-		if (mesh->HasNormals()) {
-			for (size_t v = 0; v < mesh->mNumVertices; v++) {
-				_vertex[v].m_normal = glm::packSnorm3x10_1x2(vec4(mesh->mNormals[v].x, mesh->mNormals[v].y, mesh->mNormals[v].z, 1.f));
-			}
-		}
-		if (mesh->HasTextureCoords(0)) {
-			for (size_t v = 0; v < mesh->mNumVertices; v++) {
-//				_vertex[v].m_texcoord0 = glm::packSnorm3x10_1x2(vec4(mesh->mTextureCoords[0][v].x, mesh->mTextureCoords[0][v].y, mesh->mTextureCoords[0][v].z, 0.f));
-				_vertex[v].m_texcoord0 = vec4(mesh->mTextureCoords[0][v].x, mesh->mTextureCoords[0][v].y, mesh->mTextureCoords[0][v].z, 0.f);
-			}
-		}
+		std::copy(mesh->mVertices, mesh->mVertices + mesh->mNumVertices, vertex.getMappedPtr(vertex_offset));
+		for (unsigned v = 0; v < mesh->mNumVertices; v++) { *normal.getMappedPtr(vertex_offset+v) = glm::packSnorm3x10_1x2(vec4(mesh->mNormals[v].x, mesh->mNormals[v].y, mesh->mNormals[v].z, 1.f)); }
+		std::copy(mesh->mTextureCoords[0], mesh->mTextureCoords[0] + mesh->mNumVertices, texcoord.getMappedPtr(vertex_offset));
+
 
 		// SkinMesh
 		if (mesh->HasBones())
@@ -302,14 +260,17 @@ void cModel::load(const std::shared_ptr<btr::Context>& context, const std::strin
 			{
 				// BoneがMeshからしか参照できないので全部展開する
 				u8 index = 0xffui8;
-				for (size_t k = 0; k < boneList.size(); k++) {
-					if (boneList[k].mName.compare(mesh->mBones[b]->mName.C_Str()) == 0) {
+				for (size_t k = 0; k < boneList.size(); k++)
+				{
+					if (boneList[k].mName.compare(mesh->mBones[b]->mName.C_Str()) == 0)
+					{
 						index = (int)k;
 						break;
 					}
 
 				}
-				if (index == 0xffui8) {
+				if (index == 0xffui8)
+				{
 					// 新しいボーンの登録
 					Bone bone;
 					bone.mName = mesh->mBones[b]->mName.C_Str();
@@ -325,17 +286,20 @@ void cModel::load(const std::shared_ptr<btr::Context>& context, const std::strin
 				for (size_t i = 0; i < mesh->mBones[b]->mNumWeights; i++)
 				{
 					aiVertexWeight& weight = mesh->mBones[b]->mWeights[i];
-					Vertex& v = _vertex[weight.mVertexId];
-					for (glm::length_t o = 0; o < Vertex::BONE_NUM; o++) {
-						if (v.m_bone_ID[o] == 0xffui8) {
-							v.m_bone_ID[o] = index;
-							v.m_weight[o] = glm::packUnorm1x8(weight.mWeight);
+					for (glm::length_t o = 0; o < BONE_NUM; o++) 
+					{
+						if ((*bone_id.getMappedPtr(vertex_offset+weight.mVertexId))[o] == 0xffui8)
+						{
+							(*bone_id.getMappedPtr(vertex_offset + weight.mVertexId))[o] = index;
+							(*bone_weight.getMappedPtr(vertex_offset + weight.mVertexId))[o] = glm::packUnorm1x8(weight.mWeight);
 							break;
 						}
 					}
 				}
 			}
 		}
+
+		vertex_offset += mesh->mNumVertices;
 	}
 	importer.FreeScene();
 
@@ -343,54 +307,51 @@ void cModel::load(const std::shared_ptr<btr::Context>& context, const std::strin
 		ResourceVertex& vertex_data = m_resource->m_mesh_resource;
 
 		{
-			vertex_data.m_vertex_buffer = context->m_vertex_memory.allocateMemory(staging_vertex.getInfo().range);
-			vertex_data.m_index_buffer = context->m_vertex_memory.allocateMemory(staging_index.getInfo().range);
+			vertex_data.v_position = context->m_vertex_memory.allocateMemory<vec3>(numVertex);
+			vertex_data.v_normal = context->m_vertex_memory.allocateMemory<uint32_t>(numVertex);
+			vertex_data.v_texcoord = context->m_vertex_memory.allocateMemory<vec3>(numVertex);
+			vertex_data.v_bone_id = context->m_vertex_memory.allocateMemory<u8vec4>(numVertex);
+			vertex_data.v_bone_weight = context->m_vertex_memory.allocateMemory<u8vec4>(numVertex);
+			vertex_data.v_index = context->m_vertex_memory.allocateMemory<uvec3>(numIndex);
+
+			vk::BufferCopy copy_info;
+			copy_info.setSize(vertex.getInfo().range).setSrcOffset(vertex.getInfo().offset).setDstOffset(vertex_data.v_position.getInfo().offset);
+			cmd.copyBuffer(vertex.getInfo().buffer, vertex_data.v_position.getInfo().buffer, copy_info);
+
+			copy_info.setSize(normal.getInfo().range).setSrcOffset(normal.getInfo().offset).setDstOffset(vertex_data.v_normal.getInfo().offset);
+			cmd.copyBuffer(normal.getInfo().buffer, vertex_data.v_normal.getInfo().buffer, copy_info);
+
+			copy_info.setSize(texcoord.getInfo().range).setSrcOffset(texcoord.getInfo().offset).setDstOffset(vertex_data.v_texcoord.getInfo().offset);
+			cmd.copyBuffer(texcoord.getInfo().buffer, vertex_data.v_texcoord.getInfo().buffer, copy_info);
+
+
+			copy_info.setSize(bone_id.getInfo().range).setSrcOffset(bone_id.getInfo().offset).setDstOffset(vertex_data.v_bone_id.getInfo().offset);
+			cmd.copyBuffer(bone_id.getInfo().buffer, vertex_data.v_bone_id.getInfo().buffer, copy_info);
+
+			copy_info.setSize(bone_weight.getInfo().range).setSrcOffset(bone_weight.getInfo().offset).setDstOffset(vertex_data.v_bone_weight.getInfo().offset);
+			cmd.copyBuffer(bone_weight.getInfo().buffer, vertex_data.v_bone_weight.getInfo().buffer, copy_info);
+
+			copy_info.setSize(index.getInfo().range).setSrcOffset(index.getInfo().offset).setDstOffset(vertex_data.v_index.getInfo().offset);
+			cmd.copyBuffer(index.getInfo().buffer, vertex_data.v_index.getInfo().buffer, copy_info);
+
 
 			btr::BufferMemoryDescriptor indirect_desc;
 			indirect_desc.size = vector_sizeof(m_resource->m_mesh);
-			vertex_data.m_indirect_buffer = context->m_vertex_memory.allocateMemory(indirect_desc);
+			vertex_data.v_indirect = context->m_vertex_memory.allocateMemory(indirect_desc);
 
 			indirect_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging_indirect = context->m_staging_memory.allocateMemory(indirect_desc);
-			auto* indirect = staging_indirect.getMappedPtr<Mesh>(0);
-			memcpy_s(indirect, indirect_desc.size, m_resource->m_mesh.data(), indirect_desc.size);
+			memcpy_s(staging_indirect.getMappedPtr<Mesh>(), indirect_desc.size, m_resource->m_mesh.data(), indirect_desc.size);
 
-			vk::BufferCopy copy_info;
-			copy_info.setSize(staging_vertex.getInfo().range);
-			copy_info.setSrcOffset(staging_vertex.getInfo().offset);
-			copy_info.setDstOffset(vertex_data.m_vertex_buffer.getInfo().offset);
-			cmd.copyBuffer(staging_vertex.getInfo().buffer, vertex_data.m_vertex_buffer.getInfo().buffer, copy_info);
+			copy_info.setSize(staging_indirect.getInfo().range).setSrcOffset(staging_indirect.getInfo().offset).setDstOffset(vertex_data.v_indirect.getInfo().offset);
+			cmd.copyBuffer(staging_indirect.getInfo().buffer, vertex_data.v_indirect.getInfo().buffer, copy_info);
 
-			copy_info.setSize(staging_index.getInfo().range);
-			copy_info.setSrcOffset(staging_index.getInfo().offset);
-			copy_info.setDstOffset(vertex_data.m_index_buffer.getInfo().offset);
-			cmd.copyBuffer(staging_index.getInfo().buffer, vertex_data.m_index_buffer.getInfo().buffer, copy_info);
+			vk::BufferMemoryBarrier indirect_barrier = vertex_data.v_indirect.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eIndirectCommandRead);
+			cmd.pipelineBarrier( vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, { indirect_barrier }, {});
 
-			copy_info.setSize(staging_indirect.getInfo().range);
-			copy_info.setSrcOffset(staging_indirect.getInfo().offset);
-			copy_info.setDstOffset(vertex_data.m_indirect_buffer.getInfo().offset);
-			cmd.copyBuffer(staging_indirect.getInfo().buffer, vertex_data.m_indirect_buffer.getInfo().buffer, copy_info);
-
-			vk::BufferMemoryBarrier indirect_barrier;
-			indirect_barrier.setBuffer(vertex_data.m_indirect_buffer.getInfo().buffer);
-			indirect_barrier.setOffset(vertex_data.m_indirect_buffer.getInfo().offset);
-			indirect_barrier.setSize(vertex_data.m_indirect_buffer.getInfo().range);
-			indirect_barrier.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
-			cmd.pipelineBarrier(
-				vk::PipelineStageFlagBits::eTransfer,
-				vk::PipelineStageFlagBits::eDrawIndirect,
-				vk::DependencyFlags(),
-				{}, { indirect_barrier }, {});
-
-			vertex_data.mIndexType = index_type;
+			vertex_data.mIndexType = vk::IndexType::eUint32;
 			vertex_data.mIndirectCount = (int32_t)m_resource->m_mesh.size();
 
-			vertex_data.m_vertex_input_binding = GetVertexInputBinding();
-			vertex_data.m_vertex_input_attribute = GetVertexInputAttribute();
-			vertex_data.m_vertex_input_info.setVertexBindingDescriptionCount((uint32_t)vertex_data.m_vertex_input_binding.size());
-			vertex_data.m_vertex_input_info.setPVertexBindingDescriptions(vertex_data.m_vertex_input_binding.data());
-			vertex_data.m_vertex_input_info.setVertexAttributeDescriptionCount((uint32_t)vertex_data.m_vertex_input_attribute.size());
-			vertex_data.m_vertex_input_info.setPVertexAttributeDescriptions(vertex_data.m_vertex_input_attribute.data());
 		}
 	}
 
@@ -424,7 +385,11 @@ const ResourceVertex* cModel::getMesh() const
 
 void ResourceVertex::draw(vk::CommandBuffer cmd) const
 {
-	cmd.bindVertexBuffers(0, m_vertex_buffer.getInfo().buffer, m_vertex_buffer.getInfo().offset);
-	cmd.bindIndexBuffer(m_index_buffer.getInfo().buffer, m_index_buffer.getInfo().offset, mIndexType);
-	cmd.drawIndexedIndirect(m_indirect_buffer.getInfo().buffer, m_indirect_buffer.getInfo().offset, mIndirectCount, sizeof(cModel::Mesh));
+	cmd.bindVertexBuffers(0, v_position.getInfo().buffer, v_position.getInfo().offset);
+	cmd.bindVertexBuffers(1, v_normal.getInfo().buffer, v_normal.getInfo().offset);
+	cmd.bindVertexBuffers(2, v_texcoord.getInfo().buffer, v_texcoord.getInfo().offset);
+	cmd.bindVertexBuffers(3, v_bone_id.getInfo().buffer, v_bone_id.getInfo().offset);
+	cmd.bindVertexBuffers(4, v_bone_weight.getInfo().buffer, v_bone_weight.getInfo().offset);
+	cmd.bindIndexBuffer(v_index.getInfo().buffer, v_index.getInfo().offset, mIndexType);
+	cmd.drawIndexedIndirect(v_indirect.getInfo().buffer, v_indirect.getInfo().offset, mIndirectCount, sizeof(cModel::Mesh));
 }
