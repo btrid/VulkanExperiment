@@ -147,12 +147,6 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 	}
 
 	// todo 結構適当
-	m_albedo_texture.resize(resource->m_material.size() * 1);
-	for (size_t i = 0; i < resource->m_material.size(); i++)
-	{
-		auto& m = resource->m_material[i];
-		m_albedo_texture[i * 1 + 0] = m.mDiffuseTex.isReady() ? m.mDiffuseTex : ResourceTexture();
-	}
 	m_render.m_data = resource;
 	m_render.m_indirect_buffer = b_draw_indirect.getInfo();
 
@@ -220,14 +214,35 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 			b_draw_indirect.getInfo(),
 		};
 		std::array<vk::DescriptorImageInfo, AppModelContext::DESCRIPTOR_ALBEDO_TEXTURE_NUM> albedo_images;
+		std::array<vk::DescriptorImageInfo, AppModelContext::DESCRIPTOR_ALBEDO_TEXTURE_NUM> normal_images;
+		std::array<vk::DescriptorImageInfo, AppModelContext::DESCRIPTOR_ALBEDO_TEXTURE_NUM> emissive_images;
+		std::array<vk::DescriptorImageInfo, AppModelContext::DESCRIPTOR_ALBEDO_TEXTURE_NUM> metalness_images;
+		std::array<vk::DescriptorImageInfo, AppModelContext::DESCRIPTOR_ALBEDO_TEXTURE_NUM> roughness_images;
+		std::array<vk::DescriptorImageInfo, AppModelContext::DESCRIPTOR_ALBEDO_TEXTURE_NUM> occlusion_images;
 		albedo_images.fill(vk::DescriptorImageInfo(sGraphicsResource::Order().getWhiteTexture().m_sampler.get(), sGraphicsResource::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal));
-		for (size_t i = 0; i < m_albedo_texture.size(); i++)
+		normal_images.fill(vk::DescriptorImageInfo(sGraphicsResource::Order().getWhiteTexture().m_sampler.get(), sGraphicsResource::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal));
+		emissive_images.fill(vk::DescriptorImageInfo(sGraphicsResource::Order().getWhiteTexture().m_sampler.get(), sGraphicsResource::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal));
+		metalness_images.fill(vk::DescriptorImageInfo(sGraphicsResource::Order().getWhiteTexture().m_sampler.get(), sGraphicsResource::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal));
+		roughness_images.fill(vk::DescriptorImageInfo(sGraphicsResource::Order().getWhiteTexture().m_sampler.get(), sGraphicsResource::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal));
+		occlusion_images.fill(vk::DescriptorImageInfo(sGraphicsResource::Order().getWhiteTexture().m_sampler.get(), sGraphicsResource::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal));
+		for (size_t i = 0; i < resource->m_material.size(); i++)
 		{
-			const auto& tex = m_albedo_texture[i];
-			if (tex.isReady()) {
-				albedo_images[i] = vk::DescriptorImageInfo(tex.getSampler(), tex.getImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
-			}
+			auto& m = resource->m_material[i];
+			auto& t = m.mTex[cModel::ResourceTextureIndex_Base];
+			if (t.isReady()) { albedo_images[i] = vk::DescriptorImageInfo(t.getSampler(), t.getImageView(), vk::ImageLayout::eShaderReadOnlyOptimal); }
+			t = m.mTex[cModel::ResourceTextureIndex_NormalCamera];
+			if (t.isReady()) { normal_images[i] = vk::DescriptorImageInfo(t.getSampler(), t.getImageView(), vk::ImageLayout::eShaderReadOnlyOptimal); }
+			t = m.mTex[cModel::ResourceTextureIndex_Emissive];
+			if (t.isReady()) { emissive_images[i] = vk::DescriptorImageInfo(t.getSampler(), t.getImageView(), vk::ImageLayout::eShaderReadOnlyOptimal); }
+			t = m.mTex[cModel::ResourceTextureIndex_Metalness];
+			if (t.isReady()) { metalness_images[i] = vk::DescriptorImageInfo(t.getSampler(), t.getImageView(), vk::ImageLayout::eShaderReadOnlyOptimal); }
+			t = m.mTex[cModel::ResourceTextureIndex_DiffuseRoughness];
+			if (t.isReady()) { roughness_images[i] = vk::DescriptorImageInfo(t.getSampler(), t.getImageView(), vk::ImageLayout::eShaderReadOnlyOptimal); }
+			t = m.mTex[cModel::ResourceTextureIndex_AmbientOcclusion];
+			if (t.isReady()) { occlusion_images[i] = vk::DescriptorImageInfo(t.getSampler(), t.getImageView(), vk::ImageLayout::eShaderReadOnlyOptimal); }
 		}
+
+
 		std::vector<vk::DescriptorImageInfo> animation_images =
 		{
 			vk::DescriptorImageInfo(m_motion_texture[0].getSampler(),m_motion_texture[0].getImageView(), vk::ImageLayout::eShaderReadOnlyOptimal),
@@ -247,12 +262,12 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 			.setPBufferInfo(render_storages)
 			.setDstBinding(0)
 			.setDstSet(m_descriptor_set[DescriptorSet_Render].get()),
-			vk::WriteDescriptorSet()
-			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-			.setDescriptorCount(albedo_images.size())
-			.setPImageInfo(albedo_images.data())
-			.setDstBinding(2)
-			.setDstSet(m_descriptor_set[DescriptorSet_Render].get()),
+			vk::WriteDescriptorSet().setDstSet(m_descriptor_set[DescriptorSet_Render].get()).setDstBinding(10).setDescriptorType(vk::DescriptorType::eCombinedImageSampler).setDescriptorCount(albedo_images.size()).setPImageInfo(albedo_images.data()),
+			vk::WriteDescriptorSet().setDstSet(m_descriptor_set[DescriptorSet_Render].get()).setDstBinding(11).setDescriptorType(vk::DescriptorType::eCombinedImageSampler).setDescriptorCount(normal_images.size()).setPImageInfo(normal_images.data()),
+			vk::WriteDescriptorSet().setDstSet(m_descriptor_set[DescriptorSet_Render].get()).setDstBinding(12).setDescriptorType(vk::DescriptorType::eCombinedImageSampler).setDescriptorCount(emissive_images.size()).setPImageInfo(emissive_images.data()),
+			vk::WriteDescriptorSet().setDstSet(m_descriptor_set[DescriptorSet_Render].get()).setDstBinding(13).setDescriptorType(vk::DescriptorType::eCombinedImageSampler).setDescriptorCount(metalness_images.size()).setPImageInfo(metalness_images.data()),
+			vk::WriteDescriptorSet().setDstSet(m_descriptor_set[DescriptorSet_Render].get()).setDstBinding(14).setDescriptorType(vk::DescriptorType::eCombinedImageSampler).setDescriptorCount(roughness_images.size()).setPImageInfo(roughness_images.data()),
+			vk::WriteDescriptorSet().setDstSet(m_descriptor_set[DescriptorSet_Render].get()).setDstBinding(15).setDescriptorType(vk::DescriptorType::eCombinedImageSampler).setDescriptorCount(occlusion_images.size()).setPImageInfo(occlusion_images.data()),
 			vk::WriteDescriptorSet()
 			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
 			.setDescriptorCount(animation_images.size())

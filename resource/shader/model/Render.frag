@@ -35,7 +35,7 @@ vec3 getColor()
 //	vec3 ambient = LightAmbient * (m.AmbientTex != 0 ? texture(sampler2D(m.AmbientTex), FSIn.Texcoord.xy).xyz : m.Ambient.xyz);
 	float sDotN = max( dot(s,norm), 0.0 );
 //	vec3 diffuse = LightDiffuse * (m.DiffuseTex != 0? texture(sampler2D(m.DiffuseTex), FSIn.Texcoord.xy).xyz : m.Diffuse.xyz) * (sDotN + 0.5);
-	vec3 diffuse = /*LightDiffuse * */texture(t_albedo_texture[material_index], FSIn.Texcoord.xy).xyz;
+	vec3 diffuse = /*LightDiffuse * */texture(t_base[material_index], FSIn.Texcoord.xy).xyz;
 	return /*ambient +*/ diffuse /*+ spec*/;
 
 //	return diffuse;

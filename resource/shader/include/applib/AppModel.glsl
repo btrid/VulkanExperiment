@@ -96,7 +96,13 @@ layout(std430, set=USE_AppModel_Render, binding=0) restrict buffer MaterialIndex
 layout(std430, set=USE_AppModel_Render, binding=1) restrict buffer MaterialBuffer {
 	Material b_material[];
 };
-layout (set=USE_AppModel_Render, binding=2) uniform sampler2D t_albedo_texture[16];
+layout (set=USE_AppModel_Render, binding=10) uniform sampler2D t_base[16];
+layout (set=USE_AppModel_Render, binding=11) uniform sampler2D t_normalcamera[16];
+layout (set=USE_AppModel_Render, binding=12) uniform sampler2D t_emissive[16];
+layout (set=USE_AppModel_Render, binding=13) uniform sampler2D t_metalness[16];
+layout (set=USE_AppModel_Render, binding=14) uniform sampler2D t_roughness[16];
+layout (set=USE_AppModel_Render, binding=15) uniform sampler2D t_occlusion[16];
+
 #endif
 
 #ifdef USE_AppModel_Update

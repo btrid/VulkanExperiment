@@ -32,7 +32,7 @@ vec3 getColor()
 	vec3 pos = FSIn.Position;
 	vec3 norm = FSIn.Normal;
 	uint material_index = b_material_index[FSIn.DrawID];
-	vec3 albedo = texture(t_albedo_texture[material_index], FSIn.Texcoord.xy).xyz;
+	vec3 albedo = texture(t_base[material_index], FSIn.Texcoord.xy).xyz;
 	vec3 diffuse = vec3(0.);
 
 	for(uint i = b_light_LL_head[tile_index_1D]; i != INVALID_LIGHT_INDEX;)

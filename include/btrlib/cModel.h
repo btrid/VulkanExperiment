@@ -64,23 +64,35 @@ struct RootNode
 class cModel
 {
 public:
-	enum {
+	enum E
+	{
 		BONE_NUM = 4,
+
+		ResourceTextureIndex_Diffuse = 0,
+		ResourceTextureIndex_Ambient,
+		ResourceTextureIndex_Normal,
+		ResourceTextureIndex_Specular,
+		ResourceTextureIndex_Height,
+		ResourceTextureIndex_Reflection,
+
+		ResourceTextureIndex_Base,
+		ResourceTextureIndex_NormalCamera,
+		ResourceTextureIndex_Emissive,
+		ResourceTextureIndex_Metalness,
+		ResourceTextureIndex_DiffuseRoughness,
+		ResourceTextureIndex_AmbientOcclusion,
+		ResourceTextureIndex_MAX,
 	};
 
-	struct Material 
+	struct Material
 	{
 		vec4		mAmbient;
 		vec4		mDiffuse;
 		vec4		mSpecular;
-		ResourceTexture	mDiffuseTex;
-		ResourceTexture	mAmbientTex;
-		ResourceTexture	mNormalTex;
-		ResourceTexture	mSpecularTex;
-		ResourceTexture	mHeightTex;
-		ResourceTexture	mReflectionTex;
-		float			mShininess;
 		vec4		mEmissive;
+		float			mShininess;
+
+		ResourceTexture mTex[ResourceTextureIndex_MAX];
 	};
 
 

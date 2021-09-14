@@ -129,7 +129,12 @@ struct AppModelContext
 			{
 				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eCombinedImageSampler, DESCRIPTOR_ALBEDO_TEXTURE_NUM, stage),
+				vk::DescriptorSetLayoutBinding(10, vk::DescriptorType::eCombinedImageSampler, DESCRIPTOR_ALBEDO_TEXTURE_NUM, stage),
+				vk::DescriptorSetLayoutBinding(11, vk::DescriptorType::eCombinedImageSampler, DESCRIPTOR_ALBEDO_TEXTURE_NUM, stage),
+				vk::DescriptorSetLayoutBinding(12, vk::DescriptorType::eCombinedImageSampler, DESCRIPTOR_ALBEDO_TEXTURE_NUM, stage),
+				vk::DescriptorSetLayoutBinding(13, vk::DescriptorType::eCombinedImageSampler, DESCRIPTOR_ALBEDO_TEXTURE_NUM, stage),
+				vk::DescriptorSetLayoutBinding(14, vk::DescriptorType::eCombinedImageSampler, DESCRIPTOR_ALBEDO_TEXTURE_NUM, stage),
+				vk::DescriptorSetLayoutBinding(15, vk::DescriptorType::eCombinedImageSampler, DESCRIPTOR_ALBEDO_TEXTURE_NUM, stage),
 			};
 			vk::DescriptorSetLayoutCreateInfo descriptor_layout_info;
 			descriptor_layout_info.setBindingCount(array_length(binding));
@@ -185,7 +190,6 @@ struct AppModel
 	//! material
 	btr::BufferMemoryEx<uint32_t> b_material_index;
 	btr::BufferMemoryEx<MaterialBuffer> b_material;
-	std::vector<ResourceTexture> m_albedo_texture;
 
 	//! 作業用バッファ
 	btr::BufferMemoryEx<mat4> b_node_transform;

@@ -58,22 +58,28 @@ std::vector<cModel::Material> loadMaterial(const aiScene* scene, const std::stri
 		aiTextureMapMode mapmode[3];
 		aiTextureMapping mapping;
 		unsigned uvIndex;
-		if (aiMat->GetTexture(aiTextureType_DIFFUSE, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode) == AI_SUCCESS) {
-			mat.mDiffuseTex.load(context, cmd, path + "/" + str.C_Str());
-		}
-		if (aiMat->GetTexture(aiTextureType_AMBIENT, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode)) {
-			mat.mAmbientTex.load(context, cmd, path + "/" + str.C_Str());
-		}
-		if (aiMat->GetTexture(aiTextureType_SPECULAR, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode)) {
-			mat.mSpecularTex.load(context, cmd, path + "/" + str.C_Str());
-		}
 
-		if (aiMat->GetTexture(aiTextureType_NORMALS, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode)) {
-			mat.mNormalTex.load(context, cmd, path + "/" + str.C_Str());
-		}
-
-		if (aiMat->GetTexture(aiTextureType_HEIGHT, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode)) {
-			mat.mHeightTex.load(context, cmd, path + "/" + str.C_Str());
+		struct  
+		{
+			aiTextureType type;
+			cModel::E index;
+		}tex_type[] = 
+		{
+			{aiTextureType_DIFFUSE, cModel::ResourceTextureIndex_Diffuse},
+			{aiTextureType_AMBIENT, cModel::ResourceTextureIndex_Ambient},
+			{aiTextureType_SPECULAR, cModel::ResourceTextureIndex_Specular},
+			{aiTextureType_NORMALS, cModel::ResourceTextureIndex_Normal},
+			{aiTextureType_HEIGHT, cModel::ResourceTextureIndex_Height},
+			{aiTextureType_BASE_COLOR, cModel::ResourceTextureIndex_Base},
+			{aiTextureType_NORMAL_CAMERA, cModel::ResourceTextureIndex_NormalCamera},
+			{aiTextureType_EMISSION_COLOR, cModel::ResourceTextureIndex_Emissive},
+			{aiTextureType_METALNESS, cModel::ResourceTextureIndex_Metalness},
+			{aiTextureType_DIFFUSE_ROUGHNESS, cModel::ResourceTextureIndex_DiffuseRoughness},
+			{aiTextureType_AMBIENT_OCCLUSION, cModel::ResourceTextureIndex_AmbientOcclusion},
+		};
+		for (auto& t : tex_type)
+		{
+			if (aiMat->GetTexture(t.type, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode)) { mat.mTex[t.index].load(context, cmd, path + "/" + str.C_Str()); }
 		}
 	}
 	return material;
