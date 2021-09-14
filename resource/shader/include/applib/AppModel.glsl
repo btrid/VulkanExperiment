@@ -119,10 +119,10 @@ struct PlayingAnimation
 {
 	int   playingAnimationNo;
 	float time;
-	int	  currentDataIndex;
+	int	  isPlay;
 	int   isLoop;
 };
-layout (set=USE_AppModel_Update, binding = 0) uniform sampler1DArray t_motion_texture;
+layout (set=USE_AppModel_Update, binding = 0) uniform sampler1DArray t_motion_texture[16];
 
 layout(std430, set=USE_AppModel_Update, binding=1)restrict buffer AnimationInfoBuffer 
 {

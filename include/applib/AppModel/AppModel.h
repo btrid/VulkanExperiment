@@ -144,7 +144,7 @@ struct AppModelContext
 		{
 			vk::DescriptorSetLayoutBinding binding[] =
 			{
-			vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eCombinedImageSampler, 1, stage),
+			vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eCombinedImageSampler, DESCRIPTOR_ALBEDO_TEXTURE_NUM, stage),
 			vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
 			vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
 			vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),

@@ -4,37 +4,42 @@
 
 AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<AppModelContext>& appmodel_context, const std::shared_ptr<cModel::Resource>& resource, uint32_t instanceNum)
 {
-	assert(!resource->mBone.empty());
+//	assert(!resource->mBone.empty());
 	m_resource = resource;
 	m_instance_max_num = instanceNum;
 
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-	// node info
+
+	auto node_info = NodeInfo::createNodeInfo(resource->mNodeRoot);
+	b_node_info = context->m_storage_memory.allocateMemory<NodeInfo>(node_info.size());
+
+	auto bone_info = BoneInfo::createBoneInfo(resource->mBone);
+	b_bone_info = context->m_storage_memory.allocateMemory<BoneInfo>(bone_info.size());
+
+	if (!resource->mBone.empty())
 	{
-		auto node_info = NodeInfo::createNodeInfo(resource->mNodeRoot);
-		b_node_info = context->m_storage_memory.allocateMemory<NodeInfo>(node_info.size());
+		// node info
+		{
+			auto staging = context->m_staging_memory.allocateMemory<NodeInfo>(node_info.size(), true);
+			memcpy_s(staging.getMappedPtr(), staging.getInfo().range, node_info.data(), vector_sizeof(node_info));
 
-		auto staging = context->m_staging_memory.allocateMemory<NodeInfo>(node_info.size(), true);
-		memcpy_s(staging.getMappedPtr(), staging.getInfo().range, node_info.data(), vector_sizeof(node_info));
+			vk::BufferCopy copy_info = vk::BufferCopy().setSize(staging.getInfo().range).setSrcOffset(staging.getInfo().offset).setDstOffset(b_node_info.getInfo().offset);
+			cmd.copyBuffer(staging.getInfo().buffer, b_node_info.getInfo().buffer, copy_info);
 
-		vk::BufferCopy copy_info = vk::BufferCopy().setSize(staging.getInfo().range).setSrcOffset(staging.getInfo().offset).setDstOffset(b_node_info.getInfo().offset);
-		cmd.copyBuffer(staging.getInfo().buffer, b_node_info.getInfo().buffer, copy_info);
+			auto to_render = b_node_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_render, {});
+		}
 
-		auto to_render = b_node_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead);
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_render, {});
-	}
+		{
+			// BoneInfo
+			auto staging = context->m_staging_memory.allocateMemory<BoneInfo>(bone_info.size(), true);
 
-	{
-		// BoneInfo
-		auto& buffer = b_bone_info;
-		auto bone_info = BoneInfo::createBoneInfo(resource->mBone);
-		buffer = context->m_storage_memory.allocateMemory<BoneInfo>(bone_info.size());
-		auto staging = context->m_staging_memory.allocateMemory<BoneInfo>(bone_info.size(), true);
+			memcpy_s(staging.getMappedPtr(), vector_sizeof(bone_info), bone_info.data(), vector_sizeof(bone_info));
 
-		memcpy_s(staging.getMappedPtr(), vector_sizeof(bone_info), bone_info.data(), vector_sizeof(bone_info));
+			vk::BufferCopy copy_info = vk::BufferCopy().setSize(staging.getInfo().range).setSrcOffset(staging.getInfo().offset).setDstOffset(b_bone_info.getInfo().offset);
+			cmd.copyBuffer(staging.getInfo().buffer, b_bone_info.getInfo().buffer, copy_info);
+		}
 
-		vk::BufferCopy copy_info = vk::BufferCopy().setSize(staging.getInfo().range).setSrcOffset(staging.getInfo().offset).setDstOffset(buffer.getInfo().offset);
-		cmd.copyBuffer(staging.getInfo().buffer, buffer.getInfo().buffer, copy_info);
 	}
 
 	b_model_info = context->m_storage_memory.allocateMemory<cModel::ModelInfo>({ 1, {} });
@@ -87,20 +92,23 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 		m_motion_texture = MotionTexture::createMotion(context, cmd, resource->getAnimation());
 
 		b_animation_info = context->m_storage_memory.allocateMemory<AnimationInfo>(anim.m_motion.size());
-		std::vector<AnimationInfo> data(anim.m_motion.size());
-		for (size_t i = 0; i < anim.m_motion.size(); i++)
+		if (!anim.m_motion.empty())
 		{
-			auto& animation = data[i];
-			animation.duration_ = (float)anim.m_motion[i]->m_duration;
-			animation.ticksPerSecond_ = (float)anim.m_motion[i]->m_ticks_per_second;
-			animation.numInfo_ = 0;
-			animation.offsetInfo_ = 0;
+			std::vector<AnimationInfo> data(anim.m_motion.size());
+			for (size_t i = 0; i < anim.m_motion.size(); i++)
+			{
+				auto& animation = data[i];
+				animation.duration_ = (float)anim.m_motion[i]->m_duration;
+				animation.ticksPerSecond_ = (float)anim.m_motion[i]->m_ticks_per_second;
+				animation.numInfo_ = 0;
+				animation.offsetInfo_ = 0;
+			}
+
+			cmd.updateBuffer(b_animation_info.getInfo().buffer, b_animation_info.getInfo().offset, vector_sizeof(data), data.data());
+
+			vk::BufferMemoryBarrier barrier = b_animation_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { barrier }, {});
 		}
-
-		cmd.updateBuffer(b_animation_info.getInfo().buffer, b_animation_info.getInfo().offset, vector_sizeof(data), data.data());
-
-		vk::BufferMemoryBarrier barrier = b_animation_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite,vk::AccessFlagBits::eShaderRead);
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { barrier }, {});
 	}
 	// PlayingAnimation
 	{
@@ -243,43 +251,25 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 		}
 
 
-		std::vector<vk::DescriptorImageInfo> animation_images =
+		std::array<vk::DescriptorImageInfo, 16> animation_images;
+		auto d = MotionTexture::getDefault(context, cmd);
+		animation_images.fill(vk::DescriptorImageInfo(d.getSampler(), d.getImageView(), vk::ImageLayout::eShaderReadOnlyOptimal));
+		for (int i = 0; i< m_motion_texture.size(); i++)
 		{
-			vk::DescriptorImageInfo(m_motion_texture[0].getSampler(),m_motion_texture[0].getImageView(), vk::ImageLayout::eShaderReadOnlyOptimal),
-		};
-
+			vk::DescriptorImageInfo(m_motion_texture[i].getSampler(), m_motion_texture[i].getImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
+		}
 		std::vector<vk::WriteDescriptorSet> write =
 		{
-			vk::WriteDescriptorSet()
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(array_length(common_storages))
-			.setPBufferInfo(common_storages)
-			.setDstBinding(0)
-			.setDstSet(m_descriptor_set[DescriptorSet_Model].get()),
-			vk::WriteDescriptorSet()
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(array_length(render_storages))
-			.setPBufferInfo(render_storages)
-			.setDstBinding(0)
-			.setDstSet(m_descriptor_set[DescriptorSet_Render].get()),
+			vk::WriteDescriptorSet().setDstSet(m_descriptor_set[DescriptorSet_Model].get()).setDstBinding(0).setDescriptorType(vk::DescriptorType::eStorageBuffer).setDescriptorCount(array_length(common_storages)).setPBufferInfo(common_storages),
+			vk::WriteDescriptorSet().setDstSet(m_descriptor_set[DescriptorSet_Render].get()).setDstBinding(0).setDescriptorType(vk::DescriptorType::eStorageBuffer).setDescriptorCount(array_length(render_storages)).setPBufferInfo(render_storages),
 			vk::WriteDescriptorSet().setDstSet(m_descriptor_set[DescriptorSet_Render].get()).setDstBinding(10).setDescriptorType(vk::DescriptorType::eCombinedImageSampler).setDescriptorCount(albedo_images.size()).setPImageInfo(albedo_images.data()),
 			vk::WriteDescriptorSet().setDstSet(m_descriptor_set[DescriptorSet_Render].get()).setDstBinding(11).setDescriptorType(vk::DescriptorType::eCombinedImageSampler).setDescriptorCount(normal_images.size()).setPImageInfo(normal_images.data()),
 			vk::WriteDescriptorSet().setDstSet(m_descriptor_set[DescriptorSet_Render].get()).setDstBinding(12).setDescriptorType(vk::DescriptorType::eCombinedImageSampler).setDescriptorCount(emissive_images.size()).setPImageInfo(emissive_images.data()),
 			vk::WriteDescriptorSet().setDstSet(m_descriptor_set[DescriptorSet_Render].get()).setDstBinding(13).setDescriptorType(vk::DescriptorType::eCombinedImageSampler).setDescriptorCount(metalness_images.size()).setPImageInfo(metalness_images.data()),
 			vk::WriteDescriptorSet().setDstSet(m_descriptor_set[DescriptorSet_Render].get()).setDstBinding(14).setDescriptorType(vk::DescriptorType::eCombinedImageSampler).setDescriptorCount(roughness_images.size()).setPImageInfo(roughness_images.data()),
 			vk::WriteDescriptorSet().setDstSet(m_descriptor_set[DescriptorSet_Render].get()).setDstBinding(15).setDescriptorType(vk::DescriptorType::eCombinedImageSampler).setDescriptorCount(occlusion_images.size()).setPImageInfo(occlusion_images.data()),
-			vk::WriteDescriptorSet()
-			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-			.setDescriptorCount(animation_images.size())
-			.setPImageInfo(animation_images.data())
-			.setDstBinding(0)
-			.setDstSet(m_descriptor_set[DescriptorSet_Update].get()),
-			vk::WriteDescriptorSet()
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(array_length(execute_storages))
-			.setPBufferInfo(execute_storages)
-			.setDstBinding(1)
-			.setDstSet(m_descriptor_set[DescriptorSet_Update].get()),
+			vk::WriteDescriptorSet().setDstSet(m_descriptor_set[DescriptorSet_Update].get()).setDstBinding(0).setDescriptorType(vk::DescriptorType::eCombinedImageSampler).setDescriptorCount(animation_images.size()).setPImageInfo(animation_images.data()),
+			vk::WriteDescriptorSet().setDstSet(m_descriptor_set[DescriptorSet_Update].get()).setDstBinding(1).setDescriptorType(vk::DescriptorType::eStorageBuffer).setDescriptorCount(array_length(execute_storages)).setPBufferInfo(execute_storages),
 		};
 		context->m_device.updateDescriptorSets(write, {});
 

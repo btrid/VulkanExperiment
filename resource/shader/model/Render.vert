@@ -48,10 +48,10 @@ void main()
 {
 	vec4 pos = vec4((inPosition).xyz, 1.0);
 	mat4 skinningMat = skinning();
-	gl_Position = u_camera[0].u_projection * u_camera[0].u_view * skinningMat * vec4(pos.xyz, 1.0);
+	gl_Position = u_camera[0].u_projection * u_camera[0].u_view *  vec4(pos.xyz, 1.0);
 
 	VSOut.Position = pos.xyz;
-	VSOut.Normal = mat3(skinningMat) * inNormal.xyz;
+	VSOut.Normal =  inNormal.xyz;
 	VSOut.Texcoord = inTexcoord.xyz;
 	VSOut.DrawID = gl_DrawID;
 }

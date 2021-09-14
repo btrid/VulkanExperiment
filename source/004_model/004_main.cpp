@@ -54,8 +54,9 @@ int main()
 	AppModelAnimationStage model_animater(context, appmodel_context);
 
 	cModel model;
-	model.load(context, btr::getResourceAppPath() + "tiny.x");
-	std::shared_ptr<AppModel> player_model = std::make_shared<AppModel>(context, appmodel_context, model.getResource(), 1024);
+//	model.load(context, btr::getResourceAppPath() + "tiny.x");
+	model.load(context, btr::getResourceAppPath() + "pbr/DamagedHelmet.gltf");
+	std::shared_ptr<AppModel> player_model = std::make_shared<AppModel>(context, appmodel_context, model.getResource(), 1);
 
 	auto anime_cmd = model_animater.createCmd(player_model);
 	auto render_cmd = model_renderer.createCmd(player_model);
@@ -79,7 +80,7 @@ int main()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				std::vector<vk::CommandBuffer> anime_cmds = { anime_cmd.get() };
-				model_animater.dispatchCmd(cmd, anime_cmds);
+//				model_animater.dispatchCmd(cmd, anime_cmds);
 
 				cmd.end();
 				cmds[cmd_model_update] = cmd;

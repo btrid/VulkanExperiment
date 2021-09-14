@@ -15,6 +15,7 @@ void main()
 	if(index >= b_model_instancing_info.instanceAliveNum){ return; }
 
 //	b_playing_animation[index].time += 60. + float(index)*0.01;
-	b_playing_animation[index].time += 0.016 + float(index)*0.01;
+	if(b_playing_animation[index].isPlay != 0)
+		b_playing_animation[index].time += 0.016 + float(index)*0.01;
 }
 

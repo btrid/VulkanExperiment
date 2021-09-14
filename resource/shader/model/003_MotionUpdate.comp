@@ -24,9 +24,9 @@ void main()
 
 	uint node_index = node_global_index % model_info.nodeNum;
 	mat4 local = mat4(1.);
-	vec4 xyz = texture(t_motion_texture, vec2(pa.time / aInfo.maxTime, node_index*3));
-	vec4 rot = texture(t_motion_texture, vec2(pa.time / aInfo.maxTime, node_index*3+1));
-	vec4 scale = texture(t_motion_texture, vec2(pa.time / aInfo.maxTime, node_index*3+2));
+	vec4 xyz = texture(t_motion_texture[0], vec2(pa.time / aInfo.maxTime, node_index*3));
+	vec4 rot = texture(t_motion_texture[0], vec2(pa.time / aInfo.maxTime, node_index*3+1));
+	vec4 scale = texture(t_motion_texture[0], vec2(pa.time / aInfo.maxTime, node_index*3+2));
 	local = scaling(local, scale.xyz) * translate(mat4(1.), xyz.xyz) * mat4(quatToMat3(rot));
 	b_node_transform[node_global_index] = local;
 

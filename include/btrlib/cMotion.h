@@ -82,7 +82,6 @@ struct MotionTexture
 		vk::ImageCreateInfo image_info;
 		image_info.imageType = vk::ImageType::e1D;
 		image_info.format = vk::Format::eR16G16B16A16Sfloat;
-//		image_info.format = vk::Format::eR32G32B32A32Sfloat;
 		image_info.mipLevels = 1;
 		image_info.arrayLayers = motion->m_node_num * 3u;
 		image_info.samples = vk::SampleCountFlagBits::e1;
@@ -255,6 +254,114 @@ struct MotionTexture
 		tex.m_resource->m_memory = std::move(image_memory);
 		tex.m_resource->m_sampler = context->m_device.createSamplerUnique(sampler_info);
 		return tex;
+	}
+
+	static MotionTexture getDefault(const std::shared_ptr<btr::Context>& context, vk::CommandBuffer cmd)
+	{
+		static MotionTexture s_tex;
+		static std::once_flag flag;
+		std::call_once(flag, [&]() 
+			{
+				uint32_t SIZE = 1;
+
+				vk::ImageCreateInfo image_info;
+				image_info.imageType = vk::ImageType::e1D;
+				image_info.format = vk::Format::eR16G16B16A16Sfloat;
+				image_info.mipLevels = 1;
+				image_info.arrayLayers = 3u;
+				image_info.samples = vk::SampleCountFlagBits::e1;
+				image_info.tiling = vk::ImageTiling::eOptimal;
+				image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
+				image_info.sharingMode = vk::SharingMode::eExclusive;
+				image_info.initialLayout = vk::ImageLayout::eUndefined;
+				image_info.extent = vk::Extent3D{ SIZE, 1u, 1u };
+
+				auto image_prop = context->m_physical_device.getImageFormatProperties(image_info.format, image_info.imageType, image_info.tiling, image_info.usage, image_info.flags);
+				vk::UniqueImage image = context->m_device.createImageUnique(image_info);
+
+				auto staging_buffer = context->m_staging_memory.allocateMemory<f16vec4>(3);
+				staging_buffer.getMappedPtr()[0] = f16vec4(0.f);
+				staging_buffer.getMappedPtr()[1] = f16vec4(0.f);
+				staging_buffer.getMappedPtr()[2] = f16vec4(1.f);
+
+				vk::MemoryRequirements memory_request = context->m_device.getImageMemoryRequirements(image.get());
+				vk::MemoryAllocateInfo memory_alloc_info;
+				memory_alloc_info.allocationSize = memory_request.size;
+				memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(context->m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+				vk::UniqueDeviceMemory image_memory = context->m_device.allocateMemoryUnique(memory_alloc_info);
+				context->m_device.bindImageMemory(image.get(), image_memory.get(), 0);
+
+				vk::ImageSubresourceRange subresourceRange;
+				subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+				subresourceRange.baseArrayLayer = 0;
+				subresourceRange.baseMipLevel = 0;
+				subresourceRange.layerCount = image_info.arrayLayers;
+				subresourceRange.levelCount = 1;
+
+				vk::BufferImageCopy copy;
+				copy.bufferOffset = staging_buffer.getInfo().offset;
+				copy.imageExtent = vk::Extent3D{ SIZE, 1u, 1u };
+				copy.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+				copy.imageSubresource.baseArrayLayer = 0;
+				copy.imageSubresource.layerCount = image_info.arrayLayers;
+				copy.imageSubresource.mipLevel = 0;
+
+				{
+					vk::ImageMemoryBarrier to_copy_barrier;
+					to_copy_barrier.image = image.get();
+					to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
+					to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
+					to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+					to_copy_barrier.subresourceRange = subresourceRange;
+					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+				}
+				cmd.copyBufferToImage(staging_buffer.getInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, { copy });
+				{
+					vk::ImageMemoryBarrier to_shader_read_barrier;
+					to_shader_read_barrier.image = image.get();
+					to_shader_read_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
+					to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+					to_shader_read_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+					to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+					to_shader_read_barrier.subresourceRange = subresourceRange;
+
+					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
+				}
+
+				vk::ImageViewCreateInfo view_info;
+				view_info.viewType = vk::ImageViewType::e1DArray;
+				view_info.components.r = vk::ComponentSwizzle::eR;
+				view_info.components.g = vk::ComponentSwizzle::eG;
+				view_info.components.b = vk::ComponentSwizzle::eB;
+				view_info.components.a = vk::ComponentSwizzle::eA;
+				view_info.flags = vk::ImageViewCreateFlags();
+				view_info.format = image_info.format;
+				view_info.image = image.get();
+				view_info.subresourceRange = subresourceRange;
+
+				vk::SamplerCreateInfo sampler_info;
+				sampler_info.magFilter = vk::Filter::eNearest;
+				sampler_info.minFilter = vk::Filter::eNearest;
+				sampler_info.mipmapMode = vk::SamplerMipmapMode::eNearest;
+				sampler_info.addressModeU = vk::SamplerAddressMode::eRepeat;//
+				sampler_info.addressModeV = vk::SamplerAddressMode::eClampToEdge;
+				sampler_info.addressModeW = vk::SamplerAddressMode::eClampToEdge;
+				sampler_info.mipLodBias = 0.0f;
+				sampler_info.compareOp = vk::CompareOp::eNever;
+				sampler_info.minLod = 0.0f;
+				sampler_info.maxLod = 0.f;
+				sampler_info.maxAnisotropy = 1.0;
+				sampler_info.anisotropyEnable = VK_FALSE;
+				sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
+
+				s_tex.m_resource = std::make_shared<MotionTexture::Resource>();
+				s_tex.m_resource->m_image = std::move(image);
+				s_tex.m_resource->m_image_view = context->m_device.createImageViewUnique(view_info);
+				s_tex.m_resource->m_memory = std::move(image_memory);
+				s_tex.m_resource->m_sampler = context->m_device.createSamplerUnique(sampler_info);
+			});
+		return s_tex;
 	}
 };
 
