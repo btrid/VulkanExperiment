@@ -304,7 +304,7 @@ void cModel::load(const std::shared_ptr<btr::Context>& context, const std::strin
 	importer.FreeScene();
 
 	{
-		ResourceVertex& vertex_data = m_resource->m_mesh_resource;
+		VertexResource& vertex_data = m_resource->m_vertex;
 
 		{
 			vertex_data.v_position = context->m_vertex_memory.allocateMemory<vec3>(numVertex);
@@ -335,16 +335,12 @@ void cModel::load(const std::shared_ptr<btr::Context>& context, const std::strin
 			cmd.copyBuffer(index.getInfo().buffer, vertex_data.v_index.getInfo().buffer, copy_info);
 
 
-			btr::BufferMemoryDescriptor indirect_desc;
-			indirect_desc.size = vector_sizeof(m_resource->m_mesh);
-			vertex_data.v_indirect = context->m_vertex_memory.allocateMemory(indirect_desc);
+			vertex_data.v_indirect = context->m_vertex_memory.allocateMemory<Mesh>(m_resource->m_mesh.size());
+			auto indirect = context->m_staging_memory.allocateMemory<Mesh>(m_resource->m_mesh.size(), true);
+			memcpy_s(indirect.getMappedPtr(), vector_sizeof(m_resource->m_mesh), m_resource->m_mesh.data(), vector_sizeof(m_resource->m_mesh));
 
-			indirect_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-			auto staging_indirect = context->m_staging_memory.allocateMemory(indirect_desc);
-			memcpy_s(staging_indirect.getMappedPtr<Mesh>(), indirect_desc.size, m_resource->m_mesh.data(), indirect_desc.size);
-
-			copy_info.setSize(staging_indirect.getInfo().range).setSrcOffset(staging_indirect.getInfo().offset).setDstOffset(vertex_data.v_indirect.getInfo().offset);
-			cmd.copyBuffer(staging_indirect.getInfo().buffer, vertex_data.v_indirect.getInfo().buffer, copy_info);
+			copy_info.setSize(indirect.getInfo().range).setSrcOffset(indirect.getInfo().offset).setDstOffset(vertex_data.v_indirect.getInfo().offset);
+			cmd.copyBuffer(indirect.getInfo().buffer, vertex_data.v_indirect.getInfo().buffer, copy_info);
 
 			vk::BufferMemoryBarrier indirect_barrier = vertex_data.v_indirect.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eIndirectCommandRead);
 			cmd.pipelineBarrier( vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, { indirect_barrier }, {});
@@ -378,18 +374,7 @@ std::string cModel::getFilename() const
 {
 	return m_resource ? m_resource->m_filename : "";
 }
-const ResourceVertex* cModel::getMesh() const
+const cModel::VertexResource* cModel::getMesh() const
 {
-	return m_resource ? &m_resource->m_mesh_resource : nullptr;
-}
-
-void ResourceVertex::draw(vk::CommandBuffer cmd) const
-{
-	cmd.bindVertexBuffers(0, v_position.getInfo().buffer, v_position.getInfo().offset);
-	cmd.bindVertexBuffers(1, v_normal.getInfo().buffer, v_normal.getInfo().offset);
-	cmd.bindVertexBuffers(2, v_texcoord.getInfo().buffer, v_texcoord.getInfo().offset);
-	cmd.bindVertexBuffers(3, v_bone_id.getInfo().buffer, v_bone_id.getInfo().offset);
-	cmd.bindVertexBuffers(4, v_bone_weight.getInfo().buffer, v_bone_weight.getInfo().offset);
-	cmd.bindIndexBuffer(v_index.getInfo().buffer, v_index.getInfo().offset, mIndexType);
-	cmd.drawIndexedIndirect(v_indirect.getInfo().buffer, v_indirect.getInfo().offset, mIndirectCount, sizeof(cModel::Mesh));
+	return m_resource ? &m_resource->m_vertex : nullptr;
 }

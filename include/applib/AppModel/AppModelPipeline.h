@@ -358,13 +358,29 @@ struct AppModelRenderStage
 			blend_info.setPAttachments(blend_state.data());
 
 			// vertexinput
-			auto vertex_input_binding = cModel::GetVertexInputBinding();
-			auto vertex_input_attribute = cModel::GetVertexInputAttribute();
+
+			vk::VertexInputBindingDescription vib_disc[] =
+			{
+				vk::VertexInputBindingDescription().setBinding(0).setInputRate(vk::VertexInputRate::eVertex).setStride(sizeof(vec3)),
+				vk::VertexInputBindingDescription().setBinding(1).setInputRate(vk::VertexInputRate::eVertex).setStride(sizeof(uint32_t)),
+				vk::VertexInputBindingDescription().setBinding(2).setInputRate(vk::VertexInputRate::eVertex).setStride(sizeof(vec3)),
+				vk::VertexInputBindingDescription().setBinding(3).setInputRate(vk::VertexInputRate::eVertex).setStride(sizeof(u8vec4)),
+				vk::VertexInputBindingDescription().setBinding(4).setInputRate(vk::VertexInputRate::eVertex).setStride(sizeof(u8vec4)),
+			};
+			vk::VertexInputAttributeDescription vid_disc[] =
+			{
+				vk::VertexInputAttributeDescription().setBinding(0).setLocation(0).setFormat(vk::Format::eR32G32B32Sfloat).setOffset(0),
+				vk::VertexInputAttributeDescription().setBinding(1).setLocation(1).setFormat(vk::Format::eA2R10G10B10SnormPack32).setOffset(0),
+				vk::VertexInputAttributeDescription().setBinding(2).setLocation(2).setFormat(vk::Format::eR32G32B32Sfloat).setOffset(0),
+				vk::VertexInputAttributeDescription().setBinding(3).setLocation(3).setFormat(vk::Format::eR8G8B8A8Uint).setOffset(0),
+				vk::VertexInputAttributeDescription().setBinding(4).setLocation(4).setFormat(vk::Format::eR8G8B8A8Unorm).setOffset(0),
+			};
+
 			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
-			vertex_input_info.setVertexBindingDescriptionCount((uint32_t)vertex_input_binding.size());
-			vertex_input_info.setPVertexBindingDescriptions(vertex_input_binding.data());
-			vertex_input_info.setVertexAttributeDescriptionCount((uint32_t)vertex_input_attribute.size());
-			vertex_input_info.setPVertexAttributeDescriptions(vertex_input_attribute.data());
+			vertex_input_info.setVertexBindingDescriptionCount(array_size(vib_disc));
+			vertex_input_info.setPVertexBindingDescriptions(vib_disc);
+			vertex_input_info.setVertexAttributeDescriptionCount(array_size(vid_disc));
+			vertex_input_info.setPVertexAttributeDescriptions(vid_disc);
 
 			const auto& shader_stage = m_shader->getShaderStageInfo();
 			std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =

@@ -83,10 +83,10 @@ struct AnimationWorker
 	int		isLoop;				//!<
 };
 struct MaterialBuffer {
-	glm::vec4		mAmbient;
-	glm::vec4		mDiffuse;
-	glm::vec4		mSpecular;
-	glm::vec4		mEmissive;
+	vec4		mAmbient;
+	vec4		mDiffuse;
+	vec4		mSpecular;
+	vec4		mEmissive;
 	uint32_t		u_albedo_texture;
 	uint32_t		u_ambient_texture;
 	uint32_t		u_specular_texture;
@@ -200,13 +200,13 @@ struct AppModel
 		vk::DescriptorBufferInfo m_indirect_buffer;
 		void draw(vk::CommandBuffer cmd)const override
 		{
-			cmd.bindVertexBuffers(0, m_data->m_mesh_resource.v_position.getInfo().buffer, m_data->m_mesh_resource.v_position.getInfo().offset);
-			cmd.bindVertexBuffers(1, m_data->m_mesh_resource.v_normal.getInfo().buffer, m_data->m_mesh_resource.v_normal.getInfo().offset);
-			cmd.bindVertexBuffers(2, m_data->m_mesh_resource.v_texcoord.getInfo().buffer, m_data->m_mesh_resource.v_texcoord.getInfo().offset);
-			cmd.bindVertexBuffers(3, m_data->m_mesh_resource.v_bone_id.getInfo().buffer, m_data->m_mesh_resource.v_bone_id.getInfo().offset);
-			cmd.bindVertexBuffers(4, m_data->m_mesh_resource.v_bone_weight.getInfo().buffer, m_data->m_mesh_resource.v_bone_weight.getInfo().offset);
-			cmd.bindIndexBuffer(m_data->m_mesh_resource.v_index.getInfo().buffer, m_data->m_mesh_resource.v_index.getInfo().offset, m_data->m_mesh_resource.mIndexType);
-			cmd.drawIndexedIndirect(m_indirect_buffer.buffer, m_indirect_buffer.offset, m_data->m_mesh_resource.mIndirectCount, sizeof(cModel::Mesh));
+			cmd.bindVertexBuffers(0, m_data->m_vertex.v_position.getInfo().buffer, m_data->m_vertex.v_position.getInfo().offset);
+			cmd.bindVertexBuffers(1, m_data->m_vertex.v_normal.getInfo().buffer, m_data->m_vertex.v_normal.getInfo().offset);
+			cmd.bindVertexBuffers(2, m_data->m_vertex.v_texcoord.getInfo().buffer, m_data->m_vertex.v_texcoord.getInfo().offset);
+			cmd.bindVertexBuffers(3, m_data->m_vertex.v_bone_id.getInfo().buffer, m_data->m_vertex.v_bone_id.getInfo().offset);
+			cmd.bindVertexBuffers(4, m_data->m_vertex.v_bone_weight.getInfo().buffer, m_data->m_vertex.v_bone_weight.getInfo().offset);
+			cmd.bindIndexBuffer(m_data->m_vertex.v_index.getInfo().buffer, m_data->m_vertex.v_index.getInfo().offset, m_data->m_vertex.mIndexType);
+			cmd.drawIndexedIndirect(m_indirect_buffer.buffer, m_indirect_buffer.offset, m_data->m_vertex.mIndirectCount, sizeof(cModel::Mesh));
 		}
 	};
 	AppModelRender m_render;

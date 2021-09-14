@@ -12,45 +12,28 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 	// node info
 	{
 		auto node_info = NodeInfo::createNodeInfo(resource->mNodeRoot);
-		btr::BufferMemoryDescriptorEx<NodeInfo> desc;
-		desc.element_num = node_info.size();
-		b_node_info = context->m_storage_memory.allocateMemory(desc);
+		b_node_info = context->m_storage_memory.allocateMemory<NodeInfo>(node_info.size());
 
-		desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-		auto staging = context->m_staging_memory.allocateMemory(desc);
-
+		auto staging = context->m_staging_memory.allocateMemory<NodeInfo>(node_info.size(), true);
 		memcpy_s(staging.getMappedPtr(), staging.getInfo().range, node_info.data(), vector_sizeof(node_info));
 
-		vk::BufferCopy copy_info;
-		copy_info.setSize(staging.getInfo().range);
-		copy_info.setSrcOffset(staging.getInfo().offset);
-		copy_info.setDstOffset(b_node_info.getInfo().offset);
+		vk::BufferCopy copy_info = vk::BufferCopy().setSize(staging.getInfo().range).setSrcOffset(staging.getInfo().offset).setDstOffset(b_node_info.getInfo().offset);
 		cmd.copyBuffer(staging.getInfo().buffer, b_node_info.getInfo().buffer, copy_info);
 
-		auto to_render = b_node_info.makeMemoryBarrier();
-		to_render.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+		auto to_render = b_node_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead);
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_render, {});
-
 	}
 
 	{
 		// BoneInfo
-		auto bone_info = BoneInfo::createBoneInfo(resource->mBone);
-		btr::BufferMemoryDescriptorEx<BoneInfo> desc;
-		desc.element_num = bone_info.size();
-
 		auto& buffer = b_bone_info;
-		buffer = context->m_storage_memory.allocateMemory(desc);
-
-		desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-		auto staging = context->m_staging_memory.allocateMemory(desc);
+		auto bone_info = BoneInfo::createBoneInfo(resource->mBone);
+		buffer = context->m_storage_memory.allocateMemory<BoneInfo>(bone_info.size());
+		auto staging = context->m_staging_memory.allocateMemory<BoneInfo>(bone_info.size(), true);
 
 		memcpy_s(staging.getMappedPtr(), vector_sizeof(bone_info), bone_info.data(), vector_sizeof(bone_info));
 
-		vk::BufferCopy copy_info;
-		copy_info.setSize(staging.getInfo().range);
-		copy_info.setSrcOffset(staging.getInfo().offset);
-		copy_info.setDstOffset(buffer.getInfo().offset);
+		vk::BufferCopy copy_info = vk::BufferCopy().setSize(staging.getInfo().range).setSrcOffset(staging.getInfo().offset).setDstOffset(buffer.getInfo().offset);
 		cmd.copyBuffer(staging.getInfo().buffer, buffer.getInfo().buffer, copy_info);
 	}
 
@@ -63,31 +46,23 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 
 	// ModelInfo
 	{
-
 		cmd.updateBuffer<cModel::ModelInfo>(b_model_info.getInfo().buffer, b_model_info.getInfo().offset, resource->m_model_info);
 	}
 	// draw indirect
 	{
 		b_draw_indirect = context->m_vertex_memory.allocateMemory<cModel::Mesh>(resource->m_mesh.size());
-
 		cmd.updateBuffer(b_draw_indirect.getInfo().buffer, b_draw_indirect.getInfo().offset, vector_sizeof(resource->m_mesh), resource->m_mesh.data());
-
 	}
 
 	{
 
 		auto& buffer = b_animation_indirect;
 
-		btr::BufferMemoryDescriptorEx<uvec3> desc;
-		desc.element_num = 6;
-		buffer = context->m_vertex_memory.allocateMemory(desc);
+		buffer = context->m_vertex_memory.allocateMemory<uvec3>(6);
+		auto staging = context->m_staging_memory.allocateMemory<uvec3>(6, true);
 
-		desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-		auto staging = context->m_staging_memory.allocateMemory(desc);
-		auto* group_ptr = static_cast<glm::uvec3*>(staging.getMappedPtr());
-		int32_t local_size_x = 1024;
 		uvec3 local_size(1024, 1, 1);
-		auto nc = (local_size_x / resource->m_model_info.mNodeNum) * resource->m_model_info.mNodeNum;
+		auto nc = (local_size.x / resource->m_model_info.mNodeNum) * resource->m_model_info.mNodeNum;
 		auto dispach_count = ((instanceNum * resource->m_model_info.mNodeNum) + (nc - 1)) / nc;
 		uvec3 group[] =
 		{
@@ -98,12 +73,9 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 			app::calcDipatchGroups(uvec3(instanceNum, 1, 1), local_size),
 			app::calcDipatchGroups(uvec3(instanceNum*resource->m_model_info.mBoneNum, 1, 1), local_size),
 		};
-		memcpy_s(group_ptr, sizeof(group), group, sizeof(group));
+		memcpy_s(staging.getMappedPtr(), sizeof(group), group, sizeof(group));
 
-		vk::BufferCopy copy_info;
-		copy_info.setSize(staging.getInfo().range);
-		copy_info.setSrcOffset(staging.getInfo().offset);
-		copy_info.setDstOffset(b_animation_indirect.getInfo().offset);
+		vk::BufferCopy copy_info = vk::BufferCopy().setSize(staging.getInfo().range).setSrcOffset(staging.getInfo().offset).setDstOffset(b_animation_indirect.getInfo().offset);
 		cmd.copyBuffer(staging.getInfo().buffer, b_animation_indirect.getInfo().buffer, copy_info);
 
 		vk::BufferMemoryBarrier dispatch_barrier = b_animation_indirect.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eIndirectCommandRead);
@@ -115,7 +87,6 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 		m_motion_texture = MotionTexture::createMotion(context, cmd, resource->getAnimation());
 
 		b_animation_info = context->m_storage_memory.allocateMemory<AnimationInfo>(anim.m_motion.size());
-
 		std::vector<AnimationInfo> data(anim.m_motion.size());
 		for (size_t i = 0; i < anim.m_motion.size(); i++)
 		{
@@ -156,8 +127,6 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 		{
 			material_index[i] = resource->m_mesh[i].m_material_index;
 		}
-
-
 		cmd.updateBuffer(b_material_index.getInfo().buffer, b_material_index.getInfo().offset, vector_sizeof(material_index), material_index.data());
 
 	}

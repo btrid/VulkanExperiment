@@ -26,7 +26,7 @@ vec3 LightSpecular = vec3(0.5);
 
 vec3 getColor()
 {
-	uint material_index = 0;
+	uint material_index = b_material_index[FSIn.DrawID];
 	vec3 pos = FSIn.Position;
 	vec3 norm = FSIn.Normal;
 	vec3 s = normalize(LightPosition.xyz - pos);
