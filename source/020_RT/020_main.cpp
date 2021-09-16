@@ -210,13 +210,14 @@ struct Model
 		{
 			model->b_vertex[i] = ctx.m_ctx->m_vertex_memory.allocateMemory(gltf_model.buffers[i].data.size());
 			staging[i] = ctx.m_ctx->m_staging_memory.allocateMemory(gltf_model.buffers[i].data.size());
+			memcpy_s(staging[i].getMappedPtr(), gltf_model.buffers[i].data.size(), gltf_model.buffers[i].data.data(), gltf_model.buffers[i].data.size());
+
 			vk::BufferCopy copy = vk::BufferCopy().setSize(gltf_model.buffers[i].data.size()).setSrcOffset(staging[i].getInfo().offset).setDstOffset(model->b_vertex[i].getInfo().offset);
 			cmd.copyBuffer(staging[i].getInfo().buffer, model->b_vertex[i].getInfo().buffer, copy);
-//			cmd.updateBuffer(model->b_vertex[i].getInfo().buffer, model->b_vertex[i].getInfo().offset, gltf_model.buffers[i].data.size(), gltf_model.buffers[i].data.data());
+
 			info[i].offset = info[std::max(i-1, 0)].offset+info[std::max(i-1, 0)].range;
 			buffersize_total += gltf_model.buffers[i].data.size();
 		}
-		btr::BufferMemory buffer = ctx.m_ctx->m_vertex_memory.allocateMemory(buffersize_total);
 
 		model->m_meshes.resize(gltf_model.meshes.size());
 		for (size_t mesh_index = 0; mesh_index < gltf_model.meshes.size(); ++mesh_index)
@@ -750,18 +751,18 @@ struct ModelRenderer
 			blend_info.setPAttachments(blend_state.data());
 
 			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
-			vk::VertexInputAttributeDescription vi_attrib[] = 
+			vk::VertexInputBindingDescription vi_binding[] =
 			{
-				vk::VertexInputAttributeDescription().setFormat(vk::Format::eR32G32B32Sfloat).setBinding(0).setOffset(0),
+				vk::VertexInputBindingDescription().setBinding(0).setStride(12).setInputRate(vk::VertexInputRate::eVertex),
 			};
-			vk::VertexInputBindingDescription vi_binding[] = 
+			vk::VertexInputAttributeDescription vi_attrib[] =
 			{
-				vk::VertexInputBindingDescription().setInputRate(vk::VertexInputRate::eVertex).setStride(12).setBinding(0),
+				vk::VertexInputAttributeDescription().setLocation(0).setBinding(0).setFormat(vk::Format::eR32G32B32Sfloat).setOffset(0),
 			};
-			vertex_input_info.vertexAttributeDescriptionCount = array_size(vi_attrib);
-			vertex_input_info.pVertexAttributeDescriptions = vi_attrib;
 			vertex_input_info.vertexBindingDescriptionCount = array_size(vi_binding);
 			vertex_input_info.pVertexBindingDescriptions = vi_binding;
+			vertex_input_info.vertexAttributeDescriptionCount = array_size(vi_attrib);
+			vertex_input_info.pVertexAttributeDescriptions = vi_attrib;
 
 			vk::GraphicsPipelineCreateInfo graphics_pipeline_info =
 				vk::GraphicsPipelineCreateInfo()
@@ -784,6 +785,7 @@ struct ModelRenderer
 
 	void execute_Render(vk::CommandBuffer cmd, RenderTarget& rt, Model& model)
 	{
+		DebugLabel _label(cmd, __FUNCTION__);
 		{
 			vk::ImageMemoryBarrier image_barrier[1];
 			image_barrier[0].setImage(rt.m_image);
@@ -832,7 +834,7 @@ struct ModelRenderer
 					if (attrib.first.compare("TEXCOORD_0") == 0) vaa = 2;
 					if (vaa > -1)
 					{
-						cmd.bindVertexBuffers(vaa, model.b_vertex[bufferview.buffer].getInfo().buffer, model.b_vertex[bufferview.buffer].getInfo().offset + accessor.byteOffset);
+						cmd.bindVertexBuffers(vaa, model.b_vertex[bufferview.buffer].getInfo().buffer, model.b_vertex[bufferview.buffer].getInfo().offset + bufferview.byteOffset);
 					}
 					else
 					{
@@ -843,7 +845,16 @@ struct ModelRenderer
 					tinygltf::Accessor accessor = gltf_model.accessors[primitive.indices];
 					tinygltf::BufferView bufferview = gltf_model.bufferViews[accessor.bufferView];
 
-					cmd.bindIndexBuffer(model.b_vertex[bufferview.buffer].getInfo().buffer, model.b_vertex[bufferview.buffer].getInfo().offset + accessor.byteOffset, vk::IndexType::eUint32);
+					vk::IndexType indextype = vk::IndexType::eUint32;
+					switch (accessor.componentType)
+					{
+					case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT: indextype = vk::IndexType::eUint32; break;
+					case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT: indextype = vk::IndexType::eUint16; break;
+					case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: indextype = vk::IndexType::eUint8EXT; break;
+					default: assert(false); break;
+					}
+
+					cmd.bindIndexBuffer(model.b_vertex[bufferview.buffer].getInfo().buffer, model.b_vertex[bufferview.buffer].getInfo().offset + bufferview.byteOffset, indextype);
 					cmd.drawIndexed(accessor.count, 1, 0, 0, 0);
 				}
 			}
@@ -861,10 +872,8 @@ int main()
 {
 
 	auto camera = cCamera::sCamera::Order().create();
-	camera->getData().m_position = vec3(-1000.f, 500.f, -666.f);
-	camera->getData().m_target = vec3(0.f, 200.f, 0.f);
-	//	camera->getData().m_position = vec3(1000.f, 220.f, -200.f);
-	//	camera->getData().m_target = vec3(1000.f, 220.f, 0.f);
+	camera->getData().m_position = vec3(-100.f, 0.f, -100.f);
+	camera->getData().m_target = vec3(0.f, 0.1f, 0.f);
 	camera->getData().m_up = vec3(0.f, -1.f, 0.f);
 	camera->getData().m_width = 1024;
 	camera->getData().m_height = 1024;
@@ -877,7 +886,6 @@ int main()
 
 	auto context = app.m_context;
 	auto ctx = std::make_shared<Context>(context);
-//	auto model_ctx = std::make_shared<ModelContext>(*context);
 
 	auto render_target = app.m_window->getFrontBuffer();
 	ClearPipeline clear_pipeline(context, render_target);
@@ -914,7 +922,7 @@ int main()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				{
-					renderer.execute_Render(cmd, *app.m_window->getFrontBuffer(), *model);
+					renderer.execute_Render(cmd, *render_target, *model);
 				}
 
 				cmd.end();

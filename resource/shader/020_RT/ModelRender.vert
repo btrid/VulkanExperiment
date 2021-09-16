@@ -46,7 +46,7 @@ void main()
 {
 	vec4 pos = vec4(inPosition.xyz, 1.0);
 //	mat4 skinningMat = skinning();
-	gl_Position = u_camera[0].u_projection * u_camera[0].u_view *  pos;
+	gl_Position = u_camera[0].u_projection * u_camera[0].u_view *  100.*pos;
 
 //	VSOut.Position = pos.xyz;
 //	VSOut.Normal =  inNormal.xyz;
