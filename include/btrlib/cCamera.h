@@ -84,15 +84,15 @@ public:
 		{
 			// XZ•½–Ê‚ÌˆÚ“®
 			auto move = vec2(input.m_mouse.getMove());
-			m_data.m_position += (s*move.x + f*move.y);
-			m_data.m_target += (s*move.x + f*move.y);
+			m_data.m_position += (s*move.x + f*move.y) * distance * deltaTime;
+			m_data.m_target += (s*move.x + f*move.y) * distance * deltaTime;
 
 		}else if (input.m_mouse.isHold(cMouse::BUTTON_LEFT))
 		{
 			// XY•½–Ê‚ÌˆÚ“®
 			auto move = vec2(input.m_mouse.getMove());
-			m_data.m_position += (s*move.x + m_data.m_up*move.y);// * distance / 100.f;
-			m_data.m_target += (s*move.x + m_data.m_up*move.y);// * distance / 100.f;
+			m_data.m_position += (s*move.x + m_data.m_up*move.y) * distance * deltaTime;
+			m_data.m_target += (s*move.x + m_data.m_up*move.y) * distance * deltaTime;
 		}
 		else if (input.m_mouse.isHold(cMouse::BUTTON_RIGHT))
 		{

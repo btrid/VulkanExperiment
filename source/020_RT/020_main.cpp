@@ -24,6 +24,7 @@
 #include <applib/App.h>
 #include <applib/AppPipeline.h>
 #include <applib/sCameraManager.h>
+#include <applib/GraphicsResource.h>
 
 #include <btrlib/Context.h>
 
@@ -35,8 +36,11 @@
 #define TINYGLTF_IMPLEMENTATION
 #define TINYGLTF_NOEXCEPTION
 #define JSON_NOEXCEPTION
-#define TINYGLTF_NO_STB_IMAGE
-#define TINYGLTF_NO_STB_IMAGE_WRITE
+//#define TINYGLTF_NO_STB_IMAGE
+//#define TINYGLTF_NO_STB_IMAGE_WRITE
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#define STBI_MSC_SECURE_CRT
 #include <tinygltf/tiny_gltf.h>
 
 namespace GLtoVK
@@ -109,24 +113,66 @@ namespace GLtoVK
 		assert(false);
 		return vk::Format::eUndefined;
 	}
-	
-#define TINYGLTF_TYPE_VEC2 (2)
-#define TINYGLTF_TYPE_VEC3 (3)
-#define TINYGLTF_TYPE_VEC4 (4)
 
+	vk::Format toFormat(int gltf_type, int component_num, int bits)
+	{
+		switch (component_num)
+		{
+		case 1:
+			switch (bits)
+			{
+			case 8: return vk::Format::eR8Unorm;
+			case 16: return vk::Format::eR16Unorm;
+			case 32: return vk::Format::eR32Sfloat;
+			}
+		case 2:
+			switch (bits)
+			{
+			case 8: return vk::Format::eR8G8Unorm;
+			case 16: return vk::Format::eR16G16Unorm;
+			case 32: return vk::Format::eR32G32Sfloat;
+			}
+		case 3:
+			switch (bits)
+			{
+			case 8: return vk::Format::eR8G8B8Unorm;
+			case 16: return vk::Format::eR16G16B16Unorm;
+			case 32: return vk::Format::eR32G32B32Sfloat;
+			}
+		case 4:
+			switch (bits)
+			{
+			case 8: return vk::Format::eR8G8B8A8Unorm;
+			case 16: return vk::Format::eR16G16B16A16Unorm;
+			case 32: return vk::Format::eR32G32B32A32Sfloat;
+			}
+		}
+		assert(false);
+		return vk::Format::eUndefined;
+	}
 }
 
 struct Context
 {
 	enum DSL
 	{
+		DSL_RenderCongig,
 		DSL_Model,
+		DSL_Model_Material,
 		DSL_Num,
+	};
+
+	struct RenderCongig
+	{
+		float exposure;
+		float gamma;
 	};
 
 	std::shared_ptr<btr::Context> m_ctx;
 
 	vk::UniqueDescriptorSetLayout m_DSL[DSL_Num];
+
+	vk::UniqueDescriptorSet m_DS_RenderConfig;
 
 	Context(std::shared_ptr<btr::Context>& ctx)
 	{
@@ -135,6 +181,17 @@ struct Context
 
 		// descriptor set layout
 		{
+			{
+				auto stage = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment;
+				vk::DescriptorSetLayoutBinding binding[] =
+				{
+					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eUniformBuffer, 1, stage),
+				};
+				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
+				desc_layout_info.setBindingCount(array_length(binding));
+				desc_layout_info.setPBindings(binding);
+				m_DSL[DSL_RenderCongig] = ctx->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
+			}
 			{
 				auto stage = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex;
 				vk::DescriptorSetLayoutBinding binding[] =
@@ -151,8 +208,49 @@ struct Context
 				m_DSL[DSL_Model] = ctx->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
 			}
 
+			{
+				auto stage = vk::ShaderStageFlagBits::eFragment;
+				vk::DescriptorSetLayoutBinding binding[] =
+				{
+					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eUniformBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(10, vk::DescriptorType::eCombinedImageSampler, 1, stage),
+					vk::DescriptorSetLayoutBinding(11, vk::DescriptorType::eCombinedImageSampler, 1, stage),
+					vk::DescriptorSetLayoutBinding(12, vk::DescriptorType::eCombinedImageSampler, 1, stage),
+					vk::DescriptorSetLayoutBinding(13, vk::DescriptorType::eCombinedImageSampler, 1, stage),
+					vk::DescriptorSetLayoutBinding(14, vk::DescriptorType::eCombinedImageSampler, 1, stage),
+				};
+				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
+				desc_layout_info.setBindingCount(array_length(binding));
+				desc_layout_info.setPBindings(binding);
+				m_DSL[DSL_Model_Material] = ctx->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
+			}
 		}
+		{
+			vk::DescriptorSetLayout layouts[] =
+			{
+				m_DSL[Context::DSL_RenderCongig].get(),
+			};
+			vk::DescriptorSetAllocateInfo desc_info;
+			desc_info.setDescriptorPool(ctx->m_descriptor_pool.get());
+			desc_info.setDescriptorSetCount(array_length(layouts));
+			desc_info.setPSetLayouts(layouts);
+			m_DS_RenderConfig = std::move(ctx->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
+			{
+// 				vk::DescriptorBufferInfo uniforms[] =
+// 				{
+// 				};
+// 				vk::WriteDescriptorSet write[] =
+// 				{
+// 					vk::WriteDescriptorSet()
+// 					.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+// 					.setDescriptorCount(array_length(uniforms))
+// 					.setPBufferInfo(uniforms)
+// 					.setDstBinding(0)
+// 				};
+// 				ctx.m_ctx->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
 
+			}
+		}
 	}
 };
 struct Model
@@ -165,19 +263,38 @@ struct Model
 		uint m_primitive_num;
 		uvec3 m_voxel_reso;
 	};
-//	btr::BufferMemory b_vertex;
-//	btr::BufferMemory b_normal;
-//	btr::BufferMemory b_index;
-//	btr::BufferMemoryEx<Info> u_info;
-//	btr::BufferMemoryEx<vk::DrawIndexedIndirectCommand> b_draw_cmd;
 
 	struct Mesh
 	{
 		std::vector<vk::VertexInputBindingDescription> vib_disc;
 		std::vector<vk::VertexInputAttributeDescription> vid_disc;
 	};
+
+	struct Image
+	{
+		std::string m_filename;
+		vk::UniqueImage m_image;
+		vk::UniqueImageView m_image_view;
+		vk::UniqueDeviceMemory m_memory;
+		vk::UniqueSampler m_sampler;
+	};
+
+	struct Material
+	{
+		vec4 m_basecolor_factor;
+		float m_metallic_factor;
+		float m_roughness_factor;
+		float _p1;
+		float _p2;
+		vec3  m_emissive_factor;
+		float _p11;
+	};
 	std::vector<Mesh> m_meshes;
 	std::vector<btr::BufferMemory> b_vertex;
+	std::vector<ResourceTexture> t_image;
+	std::vector<btr::BufferMemoryEx<Material>> b_material;
+	std::vector<vk::UniqueDescriptorSet> m_DS_material;
+
 	tinygltf::Model gltf_model;
 
 	vk::UniqueDescriptorSet m_DS_Model;
@@ -189,6 +306,7 @@ struct Model
 		tinygltf::Model gltf_model;
 		{
 			tinygltf::TinyGLTF loader;
+//			loader.SetImageLoader()
 			std::string err;
 			std::string warn;
 
@@ -202,23 +320,151 @@ struct Model
 		}
 
 		auto model = std::make_shared<Model>();
-		std::vector<vk::DescriptorBufferInfo> info(gltf_model.buffers.size());
-		uint buffersize_total = 0;
-		model->b_vertex.resize(gltf_model.buffers.size());
-		std::vector<btr::BufferMemory> staging(gltf_model.buffers.size());
-		for (int i = 0; i < gltf_model.buffers.size(); i++)
+
+		// buffer
 		{
-			model->b_vertex[i] = ctx.m_ctx->m_vertex_memory.allocateMemory(gltf_model.buffers[i].data.size());
-			staging[i] = ctx.m_ctx->m_staging_memory.allocateMemory(gltf_model.buffers[i].data.size());
-			memcpy_s(staging[i].getMappedPtr(), gltf_model.buffers[i].data.size(), gltf_model.buffers[i].data.data(), gltf_model.buffers[i].data.size());
+			std::vector<vk::DescriptorBufferInfo> info(gltf_model.buffers.size());
+			uint buffersize_total = 0;
+			model->b_vertex.resize(gltf_model.buffers.size());
+			std::vector<btr::BufferMemory> staging(gltf_model.buffers.size());
+			for (int i = 0; i < gltf_model.buffers.size(); i++)
+			{
+				model->b_vertex[i] = ctx.m_ctx->m_vertex_memory.allocateMemory(gltf_model.buffers[i].data.size());
+				staging[i] = ctx.m_ctx->m_staging_memory.allocateMemory(gltf_model.buffers[i].data.size());
+				memcpy_s(staging[i].getMappedPtr(), gltf_model.buffers[i].data.size(), gltf_model.buffers[i].data.data(), gltf_model.buffers[i].data.size());
 
-			vk::BufferCopy copy = vk::BufferCopy().setSize(gltf_model.buffers[i].data.size()).setSrcOffset(staging[i].getInfo().offset).setDstOffset(model->b_vertex[i].getInfo().offset);
-			cmd.copyBuffer(staging[i].getInfo().buffer, model->b_vertex[i].getInfo().buffer, copy);
+				vk::BufferCopy copy = vk::BufferCopy().setSize(gltf_model.buffers[i].data.size()).setSrcOffset(staging[i].getInfo().offset).setDstOffset(model->b_vertex[i].getInfo().offset);
+				cmd.copyBuffer(staging[i].getInfo().buffer, model->b_vertex[i].getInfo().buffer, copy);
 
-			info[i].offset = info[std::max(i-1, 0)].offset+info[std::max(i-1, 0)].range;
-			buffersize_total += gltf_model.buffers[i].data.size();
+				info[i].offset = info[std::max(i - 1, 0)].offset + info[std::max(i - 1, 0)].range;
+				buffersize_total += gltf_model.buffers[i].data.size();
+			}
 		}
 
+		// image 
+		{
+			model->t_image.resize(gltf_model.images.size());
+			for (size_t i = 0; i < gltf_model.images.size(); i++)
+			{
+				tinygltf::Texture& tex = gltf_model.textures[i];
+				tinygltf::Image& image = gltf_model.images[i];
+//				image.pixel_type
+				vk::ImageCreateInfo image_info;
+				image_info.imageType = vk::ImageType::e2D;
+				image_info.format = GLtoVK::toFormat(image.pixel_type, image.component, image.bits);
+				image_info.mipLevels = 1;
+				image_info.arrayLayers = 1;
+				image_info.samples = vk::SampleCountFlagBits::e1;
+				image_info.tiling = vk::ImageTiling::eLinear;
+				image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
+				image_info.sharingMode = vk::SharingMode::eExclusive;
+				image_info.initialLayout = vk::ImageLayout::eUndefined;
+				image_info.extent = vk::Extent3D(image.width, image.height, 1);
+
+				model->t_image[i].make(*ctx.m_ctx, cmd, image.uri, image_info, image.image);
+			}
+		}
+		// material
+		{
+			model->b_material.resize(gltf_model.materials.size());
+			model->m_DS_material.resize(gltf_model.materials.size());
+			vk::DescriptorSetLayout layouts[] =
+			{
+				ctx.m_DSL[Context::DSL_Model_Material].get(),
+			};
+			vk::DescriptorSetAllocateInfo desc_info;
+			desc_info.setDescriptorPool(ctx.m_ctx->m_descriptor_pool.get());
+			desc_info.setDescriptorSetCount(array_length(layouts));
+			desc_info.setPSetLayouts(layouts);
+			
+			for (size_t i = 0; i < gltf_model.materials.size(); i++)
+			{
+				auto gltf_material = gltf_model.materials[i];
+
+				auto ms = ctx.m_ctx->m_staging_memory.allocateMemory<Material>(1, true);
+				Material& material = ms.getMappedPtr()[i];
+
+//				gltf_material.alphaCutoff
+
+				material.m_basecolor_factor.x = gltf_material.pbrMetallicRoughness.baseColorFactor[0];
+				material.m_basecolor_factor.y = gltf_material.pbrMetallicRoughness.baseColorFactor[1];
+				material.m_basecolor_factor.z = gltf_material.pbrMetallicRoughness.baseColorFactor[2];
+				material.m_basecolor_factor.w = gltf_material.pbrMetallicRoughness.baseColorFactor[3];
+				material.m_metallic_factor = gltf_material.pbrMetallicRoughness.metallicFactor;
+				material.m_roughness_factor = gltf_material.pbrMetallicRoughness.roughnessFactor;
+				material.m_emissive_factor.x = gltf_material.emissiveFactor[0];
+				material.m_emissive_factor.y = gltf_material.emissiveFactor[1];
+				material.m_emissive_factor.z = gltf_material.emissiveFactor[2];
+				model->b_material[i] = ctx.m_ctx->m_uniform_memory.allocateMemory<Material>(1);
+				vk::BufferCopy copy = vk::BufferCopy().setSrcOffset(ms.getInfo().offset).setSize(ms.getInfo().range).setDstOffset(model->b_material[i].getInfo().offset);
+				cmd.copyBuffer(ms.getInfo().buffer, model->b_material[i].getInfo().buffer, copy);
+
+				// descriptor set
+				{
+	
+					model->m_DS_material[i] = std::move(ctx.m_ctx->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
+
+					vk::DescriptorBufferInfo uniforms[] =
+					{
+						model->b_material[i].getInfo(),
+					};
+					std::array<vk::DescriptorImageInfo, 5> samplers;
+					auto& t = sGraphicsResource::Order().getWhiteTexture();
+					samplers.fill(vk::DescriptorImageInfo(t.m_sampler.get(), t.m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal));
+
+					if (gltf_material.pbrMetallicRoughness.baseColorTexture.index >= 0)
+					{
+						samplers[0].sampler = model->t_image[gltf_material.pbrMetallicRoughness.baseColorTexture.index].getSampler();
+						samplers[0].imageView = model->t_image[gltf_material.pbrMetallicRoughness.baseColorTexture.index].getImageView();
+						samplers[0].imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+					}
+					if (gltf_material.pbrMetallicRoughness.metallicRoughnessTexture.index >= 0)
+					{
+						samplers[1].sampler = model->t_image[gltf_material.pbrMetallicRoughness.metallicRoughnessTexture.index].getSampler();
+						samplers[1].imageView = model->t_image[gltf_material.pbrMetallicRoughness.metallicRoughnessTexture.index].getImageView();
+						samplers[1].imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+					}
+					if (gltf_material.normalTexture.index >= 0)
+					{
+						samplers[2].sampler = model->t_image[gltf_material.normalTexture.index].getSampler();
+						samplers[2].imageView = model->t_image[gltf_material.normalTexture.index].getImageView();
+						samplers[2].imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+					}
+
+					if (gltf_material.occlusionTexture.index >= 0)
+					{
+						samplers[3].sampler = model->t_image[gltf_material.occlusionTexture.index].getSampler();
+						samplers[3].imageView = model->t_image[gltf_material.occlusionTexture.index].getImageView();
+						samplers[3].imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+					}
+					if (gltf_material.emissiveTexture.index >= 0)
+					{
+						samplers[4].sampler = model->t_image[gltf_material.emissiveTexture.index].getSampler();
+						samplers[4].imageView = model->t_image[gltf_material.emissiveTexture.index].getImageView();
+						samplers[4].imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+					}
+
+					vk::WriteDescriptorSet write[] =
+					{
+						vk::WriteDescriptorSet()
+						.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+						.setDescriptorCount(array_length(uniforms))
+						.setPBufferInfo(uniforms)
+						.setDstBinding(0)
+						.setDstSet(model->m_DS_material[i].get()),
+						vk::WriteDescriptorSet()
+						.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+						.setDescriptorCount(array_length(samplers))
+						.setPImageInfo(samplers.data())
+						.setDstBinding(10)
+						.setDstSet(model->m_DS_material[i].get()),
+					};
+					ctx.m_ctx->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
+				}
+			}
+
+
+		}
 		model->m_meshes.resize(gltf_model.meshes.size());
 		for (size_t mesh_index = 0; mesh_index < gltf_model.meshes.size(); ++mesh_index)
 		{
@@ -255,210 +501,9 @@ struct Model
 					}
 				}
 
-				if (gltf_model.textures.size() > 0) 
-				{
-// 					// fixme: Use material's baseColor
-// 					tinygltf::Texture& tex = model.textures[0];
-// 
-// 					if (tex.source > -1) {
-// 
-// 						GLuint texid;
-// 						glGenTextures(1, &texid);
-// 
-// 						tinygltf::Image& image = model.images[tex.source];
-// 
-// 						glBindTexture(GL_TEXTURE_2D, texid);
-// 						glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-// 						glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-// 						glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-// 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-// 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-// 
-// 						GLenum format = GL_RGBA;
-// 
-// 						if (image.component == 1) {
-// 							format = GL_RED;
-// 						}
-// 						else if (image.component == 2) {
-// 							format = GL_RG;
-// 						}
-// 						else if (image.component == 3) {
-// 							format = GL_RGB;
-// 						}
-// 						else {
-// 							// ???
-// 						}
-// 
-// 						GLenum type = GL_UNSIGNED_BYTE;
-// 						if (image.bits == 8) {
-// 							// ok
-// 						}
-// 						else if (image.bits == 16) {
-// 							type = GL_UNSIGNED_SHORT;
-// 						}
-// 						else {
-// 							// ???
-// 						}
-// 
-// 						glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width, image.height, 0,
-// 							format, type, &image.image.at(0));
-// 					}
-				}
 			}
-
-//			return vbos;
 		}
 
-// 		// bind models
-// 		void bindModelNodes(std::map<int, GLuint> vbos, tinygltf::Model & model, tinygltf::Node & node) 
-//		{
-// 			if ((node.mesh >= 0) && (node.mesh < model.meshes.size())) {
-// 				bindMesh(vbos, model, model.meshes[node.mesh]);
-// 			}
-// 
-// 			for (size_t i = 0; i < node.children.size(); i++) {
-// 				assert((node.children[i] >= 0) && (node.children[i] < model.nodes.size()));
-// 				bindModelNodes(vbos, model, model.nodes[node.children[i]]);
-// 			}
-// 		}
-// 		GLuint bindModel(tinygltf::Model & model) 
-// 		{
-// 			std::map<int, GLuint> vbos;
-// 			GLuint vao;
-// 			glGenVertexArrays(1, &vao);
-// 			glBindVertexArray(vao);
-// 
-// 			const tinygltf::Scene& scene = model.scenes[model.defaultScene];
-// 			for (size_t i = 0; i < scene.nodes.size(); ++i) {
-// 				assert((scene.nodes[i] >= 0) && (scene.nodes[i] < model.nodes.size()));
-// 				bindModelNodes(vbos, model, model.nodes[scene.nodes[i]]);
-// 			}
-// 
-// 			glBindVertexArray(0);
-// 			// cleanup vbos
-// 			for (size_t i = 0; i < vbos.size(); ++i) {
-// 				glDeleteBuffers(1, &vbos[i]);
-// 			}
-// 
-// 			return vao;
-// 		}
-
-// 		void drawMesh(tinygltf::Model & model, tinygltf::Mesh & mesh) {
-// 			for (size_t i = 0; i < mesh.primitives.size(); ++i) {
-// 				tinygltf::Primitive primitive = mesh.primitives[i];
-// 				tinygltf::Accessor indexAccessor = model.accessors[primitive.indices];
-// 
-// 				glDrawElements(primitive.mode, indexAccessor.count,
-// 					indexAccessor.componentType,
-// 					BUFFER_OFFSET(indexAccessor.byteOffset));
-// 			}
-// 		}
-// 
-// 		// recursively draw node and children nodes of model
-// 		void drawModelNodes(tinygltf::Model & model, tinygltf::Node & node) {
-// 			if ((node.mesh >= 0) && (node.mesh < model.meshes.size())) {
-// 				drawMesh(model, model.meshes[node.mesh]);
-// 			}
-// 			for (size_t i = 0; i < node.children.size(); i++) {
-// 				drawModelNodes(model, model.nodes[node.children[i]]);
-// 			}
-// 		}
-// 		void drawModel(GLuint vao, tinygltf::Model & model) {
-// 			glBindVertexArray(vao);
-// 
-// 			const tinygltf::Scene& scene = model.scenes[model.defaultScene];
-// 			for (size_t i = 0; i < scene.nodes.size(); ++i) {
-// 				drawModelNodes(model, model.nodes[scene.nodes[i]]);
-// 			}
-// 
-// 			glBindVertexArray(0);
-// 		}
-// 
-/*
-		info.m_vertex_num = numVertex;
-		auto cmd = ctx.m_ctx->m_cmd_pool->allocCmdTempolary(0);
-		std::shared_ptr<Model> model = std::make_shared<Model>();
-		{
-			model->b_vertex = ctx.m_ctx->m_vertex_memory.allocateMemory(numVertex * sizeof(aiVector3D));
-			model->b_normal = ctx.m_ctx->m_vertex_memory.allocateMemory(numVertex * sizeof(aiVector3D));
-			model->b_index = ctx.m_ctx->m_vertex_memory.allocateMemory(numIndex * sizeof(uint32_t));
-
-			std::array<vk::BufferCopy, 3> copy;
-			copy[0].srcOffset = vertex.getInfo().offset;
-			copy[0].dstOffset = model->b_vertex.getInfo().offset;
-			copy[0].size = vertex.getInfo().range;
-			copy[1].srcOffset = normal.getInfo().offset;
-			copy[1].dstOffset = model->b_normal.getInfo().offset;
-			copy[1].size = normal.getInfo().range;
-			copy[2].srcOffset = index.getInfo().offset;
-			copy[2].dstOffset = model->b_index.getInfo().offset;
-			copy[2].size = index.getInfo().range;
-			cmd.copyBuffer(vertex.getInfo().buffer, model->b_vertex.getInfo().buffer, copy);
-		}
-
-		{
-			info.m_primitive_num = numIndex / 3;
-			model->m_info = info;
-			model->u_info = ctx.m_ctx->m_uniform_memory.allocateMemory<Info>(1);
-
-			cmd.updateBuffer<Info>(model->u_info.getInfo().buffer, model->u_info.getInfo().offset, info);
-
-			model->b_draw_cmd = ctx.m_ctx->m_storage_memory.allocateMemory<vk::DrawIndexedIndirectCommand>(1);
-			cmd.updateBuffer<vk::DrawIndexedIndirectCommand>(model->b_draw_cmd.getInfo().buffer, model->b_draw_cmd.getInfo().offset, vk::DrawIndexedIndirectCommand(numIndex, 1, 0, 0, 0));
-		}
-
-
-		vk::BufferMemoryBarrier barrier[] = {
-			model->b_vertex.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
-			model->b_normal.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
-			model->b_index.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
-			model->u_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR | vk::PipelineStageFlagBits::eRayTracingShaderKHR, {}, {}, { array_size(barrier), barrier }, {});
-
-
-		{
-			vk::DescriptorSetLayout layouts[] =
-			{
-				ctx.m_DSL[Context::DSL_Model].get(),
-			};
-			vk::DescriptorSetAllocateInfo desc_info;
-			desc_info.setDescriptorPool(ctx.m_ctx->m_descriptor_pool.get());
-			desc_info.setDescriptorSetCount(array_length(layouts));
-			desc_info.setPSetLayouts(layouts);
-			model->m_DS_Model = std::move(ctx.m_ctx->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
-
-			vk::DescriptorBufferInfo uniforms[] =
-			{
-				model->u_info.getInfo(),
-			};
-			vk::DescriptorBufferInfo model_storages[] =
-			{
-				model->b_vertex.getInfo(),
-				model->b_normal.getInfo(),
-				model->b_index.getInfo(),
-				model->b_draw_cmd.getInfo(),
-			};
-
-			vk::WriteDescriptorSet write[] =
-			{
-				vk::WriteDescriptorSet()
-				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-				.setDescriptorCount(array_length(uniforms))
-				.setPBufferInfo(uniforms)
-				.setDstBinding(0)
-				.setDstSet(model->m_DS_Model.get()),
-				vk::WriteDescriptorSet()
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(array_length(model_storages))
-				.setPBufferInfo(model_storages)
-				.setDstBinding(1)
-				.setDstSet(model->m_DS_Model.get()),
-			};
-			ctx.m_ctx->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
-
-		}
-*/
 		model->gltf_model = std::move(gltf_model);
 		return model;
 	}
@@ -571,6 +616,7 @@ struct ModelRenderer
 				{
 //					m_DSL[DSL_Renderer].get(),
 					sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
+					ctx.m_DSL[Context::DSL_Model_Material].get(),
 //					RenderTarget::s_descriptor_set_layout.get(),
 				};
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
@@ -754,10 +800,14 @@ struct ModelRenderer
 			vk::VertexInputBindingDescription vi_binding[] =
 			{
 				vk::VertexInputBindingDescription().setBinding(0).setStride(12).setInputRate(vk::VertexInputRate::eVertex),
+				vk::VertexInputBindingDescription().setBinding(1).setStride(12).setInputRate(vk::VertexInputRate::eVertex),
+				vk::VertexInputBindingDescription().setBinding(2).setStride(8).setInputRate(vk::VertexInputRate::eVertex),
 			};
 			vk::VertexInputAttributeDescription vi_attrib[] =
 			{
 				vk::VertexInputAttributeDescription().setLocation(0).setBinding(0).setFormat(vk::Format::eR32G32B32Sfloat).setOffset(0),
+				vk::VertexInputAttributeDescription().setLocation(1).setBinding(1).setFormat(vk::Format::eR32G32B32Sfloat).setOffset(0),
+				vk::VertexInputAttributeDescription().setLocation(2).setBinding(2).setFormat(vk::Format::eR32G32Sfloat).setOffset(0),
 			};
 			vertex_input_info.vertexBindingDescriptionCount = array_size(vi_binding);
 			vertex_input_info.pVertexBindingDescriptions = vi_binding;
@@ -814,6 +864,7 @@ struct ModelRenderer
 		for (size_t mesh_index = 0; mesh_index < gltf_model.meshes.size(); ++mesh_index)
 		{
 			auto& gltf_mesh = gltf_model.meshes[mesh_index];
+
 			for (size_t i = 0; i < gltf_mesh.primitives.size(); ++i)
 			{
 				tinygltf::Primitive primitive = gltf_mesh.primitives[i];
@@ -841,6 +892,8 @@ struct ModelRenderer
 						std::cout << "vaa missing: " << attrib.first << std::endl;
 					}
 				}
+
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 1, { model.m_DS_material[primitive.material].get() }, {});
 				{
 					tinygltf::Accessor accessor = gltf_model.accessors[primitive.indices];
 					tinygltf::BufferView bufferview = gltf_model.bufferViews[accessor.bufferView];
@@ -853,9 +906,10 @@ struct ModelRenderer
 					case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: indextype = vk::IndexType::eUint8EXT; break;
 					default: assert(false); break;
 					}
-
 					cmd.bindIndexBuffer(model.b_vertex[bufferview.buffer].getInfo().buffer, model.b_vertex[bufferview.buffer].getInfo().offset + bufferview.byteOffset, indextype);
+
 					cmd.drawIndexed(accessor.count, 1, 0, 0, 0);
+
 				}
 			}
 		}
@@ -872,7 +926,7 @@ int main()
 {
 
 	auto camera = cCamera::sCamera::Order().create();
-	camera->getData().m_position = vec3(-100.f, 0.f, -100.f);
+	camera->getData().m_position = vec3(5.f, 5.f, 0.f);
 	camera->getData().m_target = vec3(0.f, 0.1f, 0.f);
 	camera->getData().m_up = vec3(0.f, -1.f, 0.f);
 	camera->getData().m_width = 1024;

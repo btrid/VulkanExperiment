@@ -9,8 +9,8 @@
 #include "btrlib/Camera.glsl"
 
 layout(location = 0)in vec3 inPosition;
-///layout(location = 1)in vec3 inNormal;
-//layout(location = 2)in vec3 inTexcoord;
+layout(location = 1)in vec3 inNormal;
+layout(location = 2)in vec2 inTexcoord_0;
 //layout(location = 3)in uvec4 inBoneID;
 //layout(location = 4)in vec4 inWeight;
 
@@ -18,15 +18,15 @@ layout(location = 0)in vec3 inPosition;
 layout(location = 0) out gl_PerVertex{
 	vec4 gl_Position;
 };
-/*
+
 layout(location = 1) out Vertex
 {
-	vec3 Position;
-	vec3 Normal;
-	vec3 Texcoord;
-	flat int DrawID;
+//	vec3 Position;
+//	vec3 Normal;
+	vec2 Texcoord_0;
+//	flat int DrawID;
 }VSOut;
-*/
+
 /*
 mat4 skinning()
 {
@@ -50,6 +50,6 @@ void main()
 
 //	VSOut.Position = pos.xyz;
 //	VSOut.Normal =  inNormal.xyz;
-//	VSOut.Texcoord = inTexcoord.xyz;
+	VSOut.Texcoord_0 = inTexcoord_0;
 //	VSOut.DrawID = gl_DrawID;
 }

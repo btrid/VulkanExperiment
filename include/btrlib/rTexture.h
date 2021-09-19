@@ -51,6 +51,7 @@ struct ResourceTexture
 	std::shared_ptr<Resource> m_resource;
 
 	void load(const std::shared_ptr<btr::Context>& loader, vk::CommandBuffer cmd, const std::string& filename);
+	void make(btr::Context& ctx, vk::CommandBuffer cmd, const std::string& filename, const vk::ImageCreateInfo& info, const std::vector<byte>& data);
 	vk::ImageView getImageView()const { return m_resource ? m_resource->m_image_view.get() : vk::ImageView(); }
 	vk::Sampler getSampler()const { return m_resource ? m_resource->m_sampler.get() : vk::Sampler(); }
 
