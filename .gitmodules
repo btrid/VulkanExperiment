@@ -10,3 +10,9 @@
 [submodule "external/tinygltf"]
 	path = external/tinygltf
 	url = https://github.com/syoyo/tinygltf.git
+[submodule "external/gli"]
+	path = external/gli
+	url = https://github.com/g-truc/gli.git
+[submodule "resource/shader/020_RT/tinygltf"]
+	path = resource/shader/020_RT/tinygltf
+	url = https://github.com/syoyo/tinygltf.git
