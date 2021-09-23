@@ -19,6 +19,7 @@
 
 #include <btrlib/DefineMath.h>
 
+#include <cstdlib>
 #include <string>
 #include <cstring>
 #include <cstdlib>
@@ -33,6 +34,7 @@
 #include <chrono>
 #include <memory>
 #include <filesystem>
+
 
 namespace btr {
 	std::string getResourceAppPath();

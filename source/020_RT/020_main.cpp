@@ -1,17 +1,7 @@
 ﻿#include <btrlib/Define.h>
-#include <cstdlib>
-#include <string>
-#include <vector>
-#include <utility>
-#include <array>
-#include <unordered_set>
-#include <vector>
-#include <functional>
-#include <thread>
-#include <future>
-#include <chrono>
-#include <memory>
-#include <filesystem>
+
+#include <btrlib/Context.h>
+
 #include <btrlib/cWindow.h>
 #include <btrlib/cInput.h>
 #include <btrlib/cCamera.h>
@@ -26,7 +16,10 @@
 #include <applib/sCameraManager.h>
 #include <applib/GraphicsResource.h>
 
-#include <btrlib/Context.h>
+#include <gli/gli/gli.hpp>
+
+#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+#include <imgui/imgui.h>
 
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
@@ -150,29 +143,481 @@ namespace GLtoVK
 		assert(false);
 		return vk::Format::eUndefined;
 	}
+
+	vk::Format toFormat(gli::format f)
+	{
+		// 間違ってる可能性はある
+		return (vk::Format)f;
+		switch (f)
+		{
+		case gli::FORMAT_UNDEFINED:
+			return vk::Format::eUndefined;
+		case gli::FORMAT_RG4_UNORM_PACK8:
+			return vk::Format::eR4G4UnormPack8;
+		case gli::FORMAT_RGBA4_UNORM_PACK16:
+			return vk::Format::eR4G4B4A4UnormPack16;
+		case gli::FORMAT_BGRA4_UNORM_PACK16:
+			return vk::Format::eB4G4R4A4UnormPack16;
+		case gli::FORMAT_R5G6B5_UNORM_PACK16:
+			return vk::Format::eR5G6B5UnormPack16;
+		case gli::FORMAT_B5G6R5_UNORM_PACK16:
+			return vk::Format::eB5G6R5UnormPack16;
+		case gli::FORMAT_RGB5A1_UNORM_PACK16:
+			return vk::Format::eR5G5B5A1UnormPack16;
+		case gli::FORMAT_BGR5A1_UNORM_PACK16:
+			return vk::Format::eB5G5R5A1UnormPack16;
+		case gli::FORMAT_A1RGB5_UNORM_PACK16:
+			return vk::Format::eA1R5G5B5UnormPack16;
+		case gli::FORMAT_R8_UNORM_PACK8:
+			return vk::Format::eR8Unorm;
+		case gli::FORMAT_R8_SNORM_PACK8:
+			return vk::Format::eR8Snorm;
+		case gli::FORMAT_R8_USCALED_PACK8:
+			return vk::Format::eR8Uscaled;
+		case gli::FORMAT_R8_SSCALED_PACK8:
+			return vk::Format::eR8Sscaled;
+		case gli::FORMAT_R8_UINT_PACK8:
+			return vk::Format::eR8Uint;
+		case gli::FORMAT_R8_SINT_PACK8:
+			return vk::Format::eR8Sint;
+		case gli::FORMAT_R8_SRGB_PACK8:
+			return vk::Format::eR8Srgb;
+		case gli::FORMAT_RG8_UNORM_PACK8:
+			return vk::Format::eR8G8Unorm;
+		case gli::FORMAT_RG8_SNORM_PACK8:
+			return vk::Format::eR8G8Snorm;
+		case gli::FORMAT_RG8_USCALED_PACK8:
+			return vk::Format::eR8G8Uscaled;
+		case gli::FORMAT_RG8_SSCALED_PACK8:
+			return vk::Format::eR8G8Sscaled;
+		case gli::FORMAT_RG8_UINT_PACK8:
+			return vk::Format::eR8G8Uint;
+		case gli::FORMAT_RG8_SINT_PACK8:
+			return vk::Format::eR8G8Sint;
+		case gli::FORMAT_RG8_SRGB_PACK8:
+			return vk::Format::eR8G8Srgb;
+		case gli::FORMAT_RGB8_UNORM_PACK8:
+			return vk::Format::eR8G8B8Unorm;
+		case gli::FORMAT_RGB8_SNORM_PACK8:
+			return vk::Format::eR8G8B8Snorm;
+		case gli::FORMAT_RGB8_USCALED_PACK8:
+			return vk::Format::eR8G8B8Uscaled;
+		case gli::FORMAT_RGB8_SSCALED_PACK8:
+			return vk::Format::eR8G8B8Sscaled;
+		case gli::FORMAT_RGB8_UINT_PACK8:
+			return vk::Format::eR8G8B8Uint;
+		case gli::FORMAT_RGB8_SINT_PACK8:
+			return vk::Format::eR8G8B8Sint;
+		case gli::FORMAT_RGB8_SRGB_PACK8:
+			return vk::Format::eR8G8B8Srgb;
+		case gli::FORMAT_BGR8_UNORM_PACK8:
+			return vk::Format::eB8G8R8Unorm;
+		case gli::FORMAT_BGR8_SNORM_PACK8:
+			return vk::Format::eB8G8R8Snorm;
+		case gli::FORMAT_BGR8_USCALED_PACK8:
+			return vk::Format::eB8G8R8Uscaled;
+		case gli::FORMAT_BGR8_SSCALED_PACK8:
+			return vk::Format::eB8G8R8Sscaled;
+		case gli::FORMAT_BGR8_UINT_PACK8:
+			return vk::Format::eB8G8R8Uint;
+		case gli::FORMAT_BGR8_SINT_PACK8:
+			return vk::Format::eB8G8R8Sint;
+		case gli::FORMAT_BGR8_SRGB_PACK8:
+			return vk::Format::eB8G8R8Srgb;
+		case gli::FORMAT_RGBA8_UNORM_PACK8:
+			return vk::Format::eB8G8R8Unorm;
+		case gli::FORMAT_RGBA8_SNORM_PACK8:
+			return vk::Format::eR8G8B8Snorm;
+		case gli::FORMAT_RGBA8_USCALED_PACK8:
+			return vk::Format::eR8G8B8A8Uscaled;
+		case gli::FORMAT_RGBA8_SSCALED_PACK8:
+			break;
+		case gli::FORMAT_RGBA8_UINT_PACK8:
+			break;
+		case gli::FORMAT_RGBA8_SINT_PACK8:
+			break;
+		case gli::FORMAT_RGBA8_SRGB_PACK8:
+			break;
+		case gli::FORMAT_BGRA8_UNORM_PACK8:
+			break;
+		case gli::FORMAT_BGRA8_SNORM_PACK8:
+			break;
+		case gli::FORMAT_BGRA8_USCALED_PACK8:
+			break;
+		case gli::FORMAT_BGRA8_SSCALED_PACK8:
+			break;
+		case gli::FORMAT_BGRA8_UINT_PACK8:
+			break;
+		case gli::FORMAT_BGRA8_SINT_PACK8:
+			break;
+		case gli::FORMAT_BGRA8_SRGB_PACK8:
+			break;
+		case gli::FORMAT_RGBA8_UNORM_PACK32:
+			break;
+		case gli::FORMAT_RGBA8_SNORM_PACK32:
+			break;
+		case gli::FORMAT_RGBA8_USCALED_PACK32:
+			break;
+		case gli::FORMAT_RGBA8_SSCALED_PACK32:
+			break;
+		case gli::FORMAT_RGBA8_UINT_PACK32:
+			break;
+		case gli::FORMAT_RGBA8_SINT_PACK32:
+			break;
+		case gli::FORMAT_RGBA8_SRGB_PACK32:
+			break;
+		case gli::FORMAT_RGB10A2_UNORM_PACK32:
+			break;
+		case gli::FORMAT_RGB10A2_SNORM_PACK32:
+			break;
+		case gli::FORMAT_RGB10A2_USCALED_PACK32:
+			break;
+		case gli::FORMAT_RGB10A2_SSCALED_PACK32:
+			break;
+		case gli::FORMAT_RGB10A2_UINT_PACK32:
+			break;
+		case gli::FORMAT_RGB10A2_SINT_PACK32:
+			break;
+		case gli::FORMAT_BGR10A2_UNORM_PACK32:
+			break;
+		case gli::FORMAT_BGR10A2_SNORM_PACK32:
+			break;
+		case gli::FORMAT_BGR10A2_USCALED_PACK32:
+			break;
+		case gli::FORMAT_BGR10A2_SSCALED_PACK32:
+			break;
+		case gli::FORMAT_BGR10A2_UINT_PACK32:
+			break;
+		case gli::FORMAT_BGR10A2_SINT_PACK32:
+			break;
+		case gli::FORMAT_R16_UNORM_PACK16:
+			break;
+		case gli::FORMAT_R16_SNORM_PACK16:
+			break;
+		case gli::FORMAT_R16_USCALED_PACK16:
+			break;
+		case gli::FORMAT_R16_SSCALED_PACK16:
+			break;
+		case gli::FORMAT_R16_UINT_PACK16:
+			break;
+		case gli::FORMAT_R16_SINT_PACK16:
+			break;
+		case gli::FORMAT_R16_SFLOAT_PACK16:
+			break;
+		case gli::FORMAT_RG16_UNORM_PACK16:
+			break;
+		case gli::FORMAT_RG16_SNORM_PACK16:
+			break;
+		case gli::FORMAT_RG16_USCALED_PACK16:
+			break;
+		case gli::FORMAT_RG16_SSCALED_PACK16:
+			break;
+		case gli::FORMAT_RG16_UINT_PACK16:
+			break;
+		case gli::FORMAT_RG16_SINT_PACK16:
+			break;
+		case gli::FORMAT_RG16_SFLOAT_PACK16:
+			break;
+		case gli::FORMAT_RGB16_UNORM_PACK16:
+			break;
+		case gli::FORMAT_RGB16_SNORM_PACK16:
+			break;
+		case gli::FORMAT_RGB16_USCALED_PACK16:
+			break;
+		case gli::FORMAT_RGB16_SSCALED_PACK16:
+			break;
+		case gli::FORMAT_RGB16_UINT_PACK16:
+			break;
+		case gli::FORMAT_RGB16_SINT_PACK16:
+			break;
+		case gli::FORMAT_RGB16_SFLOAT_PACK16:
+			break;
+		case gli::FORMAT_RGBA16_UNORM_PACK16:
+			break;
+		case gli::FORMAT_RGBA16_SNORM_PACK16:
+			break;
+		case gli::FORMAT_RGBA16_USCALED_PACK16:
+			break;
+		case gli::FORMAT_RGBA16_SSCALED_PACK16:
+			break;
+		case gli::FORMAT_RGBA16_UINT_PACK16:
+			break;
+		case gli::FORMAT_RGBA16_SINT_PACK16:
+			break;
+		case gli::FORMAT_RGBA16_SFLOAT_PACK16:
+			break;
+		case gli::FORMAT_R32_UINT_PACK32:
+			break;
+		case gli::FORMAT_R32_SINT_PACK32:
+			break;
+		case gli::FORMAT_R32_SFLOAT_PACK32:
+			break;
+		case gli::FORMAT_RG32_UINT_PACK32:
+			break;
+		case gli::FORMAT_RG32_SINT_PACK32:
+			break;
+		case gli::FORMAT_RG32_SFLOAT_PACK32:
+			break;
+		case gli::FORMAT_RGB32_UINT_PACK32:
+			break;
+		case gli::FORMAT_RGB32_SINT_PACK32:
+			break;
+		case gli::FORMAT_RGB32_SFLOAT_PACK32:
+			break;
+		case gli::FORMAT_RGBA32_UINT_PACK32:
+			break;
+		case gli::FORMAT_RGBA32_SINT_PACK32:
+			break;
+		case gli::FORMAT_RGBA32_SFLOAT_PACK32:
+			break;
+		case gli::FORMAT_R64_UINT_PACK64:
+			break;
+		case gli::FORMAT_R64_SINT_PACK64:
+			break;
+		case gli::FORMAT_R64_SFLOAT_PACK64:
+			break;
+		case gli::FORMAT_RG64_UINT_PACK64:
+			break;
+		case gli::FORMAT_RG64_SINT_PACK64:
+			break;
+		case gli::FORMAT_RG64_SFLOAT_PACK64:
+			break;
+		case gli::FORMAT_RGB64_UINT_PACK64:
+			break;
+		case gli::FORMAT_RGB64_SINT_PACK64:
+			break;
+		case gli::FORMAT_RGB64_SFLOAT_PACK64:
+			break;
+		case gli::FORMAT_RGBA64_UINT_PACK64:
+			break;
+		case gli::FORMAT_RGBA64_SINT_PACK64:
+			break;
+		case gli::FORMAT_RGBA64_SFLOAT_PACK64:
+			break;
+		case gli::FORMAT_RG11B10_UFLOAT_PACK32:
+			break;
+		case gli::FORMAT_RGB9E5_UFLOAT_PACK32:
+			break;
+		case gli::FORMAT_D16_UNORM_PACK16:
+			break;
+		case gli::FORMAT_D24_UNORM_PACK32:
+			break;
+		case gli::FORMAT_D32_SFLOAT_PACK32:
+			break;
+		case gli::FORMAT_S8_UINT_PACK8:
+			break;
+		case gli::FORMAT_D16_UNORM_S8_UINT_PACK32:
+			break;
+		case gli::FORMAT_D24_UNORM_S8_UINT_PACK32:
+			break;
+		case gli::FORMAT_D32_SFLOAT_S8_UINT_PACK64:
+			break;
+		case gli::FORMAT_RGB_DXT1_UNORM_BLOCK8:
+			break;
+		case gli::FORMAT_RGB_DXT1_SRGB_BLOCK8:
+			break;
+		case gli::FORMAT_RGBA_DXT1_UNORM_BLOCK8:
+			break;
+		case gli::FORMAT_RGBA_DXT1_SRGB_BLOCK8:
+			break;
+		case gli::FORMAT_RGBA_DXT3_UNORM_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_DXT3_SRGB_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_DXT5_UNORM_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_DXT5_SRGB_BLOCK16:
+			break;
+		case gli::FORMAT_R_ATI1N_UNORM_BLOCK8:
+			break;
+		case gli::FORMAT_R_ATI1N_SNORM_BLOCK8:
+			break;
+		case gli::FORMAT_RG_ATI2N_UNORM_BLOCK16:
+			break;
+		case gli::FORMAT_RG_ATI2N_SNORM_BLOCK16:
+			break;
+		case gli::FORMAT_RGB_BP_UFLOAT_BLOCK16:
+			break;
+		case gli::FORMAT_RGB_BP_SFLOAT_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_BP_UNORM_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_BP_SRGB_BLOCK16:
+			break;
+		case gli::FORMAT_RGB_ETC2_UNORM_BLOCK8:
+			break;
+		case gli::FORMAT_RGB_ETC2_SRGB_BLOCK8:
+			break;
+		case gli::FORMAT_RGBA_ETC2_UNORM_BLOCK8:
+			break;
+		case gli::FORMAT_RGBA_ETC2_SRGB_BLOCK8:
+			break;
+		case gli::FORMAT_RGBA_ETC2_UNORM_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_ETC2_SRGB_BLOCK16:
+			break;
+		case gli::FORMAT_R_EAC_UNORM_BLOCK8:
+			break;
+		case gli::FORMAT_R_EAC_SNORM_BLOCK8:
+			break;
+		case gli::FORMAT_RG_EAC_UNORM_BLOCK16:
+			break;
+		case gli::FORMAT_RG_EAC_SNORM_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_ASTC_4X4_UNORM_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_ASTC_4X4_SRGB_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_ASTC_5X4_UNORM_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_ASTC_5X4_SRGB_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_ASTC_5X5_UNORM_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_ASTC_5X5_SRGB_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_ASTC_6X5_UNORM_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_ASTC_6X5_SRGB_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_ASTC_6X6_UNORM_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_ASTC_6X6_SRGB_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_ASTC_8X5_UNORM_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_ASTC_8X5_SRGB_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_ASTC_8X6_UNORM_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_ASTC_8X6_SRGB_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_ASTC_8X8_UNORM_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_ASTC_8X8_SRGB_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_ASTC_10X5_UNORM_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_ASTC_10X5_SRGB_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_ASTC_10X6_UNORM_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_ASTC_10X6_SRGB_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_ASTC_10X8_UNORM_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_ASTC_10X8_SRGB_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_ASTC_10X10_UNORM_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_ASTC_10X10_SRGB_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_ASTC_12X10_UNORM_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_ASTC_12X10_SRGB_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_ASTC_12X12_UNORM_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_ASTC_12X12_SRGB_BLOCK16:
+			break;
+		case gli::FORMAT_RGB_PVRTC1_8X8_UNORM_BLOCK32:
+			break;
+		case gli::FORMAT_RGB_PVRTC1_8X8_SRGB_BLOCK32:
+			break;
+		case gli::FORMAT_RGB_PVRTC1_16X8_UNORM_BLOCK32:
+			break;
+		case gli::FORMAT_RGB_PVRTC1_16X8_SRGB_BLOCK32:
+			break;
+		case gli::FORMAT_RGBA_PVRTC1_8X8_UNORM_BLOCK32:
+			break;
+		case gli::FORMAT_RGBA_PVRTC1_8X8_SRGB_BLOCK32:
+			break;
+		case gli::FORMAT_RGBA_PVRTC1_16X8_UNORM_BLOCK32:
+			break;
+		case gli::FORMAT_RGBA_PVRTC1_16X8_SRGB_BLOCK32:
+			break;
+		case gli::FORMAT_RGBA_PVRTC2_4X4_UNORM_BLOCK8:
+			break;
+		case gli::FORMAT_RGBA_PVRTC2_4X4_SRGB_BLOCK8:
+			break;
+		case gli::FORMAT_RGBA_PVRTC2_8X4_UNORM_BLOCK8:
+			break;
+		case gli::FORMAT_RGBA_PVRTC2_8X4_SRGB_BLOCK8:
+			break;
+		case gli::FORMAT_RGB_ETC_UNORM_BLOCK8:
+			break;
+		case gli::FORMAT_RGB_ATC_UNORM_BLOCK8:
+			break;
+		case gli::FORMAT_RGBA_ATCA_UNORM_BLOCK16:
+			break;
+		case gli::FORMAT_RGBA_ATCI_UNORM_BLOCK16:
+			break;
+		case gli::FORMAT_L8_UNORM_PACK8:
+			break;
+		case gli::FORMAT_A8_UNORM_PACK8:
+			break;
+		case gli::FORMAT_LA8_UNORM_PACK8:
+			break;
+		case gli::FORMAT_L16_UNORM_PACK16:
+			break;
+		case gli::FORMAT_A16_UNORM_PACK16:
+			break;
+		case gli::FORMAT_LA16_UNORM_PACK16:
+			break;
+		case gli::FORMAT_BGR8_UNORM_PACK32:
+			break;
+		case gli::FORMAT_BGR8_SRGB_PACK32:
+			break;
+		case gli::FORMAT_RG3B2_UNORM_PACK8:
+			break;
+		default:
+			break;
+		}
+
+		assert(false);
+		return vk::Format::eUndefined;
+	}
 }
+
+struct Image
+{
+	std::string m_filename;
+	vk::UniqueImage m_image;
+	vk::UniqueImageView m_image_view;
+	vk::UniqueDeviceMemory m_memory;
+	vk::UniqueSampler m_sampler;
+
+	vk::DescriptorImageInfo info()
+	{
+		return vk::DescriptorImageInfo().setSampler(m_sampler.get()).setImageView(m_image_view.get()).setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+	}
+};
+
 
 struct Context
 {
 	enum DSL
 	{
-		DSL_RenderCongig,
+		DSL_Scene,
 		DSL_Model,
 		DSL_Model_Material,
 		DSL_Num,
 	};
 
-	struct RenderCongig
+	std::shared_ptr<btr::Context> m_ctx;
+	vk::UniqueDescriptorSetLayout m_DSL[DSL_Num];
+
+
+	struct RenderConfig
 	{
 		float exposure;
 		float gamma;
 	};
 
-	std::shared_ptr<btr::Context> m_ctx;
+	RenderConfig m_render_config;
+	Image m_environment;
 
-	vk::UniqueDescriptorSetLayout m_DSL[DSL_Num];
-
-	vk::UniqueDescriptorSet m_DS_RenderConfig;
+	vk::UniqueDescriptorSet m_DS_Scene;
 
 	Context(std::shared_ptr<btr::Context>& ctx)
 	{
@@ -186,11 +631,12 @@ struct Context
 				vk::DescriptorSetLayoutBinding binding[] =
 				{
 					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eUniformBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(10, vk::DescriptorType::eCombinedImageSampler, 1, stage),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
 				desc_layout_info.setPBindings(binding);
-				m_DSL[DSL_RenderCongig] = ctx->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
+				m_DSL[DSL_Scene] = ctx->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
 			}
 			{
 				auto stage = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex;
@@ -225,34 +671,356 @@ struct Context
 				m_DSL[DSL_Model_Material] = ctx->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
 			}
 		}
+
+		// environment texture
+		{
+			gli::texture_cube tex(gli::load(btr::getResourceAppPath() + "environments/papermill.ktx"));
+
+			vk::ImageCreateInfo image_info;
+			image_info.imageType = vk::ImageType::e2D;
+			image_info.format = GLtoVK::toFormat(tex.format());
+			image_info.mipLevels = tex.levels();
+			image_info.arrayLayers = 6;
+			image_info.samples = vk::SampleCountFlagBits::e1;
+			image_info.tiling = vk::ImageTiling::eOptimal;
+			image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
+			image_info.sharingMode = vk::SharingMode::eExclusive;
+			image_info.initialLayout = vk::ImageLayout::eUndefined;
+			image_info.flags = vk::ImageCreateFlagBits::eCubeCompatible;
+			image_info.extent = vk::Extent3D(tex.extent().x, tex.extent().y, 1);
+
+			vk::UniqueImage image = ctx->m_device.createImageUnique(image_info);
+
+			vk::MemoryRequirements memory_request = ctx->m_device.getImageMemoryRequirements(image.get());
+			vk::MemoryAllocateInfo memory_alloc_info;
+			memory_alloc_info.allocationSize = memory_request.size;
+			memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(ctx->m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+			vk::UniqueDeviceMemory image_memory = ctx->m_device.allocateMemoryUnique(memory_alloc_info);
+			ctx->m_device.bindImageMemory(image.get(), image_memory.get(), 0);
+
+			auto staging_buffer = ctx->m_staging_memory.allocateMemory<byte>(tex.size(), true);
+			memcpy(staging_buffer.getMappedPtr(), tex.data(), tex.size());
+
+			vk::ImageSubresourceRange subresourceRange;
+			subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+			subresourceRange.baseArrayLayer = 0;
+			subresourceRange.baseMipLevel = 0;
+			subresourceRange.layerCount = VK_REMAINING_MIP_LEVELS;
+			subresourceRange.levelCount = VK_REMAINING_ARRAY_LAYERS;
+
+			{
+				// staging_bufferからimageへコピー
+				{
+					vk::ImageMemoryBarrier to_copy_barrier;
+					to_copy_barrier.image = image.get();
+					to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
+					to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
+					to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+					to_copy_barrier.subresourceRange = subresourceRange;
+					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+				}
+
+				std::vector<vk::BufferImageCopy> copys;
+				uint offset = staging_buffer.getInfo().offset;
+				for (uint32_t face = 0; face < 6; face++)
+				{
+					for (uint32_t level = 0; level < tex.levels(); level++)
+					{
+						vk::BufferImageCopy copy = {};
+						copy.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+						copy.imageSubresource.mipLevel = level;
+						copy.imageSubresource.baseArrayLayer = face;
+						copy.imageSubresource.layerCount = 1;
+						copy.imageExtent.width = static_cast<uint32_t>(tex[face][level].extent().x);
+						copy.imageExtent.height = static_cast<uint32_t>(tex[face][level].extent().y);
+						copy.imageExtent.depth = 1;
+						copy.bufferOffset = offset;
+
+						copys.push_back(copy);
+
+						// Increase offset into staging buffer for next level / face
+						offset += tex[face][level].size();
+					}
+				}
+				cmd.copyBufferToImage(staging_buffer.getInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, copys);
+
+				{
+					vk::ImageMemoryBarrier to_shader_read_barrier;
+					to_shader_read_barrier.image = image.get();
+					to_shader_read_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
+					to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+					to_shader_read_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+					to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+					to_shader_read_barrier.subresourceRange = subresourceRange;
+					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
+				}
+
+			}
+
+			vk::ImageViewCreateInfo view_info;
+			view_info.viewType = vk::ImageViewType::eCube;
+			view_info.components = { vk::ComponentSwizzle::eR, vk::ComponentSwizzle::eG, vk::ComponentSwizzle::eB,vk::ComponentSwizzle::eA };
+			view_info.flags = vk::ImageViewCreateFlags();
+			view_info.format = image_info.format;
+			view_info.image = image.get();
+			view_info.subresourceRange = subresourceRange;
+
+			vk::SamplerCreateInfo sampler_info;
+			sampler_info.magFilter = vk::Filter::eLinear;
+			sampler_info.minFilter = vk::Filter::eLinear;
+			sampler_info.mipmapMode = vk::SamplerMipmapMode::eLinear;
+			sampler_info.addressModeU = vk::SamplerAddressMode::eRepeat;
+			sampler_info.addressModeV = vk::SamplerAddressMode::eRepeat;
+			sampler_info.addressModeW = vk::SamplerAddressMode::eRepeat;
+			sampler_info.mipLodBias = 0.0f;
+			sampler_info.compareOp = vk::CompareOp::eNever;
+			sampler_info.minLod = 0.0f;
+			sampler_info.maxLod = 0.f;
+			sampler_info.maxAnisotropy = 1.0;
+			sampler_info.anisotropyEnable = VK_FALSE;
+			sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
+
+			m_environment.m_image = std::move(image);
+			m_environment.m_memory = std::move(image_memory);
+			m_environment.m_image_view = ctx->m_device.createImageViewUnique(view_info);
+			m_environment.m_sampler = ctx->m_device.createSamplerUnique(sampler_info);
+
+		}
+
 		{
 			vk::DescriptorSetLayout layouts[] =
 			{
-				m_DSL[Context::DSL_RenderCongig].get(),
+				m_DSL[Context::DSL_Scene].get(),
 			};
 			vk::DescriptorSetAllocateInfo desc_info;
 			desc_info.setDescriptorPool(ctx->m_descriptor_pool.get());
 			desc_info.setDescriptorSetCount(array_length(layouts));
 			desc_info.setPSetLayouts(layouts);
-			m_DS_RenderConfig = std::move(ctx->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
+			m_DS_Scene = std::move(ctx->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
 			{
 // 				vk::DescriptorBufferInfo uniforms[] =
 // 				{
 // 				};
-// 				vk::WriteDescriptorSet write[] =
-// 				{
-// 					vk::WriteDescriptorSet()
-// 					.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-// 					.setDescriptorCount(array_length(uniforms))
-// 					.setPBufferInfo(uniforms)
-// 					.setDstBinding(0)
-// 				};
-// 				ctx.m_ctx->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
+
+				vk::DescriptorImageInfo images[] = {
+					m_environment.info(),
+				};
+				vk::WriteDescriptorSet write[] =
+				{
+//					vk::WriteDescriptorSet().setDstBinding(0).setDescriptorType(vk::DescriptorType::eUniformBuffer).setDescriptorCount(array_length(uniforms)).setPBufferInfo(uniforms),
+					vk::WriteDescriptorSet().setDstSet(*m_DS_Scene).setDstBinding(10).setDescriptorType(vk::DescriptorType::eCombinedImageSampler).setDescriptorCount(array_length(images)).setPImageInfo(images)
+				};
+				ctx->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
 
 			}
 		}
 	}
 };
+struct Skybox
+{
+	vk::UniquePipeline m_pipeline;
+	vk::UniquePipelineLayout m_PL;
+
+	vk::UniqueRenderPass m_renderpass;
+	vk::UniqueFramebuffer m_framebuffer;
+
+	Skybox(Context& ctx_, vk::CommandBuffer cmd, RenderTarget& rt)
+	{
+		auto& ctx = *ctx_.m_ctx;
+		// pipeline layout
+		{
+			{
+				vk::DescriptorSetLayout layouts[] =
+				{
+					sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
+					ctx_.m_DSL[Context::DSL_Scene].get(),
+				};
+				vk::PipelineLayoutCreateInfo pipeline_layout_info;
+				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
+				pipeline_layout_info.setPSetLayouts(layouts);
+				m_PL = ctx.m_device.createPipelineLayoutUnique(pipeline_layout_info);
+			}
+
+		}
+
+		// graphics pipeline render
+		{
+			// レンダーパス
+			{
+				// sub pass
+				vk::AttachmentReference color_ref[] =
+				{
+					vk::AttachmentReference()
+					.setAttachment(0)
+					.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
+				};
+				vk::AttachmentReference depth_ref;
+				depth_ref.setAttachment(1);
+				depth_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+				vk::SubpassDescription subpass;
+				subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+				subpass.setInputAttachmentCount(0);
+				subpass.setPInputAttachments(nullptr);
+				subpass.setColorAttachmentCount(array_length(color_ref));
+				subpass.setPColorAttachments(color_ref);
+				subpass.setPDepthStencilAttachment(&depth_ref);
+
+				vk::AttachmentDescription attach_description[] =
+				{
+					// color1
+					vk::AttachmentDescription()
+					.setFormat(rt.m_info.format)
+					.setSamples(vk::SampleCountFlagBits::e1)
+					.setLoadOp(vk::AttachmentLoadOp::eLoad)
+					.setStoreOp(vk::AttachmentStoreOp::eStore)
+					.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
+					.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
+					// depth
+					vk::AttachmentDescription()
+					.setFormat(rt.m_depth_info.format)
+					.setSamples(vk::SampleCountFlagBits::e1)
+					.setLoadOp(vk::AttachmentLoadOp::eLoad)
+					.setStoreOp(vk::AttachmentStoreOp::eStore)
+					.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
+					.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
+				};
+				vk::RenderPassCreateInfo renderpass_info;
+				renderpass_info.setAttachmentCount(array_length(attach_description));
+				renderpass_info.setPAttachments(attach_description);
+				renderpass_info.setSubpassCount(1);
+				renderpass_info.setPSubpasses(&subpass);
+				m_renderpass = ctx.m_device.createRenderPassUnique(renderpass_info);
+			}
+
+			{
+				vk::ImageView view[] =
+				{
+					rt.m_view,
+					rt.m_depth_view,
+				};
+				vk::FramebufferCreateInfo framebuffer_info;
+				framebuffer_info.setRenderPass(m_renderpass.get());
+				framebuffer_info.setAttachmentCount(array_length(view));
+				framebuffer_info.setPAttachments(view);
+				framebuffer_info.setWidth(rt.m_info.extent.width);
+				framebuffer_info.setHeight(rt.m_info.extent.height);
+				framebuffer_info.setLayers(1);
+				m_framebuffer = ctx.m_device.createFramebufferUnique(framebuffer_info);
+			}
+			struct { const char* name; vk::ShaderStageFlagBits flag; } shader_param[] =
+			{
+				{"Skybox.vert.spv", vk::ShaderStageFlagBits::eVertex},
+				{"Skybox.geom.spv", vk::ShaderStageFlagBits::eGeometry},
+				{"Skybox.frag.spv", vk::ShaderStageFlagBits::eFragment},
+
+			};
+			std::array<vk::UniqueShaderModule, array_length(shader_param)> shader;
+			std::array<vk::PipelineShaderStageCreateInfo, array_length(shader_param)> shaderStages;
+			for (size_t i = 0; i < array_length(shader_param); i++)
+			{
+				shader[i] = loadShaderUnique(ctx.m_device, btr::getResourceShaderPath() + shader_param[i].name);
+				shaderStages[i].setModule(shader[i].get()).setStage(shader_param[i].flag).setPName("main");
+			}
+
+			// assembly
+			vk::PipelineInputAssemblyStateCreateInfo assembly_info;
+			assembly_info.setPrimitiveRestartEnable(VK_FALSE);
+			assembly_info.setTopology(vk::PrimitiveTopology::ePointList);
+
+			// viewport
+			vk::Viewport viewport[] = { vk::Viewport(0.f, 0.f, rt.m_resolution.width, rt.m_resolution.height, 0.f, 1.f) };
+			vk::Rect2D scissor[] = { vk::Rect2D(vk::Offset2D(0, 0), rt.m_resolution) };
+			vk::PipelineViewportStateCreateInfo viewportInfo;
+			viewportInfo.setViewportCount(array_length(viewport));
+			viewportInfo.setPViewports(viewport);
+			viewportInfo.setScissorCount(array_length(scissor));
+			viewportInfo.setPScissors(scissor);
+
+
+			vk::PipelineRasterizationStateCreateInfo rasterization_info;
+			rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
+			rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
+			rasterization_info.setCullMode(vk::CullModeFlagBits::eNone);
+			rasterization_info.setLineWidth(1.f);
+
+
+			vk::PipelineMultisampleStateCreateInfo sample_info;
+			sample_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);
+
+			vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
+			depth_stencil_info.setDepthTestEnable(VK_TRUE);
+			depth_stencil_info.setDepthWriteEnable(VK_TRUE);
+			depth_stencil_info.setDepthCompareOp(vk::CompareOp::eGreaterOrEqual);
+			depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
+			depth_stencil_info.setStencilTestEnable(VK_FALSE);
+
+
+			std::vector<vk::PipelineColorBlendAttachmentState> blend_state = {
+				vk::PipelineColorBlendAttachmentState()
+				.setBlendEnable(VK_FALSE)
+				.setColorWriteMask(vk::ColorComponentFlagBits::eR| vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB| vk::ColorComponentFlagBits::eA)
+			};
+			vk::PipelineColorBlendStateCreateInfo blend_info;
+			blend_info.setAttachmentCount(blend_state.size());
+			blend_info.setPAttachments(blend_state.data());
+
+			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
+
+			vk::GraphicsPipelineCreateInfo graphics_pipeline_info =
+				vk::GraphicsPipelineCreateInfo()
+				.setStageCount(shaderStages.size())
+				.setPStages(shaderStages.data())
+				.setPVertexInputState(&vertex_input_info)
+				.setPInputAssemblyState(&assembly_info)
+				.setPViewportState(&viewportInfo)
+				.setPRasterizationState(&rasterization_info)
+				.setPMultisampleState(&sample_info)
+				.setLayout(m_PL.get())
+				.setRenderPass(m_renderpass.get())
+				.setPDepthStencilState(&depth_stencil_info)
+				.setPColorBlendState(&blend_info);
+			m_pipeline = ctx.m_device.createGraphicsPipelineUnique(vk::PipelineCache(), graphics_pipeline_info).value;
+
+		}
+
+	}
+
+	void execute_Render(vk::CommandBuffer cmd, Context& ctx, RenderTarget& rt)
+	{
+		DebugLabel _label(cmd, __FUNCTION__);
+		{
+			vk::ImageMemoryBarrier image_barrier[1];
+			image_barrier[0].setImage(rt.m_image);
+			image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+			image_barrier[0].setOldLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			image_barrier[0].setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+			image_barrier[0].setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eColorAttachmentOutput,
+				{}, {}, { /*array_size(to_read), to_read*/ }, { array_size(image_barrier), image_barrier });
+		}
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline.get());
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL.get(), 0, { sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA) }, {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL.get(), 1, { ctx.m_DS_Scene.get() }, {});
+
+		vk::RenderPassBeginInfo begin_render_Info;
+		begin_render_Info.setRenderPass(m_renderpass.get());
+		begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), rt.m_resolution));
+		begin_render_Info.setFramebuffer(m_framebuffer.get());
+		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
+
+		cmd.draw(1, 1, 0, 0);
+		cmd.endRenderPass();
+
+	}
+};
+
+
+
 struct Model
 {
 	struct Info
@@ -268,15 +1036,6 @@ struct Model
 	{
 		std::vector<vk::VertexInputBindingDescription> vib_disc;
 		std::vector<vk::VertexInputAttributeDescription> vid_disc;
-	};
-
-	struct Image
-	{
-		std::string m_filename;
-		vk::UniqueImage m_image;
-		vk::UniqueImageView m_image_view;
-		vk::UniqueDeviceMemory m_memory;
-		vk::UniqueSampler m_sampler;
 	};
 
 	struct Material
@@ -542,8 +1301,10 @@ struct ModelRenderer
 	vk::UniqueRenderPass m_renderpass;
 	vk::UniqueFramebuffer m_framebuffer;
 
+	Context* m_ctx;
 	ModelRenderer(Context& ctx, RenderTarget& rt)
 	{
+		m_ctx = &ctx;
 //		auto cmd = ctx.m_ctx->m_cmd_pool->allocCmdTempolary(0);
 
 		// descriptor set layout
@@ -617,7 +1378,8 @@ struct ModelRenderer
 //					m_DSL[DSL_Renderer].get(),
 					sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
 					ctx.m_DSL[Context::DSL_Model_Material].get(),
-//					RenderTarget::s_descriptor_set_layout.get(),
+					ctx.m_DSL[Context::DSL_Scene].get(),
+										//					RenderTarget::s_descriptor_set_layout.get(),
 				};
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
@@ -625,44 +1387,6 @@ struct ModelRenderer
 				m_PL[PipelineLayout_Render] = ctx.m_ctx->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 			}
 
-		}
-
-		// compute pipeline
-		{
-// 			struct { const char* name; vk::ShaderStageFlagBits flag; } shader_param[] =
-// 			{
-// 				{"Voxel_AllocateTopChild.comp.spv", vk::ShaderStageFlagBits::eCompute},
-// 				{"Voxel_AllocateMidChild.comp.spv", vk::ShaderStageFlagBits::eCompute},
-// 				{"Voxel_MakeHashMapMask.comp.spv", vk::ShaderStageFlagBits::eCompute},
-// 				{"Voxel_Rendering.comp.spv", vk::ShaderStageFlagBits::eCompute},
-// 			};
-// 			std::array<vk::UniqueShaderModule, array_length(shader_param)> shader;
-// 			std::array<vk::PipelineShaderStageCreateInfo, array_length(shader_param)> shaderStages;
-// 			for (size_t i = 0; i < array_length(shader_param); i++)
-// 			{
-// 				shader[i] = loadShaderUnique(ctx.m_ctx->m_device, btr::getResourceShaderPath() + shader_param[i].name);
-// 				shaderStages[i].setModule(shader[i].get()).setStage(shader_param[i].flag).setPName("main");
-// 			}
-// 
-// 			vk::ComputePipelineCreateInfo compute_pipeline_info[] =
-// 			{
-// 				vk::ComputePipelineCreateInfo()
-// 				.setStage(shaderStages[0])
-// 				.setLayout(m_PL[PipelineLayout_MakeVoxel].get()),
-// 				vk::ComputePipelineCreateInfo()
-// 				.setStage(shaderStages[1])
-// 				.setLayout(m_PL[PipelineLayout_MakeVoxel].get()),
-// 				vk::ComputePipelineCreateInfo()
-// 				.setStage(shaderStages[2])
-// 				.setLayout(m_PL[PipelineLayout_MakeVoxel].get()),
-// 				vk::ComputePipelineCreateInfo()
-// 				.setStage(shaderStages[3])
-// 				.setLayout(m_PL[PipelineLayout_RenderVoxel].get()),
-// 			};
-// 			m_pipeline[Pipeline_MakeVoxelTopChild] = ctx.m_ctx->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[0]).value;
-// 			m_pipeline[Pipeline_MakeVoxelMidChild] = ctx.m_ctx->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[1]).value;
-// 			m_pipeline[Pipeline_MakeHashMapMask] = ctx.m_ctx->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[2]).value;
-// 			m_pipeline[Pipeline_RenderVoxel] = ctx.m_ctx->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[3]).value;
 		}
 
 		// graphics pipeline render
@@ -852,7 +1576,7 @@ struct ModelRenderer
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_Render].get());
 //		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 0, { m_DS[DSL_Renderer].get() }, {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 0, { sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA) }, {});
-//		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 2, { rt.m_descriptor.get() }, {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 2, { m_ctx->m_DS_Scene.get() }, {});
 
 		vk::RenderPassBeginInfo begin_render_Info;
 		begin_render_Info.setRenderPass(m_renderpass.get());
@@ -945,16 +1669,15 @@ int main()
 	ClearPipeline clear_pipeline(context, render_target);
 	PresentPipeline present_pipeline(context, render_target, context->m_window->getSwapchain());
 
-	std::shared_ptr<Model> model;
-	{
-		auto setup_cmd = context->m_cmd_pool->allocCmdTempolary(0);
-		model = Model::LoadModel(*ctx, setup_cmd, btr::getResourceAppPath() + "pbr/DamagedHelmet.gltf");
+	auto setup_cmd = context->m_cmd_pool->allocCmdTempolary(0);
+	std::shared_ptr<Model> model = Model::LoadModel(*ctx, setup_cmd, btr::getResourceAppPath() + "pbr/DamagedHelmet.gltf");
 
-	}
+	ModelRenderer renderer(*ctx, *app.m_window->getFrontBuffer());
+	Skybox skybox(*ctx, setup_cmd, *app.m_window->getFrontBuffer());
+//	Scene scene(*ctx, setup_cmd);
 
 	app.setup();
 
-	ModelRenderer renderer(*ctx, *app.m_window->getFrontBuffer());
 	while (true)
 	{
 		cStopWatch time;
@@ -974,9 +1697,20 @@ int main()
 				cmds[cmd_render_present] = present_pipeline.execute();
 			}
 			{
+				app.m_window->getImgui()->pushImguiCmd([]()
+					{
+						ImGui::SetNextWindowSize(ImVec2(550, 680), ImGuiCond_FirstUseEver);
+						if (!ImGui::Begin("ImGui Demo"))
+						{
+							// Early out if the window is collapsed, as an optimization.
+							ImGui::End();
+							return;
+						}
+					});
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				{
-					renderer.execute_Render(cmd, *render_target, *model);
+					skybox.execute_Render(cmd, *ctx, *render_target);
+//					renderer.execute_Render(cmd, *render_target, *model);
 				}
 
 				cmd.end();

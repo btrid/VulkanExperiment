@@ -21,10 +21,9 @@ layout(location = 0) out gl_PerVertex{
 
 layout(location = 1) out Vertex
 {
-//	vec3 Position;
-//	vec3 Normal;
+	vec3 WorldPos;
+	vec3 Normal;
 	vec2 Texcoord_0;
-//	flat int DrawID;
 }VSOut;
 
 /*
@@ -48,8 +47,7 @@ void main()
 //	mat4 skinningMat = skinning();
 	gl_Position = u_camera[0].u_projection * u_camera[0].u_view *  100.*pos;
 
-//	VSOut.Position = pos.xyz;
-//	VSOut.Normal =  inNormal.xyz;
+	VSOut.WorldPos = gl_Position.xyz / gl_Position.w;
+	VSOut.Normal =  inNormal.xyz;
 	VSOut.Texcoord_0 = inTexcoord_0;
-//	VSOut.DrawID = gl_DrawID;
 }
