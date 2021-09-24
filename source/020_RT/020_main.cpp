@@ -820,7 +820,7 @@ struct Context
 
 	void execute()
 	{
-		app.m_window->getImgui()->pushImguiCmd([]()
+		app::g_app_instance->m_window->getImgui()->pushImguiCmd([]()
 			{
 				static bool is_open;
 				ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver);
