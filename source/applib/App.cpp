@@ -408,22 +408,12 @@ void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 		cmds.insert(cmds.end(), std::make_move_iterator(precmds.begin()), std::make_move_iterator(precmds.end()));
 	}
 
-	for (auto& window : m_window_list)
-	{
-//		cmds.push_back(window->m_cmd_present_to_render[window->getSwapchain().m_backbuffer_index].get());
-	}
-
 	m_sync_point.wait();
 
 	cmds.insert(cmds.end(), std::make_move_iterator(m_system_cmds.begin()), std::make_move_iterator(m_system_cmds.end()));
 
 	submit_cmds.erase(std::remove_if(submit_cmds.begin(), submit_cmds.end(), [&](auto& d) { return !d; }), submit_cmds.end());
 	cmds.insert(cmds.end(), std::make_move_iterator(submit_cmds.begin()), std::make_move_iterator(submit_cmds.end()));
-
-	for (auto& window : m_window_list)
-	{
-//		cmds.push_back(window->m_cmd_render_to_present[window->getSwapchain().m_backbuffer_index].get());
-	}
 
 	vk::SubmitInfo submit_info;
 	submit_info.setCommandBufferCount((uint32_t)cmds.size());
@@ -501,15 +491,22 @@ void App::preUpdate()
 		m_camera->control(m_window->getInput(), 0.016f);
 	}
 
-	m_system_cmds.resize(2);
-	m_sync_point.reset(4);
+	enum 
+	{
+		job_system,
+		job_camera,
+//		job_imgui,
+		job_MAX,
+	};
+	m_system_cmds.resize(job_MAX);
+	m_sync_point.reset(job_MAX);
 
 	{
 		MAKE_THREAD_JOB(job);
 		job.mJob.emplace_back(
 			[&]()
 		{
-			m_system_cmds[0] = sSystem::Order().execute(m_context);
+			m_system_cmds[job_system] = sSystem::Order().execute(m_context);
 			m_sync_point.arrive();
 		}
 		);
@@ -520,18 +517,7 @@ void App::preUpdate()
 		job.mJob.emplace_back(
 			[&]()
 		{
-			m_system_cmds[1] = sCameraManager::Order().draw(m_context);
-			m_sync_point.arrive();
-		}
-		);
-		m_thread_pool.enque(job);
-	}
-	{
-		MAKE_THREAD_JOB(job);
-		job.mJob.emplace_back(
-			[&]()
-		{
-//			m_system_cmds[3] = DrawHelper::Order().draw(m_context);
+			m_system_cmds[job_camera] = sCameraManager::Order().draw(m_context);
 			m_sync_point.arrive();
 		}
 		);
@@ -543,8 +529,12 @@ void App::preUpdate()
 			[&]()
 		{
 //			m_system_cmds[2] = sParticlePipeline::Order().draw(m_context);
-//			m_system_cmds[2] = sAppImGuiRenderer::Order().Render();
-			m_sync_point.arrive();
+//			auto cmd = m_context->m_cmd_pool->allocCmdOnetime(0);
+//			sAppImGui::Order().Render(cmd);
+
+//			cmd.end();
+//			m_system_cmds[job_imgui] = cmd;
+//			m_sync_point.arrive();
 		}
 		);
 		m_thread_pool.enque(job);

@@ -14,6 +14,7 @@
 #include <applib/App.h>
 #include <applib/AppPipeline.h>
 #include <applib/sCameraManager.h>
+#include <applib/sAppImGui.h>
 #include <applib/GraphicsResource.h>
 
 #include <gli/gli/gli.hpp>
@@ -815,6 +816,26 @@ struct Context
 
 			}
 		}
+	}
+
+	void execute()
+	{
+		app.m_window->getImgui()->pushImguiCmd([]()
+			{
+				static bool is_open;
+				ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver);
+				ImGui::SetNextWindowSize(ImVec2(550, 680), ImGuiCond_FirstUseEver);
+				if (!ImGui::Begin("ImGui Demo", &is_open, ImGuiWindowFlags_NoSavedSettings))
+				{
+					// Early out if the window is collapsed, as an optimization.
+					ImGui::End();
+					return;
+				}
+				ImGui::Text("Password input");
+				ImGui::End();
+
+			});
+
 	}
 };
 struct Skybox
@@ -1696,21 +1717,14 @@ int main()
 				cmds[cmd_render_clear] = clear_pipeline.execute();
 				cmds[cmd_render_present] = present_pipeline.execute();
 			}
+			ctx->execute();
+
 			{
-				app.m_window->getImgui()->pushImguiCmd([]()
-					{
-						ImGui::SetNextWindowSize(ImVec2(550, 680), ImGuiCond_FirstUseEver);
-						if (!ImGui::Begin("ImGui Demo"))
-						{
-							// Early out if the window is collapsed, as an optimization.
-							ImGui::End();
-							return;
-						}
-					});
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				{
 					skybox.execute_Render(cmd, *ctx, *render_target);
 //					renderer.execute_Render(cmd, *render_target, *model);
+					sAppImGui::Order().Render(cmd);
 				}
 
 				cmd.end();

@@ -225,8 +225,8 @@ sAppImGui::sAppImGui(const std::shared_ptr<btr::Context>& context)
 		framebuffer_info.setRenderPass(m_render_pass.get());
 		framebuffer_info.setAttachmentCount(1);
 		//		framebuffer_info.setPAttachments(view);
-		framebuffer_info.setWidth(2048);
-		framebuffer_info.setHeight(2048);
+		framebuffer_info.setWidth(1024);
+		framebuffer_info.setHeight(1024);
 		framebuffer_info.setLayers(1);
 
 		vk::Format format[] = {vk::Format::eR16G16B16A16Sfloat};
@@ -236,8 +236,8 @@ sAppImGui::sAppImGui(const std::shared_ptr<btr::Context>& context)
 		framebuffer_image_info.setLayerCount(1);
 		framebuffer_image_info.setViewFormatCount(array_length(format));
 		framebuffer_image_info.setPViewFormats(format);
-		framebuffer_image_info.setWidth(2048);
-		framebuffer_image_info.setHeight(2048);
+		framebuffer_image_info.setWidth(1024);
+		framebuffer_image_info.setHeight(1024);
 		vk::FramebufferAttachmentsCreateInfo framebuffer_attach_info;
 		framebuffer_attach_info.setAttachmentImageInfoCount(1);
 		framebuffer_attach_info.setPAttachmentImageInfos(&framebuffer_image_info);
@@ -342,8 +342,8 @@ sAppImGui::sAppImGui(const std::shared_ptr<btr::Context>& context)
 			.setPColorBlendState(&blend_info)
 			.setPDynamicState(&dynamic_info),
 		};
-// 		auto pipelines = context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info);
-// 		m_pipeline = std::move(pipelines.value[0]);
+ 		auto pipelines = context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info);
+ 		m_pipeline = std::move(pipelines.value[0]);
 
 	}
 
@@ -413,8 +413,10 @@ void sAppImGui::Render(vk::CommandBuffer& cmd)
 		}
 
 		vk::RenderPassBeginInfo begin_render_info;
- 		begin_render_info.setFramebuffer(window->getImgui()->m_framebuffer.get());
- 		begin_render_info.setRenderPass(window->getImgui()->m_render_pass.get());
+		begin_render_info.setFramebuffer(window->getImgui()->m_framebuffer.get());
+		begin_render_info.setRenderPass(window->getImgui()->m_render_pass.get());
+//		begin_render_info.setFramebuffer(m_framebuffer.get());
+//		begin_render_info.setRenderPass(m_render_pass.get());
 		begin_render_info.setRenderArea(vk::Rect2D({}, vk::Extent2D(window->getFrontBuffer()->m_info.extent.width, window->getFrontBuffer()->m_info.extent.height)));
 		cmd.beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
 
@@ -422,23 +424,14 @@ void sAppImGui::Render(vk::CommandBuffer& cmd)
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get(), 0, { m_descriptor_set.get() }, {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get(), 1, { sSystem::Order().getSystemDescriptorSet() }, { i * sSystem::Order().getSystemDescriptorStride() });
 
-//		vk::Viewport viewport(draw_data->DisplayPos.x, draw_data->DisplayPos.y, draw_data->DisplaySize.x, draw_data->DisplaySize.y);
-//		cmd.setViewport(0, 1, &viewport);
-
 		for (int n = 0; n < draw_data->CmdListsCount; n++)
 		{
 			auto* cmd_list = draw_data->CmdLists[n];
 			auto v_num = cmd_list->VtxBuffer.size();
 			auto i_num = cmd_list->IdxBuffer.size();
 
-			btr::BufferMemoryDescriptorEx<ImDrawVert> v_desc;
-			v_desc.element_num = v_num;
-			v_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-			auto vertex = m_context->m_staging_memory.allocateMemory(v_desc);
-			btr::BufferMemoryDescriptorEx<ImDrawIdx> i_desc;
-			i_desc.element_num = i_num;
-			i_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-			auto index = m_context->m_staging_memory.allocateMemory(i_desc);
+			auto vertex = m_context->m_staging_memory.allocateMemory<ImDrawVert>(v_num, true);
+			auto index = m_context->m_staging_memory.allocateMemory<ImDrawIdx>(i_num, true);
 
 			memcpy(vertex.getMappedPtr(), cmd_list->VtxBuffer.Data, sizeof(ImDrawVert)*v_num);
 			memcpy(index.getMappedPtr(), cmd_list->IdxBuffer.Data, sizeof(ImDrawIdx)*i_num);
@@ -454,8 +447,11 @@ void sAppImGui::Render(vk::CommandBuffer& cmd)
 				}
 				else
 				{
+					vk::Viewport viewport(0, 0, 1024, 1024);
+					cmd.setViewport(0, 1, &viewport);
 					vk::Rect2D sissor(vk::Offset2D(pcmd->ClipRect.x, pcmd->ClipRect.y), vk::Extent2D(pcmd->ClipRect.z - pcmd->ClipRect.x, pcmd->ClipRect.w - pcmd->ClipRect.y));
 					cmd.setScissor(0, 1, &sissor);
+
 					cmd.bindIndexBuffer(index.getInfo().buffer, index.getInfo().offset + i_offset * sizeof(ImDrawIdx), sizeof(ImDrawIdx) == 2 ? vk::IndexType::eUint16 : vk::IndexType::eUint32);
 					cmd.drawIndexed(pcmd->ElemCount, 1, 0, 0, 0);
 				}

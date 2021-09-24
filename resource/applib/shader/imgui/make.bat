@@ -1,10 +1,9 @@
 @echo off
 cd /d %~dp0
-SET btrlib=../../../btrlib/shader/include
-SET header=-I Include -I ../../../btrlib/shader/include -I ../../../applib/shader/include 
+SET exe=glslangValidator.exe --target-env vulkan1.2 -V -I../../../applib/shader/include -g
+SET output=-o ../binary/
 
-SET output=../binary
-glslc.exe -w %header% -x glsl -fshader-stage=vertex	-o %output%\\ImGuiRender.vert.spv ImGuiRender.vert
-glslc.exe -w %header% -x glsl -fshader-stage=fragment	-o %output%\\ImGuiRender.frag.spv ImGuiRender.frag
+%exe% %output%/ImGuiRender.vert.spv ImGuiRender.vert
+%exe% %output%/ImGuiRender.frag.spv ImGuiRender.frag
 
 
