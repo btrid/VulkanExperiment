@@ -837,7 +837,7 @@ struct Context
 					ImGui::End();
 					return;
 				}
-				ImGui::SliderFloat("exposure", &this->m_render_config.exposure, 0.001f, 20.f);
+				ImGui::SliderFloat("exposure", &this->m_render_config.exposure, 0.001f, 1000.f);
 //				ImGui::SliderFloat("gamma", &this->m_render_config.gamma, 0.f, 1000.f);
 				ImGui::Text("Password input");
 				ImGui::End();

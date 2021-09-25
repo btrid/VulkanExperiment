@@ -2,14 +2,14 @@
 #define PBR_H_
 
 #ifdef USE_Render_Scene
-struct Scene
-{
-	float exposure;
-	float gamma;
-};
 
 layout(set=USE_Render_Scene, binding=0, std140) uniform UScene 
 {
+	struct Scene
+	{
+		float exposure;
+		float gamma;
+	};
 	Scene u_scene;
 };
 layout (set=USE_Render_Scene, binding=10) uniform samplerCube t_environment_irradiance;
@@ -30,8 +30,8 @@ vec3 Uncharted2Tonemap(vec3 color)
 
 vec4 tonemap(vec4 color)
 {
-	float exposure = 110.5;
-	float gamma = 2.2;
+	float exposure = u_scene.exposure;
+	float gamma = u_scene.gamma;
 	vec3 outcol = Uncharted2Tonemap(color.rgb * exposure);
 	outcol = outcol * (1.0f / Uncharted2Tonemap(vec3(11.2f)));	
 	return vec4(pow(outcol, vec3(1.0f / gamma)), color.a);
