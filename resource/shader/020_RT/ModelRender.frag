@@ -39,11 +39,6 @@ layout(location=1) in In
 	vec2 Texcoord_0;
 }fs_in;
 
-struct RenderCongig
-{
-	int a;
-};
-
 struct Light
 {
 	vec4 lightDir;

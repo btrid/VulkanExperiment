@@ -594,7 +594,835 @@ struct Image
 	}
 };
 
+struct BRDFLookupTable
+{
+	Image m_brgf_lut;
 
+	BRDFLookupTable(btr::Context& ctx, vk::CommandBuffer cmd)
+	{
+		const vk::Format format = vk::Format::eR16G16Sfloat;
+		const int32_t dim = 512;
+
+		// Image
+		vk::ImageCreateInfo image_info;
+		image_info.imageType = vk::ImageType::e2D;
+		image_info.format = format;
+		image_info.mipLevels = 1;
+		image_info.arrayLayers = 1;
+		image_info.samples = vk::SampleCountFlagBits::e1;
+		image_info.tiling = vk::ImageTiling::eOptimal;
+		image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment;
+		image_info.sharingMode = vk::SharingMode::eExclusive;
+		image_info.initialLayout = vk::ImageLayout::eUndefined;
+//		image_info.flags
+		image_info.extent = vk::Extent3D(dim, dim, 1);
+
+		vk::UniqueImage image = ctx.m_device.createImageUnique(image_info);
+
+		vk::MemoryRequirements memory_request = ctx.m_device.getImageMemoryRequirements(image.get());
+		vk::MemoryAllocateInfo memory_alloc_info;
+		memory_alloc_info.allocationSize = memory_request.size;
+		memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(ctx.m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+		vk::UniqueDeviceMemory image_memory = ctx.m_device.allocateMemoryUnique(memory_alloc_info);
+		ctx.m_device.bindImageMemory(image.get(), image_memory.get(), 0);
+
+		// View
+		vk::ImageViewCreateInfo view_info;
+		view_info.viewType = vk::ImageViewType::e2D;
+		view_info.components = { vk::ComponentSwizzle::eR, vk::ComponentSwizzle::eG, vk::ComponentSwizzle::eB,vk::ComponentSwizzle::eA };
+		view_info.flags = vk::ImageViewCreateFlags();
+		view_info.format = image_info.format;
+		view_info.image = image.get();
+		view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+		view_info.subresourceRange.baseArrayLayer = 0;
+		view_info.subresourceRange.baseMipLevel = 0;
+		view_info.subresourceRange.layerCount = 1;
+		view_info.subresourceRange.levelCount = 1;
+
+		// Sampler
+		vk::SamplerCreateInfo sampler_info;
+		sampler_info.magFilter = vk::Filter::eLinear;
+		sampler_info.minFilter = vk::Filter::eLinear;
+		sampler_info.mipmapMode = vk::SamplerMipmapMode::eLinear;
+		sampler_info.addressModeU = vk::SamplerAddressMode::eRepeat;
+		sampler_info.addressModeV = vk::SamplerAddressMode::eRepeat;
+		sampler_info.addressModeW = vk::SamplerAddressMode::eRepeat;
+		sampler_info.mipLodBias = 0.0f;
+		sampler_info.compareOp = vk::CompareOp::eNever;
+		sampler_info.minLod = 0.f;
+		sampler_info.maxLod = 0.f;
+		sampler_info.maxAnisotropy = 1.0;
+		sampler_info.anisotropyEnable = VK_FALSE;
+
+		m_brgf_lut.m_image_view = ctx.m_device.createImageViewUnique(view_info);
+		m_brgf_lut.m_sampler = ctx.m_device.createSamplerUnique(sampler_info);
+
+		m_brgf_lut.m_image = std::move(image);
+		m_brgf_lut.m_memory = std::move(image_memory);
+		//		m_brgf_lut.m_image_view = std::move(image_view);
+//		m_brgf_lut.m_sampler = std::move(sampler);
+
+		// FB, Att, RP, Pipe, etc.
+		{
+			// レンダーパス
+			// sub pass
+			vk::AttachmentReference color_ref[] =
+			{
+				vk::AttachmentReference()
+				.setAttachment(0)
+				.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
+			};
+
+			vk::SubpassDescription subpass;
+			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+			subpass.setInputAttachmentCount(0);
+			subpass.setPInputAttachments(nullptr);
+			subpass.setColorAttachmentCount(array_length(color_ref));
+			subpass.setPColorAttachments(color_ref);
+
+			// Use subpass dependencies for layout transitions
+			std::array<vk::SubpassDependency, 2> dependencies;
+			dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+			dependencies[0].dstSubpass = 0;
+			dependencies[0].srcStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
+			dependencies[0].dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+			dependencies[0].srcAccessMask = vk::AccessFlagBits::eMemoryRead;
+			dependencies[0].dstAccessMask = vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite;
+			dependencies[0].dependencyFlags = vk::DependencyFlagBits::eByRegion;
+			dependencies[1].srcSubpass = 0;
+			dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+			dependencies[1].srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+			dependencies[1].dstStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
+			dependencies[1].srcAccessMask = vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite;
+			dependencies[1].dstAccessMask = vk::AccessFlagBits::eMemoryRead;
+			dependencies[1].dependencyFlags = vk::DependencyFlagBits::eByRegion;
+
+			// Create the actual renderpass
+			vk::AttachmentDescription attach_description[] =
+			{
+				// color1
+				vk::AttachmentDescription()
+				.setFormat(format)
+				.setSamples(vk::SampleCountFlagBits::e1)
+				.setLoadOp(vk::AttachmentLoadOp::eLoad)
+				.setStoreOp(vk::AttachmentStoreOp::eStore)
+				.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
+				.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
+			};
+			vk::RenderPassCreateInfo renderpass_info;
+			renderpass_info.setAttachmentCount(array_length(attach_description));
+			renderpass_info.setPAttachments(attach_description);
+			renderpass_info.setDependencies(dependencies);
+			renderpass_info.setSubpassCount(1);
+			renderpass_info.setPSubpasses(&subpass);
+
+
+			auto m_renderpass = ctx.m_device.createRenderPassUnique(renderpass_info);
+
+// 			vk::ImageView view[] =
+// 			{
+// 				m_brgf_lut.m_image_view.get(),
+// 			};
+			vk::FramebufferCreateInfo framebuffer_info;
+			framebuffer_info.setRenderPass(m_renderpass.get());
+			framebuffer_info.setAttachmentCount(1);
+//			framebuffer_info.setPAttachments(view);
+			framebuffer_info.setWidth(dim);
+			framebuffer_info.setHeight(dim);
+			framebuffer_info.setLayers(1);
+			framebuffer_info.setFlags(vk::FramebufferCreateFlagBits::eImageless);
+
+			vk::FramebufferAttachmentImageInfo framebuffer_image_info;
+			framebuffer_image_info.setUsage(vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment);
+			framebuffer_image_info.setLayerCount(1);
+			framebuffer_image_info.setViewFormatCount(1);
+			framebuffer_image_info.setPViewFormats(&format);
+			framebuffer_image_info.setWidth(dim);
+			framebuffer_image_info.setHeight(dim);
+			vk::FramebufferAttachmentsCreateInfo framebuffer_attach_info;
+			framebuffer_attach_info.setAttachmentImageInfoCount(1);
+			framebuffer_attach_info.setPAttachmentImageInfos(&framebuffer_image_info);
+
+			framebuffer_info.setPNext(&framebuffer_attach_info);
+
+			auto m_framebuffer = ctx.m_device.createFramebufferUnique(framebuffer_info);
+
+			// descriptor set layout
+			auto stage = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment;
+			vk::DescriptorSetLayoutBinding binding[] = {
+				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eCombinedImageSampler, 1, stage),
+			};
+			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
+			desc_layout_info.setBindingCount(array_length(binding));
+			desc_layout_info.setPBindings(binding);
+			auto DSL = ctx.m_device.createDescriptorSetLayoutUnique(desc_layout_info);
+
+			// descriptor set
+			vk::DescriptorSetLayout layouts[] =
+			{
+				DSL.get(),
+			};
+			vk::DescriptorSetAllocateInfo desc_info;
+			desc_info.setDescriptorPool(ctx.m_descriptor_pool.get());
+			desc_info.setDescriptorSetCount(array_length(layouts));
+			desc_info.setPSetLayouts(layouts);
+//			auto DS = std::move(ctx.m_device.allocateDescriptorSetsUnique(desc_info)[0]);
+			auto DS = std::move(ctx.m_device.allocateDescriptorSets(desc_info)[0]);
+
+			vk::DescriptorImageInfo images[] =
+			{
+				m_brgf_lut.info(),
+			};
+
+			vk::WriteDescriptorSet write[] =
+			{
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+				.setDescriptorCount(array_length(images))
+				.setPImageInfo(images)
+				.setDstBinding(0)
+				.setDstSet(DS),
+			};
+			ctx.m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
+
+			// pipeline layout
+			vk::PipelineLayoutCreateInfo pipeline_layout_info;
+			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
+			pipeline_layout_info.setPSetLayouts(layouts);
+			auto PL = ctx.m_device.createPipelineLayoutUnique(pipeline_layout_info);
+
+
+			// Pipeline
+			struct { const char* name; vk::ShaderStageFlagBits flag; } shader_param[] =
+			{
+				{"BRDFLUT_Make.vert.spv", vk::ShaderStageFlagBits::eVertex},
+				{"BRDFLUT_Make.frag.spv", vk::ShaderStageFlagBits::eFragment},
+
+			};
+			std::array<vk::UniqueShaderModule, array_length(shader_param)> shader;
+			std::array<vk::PipelineShaderStageCreateInfo, array_length(shader_param)> shaderStages;
+			for (size_t i = 0; i < array_length(shader_param); i++)
+			{
+				shader[i] = loadShaderUnique(ctx.m_device, btr::getResourceShaderPath() + shader_param[i].name);
+				shaderStages[i].setModule(shader[i].get()).setStage(shader_param[i].flag).setPName("main");
+			}
+
+			// assembly
+			vk::PipelineInputAssemblyStateCreateInfo assembly_info;
+			assembly_info.setPrimitiveRestartEnable(VK_FALSE);
+			assembly_info.setTopology(vk::PrimitiveTopology::eTriangleList);
+
+			// viewport
+			vk::Viewport viewport[] = { vk::Viewport(0.f, 0.f, dim, dim, 0.f, 1.f) };
+			vk::Rect2D scissor[] = { vk::Rect2D(vk::Offset2D(0, 0), dim) };
+			vk::PipelineViewportStateCreateInfo viewportInfo;
+			viewportInfo.setViewportCount(array_length(viewport));
+			viewportInfo.setPViewports(viewport);
+			viewportInfo.setScissorCount(array_length(scissor));
+			viewportInfo.setPScissors(scissor);
+
+
+			vk::PipelineRasterizationStateCreateInfo rasterization_info;
+			rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
+			rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
+			rasterization_info.setCullMode(vk::CullModeFlagBits::eNone);
+			rasterization_info.setLineWidth(1.f);
+
+
+			vk::PipelineMultisampleStateCreateInfo sample_info;
+			sample_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);
+
+			vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
+			depth_stencil_info.setDepthTestEnable(VK_FALSE);
+
+
+			std::vector<vk::PipelineColorBlendAttachmentState> blend_state = {
+				vk::PipelineColorBlendAttachmentState()
+				.setBlendEnable(VK_FALSE)
+				.setColorWriteMask(vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA)
+			};
+			vk::PipelineColorBlendStateCreateInfo blend_info;
+			blend_info.setAttachmentCount(blend_state.size());
+			blend_info.setPAttachments(blend_state.data());
+
+			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
+
+			vk::GraphicsPipelineCreateInfo graphics_pipeline_info =
+				vk::GraphicsPipelineCreateInfo()
+				.setStageCount(shaderStages.size())
+				.setPStages(shaderStages.data())
+				.setPVertexInputState(&vertex_input_info)
+				.setPInputAssemblyState(&assembly_info)
+				.setPViewportState(&viewportInfo)
+				.setPRasterizationState(&rasterization_info)
+				.setPMultisampleState(&sample_info)
+				.setLayout(PL.get())
+				.setRenderPass(m_renderpass.get())
+				.setPDepthStencilState(&depth_stencil_info)
+				.setPColorBlendState(&blend_info);
+			auto pipeline = ctx.m_device.createGraphicsPipelineUnique(vk::PipelineCache(), graphics_pipeline_info).value;
+
+			// Render
+			vk::RenderPassBeginInfo begin_render_Info;
+			begin_render_Info.setRenderPass(m_renderpass.get());
+			begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), dim));
+			begin_render_Info.setFramebuffer(m_framebuffer.get());
+
+			vk::RenderPassAttachmentBeginInfo attachment_begin_info;
+			std::array<vk::ImageView, 1> views = { m_brgf_lut.m_image_view.get() };
+			attachment_begin_info.setAttachments(views);
+
+			begin_render_Info.pNext = &attachment_begin_info;
+
+			cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, PL.get(), 0, { DS }, {});
+			cmd.draw(3, 1, 0, 0);
+			cmd.endRenderPass();
+		}
+	}
+};
+
+struct Environment
+{
+	enum Target { IRRADIANCE = 0, PREFILTEREDENV = 1, Target_Max, };
+	vk::UniqueRenderPass m_renderpass;
+	vk::UniqueDescriptorSetLayout m_DSL;
+	vk::UniqueDescriptorSet m_DS;
+	vk::UniquePipelineLayout m_pipeline_layout;
+	vk::UniquePipeline m_pipeline;
+
+	Environment(btr::Context& ctx, vk::CommandBuffer cmd)
+	{
+
+		for (uint32_t target = 0; target < PREFILTEREDENV + 1; target++)
+		{
+			//			vks::TextureCubeMap cubemap;
+			auto tStart = std::chrono::high_resolution_clock::now();
+
+			vk::Format format;
+			int32_t dim;
+
+			switch (target) 
+			{
+			case IRRADIANCE:
+				format = vk::Format::eR32G32B32A32Sfloat;
+				dim = 64;
+				break;
+			case PREFILTEREDENV:
+				format = vk::Format::eR16G16B16A16Sfloat;
+				dim = 512;
+				break;
+			};
+			const uint32_t numMips = static_cast<uint32_t>(floor(log2(dim))) + 1;
+
+			Image image;
+			// Create target cubemap
+			{
+				// Image
+				vk::ImageCreateInfo imageCI{};
+				imageCI.imageType = vk::ImageType::e2D;
+				imageCI.format = format;
+				imageCI.extent.width = dim;
+				imageCI.extent.height = dim;
+				imageCI.extent.depth = 1;
+				imageCI.mipLevels = numMips;
+				imageCI.arrayLayers = 6;
+				imageCI.samples = vk::SampleCountFlagBits::e1;
+				imageCI.tiling = vk::ImageTiling::eOptimal;
+				imageCI.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
+				imageCI.flags = vk::ImageCreateFlagBits::eCubeCompatible;
+
+				image.m_image = ctx.m_device.createImageUnique(imageCI);
+
+				vk::MemoryRequirements memory_request = ctx.m_device.getImageMemoryRequirements(image.m_image.get());
+				vk::MemoryAllocateInfo memory_alloc_info;
+				memory_alloc_info.allocationSize = memory_request.size;
+				memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(ctx.m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+				image.m_memory = ctx.m_device.allocateMemoryUnique(memory_alloc_info);
+				ctx.m_device.bindImageMemory(image.m_image.get(), image.m_memory.get(), 0);
+
+				// View
+				vk::ImageViewCreateInfo viewCI{};
+				viewCI.viewType = vk::ImageViewType::eCube;
+				viewCI.format = format;
+				viewCI.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+				viewCI.subresourceRange.levelCount = numMips;
+				viewCI.subresourceRange.layerCount = 6;
+				viewCI.image = image.m_image.get();
+				image.m_image_view = ctx.m_device.createImageViewUnique(viewCI);
+
+				// Sampler
+				vk::SamplerCreateInfo sampler_info;
+				sampler_info.magFilter = vk::Filter::eNearest;
+				sampler_info.minFilter = vk::Filter::eNearest;
+				sampler_info.mipmapMode = vk::SamplerMipmapMode::eNearest;
+				sampler_info.addressModeU = vk::SamplerAddressMode::eRepeat;
+				sampler_info.addressModeV = vk::SamplerAddressMode::eRepeat;
+				sampler_info.addressModeW = vk::SamplerAddressMode::eRepeat;
+				sampler_info.mipLodBias = 0.0f;
+				sampler_info.compareOp = vk::CompareOp::eNever;
+				sampler_info.minLod = 0.0f;
+				sampler_info.maxLod = numMips;
+				sampler_info.maxAnisotropy = 1.0;
+				sampler_info.anisotropyEnable = VK_FALSE;
+				sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
+				image.m_sampler = ctx.m_device.createSamplerUnique(sampler_info);
+			}
+
+			// FB, Att, RP, Pipe, etc.
+
+				// sub pass
+			vk::AttachmentReference color_ref[] =
+			{
+				vk::AttachmentReference()
+				.setAttachment(0)
+				.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
+			};
+
+			// Use subpass dependencies for layout transitions
+			std::array<vk::SubpassDependency, 2> dependencies;
+			dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+			dependencies[0].dstSubpass = 0;
+			dependencies[0].srcStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
+			dependencies[0].dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+			dependencies[0].srcAccessMask = vk::AccessFlagBits::eMemoryRead;
+			dependencies[0].dstAccessMask = vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite;
+			dependencies[0].dependencyFlags = vk::DependencyFlagBits::eByRegion;
+			dependencies[1].srcSubpass = 0;
+			dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+			dependencies[1].srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+			dependencies[1].dstStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
+			dependencies[1].srcAccessMask = vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite;
+			dependencies[1].dstAccessMask = vk::AccessFlagBits::eMemoryRead;
+			dependencies[1].dependencyFlags = vk::DependencyFlagBits::eByRegion;
+
+			vk::SubpassDescription subpass;
+			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+			subpass.setInputAttachmentCount(0);
+			subpass.setPInputAttachments(nullptr);
+			subpass.setColorAttachmentCount(array_length(color_ref));
+			subpass.setPColorAttachments(color_ref);
+			subpass.setPDepthStencilAttachment(nullptr);
+
+			vk::AttachmentDescription attach_description[] =
+			{
+				// color1
+				vk::AttachmentDescription()
+				.setFormat(format)
+				.setSamples(vk::SampleCountFlagBits::e1)
+				.setLoadOp(vk::AttachmentLoadOp::eLoad)
+				.setStoreOp(vk::AttachmentStoreOp::eStore)
+				.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
+				.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
+			};
+			vk::RenderPassCreateInfo renderpass_info;
+			renderpass_info.setAttachmentCount(array_length(attach_description));
+			renderpass_info.setPAttachments(attach_description);
+			renderpass_info.setSubpassCount(1);
+			renderpass_info.setPSubpasses(&subpass);
+			renderpass_info.setDependencies(dependencies);
+			auto renderpass = ctx.m_device.createRenderPassUnique(renderpass_info);
+
+			vk::ImageView view[] =
+			{
+				image.m_image_view.get(),
+			};
+			vk::FramebufferCreateInfo framebuffer_info;
+			framebuffer_info.setRenderPass(renderpass.get());
+			framebuffer_info.setAttachmentCount(array_length(view));
+			framebuffer_info.setPAttachments(view);
+			framebuffer_info.setWidth(dim);
+			framebuffer_info.setHeight(dim);
+			framebuffer_info.setLayers(1);
+			auto framebuffer = ctx.m_device.createFramebufferUnique(framebuffer_info);
+
+
+			struct Offscreen 
+			{
+				vk::Image image;
+				vk::ImageView view;
+				vk::DeviceMemory memory;
+				vk::Framebuffer framebuffer;
+			} offscreen;
+
+			// Create offscreen framebuffer
+			{
+				// Image
+				vk::ImageCreateInfo imageCI{};
+				imageCI.imageType = vk::ImageType::e2D;
+				imageCI.format = format;
+				imageCI.extent.width = dim;
+				imageCI.extent.height = dim;
+				imageCI.extent.depth = 1;
+				imageCI.mipLevels = 1;
+				imageCI.arrayLayers = 1;
+				imageCI.samples = vk::SampleCountFlagBits::e1;
+				imageCI.tiling = vk::ImageTiling::eOptimal;
+				imageCI.initialLayout = vk::ImageLayout::eUndefined;
+				imageCI.usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc;
+				offscreen.image = ctx.m_device.createImage(imageCI);
+
+
+				// View
+				vk::ImageViewCreateInfo viewCI{};
+				viewCI.viewType = vk::ImageViewType::e2D;
+				viewCI.format = format;
+				viewCI.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+				viewCI.subresourceRange.baseMipLevel = 0;
+				viewCI.subresourceRange.levelCount = 1;
+				viewCI.subresourceRange.baseArrayLayer = 0;
+				viewCI.subresourceRange.layerCount = 1;
+				viewCI.image = offscreen.image;
+				offscreen.view = ctx.m_device.createImageView(viewCI);
+
+				// Framebuffer
+				vk::FramebufferCreateInfo framebufferCI;
+				framebufferCI.renderPass = m_renderpass.get();
+				framebufferCI.attachmentCount = 1;
+				framebufferCI.pAttachments = &offscreen.view;
+				framebufferCI.width = dim;
+				framebufferCI.height = dim;
+				framebufferCI.layers = 1;
+				offscreen.framebuffer = ctx.m_device.createFramebuffer(framebufferCI);
+
+				vk::ImageMemoryBarrier imageMemoryBarrier{};
+				imageMemoryBarrier.image = offscreen.image;
+				imageMemoryBarrier.oldLayout = vk::ImageLayout::eUndefined;
+				imageMemoryBarrier.newLayout = vk::ImageLayout::eColorAttachmentOptimal;
+				imageMemoryBarrier.srcAccessMask = {};
+				imageMemoryBarrier.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+				imageMemoryBarrier.subresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands, {}, {}, {}, { imageMemoryBarrier });
+			}
+
+			// Descriptors
+			vk::DescriptorSetLayoutBinding setLayoutBinding = vk::DescriptorSetLayoutBinding{ 0, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment, nullptr };
+			vk::DescriptorSetLayoutCreateInfo descriptorSetLayoutCI{};
+			descriptorSetLayoutCI.pBindings = &setLayoutBinding;
+			descriptorSetLayoutCI.bindingCount = 1;
+			vk::DescriptorSetLayout descriptorsetlayout = ctx.m_device.createDescriptorSetLayout(descriptorSetLayoutCI);
+
+			// Descriptor sets
+			vk::DescriptorSetLayout layouts[] =
+			{
+				m_DSL.get(),
+			};
+			vk::DescriptorSetAllocateInfo desc_info;
+			desc_info.setDescriptorPool(ctx.m_descriptor_pool.get());
+			desc_info.setDescriptorSetCount(array_length(layouts));
+			desc_info.setPSetLayouts(layouts);
+			m_DS = std::move(ctx.m_device.allocateDescriptorSetsUnique(desc_info)[0]);
+
+			vk::DescriptorImageInfo images[] = {
+				image.info(),
+			};
+			vk::WriteDescriptorSet write[] =
+			{
+				vk::WriteDescriptorSet().setDstSet(*m_DS).setDstBinding(0).setDescriptorType(vk::DescriptorType::eCombinedImageSampler).setDescriptorCount(array_length(images)).setPImageInfo(images),
+			};
+			ctx.m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
+
+			struct PushBlockIrradiance
+			{
+				mat4 mvp;
+				float deltaPhi = (2.0f * glm::pi<float>()) / 180.0f;
+				float deltaTheta = (0.5f * glm::pi<float>()) / 64.0f;
+			} pushBlockIrradiance;
+
+			struct PushBlockPrefilterEnv
+			{
+				mat4 mvp;
+				float roughness;
+				uint32_t numSamples = 32u;
+			} pushBlockPrefilterEnv;
+
+			// Pipeline layout
+			vk::PushConstantRange pushConstantRange{};
+			pushConstantRange.stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment;
+
+			switch (target)
+			{
+			case IRRADIANCE:
+				pushConstantRange.size = sizeof(PushBlockIrradiance);
+				break;
+			case PREFILTEREDENV:
+				pushConstantRange.size = sizeof(PushBlockPrefilterEnv);
+				break;
+			};
+
+			vk::PipelineLayoutCreateInfo pipelineLayoutCI{};
+			pipelineLayoutCI.setLayoutCount = 1;
+			pipelineLayoutCI.pSetLayouts = &descriptorsetlayout;
+			pipelineLayoutCI.pushConstantRangeCount = 1;
+			pipelineLayoutCI.pPushConstantRanges = &pushConstantRange;
+			m_pipeline_layout = ctx.m_device.createPipelineLayoutUnique(pipelineLayoutCI);
+
+			// Pipeline
+			vk::PipelineInputAssemblyStateCreateInfo inputAssemblyStateCI;
+			inputAssemblyStateCI.topology = vk::PrimitiveTopology::eTriangleList;
+
+			vk::PipelineRasterizationStateCreateInfo rasterizationStateCI;
+			rasterizationStateCI.polygonMode = vk::PolygonMode::eFill;
+			rasterizationStateCI.cullMode = vk::CullModeFlagBits::eNone;
+			rasterizationStateCI.frontFace = vk::FrontFace::eCounterClockwise;
+			rasterizationStateCI.lineWidth = 1.0f;
+
+			vk::PipelineColorBlendAttachmentState blendAttachmentState;
+			blendAttachmentState.colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
+			blendAttachmentState.blendEnable = VK_FALSE;
+
+			vk::PipelineColorBlendStateCreateInfo colorBlendStateCI;
+			colorBlendStateCI.attachmentCount = 1;
+			colorBlendStateCI.pAttachments = &blendAttachmentState;
+
+			vk::PipelineDepthStencilStateCreateInfo depthStencilStateCI;
+			depthStencilStateCI.depthTestEnable = VK_FALSE;
+			depthStencilStateCI.depthWriteEnable = VK_FALSE;
+			depthStencilStateCI.depthCompareOp = vk::CompareOp::eLessOrEqual;
+			depthStencilStateCI.front = depthStencilStateCI.back;
+			depthStencilStateCI.back.compareOp = vk::CompareOp::eAlways;
+
+			vk::PipelineViewportStateCreateInfo viewportStateCI;
+			viewportStateCI.viewportCount = 1;
+			viewportStateCI.scissorCount = 1;
+
+			vk::PipelineMultisampleStateCreateInfo multisampleStateCI;
+			multisampleStateCI.rasterizationSamples = vk::SampleCountFlagBits::e1;
+
+			std::vector<vk::DynamicState> dynamicStateEnables = { vk::DynamicState::eViewport, vk::DynamicState::eScissor };
+			vk::PipelineDynamicStateCreateInfo dynamicStateCI;
+			dynamicStateCI.setDynamicStates(dynamicStateEnables);
+
+			vk::PipelineVertexInputStateCreateInfo vertexInputStateCI;
+
+			std::array<vk::UniqueShaderModule, 3> shader;
+			std::array<vk::PipelineShaderStageCreateInfo, 3> shaderStages;
+			shader[0] = loadShaderUnique(ctx.m_device, btr::getResourceShaderPath() + "filtercube.vert.spv");
+			shaderStages[0].module = shader[0].get();
+			shaderStages[0].stage = vk::ShaderStageFlagBits::eVertex;
+			shaderStages[0].pName = "main";
+			shader[1] = loadShaderUnique(ctx.m_device, btr::getResourceShaderPath() + "filtercube.geom.spv");
+			shaderStages[1].module = shader[1].get();
+			shaderStages[1].stage = vk::ShaderStageFlagBits::eVertex;
+			shaderStages[1].pName = "main";
+
+			switch (target)
+			{
+			case IRRADIANCE:
+				shader[2] = loadShaderUnique(ctx.m_device, btr::getResourceShaderPath() + "irradiancecube.frag.spv");
+				shaderStages[2].module = shader[2].get();
+				shaderStages[2].stage = vk::ShaderStageFlagBits::eFragment;
+				shaderStages[2].pName = "main";
+				break;
+			case PREFILTEREDENV:
+				shader[2] = loadShaderUnique(ctx.m_device, btr::getResourceShaderPath() + "prefilterenvmap.frag.spv");
+				shaderStages[2].module = shader[2].get();
+				shaderStages[2].stage = vk::ShaderStageFlagBits::eFragment;
+				shaderStages[2].pName = "main";
+				break;
+			};
+
+			vk::GraphicsPipelineCreateInfo pipelineCI{};
+			pipelineCI.layout = m_pipeline_layout.get();
+			pipelineCI.renderPass = m_renderpass.get();
+			pipelineCI.pInputAssemblyState = &inputAssemblyStateCI;
+			pipelineCI.pVertexInputState = &vertexInputStateCI;
+			pipelineCI.pRasterizationState = &rasterizationStateCI;
+			pipelineCI.pColorBlendState = &colorBlendStateCI;
+			pipelineCI.pMultisampleState = &multisampleStateCI;
+			pipelineCI.pViewportState = &viewportStateCI;
+			pipelineCI.pDepthStencilState = &depthStencilStateCI;
+			pipelineCI.pDynamicState = &dynamicStateCI;
+			pipelineCI.stageCount = array_size(shaderStages);
+			pipelineCI.pStages = shaderStages.data();
+
+			m_pipeline = ctx.m_device.createGraphicsPipelineUnique({}, pipelineCI).value;
+
+			// Render cubemap
+			vk::ClearValue clearValues[1];
+			clearValues[0].color = vk::ClearColorValue{ std::array<float, 4>{0.0f, 0.0f, 0.2f, 0.0f}};
+
+			vk::RenderPassBeginInfo renderPassBeginInfo;
+			renderPassBeginInfo.renderPass = m_renderpass.get();
+			renderPassBeginInfo.framebuffer = offscreen.framebuffer;
+			renderPassBeginInfo.renderArea.extent.width = dim;
+			renderPassBeginInfo.renderArea.extent.height = dim;
+			renderPassBeginInfo.clearValueCount = 1;
+			renderPassBeginInfo.pClearValues = clearValues;
+
+			std::vector<glm::mat4> matrices = 
+			{
+				glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
+				glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
+				glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
+				glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
+				glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
+				glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
+			};
+
+			vk::Viewport viewport{};
+			viewport.width = (float)dim;
+			viewport.height = (float)dim;
+			viewport.minDepth = 0.0f;
+			viewport.maxDepth = 1.0f;
+
+			vk::Rect2D scissor{};
+			scissor.extent.width = dim;
+			scissor.extent.height = dim;
+
+			vk::ImageSubresourceRange subresourceRange{};
+			subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+			subresourceRange.baseMipLevel = 0;
+			subresourceRange.levelCount = numMips;
+			subresourceRange.layerCount = 6;
+
+			// Change image layout for all cubemap faces to transfer destination
+			{
+				vk::ImageMemoryBarrier imageMemoryBarrier;
+//				imageMemoryBarrier.image = cubemap.image;
+				imageMemoryBarrier.oldLayout = vk::ImageLayout::eUndefined;
+				imageMemoryBarrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
+				imageMemoryBarrier.srcAccessMask = {};
+				imageMemoryBarrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+				imageMemoryBarrier.subresourceRange = subresourceRange;
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands, {}, {}, {}, { imageMemoryBarrier });
+			}
+
+			for (uint32_t m = 0; m < numMips; m++) 
+			{
+				for (uint32_t f = 0; f < 6; f++) 
+				{
+
+					viewport.width = static_cast<float>(dim * std::pow(0.5f, m));
+					viewport.height = static_cast<float>(dim * std::pow(0.5f, m));
+					cmd.setViewport(0, 1, &viewport);
+					cmd.setScissor(0, 1, &scissor);
+
+					// Render scene from cube face's point of view
+					cmd.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+
+					// Pass parameters for current pass using a push constant block
+					switch (target) 
+					{
+					case IRRADIANCE:
+						pushBlockIrradiance.mvp = glm::perspective(glm::half_pi<float>(), 1.0f, 0.1f, 512.0f) * matrices[f];
+						cmd.pushConstants(m_pipeline_layout.get(), vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, 0, sizeof(PushBlockIrradiance), &pushBlockIrradiance);
+						break;
+					case PREFILTEREDENV:
+						pushBlockPrefilterEnv.mvp = glm::perspective(glm::half_pi<float>(), 1.0f, 0.1f, 512.0f) * matrices[f];
+						pushBlockPrefilterEnv.roughness = (float)m / (float)(numMips - 1);
+						cmd.pushConstants(m_pipeline_layout.get(), vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, 0, sizeof(PushBlockPrefilterEnv), &pushBlockPrefilterEnv);
+						break;
+					};
+
+					cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline.get());
+					cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 0, { m_DS.get() }, {});
+
+//					vk::DeviceSize offsets[1] = { 0 };
+//					models.skybox.draw(cmdBuf);
+
+					cmd.endRenderPass();
+
+					VkImageSubresourceRange subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+					subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+					subresourceRange.baseMipLevel = 0;
+					subresourceRange.levelCount = numMips;
+					subresourceRange.layerCount = 6;
+
+					{
+						VkImageMemoryBarrier imageMemoryBarrier{};
+						imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+						imageMemoryBarrier.image = offscreen.image;
+						imageMemoryBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+						imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+						imageMemoryBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+						imageMemoryBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+						imageMemoryBarrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+						cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands, {}, {}, {}, { imageMemoryBarrier });
+					}
+
+					// Copy region for transfer from framebuffer to cube face
+					vk::ImageCopy copyRegion{};
+
+					copyRegion.srcSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+					copyRegion.srcSubresource.baseArrayLayer = 0;
+					copyRegion.srcSubresource.mipLevel = 0;
+					copyRegion.srcSubresource.layerCount = 1;
+					copyRegion.srcOffset = vk::Offset3D{ 0, 0, 0 };
+
+					copyRegion.dstSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+					copyRegion.dstSubresource.baseArrayLayer = f;
+					copyRegion.dstSubresource.mipLevel = m;
+					copyRegion.dstSubresource.layerCount = 1;
+					copyRegion.dstOffset = vk::Offset3D{ 0, 0, 0 };
+
+					copyRegion.extent.width = static_cast<uint32_t>(viewport.width);
+					copyRegion.extent.height = static_cast<uint32_t>(viewport.height);
+					copyRegion.extent.depth = 1;
+
+//					cmd.copyImage(offscreen.image, vk::ImageLayout::eTransferSrcOptimal, cubemap.image, vk::ImageLayout::eTransferDstOptimal,{ copyRegion });
+
+					{
+						vk::ImageMemoryBarrier imageMemoryBarrier;
+						imageMemoryBarrier.image = offscreen.image;
+						imageMemoryBarrier.oldLayout = vk::ImageLayout::eTransferSrcOptimal;
+						imageMemoryBarrier.newLayout = vk::ImageLayout::eColorAttachmentOptimal;
+						imageMemoryBarrier.srcAccessMask = vk::AccessFlagBits::eTransferRead;
+						imageMemoryBarrier.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+						imageMemoryBarrier.subresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
+						cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands, {}, {}, {}, { imageMemoryBarrier });
+					}
+				}
+			}
+
+			{
+				vk::ImageMemoryBarrier imageMemoryBarrier{};
+//				imageMemoryBarrier.image = cubemap.image;
+				imageMemoryBarrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
+				imageMemoryBarrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+				imageMemoryBarrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+				imageMemoryBarrier.dstAccessMask = vk::AccessFlagBits::eHostWrite | vk::AccessFlagBits::eTransferWrite;
+				imageMemoryBarrier.subresourceRange = subresourceRange;
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands, {}, {}, {}, { imageMemoryBarrier });
+			}
+
+
+// 			vkDestroyRenderPass(device, renderpass, nullptr);
+// 			vkDestroyFramebuffer(device, offscreen.framebuffer, nullptr);
+// 			vkFreeMemory(device, offscreen.memory, nullptr);
+// 			vkDestroyImageView(device, offscreen.view, nullptr);
+// 			vkDestroyImage(device, offscreen.image, nullptr);
+// 			vkDestroyDescriptorPool(device, descriptorpool, nullptr);
+// 			vkDestroyDescriptorSetLayout(device, descriptorsetlayout, nullptr);
+// 			vkDestroyPipeline(device, pipeline, nullptr);
+// 			vkDestroyPipelineLayout(device, pipelinelayout, nullptr);
+// 
+// 			cubemap.descriptor.imageView = cubemap.view;
+// 			cubemap.descriptor.sampler = cubemap.sampler;
+// 			cubemap.descriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+// 			cubemap.device = vulkanDevice;
+
+			switch (target) 
+			{
+			case IRRADIANCE:
+//				textures.irradianceCube = cubemap;
+				break;
+			case PREFILTEREDENV:
+//				textures.prefilteredCube = cubemap;
+//				shaderValuesParams.prefilteredCubeMipLevels = static_cast<float>(numMips);
+				break;
+			};
+
+// 			auto tEnd = std::chrono::high_resolution_clock::now();
+// 			auto tDiff = std::chrono::duration<double, std::milli>(tEnd - tStart).count();
+// 			std::cout << "Generating cube map with " << numMips << " mip levels took " << tDiff << " ms" << std::endl;
+		}
+	}
+};
 struct Context
 {
 	enum DSL
@@ -615,13 +1443,16 @@ struct Context
 		float gamma;
 	};
 
+	BRDFLookupTable m_lut;
 	RenderConfig m_render_config;
 	btr::BufferMemoryEx<RenderConfig> u_render_config;
 	Image m_environment;
+	Image m_environment_debug;
 
 	vk::UniqueDescriptorSet m_DS_Scene;
 
 	Context(std::shared_ptr<btr::Context>& ctx)
+		: m_lut(*ctx, ctx->m_cmd_pool->allocCmdOnetime(0))
 	{
 		m_ctx = ctx;
 
@@ -782,7 +1613,7 @@ struct Context
 			sampler_info.mipLodBias = 0.0f;
 			sampler_info.compareOp = vk::CompareOp::eNever;
 			sampler_info.minLod = 0.0f;
-			sampler_info.maxLod = 0.f;
+			sampler_info.maxLod = image_info.mipLevels;
 			sampler_info.maxAnisotropy = 1.0;
 			sampler_info.anisotropyEnable = VK_FALSE;
 			sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
@@ -794,6 +1625,127 @@ struct Context
 
 		}
 
+		// debug cube map
+		{
+			vk::ImageCreateInfo image_info;
+			image_info.imageType = vk::ImageType::e2D;
+			image_info.format = vk::Format::eR32G32B32A32Sfloat;
+			image_info.mipLevels = 1;
+			image_info.arrayLayers = 6;
+			image_info.samples = vk::SampleCountFlagBits::e1;
+			image_info.tiling = vk::ImageTiling::eOptimal;
+			image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
+			image_info.sharingMode = vk::SharingMode::eExclusive;
+			image_info.initialLayout = vk::ImageLayout::eUndefined;
+			image_info.flags = vk::ImageCreateFlagBits::eCubeCompatible;
+			image_info.extent = vk::Extent3D(1, 1, 1);
+
+			vk::UniqueImage image = ctx->m_device.createImageUnique(image_info);
+
+			vk::MemoryRequirements memory_request = ctx->m_device.getImageMemoryRequirements(image.get());
+			vk::MemoryAllocateInfo memory_alloc_info;
+			memory_alloc_info.allocationSize = memory_request.size;
+			memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(ctx->m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+			vk::UniqueDeviceMemory image_memory = ctx->m_device.allocateMemoryUnique(memory_alloc_info);
+			ctx->m_device.bindImageMemory(image.get(), image_memory.get(), 0);
+
+			vec4 data[] = 
+			{
+				vec4(1.f, 0.f, 0.f, 1.f),
+				vec4(0.f, 1.f, 0.f, 1.f),
+				vec4(0.f, 0.f, 1.f, 1.f),
+				vec4(1.f, 1.f, 0.f, 1.f),
+				vec4(0.f, 1.f, 1.f, 1.f),
+				vec4(1.f, 0.f, 1.f, 1.f),
+			};
+			auto staging_buffer = ctx->m_staging_memory.allocateMemory<vec4>(6, true);
+			memcpy(staging_buffer.getMappedPtr(), data, sizeof(data));
+
+			vk::ImageSubresourceRange subresourceRange;
+			subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+			subresourceRange.baseArrayLayer = 0;
+			subresourceRange.baseMipLevel = 0;
+			subresourceRange.layerCount = VK_REMAINING_MIP_LEVELS;
+			subresourceRange.levelCount = VK_REMAINING_ARRAY_LAYERS;
+
+			{
+				// staging_bufferからimageへコピー
+				{
+					vk::ImageMemoryBarrier to_copy_barrier;
+					to_copy_barrier.image = image.get();
+					to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
+					to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
+					to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+					to_copy_barrier.subresourceRange = subresourceRange;
+					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+				}
+				std::vector<vk::BufferImageCopy> copys;
+				uint offset = staging_buffer.getInfo().offset;
+				for (uint32_t face = 0; face < 6; face++)
+				{
+					for (uint32_t level = 0; level < image_info.mipLevels; level++)
+					{
+						vk::BufferImageCopy copy = {};
+						copy.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+						copy.imageSubresource.mipLevel = level;
+						copy.imageSubresource.baseArrayLayer = face;
+						copy.imageSubresource.layerCount = 1;
+						copy.imageExtent.width = 1;
+						copy.imageExtent.height = 1;
+						copy.imageExtent.depth = 1;
+						copy.bufferOffset = offset;
+
+						copys.push_back(copy);
+
+						offset += sizeof(vec4);
+					}
+				}
+				cmd.copyBufferToImage(staging_buffer.getInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, copys);
+
+
+				{
+					vk::ImageMemoryBarrier to_shader_read_barrier;
+					to_shader_read_barrier.image = image.get();
+					to_shader_read_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
+					to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+					to_shader_read_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+					to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+					to_shader_read_barrier.subresourceRange = subresourceRange;
+					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
+				}
+
+			}
+
+			vk::ImageViewCreateInfo view_info;
+			view_info.viewType = vk::ImageViewType::eCube;
+			view_info.components = { vk::ComponentSwizzle::eR, vk::ComponentSwizzle::eG, vk::ComponentSwizzle::eB,vk::ComponentSwizzle::eA };
+			view_info.flags = vk::ImageViewCreateFlags();
+			view_info.format = image_info.format;
+			view_info.image = image.get();
+			view_info.subresourceRange = subresourceRange;
+
+			vk::SamplerCreateInfo sampler_info;
+			sampler_info.magFilter = vk::Filter::eNearest;
+			sampler_info.minFilter = vk::Filter::eNearest;
+			sampler_info.mipmapMode = vk::SamplerMipmapMode::eNearest;
+			sampler_info.addressModeU = vk::SamplerAddressMode::eRepeat;
+			sampler_info.addressModeV = vk::SamplerAddressMode::eRepeat;
+			sampler_info.addressModeW = vk::SamplerAddressMode::eRepeat;
+			sampler_info.mipLodBias = 0.0f;
+			sampler_info.compareOp = vk::CompareOp::eNever;
+			sampler_info.minLod = 0.0f;
+			sampler_info.maxLod = image_info.mipLevels;
+			sampler_info.maxAnisotropy = 1.0;
+			sampler_info.anisotropyEnable = VK_FALSE;
+			sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
+
+			m_environment_debug.m_image = std::move(image);
+			m_environment_debug.m_memory = std::move(image_memory);
+			m_environment_debug.m_image_view = ctx->m_device.createImageViewUnique(view_info);
+			m_environment_debug.m_sampler = ctx->m_device.createSamplerUnique(sampler_info);
+
+		}
 		{
 			vk::DescriptorSetLayout layouts[] =
 			{
@@ -812,6 +1764,7 @@ struct Context
 
 				vk::DescriptorImageInfo images[] = {
 					m_environment.info(),
+//					m_environment_debug.info(),
 				};
 				vk::WriteDescriptorSet write[] =
 				{
@@ -823,6 +1776,9 @@ struct Context
 			}
 		}
 	}
+
+
+
 
 	void execute(vk::CommandBuffer cmd)
 	{
@@ -837,7 +1793,7 @@ struct Context
 					ImGui::End();
 					return;
 				}
-				ImGui::SliderFloat("exposure", &this->m_render_config.exposure, 0.001f, 20.f);
+				ImGui::SliderFloat("exposure", &this->m_render_config.exposure, 0.0f, 20.f);
 //				ImGui::SliderFloat("gamma", &this->m_render_config.gamma, 0.f, 1000.f);
 				ImGui::Text("Password input");
 				ImGui::End();
@@ -1438,9 +2394,6 @@ struct ModelRenderer
 					.setAttachment(0)
 					.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
 				};
-				vk::AttachmentReference depth_ref;
-				depth_ref.setAttachment(1);
-				depth_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
 				vk::SubpassDescription subpass;
 				subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
@@ -1448,7 +2401,6 @@ struct ModelRenderer
 				subpass.setPInputAttachments(nullptr);
 				subpass.setColorAttachmentCount(array_length(color_ref));
 				subpass.setPColorAttachments(color_ref);
-				subpass.setPDepthStencilAttachment(&depth_ref);
 
 				vk::AttachmentDescription attach_description[] =
 				{
@@ -1460,14 +2412,6 @@ struct ModelRenderer
 					.setStoreOp(vk::AttachmentStoreOp::eStore)
 					.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
 					.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
-					// depth
-					vk::AttachmentDescription()
-					.setFormat(rt.m_depth_info.format)
-					.setSamples(vk::SampleCountFlagBits::e1)
-					.setLoadOp(vk::AttachmentLoadOp::eLoad)
-					.setStoreOp(vk::AttachmentStoreOp::eStore)
-					.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
-					.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
 				};
 				vk::RenderPassCreateInfo renderpass_info;
 				renderpass_info.setAttachmentCount(array_length(attach_description));
@@ -1481,7 +2425,6 @@ struct ModelRenderer
 				vk::ImageView view[] = 
 				{
 					rt.m_view,
-					rt.m_depth_view,
 				};
 				vk::FramebufferCreateInfo framebuffer_info;
 				framebuffer_info.setRenderPass(m_renderpass.get());
@@ -1740,7 +2683,7 @@ int main()
 				{
 					ctx->execute(cmd);
 					skybox.execute_Render(cmd, *ctx, *render_target);
-//					renderer.execute_Render(cmd, *render_target, *model);
+					renderer.execute_Render(cmd, *render_target, *model);
 					sAppImGui::Order().Render(cmd);
 				}
 
