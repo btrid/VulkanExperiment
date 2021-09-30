@@ -1,6 +1,9 @@
 #version 450
 
-layout (location = 1) in vec3 inPos;
+layout(location = 1) in A
+{
+	vec3 Pos;
+}In;
 layout (location = 0) out vec4 outColor;
 
 layout (binding = 0) uniform samplerCube samplerEnv;
@@ -100,6 +103,6 @@ vec3 prefilterEnvMap(vec3 R, float roughness)
 
 void main()
 {		
-	vec3 N = normalize(inPos);
+	vec3 N = normalize(In.Pos);
 	outColor = vec4(prefilterEnvMap(N, consts.roughness), 1.0);
 }

@@ -98,6 +98,9 @@
       <Project>{6ab61332-963c-4d53-b5ff-04b3a9689e23}</Project>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\include\020_RT\Model.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="..\..\packages\assimp.v140.redist.3.2\build\native\assimp.v140.redist.targets" Condition="Exists('..\..\packages\assimp.v140.redist.3.2\build\native\assimp.v140.redist.targets')" />
