@@ -1,12 +1,20 @@
 #ifndef PBR_H_
 #define PBR_H_
 
+// https://substance3d.adobe.com/tutorials/courses/the-pbr-guide-part-1
+// https://substance3d.adobe.com/tutorials/courses/the-pbr-guide-part-2
+
+#ifndef M_PI
+#define M_PI 3.141592
+#endif
+
 #ifdef USE_Render_Scene
 
 struct RenderConfig
 {
 	float exposure;
 	float gamma;
+	int skybox_render_type;
 };
 
 layout(set=USE_Render_Scene, binding=0, std140) uniform UScene 

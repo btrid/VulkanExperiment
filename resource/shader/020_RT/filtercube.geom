@@ -23,20 +23,20 @@ layout(location = 1) out A
 
 const vec3 cube_strip[] = 
 {
-vec3(0.f, 1.f, 1.f),    // Front-top-left
-vec3(1.f, 1.f, 1.f),    // Front-top-right
-vec3(0.f, 0.f, 1.f),    // Front-bottom-left
-vec3(1.f, 0.f, 1.f),    // Front-bottom-right
-vec3(1.f, 0.f, 0.f),    // Back-bottom-right
-vec3(1.f, 1.f, 1.f),    // Front-top-right
-vec3(1.f, 1.f, 0.f),    // Back-top-right
-vec3(0.f, 1.f, 1.f),    // Front-top-left
-vec3(0.f, 1.f, 0.f),    // Back-top-left
-vec3(0.f, 0.f, 1.f),    // Front-bottom-left
-vec3(0.f, 0.f, 0.f),    // Back-bottom-left
-vec3(1.f, 0.f, 0.f),    // Back-bottom-right
-vec3(0.f, 1.f, 0.f),    // Back-top-left
-vec3(1.f, 1.f, 0.f),    // Back-top-right
+	vec3(0.f, 1.f, 1.f),    // Front-top-left
+	vec3(1.f, 1.f, 1.f),    // Front-top-right
+	vec3(0.f, 0.f, 1.f),    // Front-bottom-left
+	vec3(1.f, 0.f, 1.f),    // Front-bottom-right
+	vec3(1.f, 0.f, 0.f),    // Back-bottom-right
+	vec3(1.f, 1.f, 1.f),    // Front-top-right
+	vec3(1.f, 1.f, 0.f),    // Back-top-right
+	vec3(0.f, 1.f, 1.f),    // Front-top-left
+	vec3(0.f, 1.f, 0.f),    // Back-top-left
+	vec3(0.f, 0.f, 1.f),    // Front-bottom-left
+	vec3(0.f, 0.f, 0.f),    // Back-bottom-left
+	vec3(1.f, 0.f, 0.f),    // Back-bottom-right
+	vec3(0.f, 1.f, 0.f),    // Back-top-left
+	vec3(1.f, 1.f, 0.f),    // Back-top-right
 };
 
 void main() 
@@ -44,7 +44,12 @@ void main()
 	for(int i = 0; i < cube_strip.length(); i++)
 	{
 		gl_Position = pushConsts.mvp * vec4(cube_strip[i]*2.-1., 1.);
-		Out.Texcoord_0 = cube_strip[i];
+//		gl_Position.y = -gl_Position.y;
+		Out.Texcoord_0 = cube_strip[i]*2.-1.;
+//		Out.Texcoord_0.y = -Out.Texcoord_0.y;
+//		Out.Texcoord_0.z = -Out.Texcoord_0.z;
+//		Out.Texcoord_0 = cube_strip[i];
+//		Out.Texcoord_0.y = 1.-Out.Texcoord_0.y;
 
 		EmitVertex();
 	}

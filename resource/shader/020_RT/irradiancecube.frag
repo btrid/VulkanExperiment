@@ -29,8 +29,10 @@ void main()
 
 	vec3 color = vec3(0.0);
 	uint sampleCount = 0u;
-	for (float phi = 0.0; phi < TWO_PI; phi += consts.deltaPhi) {
-		for (float theta = 0.0; theta < HALF_PI; theta += consts.deltaTheta) {
+	for (float phi = 0.0; phi < TWO_PI; phi += consts.deltaPhi) 
+	{
+		for (float theta = 0.0; theta < HALF_PI; theta += consts.deltaTheta) 
+		{
 			vec3 tempVec = cos(phi) * right + sin(phi) * up;
 			vec3 sampleVector = cos(theta) * N + sin(theta) * tempVec;
 			color += texture(samplerEnv, sampleVector).rgb * cos(theta) * sin(theta);

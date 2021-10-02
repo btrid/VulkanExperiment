@@ -902,8 +902,8 @@ struct Environment
 	struct PushBlockIrradiance
 	{
 		mat4 mvp;
-		float deltaPhi = (2.0f * glm::pi<float>()) / 180.0f;
-		float deltaTheta = (0.5f * glm::pi<float>()) / 64.0f;
+		float deltaPhi = glm::two_pi<float>() / 180.0f;
+		float deltaTheta = glm::half_pi<float>() / 64.0f;
 	} pushBlockIrradiance;
 
 	struct PushBlockPrefilterEnv
@@ -936,16 +936,17 @@ struct Environment
 		for (uint32_t target = 0; target < Target_Max; target++)
 		{
 			int32_t dim = 512;
-			auto format = vk::Format::eR16G16B16A16Sfloat;
+//			auto format = vk::Format::eR16G16B16A16Sfloat;
+			auto format = vk::Format::eR32G32B32A32Sfloat;
 
 			switch (target)
 			{
 			case Target_IRRADIANCE:
-				format = vk::Format::eR16G16B16A16Sfloat;
+//				format = vk::Format::eR16G16B16A16Sfloat;
 				dim = 64;
 				break;
 			case Target_PREFILTEREDENV:
-				format = vk::Format::eR16G16B16A16Sfloat;
+//				format = vk::Format::eR16G16B16A16Sfloat;
 				dim = 512;
 				break;
 			};
@@ -1049,7 +1050,7 @@ struct Environment
 					vk::AttachmentDescription()
 					.setFormat(format)
 					.setSamples(vk::SampleCountFlagBits::e1)
-					.setLoadOp(vk::AttachmentLoadOp::eLoad)
+					.setLoadOp(vk::AttachmentLoadOp::eDontCare)
 					.setStoreOp(vk::AttachmentStoreOp::eStore)
 					.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
 					.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
@@ -1124,7 +1125,7 @@ struct Environment
 
 			// Pipeline
 			vk::PipelineInputAssemblyStateCreateInfo inputAssemblyStateCI;
-			inputAssemblyStateCI.topology = vk::PrimitiveTopology::eTriangleList;
+			inputAssemblyStateCI.topology = vk::PrimitiveTopology::ePointList;
 
 			vk::PipelineRasterizationStateCreateInfo rasterizationStateCI;
 			rasterizationStateCI.polygonMode = vk::PolygonMode::eFill;
@@ -1222,16 +1223,17 @@ struct Environment
 		for (uint32_t target = 0; target < Target_Max; target++)
 		{
 			int32_t dim = 512;
-			auto format = vk::Format::eR16G16B16A16Sfloat;
+			auto format = vk::Format::eR32G32B32A32Sfloat;
+//			auto format = vk::Format::eR32G32B32A32Sfloat;
 
 			switch (target)
 			{
 			case Target_IRRADIANCE:
-				format = vk::Format::eR16G16B16A16Sfloat;
+//				format = vk::Format::eR16G16B16A16Sfloat;
 				dim = 64;
 				break;
 			case Target_PREFILTEREDENV:
-				format = vk::Format::eR16G16B16A16Sfloat;
+//				format = vk::Format::eR16G16B16A16Sfloat;
 				dim = 512;
 				break;
 			};
@@ -1243,7 +1245,7 @@ struct Environment
 				// Image
 				vk::ImageCreateInfo imageCI;
 				imageCI.imageType = vk::ImageType::e2D;
-				imageCI.format = vk::Format::eR16G16B16A16Sfloat;
+				imageCI.format = format;
 				imageCI.extent.width = dim;
 				imageCI.extent.height = dim;
 				imageCI.extent.depth = 1;
@@ -1275,19 +1277,20 @@ struct Environment
 
 				// Sampler
 				vk::SamplerCreateInfo sampler_info;
-				sampler_info.magFilter = vk::Filter::eNearest;
-				sampler_info.minFilter = vk::Filter::eNearest;
-				sampler_info.mipmapMode = vk::SamplerMipmapMode::eNearest;
-				sampler_info.addressModeU = vk::SamplerAddressMode::eRepeat;
-				sampler_info.addressModeV = vk::SamplerAddressMode::eRepeat;
-				sampler_info.addressModeW = vk::SamplerAddressMode::eRepeat;
+				sampler_info.magFilter = vk::Filter::eLinear;
+				sampler_info.minFilter = vk::Filter::eLinear;
+				sampler_info.mipmapMode = vk::SamplerMipmapMode::eLinear;
+				sampler_info.addressModeU = vk::SamplerAddressMode::eClampToEdge;
+				sampler_info.addressModeV = vk::SamplerAddressMode::eClampToEdge;
+				sampler_info.addressModeW = vk::SamplerAddressMode::eClampToEdge;
 				sampler_info.mipLodBias = 0.0f;
 				sampler_info.compareOp = vk::CompareOp::eNever;
 				sampler_info.minLod = 0.0f;
 				sampler_info.maxLod = numMips;
-				sampler_info.maxAnisotropy = 1.0;
+				sampler_info.maxAnisotropy = 0;
 				sampler_info.anisotropyEnable = VK_FALSE;
-				sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
+				sampler_info.borderColor = vk::BorderColor::eFloatTransparentBlack;
+				sampler_info.unnormalizedCoordinates = VK_FALSE;
 				cubemap.m_sampler = ctx.m_device.createSamplerUnique(sampler_info);
 
 				cubemap.m_imageCI = imageCI;
@@ -1318,21 +1321,21 @@ struct Environment
 
 			std::vector<glm::mat4> matrices =
 			{
-				glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
-				glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
-				glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
-				glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
-				glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
-				glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
+				glm::lookAt(vec3(0.f), vec3(-1.f, 0.f, 0.f), vec3(0.f, -1.f, 0.f)),
+				glm::lookAt(vec3(0.f), vec3( 1.f, 0.f, 0.f), vec3(0.f, -1.f, 0.f)),
+				glm::lookAt(vec3(0.f), vec3(0.f, -1.f, 0.f), vec3(0.f, 0.f, 1.f)),
+				glm::lookAt(vec3(0.f), vec3(0.f, 1.f, 0.f), vec3(0.f, 0.f, -1.f)),
+				glm::lookAt(vec3(0.f), vec3(0.f, 0.f, -1.f), vec3(0.f, -1.f, 0.f)),
+				glm::lookAt(vec3(0.f), vec3(0.f, 0.f,  1.f), vec3(0.f, -1.f, 0.f)),
 			};
 
-			vk::Viewport viewport{};
+			vk::Viewport viewport;
 			viewport.width = (float)dim;
 			viewport.height = (float)dim;
 			viewport.minDepth = 0.0f;
 			viewport.maxDepth = 1.0f;
 
-			vk::Rect2D scissor{};
+			vk::Rect2D scissor;
 			scissor.extent.width = dim;
 			scissor.extent.height = dim;
 
@@ -1354,6 +1357,9 @@ struct Environment
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands, {}, {}, {}, { imageMemoryBarrier });
 			}
 
+			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[target].get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 0, { m_DS.get() }, {});
+
 			for (uint32_t m = 0; m < numMips; m++)
 			{
 				for (uint32_t f = 0; f < 6; f++)
@@ -1371,18 +1377,16 @@ struct Environment
 					switch (target)
 					{
 					case Target_IRRADIANCE:
-						pushBlockIrradiance.mvp = glm::perspective(glm::half_pi<float>(), 1.0f, 0.1f, 512.0f) * matrices[f];
-						cmd.pushConstants(m_pipeline_layout.get(), vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry| vk::ShaderStageFlagBits::eFragment, 0, sizeof(PushBlockIrradiance), & pushBlockIrradiance);
+						pushBlockIrradiance.mvp = glm::ortho(-1.f, 1.f, -1.f, 1.f) * matrices[f];
+						cmd.pushConstants(m_pipeline_layout.get(), vk::ShaderStageFlagBits::eVertex|vk::ShaderStageFlagBits::eGeometry|vk::ShaderStageFlagBits::eFragment, 0, sizeof(PushBlockIrradiance), & pushBlockIrradiance);
 						break;
 					case Target_PREFILTEREDENV:
-						pushBlockPrefilterEnv.mvp = glm::perspective(glm::half_pi<float>(), 1.0f, 0.1f, 512.0f) * matrices[f];
+						pushBlockPrefilterEnv.mvp = glm::ortho(-1.f, 1.f, -1.f, 1.f) * matrices[f];
 						pushBlockPrefilterEnv.roughness = (float)m / (float)(numMips - 1);
 						cmd.pushConstants(m_pipeline_layout.get(), vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment, 0, sizeof(PushBlockPrefilterEnv), &pushBlockPrefilterEnv);
 						break;
 					};
 
-					cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[target].get());
-					cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 0, { m_DS.get() }, {});
 
 					cmd.draw(1, 1, 0, 0);
 
@@ -1475,6 +1479,8 @@ struct Context
 	{
 		float exposure;
 		float gamma;
+
+		int32_t skybox_render_type;
 	};
 
 	Environment m_env;
@@ -1498,6 +1504,7 @@ struct Context
 
 		m_render_config.exposure = 10.f;
 		m_render_config.gamma = 2.2f;
+		m_render_config.skybox_render_type = 0;
 
 		u_render_config = ctx->m_uniform_memory.allocateMemory<RenderConfig>(1);
 		// descriptor set layout
@@ -1773,13 +1780,13 @@ struct Context
 			sampler_info.magFilter = vk::Filter::eNearest;
 			sampler_info.minFilter = vk::Filter::eNearest;
 			sampler_info.mipmapMode = vk::SamplerMipmapMode::eNearest;
-			sampler_info.addressModeU = vk::SamplerAddressMode::eRepeat;
-			sampler_info.addressModeV = vk::SamplerAddressMode::eRepeat;
-			sampler_info.addressModeW = vk::SamplerAddressMode::eRepeat;
+			sampler_info.addressModeU = vk::SamplerAddressMode::eClampToEdge;
+			sampler_info.addressModeV = vk::SamplerAddressMode::eClampToEdge;
+			sampler_info.addressModeW = vk::SamplerAddressMode::eClampToEdge;
 			sampler_info.mipLodBias = 0.0f;
 			sampler_info.compareOp = vk::CompareOp::eNever;
 			sampler_info.minLod = 0.0f;
-			sampler_info.maxLod = image_info.mipLevels;
+			sampler_info.maxLod = 0.f;
 			sampler_info.maxAnisotropy = 1.0;
 			sampler_info.anisotropyEnable = VK_FALSE;
 			sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
@@ -1810,10 +1817,10 @@ struct Context
 				{
 					m_lut.m_brgf_lut.info(),
 					m_environment.info(),
-					m_environment.info(),
-					m_environment.info(),
-//					m_environment_filter[0].info(),
-//					m_environment_filter[1].info(),
+//					m_environment.info(),
+//					m_environment.info(),
+					m_environment_filter[0].info(),
+					m_environment_filter[1].info(),
 				};
 				vk::WriteDescriptorSet write[] =
 				{
@@ -1843,8 +1850,12 @@ struct Context
 					return;
 				}
 				ImGui::SliderFloat("exposure", &this->m_render_config.exposure, 0.0f, 20.f);
-//				ImGui::SliderFloat("gamma", &this->m_render_config.gamma, 0.f, 1000.f);
-				ImGui::Text("Password input");
+				//				ImGui::SliderFloat("gamma", &this->m_render_config.gamma, 0.f, 1000.f);
+
+				m_render_config.skybox_render_type;
+				const char* types[] = {"normal", "irradiance", "prefiltered",};
+				ImGui::ListBox("Skybox", &m_render_config.skybox_render_type, types, array_size(types));
+
 				ImGui::End();
 
 			});
@@ -1993,7 +2004,7 @@ struct Skybox
 
 			vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
 			depth_stencil_info.setDepthTestEnable(VK_TRUE);
-			depth_stencil_info.setDepthWriteEnable(VK_TRUE);
+			depth_stencil_info.setDepthWriteEnable(VK_FALSE);
 			depth_stencil_info.setDepthCompareOp(vk::CompareOp::eGreaterOrEqual);
 			depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
 			depth_stencil_info.setStencilTestEnable(VK_FALSE);
@@ -2068,7 +2079,7 @@ int main()
 {
 
 	auto camera = cCamera::sCamera::Order().create();
-	camera->getData().m_position = vec3(5.f, 5.f, 0.f);
+	camera->getData().m_position = vec3(0.f, 0.1f, -10.f);
 	camera->getData().m_target = vec3(0.f, 0.1f, 0.f);
 	camera->getData().m_up = vec3(0.f, -1.f, 0.f);
 	camera->getData().m_width = 1024;

@@ -70,7 +70,8 @@ public:
 	{
 		float distance = glm::length(m_data.m_target - m_data.m_position);
 		{
-			if (input.m_mouse.getWheel() != 0) {
+			if (input.m_mouse.getWheel() != 0) 
+			{
 				glm::vec3 dir = glm::normalize(m_data.m_position - m_data.m_target);
 				distance += -input.m_mouse.getWheel() * distance * deltaTime*5.f;
 				distance = glm::max(distance, 1.f);
@@ -97,7 +98,7 @@ public:
 		else if (input.m_mouse.isHold(cMouse::BUTTON_RIGHT))
 		{
 			// ‰ñ“]ˆÚ“®
-			glm::vec3 u = glm::normalize(glm::cross(s, f));
+			glm::vec3 u = m_data.m_up;
 
 			auto move = glm::vec2(input.m_mouse.getMove());
 			if (!glm::epsilonEqual(glm::dot(move, move), 0.f, FLT_EPSILON))
@@ -106,7 +107,6 @@ public:
 				f = glm::normalize(rot * f);
 				m_data.m_target = m_data.m_position + f*distance;
 				s = glm::normalize(glm::cross(m_data.m_up, f));
-				m_data.m_up = glm::normalize(glm::cross(f, s));
 			}
 		}
 

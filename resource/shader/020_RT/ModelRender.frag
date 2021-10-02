@@ -1,8 +1,5 @@
 #version 460
 #extension GL_GOOGLE_include_directive : require
-// https://substance3d.adobe.com/tutorials/courses/the-pbr-guide-part-1
-// https://substance3d.adobe.com/tutorials/courses/the-pbr-guide-part-2
-#define M_PI 3.141592
 
  // Encapsulate the various inputs used by the various functions in the shading equation
 // We store values in this struct to simplify the integration of alternative implementations
