@@ -24,7 +24,7 @@ layout(location = 1) out Vertex
 	vec3 WorldPos;
 	vec3 Normal;
 	vec2 Texcoord_0;
-}VSOut;
+}Out;
 
 /*
 mat4 skinning()
@@ -44,10 +44,11 @@ mat4 skinning()
 void main()
 {
 	vec4 pos = vec4(inPosition.xyz, 1.0);
+//	pos.y = -pos.y;
 //	mat4 skinningMat = skinning();
-	gl_Position = u_camera[0].u_projection * u_camera[0].u_view *  100.*pos;
+	gl_Position = u_camera[0].u_projection * u_camera[0].u_view * pos;
 
-	VSOut.WorldPos = gl_Position.xyz / gl_Position.w;
-	VSOut.Normal =  inNormal.xyz;
-	VSOut.Texcoord_0 = inTexcoord_0;
+	Out.WorldPos.xyz = pos.xyz/pos.w;
+	Out.Normal.xyz =  inNormal.xyz;
+	Out.Texcoord_0 = inTexcoord_0;
 }

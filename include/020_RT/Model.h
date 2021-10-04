@@ -62,8 +62,6 @@ struct Model
 
 		// buffer
 		{
-			std::vector<vk::DescriptorBufferInfo> info(gltf_model.buffers.size());
-			uint buffersize_total = 0;
 			model->b_vertex.resize(gltf_model.buffers.size());
 			std::vector<btr::BufferMemory> staging(gltf_model.buffers.size());
 			for (int i = 0; i < gltf_model.buffers.size(); i++)
@@ -74,9 +72,6 @@ struct Model
 
 				vk::BufferCopy copy = vk::BufferCopy().setSize(gltf_model.buffers[i].data.size()).setSrcOffset(staging[i].getInfo().offset).setDstOffset(model->b_vertex[i].getInfo().offset);
 				cmd.copyBuffer(staging[i].getInfo().buffer, model->b_vertex[i].getInfo().buffer, copy);
-
-				info[i].offset = info[std::max(i - 1, 0)].offset + info[std::max(i - 1, 0)].range;
-				buffersize_total += gltf_model.buffers[i].data.size();
 			}
 		}
 
@@ -87,10 +82,10 @@ struct Model
 			{
 				tinygltf::Texture& tex = gltf_model.textures[i];
 				tinygltf::Image& image = gltf_model.images[i];
-				//				image.pixel_type
+
 				vk::ImageCreateInfo image_info;
 				image_info.imageType = vk::ImageType::e2D;
-				image_info.format = GLtoVK::toFormat(image.pixel_type, image.component, image.bits);
+				image_info.format = vk::Format::eR8G8B8A8Unorm;//GLtoVK::toFormat(image.pixel_type, image.component, image.bits);
 				image_info.mipLevels = 1;
 				image_info.arrayLayers = 1;
 				image_info.samples = vk::SampleCountFlagBits::e1;
@@ -120,11 +115,8 @@ struct Model
 			{
 				auto gltf_material = gltf_model.materials[i];
 
-				auto ms = ctx.m_ctx->m_staging_memory.allocateMemory<Material>(1, true);
-				Material& material = ms.getMappedPtr()[i];
 
-				//				gltf_material.alphaCutoff
-
+				Material material;
 				material.m_basecolor_factor.x = gltf_material.pbrMetallicRoughness.baseColorFactor[0];
 				material.m_basecolor_factor.y = gltf_material.pbrMetallicRoughness.baseColorFactor[1];
 				material.m_basecolor_factor.z = gltf_material.pbrMetallicRoughness.baseColorFactor[2];
@@ -135,8 +127,7 @@ struct Model
 				material.m_emissive_factor.y = gltf_material.emissiveFactor[1];
 				material.m_emissive_factor.z = gltf_material.emissiveFactor[2];
 				model->b_material[i] = ctx.m_ctx->m_uniform_memory.allocateMemory<Material>(1);
-				vk::BufferCopy copy = vk::BufferCopy().setSrcOffset(ms.getInfo().offset).setSize(ms.getInfo().range).setDstOffset(model->b_material[i].getInfo().offset);
-				cmd.copyBuffer(ms.getInfo().buffer, model->b_material[i].getInfo().buffer, copy);
+				cmd.updateBuffer<Material>(model->b_material[i].getInfo().buffer, model->b_material[i].getInfo().offset, material);
 
 				// descriptor set
 				{
@@ -381,6 +372,9 @@ struct ModelRenderer
 					.setAttachment(0)
 					.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
 				};
+				vk::AttachmentReference depth_ref;
+				depth_ref.setAttachment(1);
+				depth_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
 				vk::SubpassDescription subpass;
 				subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
@@ -388,6 +382,7 @@ struct ModelRenderer
 				subpass.setPInputAttachments(nullptr);
 				subpass.setColorAttachmentCount(array_length(color_ref));
 				subpass.setPColorAttachments(color_ref);
+				subpass.setPDepthStencilAttachment(&depth_ref);
 
 				vk::AttachmentDescription attach_description[] =
 				{
@@ -399,6 +394,14 @@ struct ModelRenderer
 					.setStoreOp(vk::AttachmentStoreOp::eStore)
 					.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
 					.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
+					// depth
+					vk::AttachmentDescription()
+					.setFormat(rt.m_depth_info.format)
+					.setSamples(vk::SampleCountFlagBits::e1)
+					.setLoadOp(vk::AttachmentLoadOp::eLoad)
+					.setStoreOp(vk::AttachmentStoreOp::eStore)
+					.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
+					.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
 				};
 				vk::RenderPassCreateInfo renderpass_info;
 				renderpass_info.setAttachmentCount(array_length(attach_description));
@@ -412,6 +415,7 @@ struct ModelRenderer
 				vk::ImageView view[] =
 				{
 					rt.m_view,
+					rt.m_depth_view,
 				};
 				vk::FramebufferCreateInfo framebuffer_info;
 				framebuffer_info.setRenderPass(m_renderpass.get());
@@ -564,23 +568,15 @@ struct ModelRenderer
 					tinygltf::Accessor accessor = gltf_model.accessors[attrib.second];
 					tinygltf::BufferView bufferview = gltf_model.bufferViews[accessor.bufferView];
 
-					int size = 1;
-					if (accessor.type != TINYGLTF_TYPE_SCALAR)
-					{
-						size = accessor.type;
-					}
-
 					int vaa = -1;
 					if (attrib.first.compare("POSITION") == 0) vaa = 0;
 					if (attrib.first.compare("NORMAL") == 0) vaa = 1;
 					if (attrib.first.compare("TEXCOORD_0") == 0) vaa = 2;
+
+					assert(vaa >= 0);
 					if (vaa > -1)
 					{
 						cmd.bindVertexBuffers(vaa, model.b_vertex[bufferview.buffer].getInfo().buffer, model.b_vertex[bufferview.buffer].getInfo().offset + bufferview.byteOffset);
-					}
-					else
-					{
-						std::cout << "vaa missing: " << attrib.first << std::endl;
 					}
 				}
 

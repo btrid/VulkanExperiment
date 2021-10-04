@@ -22,11 +22,17 @@ void main()
 	switch(u_render_config.skybox_render_type)
 	{
 		case 1:
-			FragColor = texture(t_environment_irradiance, t);
-			break;
+		{
+			float mip = textureQueryLevels(t_environment_irradiance);
+			FragColor = textureLod(t_environment_irradiance, t, mip*u_render_config.lod);
+		}
+		break;
 		case 2:
-			FragColor = textureLod(t_environment_prefiltered, t, 0.);
-			break;
+		{
+			float mip = textureQueryLevels(t_environment_prefiltered);
+			FragColor = textureLod(t_environment_prefiltered, t, mip*u_render_config.lod);
+		}
+		break;
 	}
 //	FragColor.xyz = normalize(In.Texcoord_0);
 	FragColor.w = 1.;

@@ -1477,10 +1477,14 @@ struct Context
 
 	struct RenderConfig
 	{
+		vec4 LightDir;
+
 		float exposure;
 		float gamma;
 
 		int32_t skybox_render_type;
+		float lod;
+
 	};
 
 	Environment m_env;
@@ -1501,11 +1505,11 @@ struct Context
 		
 	{
 		m_ctx = ctx;
-
+		m_render_config.LightDir = vec4(1.f);
 		m_render_config.exposure = 10.f;
 		m_render_config.gamma = 2.2f;
 		m_render_config.skybox_render_type = 0;
-
+		m_render_config.lod = 0.f;
 		u_render_config = ctx->m_uniform_memory.allocateMemory<RenderConfig>(1);
 		// descriptor set layout
 		{
@@ -1839,26 +1843,22 @@ struct Context
 	void execute(vk::CommandBuffer cmd)
 	{
 		app::g_app_instance->m_window->getImgui()->pushImguiCmd([this]()
-			{
-				static bool is_open;
-				ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver);
-				ImGui::SetNextWindowSize(ImVec2(550, 680), ImGuiCond_FirstUseEver);
-				if (!ImGui::Begin("ImGui Demo", &is_open, ImGuiWindowFlags_NoSavedSettings))
-				{
-					// Early out if the window is collapsed, as an optimization.
-					ImGui::End();
-					return;
-				}
-				ImGui::SliderFloat("exposure", &this->m_render_config.exposure, 0.0f, 20.f);
-				//				ImGui::SliderFloat("gamma", &this->m_render_config.gamma, 0.f, 1000.f);
+		{
+			static bool is_open;
+			ImGui::SetNextWindowSize(ImVec2(150.f, 300.f));
+			ImGui::Begin("RenderConfig", &is_open, ImGuiWindowFlags_NoSavedSettings);
+			ImGui::DragFloat4("Light Dir", &m_render_config.LightDir[0], 0.01f, -1.f, 1.f);
+			ImGui::SliderFloat("exposure", &this->m_render_config.exposure, 0.0f, 20.f);
 
-				m_render_config.skybox_render_type;
-				const char* types[] = {"normal", "irradiance", "prefiltered",};
-				ImGui::ListBox("Skybox", &m_render_config.skybox_render_type, types, array_size(types));
+			ImGui::Separator();
+			m_render_config.skybox_render_type;
+			const char* types[] = { "normal", "irradiance", "prefiltered", };
+			ImGui::Combo("Skybox", &m_render_config.skybox_render_type, types, array_size(types));
+			ImGui::SliderFloat("lod", &m_render_config.lod, 0.f, 1.f);
 
-				ImGui::End();
+			ImGui::End();
 
-			});
+		});
 		auto staging = m_ctx->m_staging_memory.allocateMemory<RenderConfig>(1, true);
 		memcpy_s(staging.getMappedPtr(), sizeof(RenderConfig), &m_render_config, sizeof(RenderConfig));
 		vk::BufferCopy copy = vk::BufferCopy(staging.getInfo().offset, u_render_config.getInfo().offset, staging.getInfo().range);
@@ -2079,9 +2079,9 @@ int main()
 {
 
 	auto camera = cCamera::sCamera::Order().create();
-	camera->getData().m_position = vec3(0.f, 0.1f, -10.f);
-	camera->getData().m_target = vec3(0.f, 0.1f, 0.f);
-	camera->getData().m_up = vec3(0.f, -1.f, 0.f);
+	camera->getData().m_position = vec3(-0.2f, 3.1f, 0.02f);
+	camera->getData().m_target = vec3(-0.2f, 1.1f, -0.03f);
+	camera->getData().m_up = vec3(0.f, 0.f, 1.f);
 	camera->getData().m_width = 1024;
 	camera->getData().m_height = 1024;
 	camera->getData().m_far = 5000.f;

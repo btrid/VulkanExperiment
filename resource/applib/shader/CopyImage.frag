@@ -18,5 +18,6 @@ void main()
 {
 	// ガンマ補正
 	vec4 color = texture(tSrc, VSIn.Texcoord);
-	FragColor = pow(color, vec4(2.2));
+//	FragColor = pow(color, vec4(2.2,2.2,2.2, 1.));
+	FragColor = color;
 }

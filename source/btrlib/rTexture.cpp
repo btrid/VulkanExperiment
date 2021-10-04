@@ -292,7 +292,6 @@ void ResourceTexture::make(btr::Context& ctx, vk::CommandBuffer cmd, const std::
 
 		{
 			vk::ImageMemoryBarrier to_copy_barrier;
-			//			to_copy_barrier.dstQueueFamilyIndex = context->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
 			to_copy_barrier.image = image.get();
 			to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
 			to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
@@ -303,7 +302,6 @@ void ResourceTexture::make(btr::Context& ctx, vk::CommandBuffer cmd, const std::
 		cmd.copyBufferToImage(staging_buffer.getInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, { copy });
 		{
 			vk::ImageMemoryBarrier to_shader_read_barrier;
-			//			to_shader_read_barrier.dstQueueFamilyIndex = context->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
 			to_shader_read_barrier.image = image.get();
 			to_shader_read_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
 			to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
