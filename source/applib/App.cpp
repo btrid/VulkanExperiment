@@ -175,10 +175,14 @@ App::App(const AppDescriptor& desc)
 		storage8bit_feature.setUniformAndStorageBuffer8BitAccess(VK_TRUE);
 		device_info.setPNext(&storage8bit_feature);
 
+		vk::PhysicalDevice16BitStorageFeatures storahe16_F;
+		storahe16_F.storageBuffer16BitAccess = VK_TRUE;
+		storage8bit_feature.setPNext(&storahe16_F);
+
 		vk::PhysicalDeviceFloat16Int8FeaturesKHR  f16s8_feature;
 		f16s8_feature.setShaderInt8(VK_TRUE);
 		f16s8_feature.setShaderFloat16(VK_TRUE);
-		storage8bit_feature.setPNext(&f16s8_feature);
+		storahe16_F.setPNext(&f16s8_feature);
 
 		vk::PhysicalDeviceImagelessFramebufferFeatures imageless_feature;
 		imageless_feature.setImagelessFramebuffer(VK_TRUE);
