@@ -90,7 +90,7 @@ vec3 getNormal()
 // See our README.md on Environment Maps [3] for additional discussion.
 vec3 getIBLContribution(PBRInfo pbrInputs, vec3 n, vec3 reflection)
 {
-	float lod = (pbrInputs.perceptualRoughness * float(textureQueryLevels(t_environment_prefiltered)));
+	float lod = pbrInputs.perceptualRoughness * float(textureQueryLevels(t_environment_prefiltered));
 	// retrieve a scale and bias to F0. See [1], Figure 3
 	vec3 brdf = texture(t_brdf_lut, vec2(pbrInputs.NdotV, 1.0 - pbrInputs.perceptualRoughness)).rgb;
 	vec3 diffuseLight = SRGBtoLINEAR(tonemap(texture(t_environment_irradiance, n))).rgb;
@@ -212,8 +212,6 @@ void main()
 
 
 	vec3 n = getNormal();
-	n = normalize(In.Normal.xyz);
-
 	vec3 v = normalize(u_camera[0].u_eye.xyz - In.WorldPos.xyz);
 	vec3 l = normalize(vec3(0.6, -1.5, 0.5));
 	vec3 h = normalize(l+v);

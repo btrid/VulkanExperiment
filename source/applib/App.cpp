@@ -4,7 +4,6 @@
 #include <btrlib/Context.h>
 #include <btrlib/sDebug.h>
 
-#include <applib/DrawHelper.h>
 #include <applib/sCameraManager.h>
 #include <applib/sParticlePipeline.h>
 #include <applib/sSystem.h>
@@ -245,7 +244,9 @@ App::App(const AppDescriptor& desc)
 		vk::PhysicalDeviceDescriptorIndexingFeatures DescriptorIndexing_Feature;
  		DescriptorIndexing_Feature.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
  		DescriptorIndexing_Feature.descriptorBindingVariableDescriptorCount = VK_TRUE;
- 		ScalarBlock_Feature.setPNext(&DescriptorIndexing_Feature);
+		DescriptorIndexing_Feature.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
+		DescriptorIndexing_Feature.descriptorBindingPartiallyBound = VK_TRUE;
+		ScalarBlock_Feature.setPNext(&DescriptorIndexing_Feature);
 
 		vk::PhysicalDeviceSubgroupSizeControlFeaturesEXT Subgroup_Feature;
 		Subgroup_Feature.subgroupSizeControl = VK_TRUE;
@@ -301,6 +302,7 @@ App::App(const AppDescriptor& desc)
 			pool_info.setPoolSizeCount(array_length(pool_size));
 			pool_info.setPPoolSizes(pool_size);
 			pool_info.setMaxSets(2000);
+			pool_info.flags = vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind;
 			m_context->m_descriptor_pool = m_device->createDescriptorPoolUnique(pool_info);
 
 		}

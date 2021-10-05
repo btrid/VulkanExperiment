@@ -1,16 +1,9 @@
 #version 450
 
-
-#pragma optionNV (unroll all)
-#pragma optionNV (inline all)
-//#pragma optionNV(fastmath on)
-//#pragma optionNV(fastprecision on)
-//#pragma optionNV(ifcvt all)
-#pragma optionNV(strict on)
-#extension GL_GOOGLE_cpp_style_line_directive : require
+#extension GL_GOOGLE_include_directive : require
 
 #define SETPOINT_CAMERA 0
-#include <btrlib/Camera.glsl>
+#include "btrlib/Camera.glsl"
 
 layout(location = 0)in vec3 in_position;
 

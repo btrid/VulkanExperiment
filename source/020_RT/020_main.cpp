@@ -16,6 +16,7 @@
 #include <applib/sCameraManager.h>
 #include <applib/sAppImGui.h>
 #include <applib/GraphicsResource.h>
+#include <applib/DrawHelper.h>
 
 
 #define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
@@ -590,27 +591,11 @@ namespace GLtoVK
 	}
 }
 
-struct Image
-{
-	std::string m_filename;
-	vk::ImageCreateInfo m_imageCI;
-	vk::ImageViewCreateInfo m_vewCI;
-	vk::UniqueImage m_image;
-	vk::UniqueImageView m_view;
-	vk::UniqueDeviceMemory m_memory;
-	vk::UniqueSampler m_sampler;
-
-	vk::DescriptorImageInfo info()
-	{
-		return vk::DescriptorImageInfo().setSampler(m_sampler.get()).setImageView(m_view.get()).setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
-	}
-};
 
 struct BRDFLookupTable
 {
-	Image m_brgf_lut;
-//	vk::UniquePipelineLayout m_PL;
-//	vk::UniquePipeline m_Pipeline;
+	AppImage m_brgf_lut;
+
 	BRDFLookupTable(btr::Context& ctx, vk::CommandBuffer cmd)
 	{
 		const vk::Format format = vk::Format::eR16G16Sfloat;
@@ -735,70 +720,37 @@ struct BRDFLookupTable
 
 			auto m_renderpass = ctx.m_device.createRenderPassUnique(renderpass_info);
 
+			vk::ImageView view[] =
+			{
+				m_brgf_lut.m_view.get(),
+			};
+
 			vk::FramebufferCreateInfo framebuffer_info;
 			framebuffer_info.setRenderPass(m_renderpass.get());
-			framebuffer_info.setAttachmentCount(1);
+			framebuffer_info.setAttachmentCount(array_length(view));
+			framebuffer_info.setPAttachments(view);
 			framebuffer_info.setWidth(dim);
 			framebuffer_info.setHeight(dim);
 			framebuffer_info.setLayers(1);
-			framebuffer_info.setFlags(vk::FramebufferCreateFlagBits::eImageless);
+//			framebuffer_info.setFlags(vk::FramebufferCreateFlagBits::eImageless);
 
-			vk::FramebufferAttachmentImageInfo framebuffer_image_info;
-			framebuffer_image_info.setUsage(vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment);
-			framebuffer_image_info.setLayerCount(1);
-			framebuffer_image_info.setViewFormatCount(1);
-			framebuffer_image_info.setPViewFormats(&format);
-			framebuffer_image_info.setWidth(dim);
-			framebuffer_image_info.setHeight(dim);
-			vk::FramebufferAttachmentsCreateInfo framebuffer_attach_info;
-			framebuffer_attach_info.setAttachmentImageInfoCount(1);
-			framebuffer_attach_info.setPAttachmentImageInfos(&framebuffer_image_info);
-
-			framebuffer_info.setPNext(&framebuffer_attach_info);
+// 			vk::FramebufferAttachmentImageInfo framebuffer_image_info;
+// 			framebuffer_image_info.setUsage(vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment);
+// 			framebuffer_image_info.setLayerCount(1);
+// 			framebuffer_image_info.setViewFormatCount(1);
+// 			framebuffer_image_info.setPViewFormats(&format);
+// 			framebuffer_image_info.setWidth(dim);
+// 			framebuffer_image_info.setHeight(dim);
+// 			vk::FramebufferAttachmentsCreateInfo framebuffer_attach_info;
+// 			framebuffer_attach_info.setAttachmentImageInfoCount(1);
+// 			framebuffer_attach_info.setPAttachmentImageInfos(&framebuffer_image_info);
+// 
+// 			framebuffer_info.setPNext(&framebuffer_attach_info);
 
 			auto m_framebuffer = ctx.m_device.createFramebufferUnique(framebuffer_info);
 
-			// descriptor set layout
-			auto stage = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment;
-			vk::DescriptorSetLayoutBinding binding[] = {
-				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eCombinedImageSampler, 1, stage),
-			};
-			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
-			desc_layout_info.setBindingCount(array_length(binding));
-			desc_layout_info.setPBindings(binding);
-			auto DSL = ctx.m_device.createDescriptorSetLayoutUnique(desc_layout_info);
-
-			// descriptor set
-			vk::DescriptorSetLayout layouts[] =
-			{
-				DSL.get(),
-			};
-			vk::DescriptorSetAllocateInfo desc_info;
-			desc_info.setDescriptorPool(ctx.m_descriptor_pool.get());
-			desc_info.setDescriptorSetCount(array_length(layouts));
-			desc_info.setPSetLayouts(layouts);
-			auto DS = std::move(ctx.m_device.allocateDescriptorSets(desc_info)[0]);
-
-			vk::DescriptorImageInfo images[] =
-			{
-				m_brgf_lut.info(),
-			};
-
-			vk::WriteDescriptorSet write[] =
-			{
-				vk::WriteDescriptorSet()
-				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-				.setDescriptorCount(array_length(images))
-				.setPImageInfo(images)
-				.setDstBinding(0)
-				.setDstSet(DS),
-			};
-			ctx.m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
-
 			// pipeline layout
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
-			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
-			pipeline_layout_info.setPSetLayouts(layouts);
 			auto PL = ctx.m_device.createPipelineLayoutUnique(pipeline_layout_info);
 
 
@@ -824,7 +776,7 @@ struct BRDFLookupTable
 
 			// viewport
 			vk::Viewport viewport[] = { vk::Viewport(0.f, 0.f, dim, dim, 0.f, 1.f) };
-			vk::Rect2D scissor[] = { vk::Rect2D(vk::Offset2D(0, 0), dim) };
+			vk::Rect2D scissor[] = { vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(dim, dim)) };
 			vk::PipelineViewportStateCreateInfo viewportInfo;
 			viewportInfo.setViewportCount(array_length(viewport));
 			viewportInfo.setPViewports(viewport);
@@ -875,19 +827,18 @@ struct BRDFLookupTable
 			// Render
 			vk::RenderPassBeginInfo begin_render_Info;
 			begin_render_Info.setRenderPass(m_renderpass.get());
-			begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), dim));
+			begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(dim, dim)));
 			begin_render_Info.setFramebuffer(m_framebuffer.get());
 
-			vk::RenderPassAttachmentBeginInfo attachment_begin_info;
-			std::array<vk::ImageView, 1> views = { m_brgf_lut.m_view.get() };
-			attachment_begin_info.setAttachments(views);
-
-			begin_render_Info.pNext = &attachment_begin_info;
+// 			vk::RenderPassAttachmentBeginInfo attachment_begin_info;
+// 			std::array<vk::ImageView, 1> views = { m_brgf_lut.m_view.get() };
+// 			attachment_begin_info.setAttachments(views);
+// 
+// 			begin_render_Info.pNext = &attachment_begin_info;
 
 			cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, PL.get(), 0, { DS }, {});
 			cmd.draw(3, 1, 0, 0);
 			cmd.endRenderPass();
 
@@ -1207,9 +1158,9 @@ struct Environment
 
 	}
 
-	std::array<Image, Target_Max> execute(btr::Context& ctx, vk::CommandBuffer cmd, Image& env)
+	std::array<AppImage, Target_Max> execute(btr::Context& ctx, vk::CommandBuffer cmd, AppImage& env)
 	{
-		std::array<Image, Target_Max> cubemaps;
+		std::array<AppImage, Target_Max> cubemaps;
 		vk::DescriptorImageInfo images[] = {
 			env.info(),
 		};
@@ -1493,9 +1444,9 @@ struct Context
 	btr::BufferMemoryEx<RenderConfig> u_render_config;
 
 	BRDFLookupTable m_lut;
-	Image m_environment;
-	std::array<Image, 2> m_environment_filter;
-	Image m_environment_debug;
+	AppImage m_environment;
+	std::array<AppImage, 2> m_environment_filter;
+	AppImage m_environment_debug;
 
 	vk::UniqueDescriptorSet m_DS_Scene;
 
@@ -2101,6 +2052,7 @@ int main()
 	ClearPipeline clear_pipeline(context, render_target);
 	PresentPipeline present_pipeline(context, render_target, context->m_window->getSwapchain());
 
+	DrawHelper drawer{ context };
 
 	std::shared_ptr<Model> model = Model::LoadModel(*ctx, setup_cmd, btr::getResourceAppPath() + "pbr/DamagedHelmet.gltf");
 
@@ -2135,6 +2087,7 @@ int main()
 					ctx->execute(cmd);
 					skybox.execute_Render(cmd, *ctx, *render_target);
 					renderer.execute_Render(cmd, *render_target, *model);
+					drawer.draw(*context, cmd, *render_target, ctx->m_lut.m_brgf_lut);
 					sAppImGui::Order().Render(cmd);
 				}
 

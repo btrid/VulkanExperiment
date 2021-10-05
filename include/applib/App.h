@@ -37,6 +37,22 @@ struct RenderTarget
 	btr::BufferMemoryEx<RenderTargetInfo> u_render_info;
 
 	static vk::UniqueDescriptorSetLayout s_descriptor_set_layout;
+	static const vk::Format sformat = vk::Format::eR16G16B16A16Sfloat;
+};
+struct AppImage
+{
+	std::string m_filename;
+	vk::ImageCreateInfo m_imageCI;
+	vk::ImageViewCreateInfo m_vewCI;
+	vk::UniqueImage m_image;
+	vk::UniqueImageView m_view;
+	vk::UniqueDeviceMemory m_memory;
+	vk::UniqueSampler m_sampler;
+
+	vk::DescriptorImageInfo info()
+	{
+		return vk::DescriptorImageInfo().setSampler(m_sampler.get()).setImageView(m_view.get()).setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+	}
 };
 
 struct AppImgui
