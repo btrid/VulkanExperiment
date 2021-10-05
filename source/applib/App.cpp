@@ -18,47 +18,11 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_messenger_callback(
 	const VkDebugUtilsMessengerCallbackDataEXT* callbackData,
 	void* userData)
 {
-	char prefix[64];
 	auto message_size = strlen(callbackData->pMessage) + 2000;
 	char *message = (char *)malloc(message_size);
 	assert(message);
-	if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)
-	{
-		strcpy_s(prefix, "VERBOSE :");
-	}
-	else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
-	{
-		strcpy_s(prefix, "INFO :");
-	}
-	else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
-	{
-		strcpy_s(prefix, "WARNING :");
-	}
-	else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
-	{
-		strcpy_s(prefix, "ERROR :");
-	}
-	if (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT)
-	{
-		strcat_s(prefix, "GENERAL :");
-	}
-	else
-	{
-		// 		if (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_SPECIFICATION_BIT_EXT) {
-		// 			strcat_s(prefix, "SPEC");
-		// 			validation_error = 1;
-		// 		}
-		// 		if (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) {
-		// 			if (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_SPECIFICATION_BIT_EXT) {
-		// 				strcat(prefix, "|");
-		// 			}
-		// 			strcat_s(prefix, "PERF");
-		// 		}
-	}
 	sprintf_s(message, message_size,
-		"%s %s\n %s",
-		prefix,
-		callbackData->pMessageIdName,
+		"%s\n",
 		callbackData->pMessage);
 
 	char tmp_message[2000];
@@ -250,7 +214,7 @@ App::App(const AppDescriptor& desc)
 
 		vk::PhysicalDeviceSubgroupSizeControlFeaturesEXT Subgroup_Feature;
 		Subgroup_Feature.subgroupSizeControl = VK_TRUE;
-		ScalarBlock_Feature.setPNext(&Subgroup_Feature);
+		DescriptorIndexing_Feature.setPNext(&Subgroup_Feature);
 
 		m_device = m_physical_device.createDeviceUnique(device_info, nullptr);
 	}
