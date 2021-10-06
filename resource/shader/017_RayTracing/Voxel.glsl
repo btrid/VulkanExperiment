@@ -33,7 +33,6 @@ layout(set=USE_Voxel,binding=4, scalar) buffer V4 { int b_leaf_counter; };
 layout(set=USE_Voxel,binding=5, scalar) buffer V5 { InteriorNode b_interior[]; };
 layout(set=USE_Voxel,binding=6, scalar) buffer V6 { LeafNode b_leaf[]; };
 
-layout(set=USE_Voxel,binding=10, std140) uniform V10 {mat4 u_voxelize_pvmat[3]; };
 #endif
 
 ivec3 ToTopIndex(in ivec3 p){ return p >> 4; }

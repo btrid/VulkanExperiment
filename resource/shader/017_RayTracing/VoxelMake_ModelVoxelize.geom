@@ -30,6 +30,19 @@ layout(location=1)out Transform{
 	vec3 Normal;
 }transform;
 
+mat4 orthoLH_ZO()
+{
+	float reso = 512.;
+	mat4 Result = mat4(1);
+	Result[0][0] = 2. / reso;
+	Result[1][1] = 2. / reso;
+	Result[2][2] = 1. / reso;
+	Result[3][0] = -1.;
+	Result[3][1] = -1.;
+	Result[3][2] = 0.;
+	return Result;
+}
+
 void main() 
 {
 //	for(int i = 0; i<99999999; i++){ i = 0;}
@@ -39,7 +52,7 @@ void main()
 	float y = dot(n, vec3(0., 1., 0.));
 	float z = dot(n, vec3(0., 0., 1.));
 
-	mat4 pv = u_voxelize_pvmat[0];
+	mat4 pv = orthoLH_ZO();
 	for(int i = 0; i < 3; i++)
 	{
 		gl_Position = vec4(In[i].Position, 1.);
