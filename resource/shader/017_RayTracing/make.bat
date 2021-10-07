@@ -4,13 +4,13 @@ cd /d %~dp0
 SET exe=glslangValidator.exe --target-env vulkan1.2 -V -I./ -I../include -g
 SET output=-o ../binary/
 
-%exe% %output%/VoxelMake_ModelVoxelize.vert.spv VoxelMake_ModelVoxelize.vert
-%exe% %output%/VoxelMake_ModelVoxelize.geom.spv VoxelMake_ModelVoxelize.geom
-%exe% %output%/VoxelMake_ModelVoxelize.frag.spv VoxelMake_ModelVoxelize.frag
+%exe% %output%/VoxelMakeTD_ModelVoxelize.vert.spv VoxelMakeTD_ModelVoxelize.vert
+%exe% %output%/VoxelMakeTD_ModelVoxelize.geom.spv VoxelMakeTD_ModelVoxelize.geom
+%exe% %output%/VoxelMakeTD_ModelVoxelize.frag.spv VoxelMakeTD_ModelVoxelize.frag
 
-%exe% %output%/VoxelMake_AllocateTopChild.comp.spv VoxelMake_AllocateTopChild.comp
-%exe% %output%/VoxelMake_AllocateMidChild.comp.spv VoxelMake_AllocateMidChild.comp
-%exe% %output%/VoxelMake_MakeHashMapMask.comp.spv VoxelMake_MakeHashMapMask.comp
+%exe% %output%/VoxelMakeTD_AllocateTopChild.comp.spv VoxelMakeTD_AllocateTopChild.comp
+%exe% %output%/VoxelMakeTD_AllocateMidChild.comp.spv VoxelMakeTD_AllocateMidChild.comp
+%exe% %output%/VoxelMakeTD_MakeHashMapMask.comp.spv VoxelMakeTD_MakeHashMapMask.comp
 
  %exe% %output%/Voxel_Rendering.comp.spv Voxel_Rendering.comp
  %exe% %output%/Voxel_Rendering.comp.spv Voxel_Rendering_2.comp

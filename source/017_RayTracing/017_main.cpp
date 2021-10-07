@@ -450,9 +450,9 @@ struct Voxel_With_Model
 		{
 			struct { const char* name; vk::ShaderStageFlagBits flag; } shader_param[] =
 			{
-				{"VoxelMake_AllocateTopChild.comp.spv", vk::ShaderStageFlagBits::eCompute},
-				{"VoxelMake_AllocateMidChild.comp.spv", vk::ShaderStageFlagBits::eCompute},
-				{"VoxelMake_MakeHashMapMask.comp.spv", vk::ShaderStageFlagBits::eCompute},
+				{"VoxelMakeTD_AllocateTopChild.comp.spv", vk::ShaderStageFlagBits::eCompute},
+				{"VoxelMakeTD_AllocateMidChild.comp.spv", vk::ShaderStageFlagBits::eCompute},
+				{"VoxelMakeTD_MakeHashMapMask.comp.spv", vk::ShaderStageFlagBits::eCompute},
 				{"Voxel_Rendering.comp.spv", vk::ShaderStageFlagBits::eCompute},
 			};
 			std::array<vk::UniqueShaderModule, array_length(shader_param)> shader;
@@ -511,9 +511,9 @@ struct Voxel_With_Model
 			}
 			struct { const char* name; vk::ShaderStageFlagBits flag; } shader_param[] =
 			{
-				{"VoxelMake_ModelVoxelize.vert.spv", vk::ShaderStageFlagBits::eVertex},
-				{"VoxelMake_ModelVoxelize.geom.spv", vk::ShaderStageFlagBits::eGeometry},
-				{"VoxelMake_ModelVoxelize.frag.spv", vk::ShaderStageFlagBits::eFragment},
+				{"VoxelMakeTD_ModelVoxelize.vert.spv", vk::ShaderStageFlagBits::eVertex},
+				{"VoxelMakeTD_ModelVoxelize.geom.spv", vk::ShaderStageFlagBits::eGeometry},
+				{"VoxelMakeTD_ModelVoxelize.frag.spv", vk::ShaderStageFlagBits::eFragment},
 
 			};
 			std::array<vk::UniqueShaderModule, array_length(shader_param)> shader;
@@ -600,7 +600,6 @@ struct Voxel_With_Model
 		}
 
 		// graphics pipeline debug
-
 		{
 
 			// レンダーパス
@@ -747,7 +746,7 @@ struct Voxel_With_Model
 		}
 	}
 
-	void execute_MakeVoxel(vk::CommandBuffer cmd, Model& model)
+	void execute_MakeVoxel_TD(vk::CommandBuffer cmd, Model& model)
 	{
 		DebugLabel _label(cmd, __FUNCTION__);
 
@@ -1037,7 +1036,7 @@ int main()
 	Voxel_With_Model voxel_with_model(*ctx, *app.m_window->getFrontBuffer());
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-		voxel_with_model.execute_MakeVoxel(cmd, *model);
+		voxel_with_model.execute_MakeVoxel_TD(cmd, *model);
 //		voxel.execute_MakeVoxel(cmd);
 	}
 	app.setup();
@@ -1064,7 +1063,7 @@ int main()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				{
- 					voxel_with_model.execute_MakeVoxel(cmd, *model);
+ 					voxel_with_model.execute_MakeVoxel_TD(cmd, *model);
  					voxel_with_model.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 //					voxel_with_model.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 //					voxel.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
