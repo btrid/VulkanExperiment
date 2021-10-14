@@ -177,16 +177,12 @@ LRESULT cWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 	break;
 	case WM_KEYDOWN:
 	{
-		auto& p = m_input_worker.m_keyboard.m_data[wParam];
-		p.key = (uint8_t)wParam;
-		p.state = cKeyboard::STATE_ON;
+		m_input_worker.m_keyboard.m_state[wParam] = true;
 	}
 	break;
 	case WM_KEYUP:
 	{
-		auto& p = m_input_worker.m_keyboard.m_data[wParam];
-		p.key = (uint8_t)wParam;
-		p.state = cKeyboard::STATE_OFF;
+		m_input_worker.m_keyboard.m_state[wParam] = false;
 	}
 	break;
 	case WM_CHAR:
@@ -269,31 +265,14 @@ LRESULT cWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 }
 void cWindow::swap()
 {
-	m_input = m_input_worker;
-	m_input_worker.m_mouse.wheel = 0;
-	m_input_worker.m_keyboard.m_char.fill(0);
-	m_input_worker.m_keyboard.m_char_count = 0;
 
 }
 void cWindow::execute()
 {
-
-	for (auto& key : m_input_worker.m_keyboard.m_data)
 	{
-		if (btr::isOn(key.state_old, cMouse::STATE_ON))
-		{
-			// ONは押したタイミングだけ立つ
-			btr::setOff(key.state, cMouse::STATE_ON);
-		}
-		if (btr::isOn(key.state_old, cMouse::STATE_ON) || btr::isOn(key.state, cMouse::STATE_HOLD))
-		{
-			key.state |= cMouse::STATE_HOLD;
-		}
-		if (btr::isOn(key.state_old, cMouse::STATE_OFF))
-		{
-			key.state = 0;
-		}
-		key.state_old = key.state;
+		// holdは押しっぱなし
+		m_input_worker.m_keyboard.m_is_on = m_input.m_keyboard.m_state & ~m_input.m_keyboard.m_state_old;
+		m_input_worker.m_keyboard.m_is_off = m_input.m_keyboard.m_state_old & ~m_input.m_keyboard.m_state;
 	}
 
 	const auto& old = m_input.m_mouse;
@@ -326,5 +305,12 @@ void cWindow::execute()
 		}
 	}
 	m_input_worker.m_mouse.xy_old = old.xy;
+
+	m_input = m_input_worker;
+	m_input_worker.m_keyboard.m_state_old = m_input_worker.m_keyboard.m_state;
+	m_input_worker.m_mouse.wheel = 0;
+	m_input_worker.m_keyboard.m_char.fill(0);
+	m_input_worker.m_keyboard.m_char_count = 0;
+
 }
 

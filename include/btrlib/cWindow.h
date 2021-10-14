@@ -13,7 +13,6 @@ namespace btr
 {
 	struct Context;
 }
-struct RenderPassModule;
 
 struct cWindowDescriptor
 {

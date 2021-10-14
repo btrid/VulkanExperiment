@@ -1033,10 +1033,10 @@ int main()
 
 //	std::shared_ptr<Model> model = Model::LoadModel(*ctx, btr::getResourceAppPath() + "Box.dae");
 	std::shared_ptr<Model> model = Model::LoadModel(*ctx, btr::getResourceAppPath() + "Duck.dae");
-	Voxel_With_Model voxel_with_model(*ctx, *app.m_window->getFrontBuffer());
+	Voxel_With_Model voxelizer(*ctx, *app.m_window->getFrontBuffer());
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-		voxel_with_model.execute_MakeVoxel_TD(cmd, *model);
+		voxelizer.execute_MakeVoxel_TD(cmd, *model);
 //		voxel.execute_MakeVoxel(cmd);
 	}
 	app.setup();
@@ -1063,8 +1063,8 @@ int main()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				{
- 					voxel_with_model.execute_MakeVoxel_TD(cmd, *model);
- 					voxel_with_model.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
+ 					voxelizer.execute_MakeVoxel_TD(cmd, *model);
+ 					voxelizer.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 //					voxel_with_model.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 //					voxel.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 //					voxel.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());

@@ -378,8 +378,7 @@ void sAppImGui::Render(vk::CommandBuffer& cmd)
 			int32_t input_count = 0;
 			for (uint32_t i = 0; i < 256; i++)
 			{
-				bool is_on = keyboard.isOn(i);
-				io.KeysDown[i] = is_on;
+				io.KeysDown[i] = keyboard.isHold(i);
 			}
 			for (uint32_t i = 0; i < keyboard.m_char_count; i++)
 			{
