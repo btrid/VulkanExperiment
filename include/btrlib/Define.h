@@ -45,8 +45,11 @@ namespace btr {
 	void setResourceLibPath(const std::string& str);
 }
 
+#if _DEBUG
 #define USE_DEBUG_REPORT 1
-
+#else
+#define USE_DEBUG_REPORT 0
+#endif
 struct DebugLabel
 {
 	static const uint32_t k_color_default = uint32_t(0xffffffffu);

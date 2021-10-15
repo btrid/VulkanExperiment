@@ -1028,16 +1028,12 @@ int main()
 	ClearPipeline clear_pipeline(context, render_target);
 	PresentPipeline present_pipeline(context, render_target, context->m_window->getSwapchain());
 
-//	Voxel2 voxel(*context, *app.m_window->getFrontBuffer());
-//	Voxel1 voxel(*context, *app.m_window->getFrontBuffer());
-
 //	std::shared_ptr<Model> model = Model::LoadModel(*ctx, btr::getResourceAppPath() + "Box.dae");
 	std::shared_ptr<Model> model = Model::LoadModel(*ctx, btr::getResourceAppPath() + "Duck.dae");
 	Voxel_With_Model voxelizer(*ctx, *app.m_window->getFrontBuffer());
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 		voxelizer.execute_MakeVoxel_TD(cmd, *model);
-//		voxel.execute_MakeVoxel(cmd);
 	}
 	app.setup();
 

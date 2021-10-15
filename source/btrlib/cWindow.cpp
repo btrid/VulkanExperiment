@@ -99,7 +99,7 @@ void Swapchain::setup(const std::shared_ptr<btr::Context>& context, const cWindo
 	swapchain_info.setQueueFamilyIndexCount((uint32_t)support_surface.size());
 	swapchain_info.setPQueueFamilyIndices(support_surface.data());
 	swapchain_info.setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque);
-	swapchain_info.setPresentMode(vk::PresentModeKHR::eMailbox);
+	swapchain_info.setPresentMode(vk::PresentModeKHR::eFifoRelaxed);
 	swapchain_info.setClipped(true);
 	swapchain_info.setOldSwapchain(m_swapchain_handle.get());
 	m_swapchain_handle = device.createSwapchainKHRUnique(swapchain_info);
@@ -111,7 +111,7 @@ void Swapchain::setup(const std::shared_ptr<btr::Context>& context, const cWindo
 
 uint32_t Swapchain::swap()
 {
-	m_context->m_device.acquireNextImageKHR(m_swapchain_handle.get(), 1000, m_swapbuffer_semaphore.get(), vk::Fence(), &m_backbuffer_index);
+	m_context->m_device.acquireNextImageKHR(m_swapchain_handle.get(), 1000, m_swapchain_acquire_semaphore[m_backbuffer_index].get(), vk::Fence(), &m_backbuffer_index);
 	return m_backbuffer_index;
 }
 
@@ -159,8 +159,13 @@ cWindow::cWindow(const std::shared_ptr<btr::Context>& context, const cWindowDesc
 	m_swapchain->setup(context, descriptor, m_surface.get());
 
 	vk::SemaphoreCreateInfo semaphoreInfo = vk::SemaphoreCreateInfo();
-	m_swapchain->m_swapbuffer_semaphore = context->m_device.createSemaphoreUnique(semaphoreInfo);
-	m_swapchain->m_submit_semaphore = context->m_device.createSemaphoreUnique(semaphoreInfo);
+	m_swapchain->m_swapchain_acquire_semaphore.resize(m_swapchain->m_backbuffer_image.size());
+	m_swapchain->m_swapchain_release_semaphore.resize(m_swapchain->m_backbuffer_image.size());
+	for (int i = 0; i < m_swapchain->m_backbuffer_image.size(); i++)
+	{
+		m_swapchain->m_swapchain_acquire_semaphore[i] = context->m_device.createSemaphoreUnique(semaphoreInfo);
+		m_swapchain->m_swapchain_release_semaphore[i] = context->m_device.createSemaphoreUnique(semaphoreInfo);
+	}
 
 }
 

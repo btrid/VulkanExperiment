@@ -355,16 +355,16 @@ void App::setup()
 void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 {
 
-	std::vector<vk::Semaphore> swap_wait_semas(m_window_list.size());
-	std::vector<vk::Semaphore> submit_wait_semas(m_window_list.size());
+	std::vector<vk::Semaphore> swapchain_acquire_semaphore(m_window_list.size());
+	std::vector<vk::Semaphore> swapchain_release_semaphore(m_window_list.size());
 	std::vector<vk::SwapchainKHR> swapchains(m_window_list.size());
 	std::vector<uint32_t> backbuffer_indexs(m_window_list.size());
 	std::vector<vk::PipelineStageFlags> wait_pipelines(m_window_list.size());
 	for (size_t i = 0; i < m_window_list.size(); i++)
 	{
 		auto& window = m_window_list[i];
-		swap_wait_semas[i] = window->getSwapchain()->m_swapbuffer_semaphore.get();
-		submit_wait_semas[i] = window->getSwapchain()->m_submit_semaphore.get();
+		swapchain_acquire_semaphore[i] = window->getSwapchain()->m_swapchain_acquire_semaphore[window->getSwapchain()->m_backbuffer_index].get();
+		swapchain_release_semaphore[i] = window->getSwapchain()->m_swapchain_release_semaphore[window->getSwapchain()->m_backbuffer_index].get();
 		swapchains[i] = window->getSwapchain()->m_swapchain_handle.get();
 		backbuffer_indexs[i] = window->getSwapchain()->m_backbuffer_index;
 		wait_pipelines[i] = vk::PipelineStageFlagBits::eAllGraphics;
@@ -388,21 +388,21 @@ void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 	vk::SubmitInfo submit_info;
 	submit_info.setCommandBufferCount((uint32_t)cmds.size());
 	submit_info.setPCommandBuffers(cmds.data());
-	submit_info.setWaitSemaphoreCount((uint32_t)swap_wait_semas.size());
-	submit_info.setPWaitSemaphores(swap_wait_semas.data());
+	submit_info.setWaitSemaphoreCount((uint32_t)swapchain_acquire_semaphore.size());
+	submit_info.setPWaitSemaphores(swapchain_acquire_semaphore.data());
 	submit_info.setPWaitDstStageMask(wait_pipelines.data());
-	submit_info.setSignalSemaphoreCount((uint32_t)submit_wait_semas.size());
-	submit_info.setPSignalSemaphores(submit_wait_semas.data());
+	submit_info.setSignalSemaphoreCount((uint32_t)swapchain_release_semaphore.size());
+	submit_info.setPSignalSemaphores(swapchain_release_semaphore.data());
 
 	auto queue = m_device->getQueue(0, 0);
-	queue.submit(submit_info, m_fence_list[sGlobal::Order().getCurrentFrame()].get());
+	queue.submit(submit_info, m_fence_list[m_window_list[0]->getSwapchain()->m_backbuffer_index].get());
 
 	vk::PresentInfoKHR present_info;
-	present_info.setWaitSemaphoreCount((uint32_t)submit_wait_semas.size());
-	present_info.setPWaitSemaphores(submit_wait_semas.data());
 	present_info.setSwapchainCount((uint32_t)swapchains.size());
 	present_info.setPSwapchains(swapchains.data());
 	present_info.setPImageIndices(backbuffer_indexs.data());
+	present_info.setWaitSemaphoreCount((uint32_t)swapchain_release_semaphore.size());
+	present_info.setPWaitSemaphores(swapchain_release_semaphore.data());
 	queue.presentKHR(present_info);
 }
 
@@ -434,7 +434,7 @@ void App::preUpdate()
 	{
 		sGlobal::Order().sync();
 
-		uint32_t index = sGlobal::Order().getCurrentFrame();
+		uint32_t index = m_window_list[0]->getSwapchain()->m_backbuffer_index;// sGlobal::Order().getCurrentFrame();
 		sDebug::Order().waitFence(m_device.get(), m_fence_list[index].get());
 		m_device->resetFences({ m_fence_list[index].get() });
 		m_cmd_pool->resetPool();
