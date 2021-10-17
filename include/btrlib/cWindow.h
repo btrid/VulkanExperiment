@@ -34,8 +34,8 @@ struct Swapchain
 
 	uint32_t m_backbuffer_index;
 
-	std::vector<vk::UniqueSemaphore> m_swapchain_acquire_semaphore;
-	std::vector<vk::UniqueSemaphore> m_swapchain_release_semaphore;
+	vk::UniqueSemaphore m_swapbuffer_semaphore;
+	vk::UniqueSemaphore m_submit_semaphore;
 
 	Swapchain()
 		: m_swapchain_handle()
