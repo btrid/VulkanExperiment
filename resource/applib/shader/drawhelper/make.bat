@@ -10,3 +10,6 @@ SET output=-o ../binary/
 %exe% %output%/DrawTex.vert.spv DrawTex.vert
 %exe% %output%/DrawTex.frag.spv DrawTex.frag
 
+%exe% %output%/DrawTexcube.vert.spv DrawTexcube.vert
+%exe% %output%/DrawTexcube.frag.spv DrawTexcube.frag
+

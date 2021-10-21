@@ -160,434 +160,10 @@ namespace GLtoVK
 	{
 		// 間違ってる可能性はある
 		return (vk::Format)f;
-		switch (f)
-		{
-		case gli::FORMAT_UNDEFINED:
-			return vk::Format::eUndefined;
-		case gli::FORMAT_RG4_UNORM_PACK8:
-			return vk::Format::eR4G4UnormPack8;
-		case gli::FORMAT_RGBA4_UNORM_PACK16:
-			return vk::Format::eR4G4B4A4UnormPack16;
-		case gli::FORMAT_BGRA4_UNORM_PACK16:
-			return vk::Format::eB4G4R4A4UnormPack16;
-		case gli::FORMAT_R5G6B5_UNORM_PACK16:
-			return vk::Format::eR5G6B5UnormPack16;
-		case gli::FORMAT_B5G6R5_UNORM_PACK16:
-			return vk::Format::eB5G6R5UnormPack16;
-		case gli::FORMAT_RGB5A1_UNORM_PACK16:
-			return vk::Format::eR5G5B5A1UnormPack16;
-		case gli::FORMAT_BGR5A1_UNORM_PACK16:
-			return vk::Format::eB5G5R5A1UnormPack16;
-		case gli::FORMAT_A1RGB5_UNORM_PACK16:
-			return vk::Format::eA1R5G5B5UnormPack16;
-		case gli::FORMAT_R8_UNORM_PACK8:
-			return vk::Format::eR8Unorm;
-		case gli::FORMAT_R8_SNORM_PACK8:
-			return vk::Format::eR8Snorm;
-		case gli::FORMAT_R8_USCALED_PACK8:
-			return vk::Format::eR8Uscaled;
-		case gli::FORMAT_R8_SSCALED_PACK8:
-			return vk::Format::eR8Sscaled;
-		case gli::FORMAT_R8_UINT_PACK8:
-			return vk::Format::eR8Uint;
-		case gli::FORMAT_R8_SINT_PACK8:
-			return vk::Format::eR8Sint;
-		case gli::FORMAT_R8_SRGB_PACK8:
-			return vk::Format::eR8Srgb;
-		case gli::FORMAT_RG8_UNORM_PACK8:
-			return vk::Format::eR8G8Unorm;
-		case gli::FORMAT_RG8_SNORM_PACK8:
-			return vk::Format::eR8G8Snorm;
-		case gli::FORMAT_RG8_USCALED_PACK8:
-			return vk::Format::eR8G8Uscaled;
-		case gli::FORMAT_RG8_SSCALED_PACK8:
-			return vk::Format::eR8G8Sscaled;
-		case gli::FORMAT_RG8_UINT_PACK8:
-			return vk::Format::eR8G8Uint;
-		case gli::FORMAT_RG8_SINT_PACK8:
-			return vk::Format::eR8G8Sint;
-		case gli::FORMAT_RG8_SRGB_PACK8:
-			return vk::Format::eR8G8Srgb;
-		case gli::FORMAT_RGB8_UNORM_PACK8:
-			return vk::Format::eR8G8B8Unorm;
-		case gli::FORMAT_RGB8_SNORM_PACK8:
-			return vk::Format::eR8G8B8Snorm;
-		case gli::FORMAT_RGB8_USCALED_PACK8:
-			return vk::Format::eR8G8B8Uscaled;
-		case gli::FORMAT_RGB8_SSCALED_PACK8:
-			return vk::Format::eR8G8B8Sscaled;
-		case gli::FORMAT_RGB8_UINT_PACK8:
-			return vk::Format::eR8G8B8Uint;
-		case gli::FORMAT_RGB8_SINT_PACK8:
-			return vk::Format::eR8G8B8Sint;
-		case gli::FORMAT_RGB8_SRGB_PACK8:
-			return vk::Format::eR8G8B8Srgb;
-		case gli::FORMAT_BGR8_UNORM_PACK8:
-			return vk::Format::eB8G8R8Unorm;
-		case gli::FORMAT_BGR8_SNORM_PACK8:
-			return vk::Format::eB8G8R8Snorm;
-		case gli::FORMAT_BGR8_USCALED_PACK8:
-			return vk::Format::eB8G8R8Uscaled;
-		case gli::FORMAT_BGR8_SSCALED_PACK8:
-			return vk::Format::eB8G8R8Sscaled;
-		case gli::FORMAT_BGR8_UINT_PACK8:
-			return vk::Format::eB8G8R8Uint;
-		case gli::FORMAT_BGR8_SINT_PACK8:
-			return vk::Format::eB8G8R8Sint;
-		case gli::FORMAT_BGR8_SRGB_PACK8:
-			return vk::Format::eB8G8R8Srgb;
-		case gli::FORMAT_RGBA8_UNORM_PACK8:
-			return vk::Format::eB8G8R8Unorm;
-		case gli::FORMAT_RGBA8_SNORM_PACK8:
-			return vk::Format::eR8G8B8Snorm;
-		case gli::FORMAT_RGBA8_USCALED_PACK8:
-			return vk::Format::eR8G8B8A8Uscaled;
-		case gli::FORMAT_RGBA8_SSCALED_PACK8:
-			break;
-		case gli::FORMAT_RGBA8_UINT_PACK8:
-			break;
-		case gli::FORMAT_RGBA8_SINT_PACK8:
-			break;
-		case gli::FORMAT_RGBA8_SRGB_PACK8:
-			break;
-		case gli::FORMAT_BGRA8_UNORM_PACK8:
-			break;
-		case gli::FORMAT_BGRA8_SNORM_PACK8:
-			break;
-		case gli::FORMAT_BGRA8_USCALED_PACK8:
-			break;
-		case gli::FORMAT_BGRA8_SSCALED_PACK8:
-			break;
-		case gli::FORMAT_BGRA8_UINT_PACK8:
-			break;
-		case gli::FORMAT_BGRA8_SINT_PACK8:
-			break;
-		case gli::FORMAT_BGRA8_SRGB_PACK8:
-			break;
-		case gli::FORMAT_RGBA8_UNORM_PACK32:
-			break;
-		case gli::FORMAT_RGBA8_SNORM_PACK32:
-			break;
-		case gli::FORMAT_RGBA8_USCALED_PACK32:
-			break;
-		case gli::FORMAT_RGBA8_SSCALED_PACK32:
-			break;
-		case gli::FORMAT_RGBA8_UINT_PACK32:
-			break;
-		case gli::FORMAT_RGBA8_SINT_PACK32:
-			break;
-		case gli::FORMAT_RGBA8_SRGB_PACK32:
-			break;
-		case gli::FORMAT_RGB10A2_UNORM_PACK32:
-			break;
-		case gli::FORMAT_RGB10A2_SNORM_PACK32:
-			break;
-		case gli::FORMAT_RGB10A2_USCALED_PACK32:
-			break;
-		case gli::FORMAT_RGB10A2_SSCALED_PACK32:
-			break;
-		case gli::FORMAT_RGB10A2_UINT_PACK32:
-			break;
-		case gli::FORMAT_RGB10A2_SINT_PACK32:
-			break;
-		case gli::FORMAT_BGR10A2_UNORM_PACK32:
-			break;
-		case gli::FORMAT_BGR10A2_SNORM_PACK32:
-			break;
-		case gli::FORMAT_BGR10A2_USCALED_PACK32:
-			break;
-		case gli::FORMAT_BGR10A2_SSCALED_PACK32:
-			break;
-		case gli::FORMAT_BGR10A2_UINT_PACK32:
-			break;
-		case gli::FORMAT_BGR10A2_SINT_PACK32:
-			break;
-		case gli::FORMAT_R16_UNORM_PACK16:
-			break;
-		case gli::FORMAT_R16_SNORM_PACK16:
-			break;
-		case gli::FORMAT_R16_USCALED_PACK16:
-			break;
-		case gli::FORMAT_R16_SSCALED_PACK16:
-			break;
-		case gli::FORMAT_R16_UINT_PACK16:
-			break;
-		case gli::FORMAT_R16_SINT_PACK16:
-			break;
-		case gli::FORMAT_R16_SFLOAT_PACK16:
-			break;
-		case gli::FORMAT_RG16_UNORM_PACK16:
-			break;
-		case gli::FORMAT_RG16_SNORM_PACK16:
-			break;
-		case gli::FORMAT_RG16_USCALED_PACK16:
-			break;
-		case gli::FORMAT_RG16_SSCALED_PACK16:
-			break;
-		case gli::FORMAT_RG16_UINT_PACK16:
-			break;
-		case gli::FORMAT_RG16_SINT_PACK16:
-			break;
-		case gli::FORMAT_RG16_SFLOAT_PACK16:
-			break;
-		case gli::FORMAT_RGB16_UNORM_PACK16:
-			break;
-		case gli::FORMAT_RGB16_SNORM_PACK16:
-			break;
-		case gli::FORMAT_RGB16_USCALED_PACK16:
-			break;
-		case gli::FORMAT_RGB16_SSCALED_PACK16:
-			break;
-		case gli::FORMAT_RGB16_UINT_PACK16:
-			break;
-		case gli::FORMAT_RGB16_SINT_PACK16:
-			break;
-		case gli::FORMAT_RGB16_SFLOAT_PACK16:
-			break;
-		case gli::FORMAT_RGBA16_UNORM_PACK16:
-			break;
-		case gli::FORMAT_RGBA16_SNORM_PACK16:
-			break;
-		case gli::FORMAT_RGBA16_USCALED_PACK16:
-			break;
-		case gli::FORMAT_RGBA16_SSCALED_PACK16:
-			break;
-		case gli::FORMAT_RGBA16_UINT_PACK16:
-			break;
-		case gli::FORMAT_RGBA16_SINT_PACK16:
-			break;
-		case gli::FORMAT_RGBA16_SFLOAT_PACK16:
-			break;
-		case gli::FORMAT_R32_UINT_PACK32:
-			break;
-		case gli::FORMAT_R32_SINT_PACK32:
-			break;
-		case gli::FORMAT_R32_SFLOAT_PACK32:
-			break;
-		case gli::FORMAT_RG32_UINT_PACK32:
-			break;
-		case gli::FORMAT_RG32_SINT_PACK32:
-			break;
-		case gli::FORMAT_RG32_SFLOAT_PACK32:
-			break;
-		case gli::FORMAT_RGB32_UINT_PACK32:
-			break;
-		case gli::FORMAT_RGB32_SINT_PACK32:
-			break;
-		case gli::FORMAT_RGB32_SFLOAT_PACK32:
-			break;
-		case gli::FORMAT_RGBA32_UINT_PACK32:
-			break;
-		case gli::FORMAT_RGBA32_SINT_PACK32:
-			break;
-		case gli::FORMAT_RGBA32_SFLOAT_PACK32:
-			break;
-		case gli::FORMAT_R64_UINT_PACK64:
-			break;
-		case gli::FORMAT_R64_SINT_PACK64:
-			break;
-		case gli::FORMAT_R64_SFLOAT_PACK64:
-			break;
-		case gli::FORMAT_RG64_UINT_PACK64:
-			break;
-		case gli::FORMAT_RG64_SINT_PACK64:
-			break;
-		case gli::FORMAT_RG64_SFLOAT_PACK64:
-			break;
-		case gli::FORMAT_RGB64_UINT_PACK64:
-			break;
-		case gli::FORMAT_RGB64_SINT_PACK64:
-			break;
-		case gli::FORMAT_RGB64_SFLOAT_PACK64:
-			break;
-		case gli::FORMAT_RGBA64_UINT_PACK64:
-			break;
-		case gli::FORMAT_RGBA64_SINT_PACK64:
-			break;
-		case gli::FORMAT_RGBA64_SFLOAT_PACK64:
-			break;
-		case gli::FORMAT_RG11B10_UFLOAT_PACK32:
-			break;
-		case gli::FORMAT_RGB9E5_UFLOAT_PACK32:
-			break;
-		case gli::FORMAT_D16_UNORM_PACK16:
-			break;
-		case gli::FORMAT_D24_UNORM_PACK32:
-			break;
-		case gli::FORMAT_D32_SFLOAT_PACK32:
-			break;
-		case gli::FORMAT_S8_UINT_PACK8:
-			break;
-		case gli::FORMAT_D16_UNORM_S8_UINT_PACK32:
-			break;
-		case gli::FORMAT_D24_UNORM_S8_UINT_PACK32:
-			break;
-		case gli::FORMAT_D32_SFLOAT_S8_UINT_PACK64:
-			break;
-		case gli::FORMAT_RGB_DXT1_UNORM_BLOCK8:
-			break;
-		case gli::FORMAT_RGB_DXT1_SRGB_BLOCK8:
-			break;
-		case gli::FORMAT_RGBA_DXT1_UNORM_BLOCK8:
-			break;
-		case gli::FORMAT_RGBA_DXT1_SRGB_BLOCK8:
-			break;
-		case gli::FORMAT_RGBA_DXT3_UNORM_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_DXT3_SRGB_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_DXT5_UNORM_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_DXT5_SRGB_BLOCK16:
-			break;
-		case gli::FORMAT_R_ATI1N_UNORM_BLOCK8:
-			break;
-		case gli::FORMAT_R_ATI1N_SNORM_BLOCK8:
-			break;
-		case gli::FORMAT_RG_ATI2N_UNORM_BLOCK16:
-			break;
-		case gli::FORMAT_RG_ATI2N_SNORM_BLOCK16:
-			break;
-		case gli::FORMAT_RGB_BP_UFLOAT_BLOCK16:
-			break;
-		case gli::FORMAT_RGB_BP_SFLOAT_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_BP_UNORM_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_BP_SRGB_BLOCK16:
-			break;
-		case gli::FORMAT_RGB_ETC2_UNORM_BLOCK8:
-			break;
-		case gli::FORMAT_RGB_ETC2_SRGB_BLOCK8:
-			break;
-		case gli::FORMAT_RGBA_ETC2_UNORM_BLOCK8:
-			break;
-		case gli::FORMAT_RGBA_ETC2_SRGB_BLOCK8:
-			break;
-		case gli::FORMAT_RGBA_ETC2_UNORM_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_ETC2_SRGB_BLOCK16:
-			break;
-		case gli::FORMAT_R_EAC_UNORM_BLOCK8:
-			break;
-		case gli::FORMAT_R_EAC_SNORM_BLOCK8:
-			break;
-		case gli::FORMAT_RG_EAC_UNORM_BLOCK16:
-			break;
-		case gli::FORMAT_RG_EAC_SNORM_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_ASTC_4X4_UNORM_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_ASTC_4X4_SRGB_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_ASTC_5X4_UNORM_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_ASTC_5X4_SRGB_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_ASTC_5X5_UNORM_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_ASTC_5X5_SRGB_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_ASTC_6X5_UNORM_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_ASTC_6X5_SRGB_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_ASTC_6X6_UNORM_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_ASTC_6X6_SRGB_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_ASTC_8X5_UNORM_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_ASTC_8X5_SRGB_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_ASTC_8X6_UNORM_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_ASTC_8X6_SRGB_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_ASTC_8X8_UNORM_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_ASTC_8X8_SRGB_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_ASTC_10X5_UNORM_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_ASTC_10X5_SRGB_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_ASTC_10X6_UNORM_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_ASTC_10X6_SRGB_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_ASTC_10X8_UNORM_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_ASTC_10X8_SRGB_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_ASTC_10X10_UNORM_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_ASTC_10X10_SRGB_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_ASTC_12X10_UNORM_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_ASTC_12X10_SRGB_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_ASTC_12X12_UNORM_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_ASTC_12X12_SRGB_BLOCK16:
-			break;
-		case gli::FORMAT_RGB_PVRTC1_8X8_UNORM_BLOCK32:
-			break;
-		case gli::FORMAT_RGB_PVRTC1_8X8_SRGB_BLOCK32:
-			break;
-		case gli::FORMAT_RGB_PVRTC1_16X8_UNORM_BLOCK32:
-			break;
-		case gli::FORMAT_RGB_PVRTC1_16X8_SRGB_BLOCK32:
-			break;
-		case gli::FORMAT_RGBA_PVRTC1_8X8_UNORM_BLOCK32:
-			break;
-		case gli::FORMAT_RGBA_PVRTC1_8X8_SRGB_BLOCK32:
-			break;
-		case gli::FORMAT_RGBA_PVRTC1_16X8_UNORM_BLOCK32:
-			break;
-		case gli::FORMAT_RGBA_PVRTC1_16X8_SRGB_BLOCK32:
-			break;
-		case gli::FORMAT_RGBA_PVRTC2_4X4_UNORM_BLOCK8:
-			break;
-		case gli::FORMAT_RGBA_PVRTC2_4X4_SRGB_BLOCK8:
-			break;
-		case gli::FORMAT_RGBA_PVRTC2_8X4_UNORM_BLOCK8:
-			break;
-		case gli::FORMAT_RGBA_PVRTC2_8X4_SRGB_BLOCK8:
-			break;
-		case gli::FORMAT_RGB_ETC_UNORM_BLOCK8:
-			break;
-		case gli::FORMAT_RGB_ATC_UNORM_BLOCK8:
-			break;
-		case gli::FORMAT_RGBA_ATCA_UNORM_BLOCK16:
-			break;
-		case gli::FORMAT_RGBA_ATCI_UNORM_BLOCK16:
-			break;
-		case gli::FORMAT_L8_UNORM_PACK8:
-			break;
-		case gli::FORMAT_A8_UNORM_PACK8:
-			break;
-		case gli::FORMAT_LA8_UNORM_PACK8:
-			break;
-		case gli::FORMAT_L16_UNORM_PACK16:
-			break;
-		case gli::FORMAT_A16_UNORM_PACK16:
-			break;
-		case gli::FORMAT_LA16_UNORM_PACK16:
-			break;
-		case gli::FORMAT_BGR8_UNORM_PACK32:
-			break;
-		case gli::FORMAT_BGR8_SRGB_PACK32:
-			break;
-		case gli::FORMAT_RG3B2_UNORM_PACK8:
-			break;
-		default:
-			break;
-		}
-
-		assert(false);
-		return vk::Format::eUndefined;
+// 		switch (f)
+// 		{
+// 		case gli::FORMAT_UNDEFINED: return vk::Format::eUndefined;
+// 		}
 	}
 }
 
@@ -732,21 +308,6 @@ struct BRDFLookupTable
 			framebuffer_info.setWidth(dim);
 			framebuffer_info.setHeight(dim);
 			framebuffer_info.setLayers(1);
-//			framebuffer_info.setFlags(vk::FramebufferCreateFlagBits::eImageless);
-
-// 			vk::FramebufferAttachmentImageInfo framebuffer_image_info;
-// 			framebuffer_image_info.setUsage(vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment);
-// 			framebuffer_image_info.setLayerCount(1);
-// 			framebuffer_image_info.setViewFormatCount(1);
-// 			framebuffer_image_info.setPViewFormats(&format);
-// 			framebuffer_image_info.setWidth(dim);
-// 			framebuffer_image_info.setHeight(dim);
-// 			vk::FramebufferAttachmentsCreateInfo framebuffer_attach_info;
-// 			framebuffer_attach_info.setAttachmentImageInfoCount(1);
-// 			framebuffer_attach_info.setPAttachmentImageInfos(&framebuffer_image_info);
-// 
-// 			framebuffer_info.setPNext(&framebuffer_attach_info);
-
 			auto m_framebuffer = ctx.m_device.createFramebufferUnique(framebuffer_info);
 
 			// pipeline layout
@@ -830,12 +391,6 @@ struct BRDFLookupTable
 			begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(dim, dim)));
 			begin_render_Info.setFramebuffer(m_framebuffer.get());
 
-// 			vk::RenderPassAttachmentBeginInfo attachment_begin_info;
-// 			std::array<vk::ImageView, 1> views = { m_brgf_lut.m_view.get() };
-// 			attachment_begin_info.setAttachments(views);
-// 
-// 			begin_render_Info.pNext = &attachment_begin_info;
-
 			cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.get());
@@ -887,26 +442,18 @@ struct Environment
 		for (uint32_t target = 0; target < Target_Max; target++)
 		{
 			int32_t dim = 512;
-//			auto format = vk::Format::eR16G16B16A16Sfloat;
 			auto format = vk::Format::eR32G32B32A32Sfloat;
-
 			switch (target)
 			{
-			case Target_IRRADIANCE:
-//				format = vk::Format::eR16G16B16A16Sfloat;
-				dim = 64;
-				break;
-			case Target_PREFILTEREDENV:
-//				format = vk::Format::eR16G16B16A16Sfloat;
-				dim = 512;
-				break;
+			case Target_IRRADIANCE: dim = 64; break;
+			case Target_PREFILTEREDENV: dim = 512; break;
 			};
 			auto& offscreen = m_offscreen[target];
 
 			// Create target cubemap
 			{
 				// Image
-				vk::ImageCreateInfo imageCI{};
+				vk::ImageCreateInfo imageCI;
 				imageCI.imageType = vk::ImageType::e2D;
 				imageCI.format = format;
 				imageCI.extent.width = dim;
@@ -956,8 +503,6 @@ struct Environment
 				name_info.objectType = vk::ObjectType::eImage;
 				name_info.pObjectName = to_str(offscreen.m_image.get());
 				ctx.m_device.setDebugUtilsObjectNameEXT(name_info);
-
-
 			}
 
 			// framebuffer
@@ -1175,16 +720,12 @@ struct Environment
 		{
 			int32_t dim = 512;
 			auto format = vk::Format::eR32G32B32A32Sfloat;
-//			auto format = vk::Format::eR32G32B32A32Sfloat;
-
 			switch (target)
 			{
 			case Target_IRRADIANCE:
-//				format = vk::Format::eR16G16B16A16Sfloat;
 				dim = 64;
 				break;
 			case Target_PREFILTEREDENV:
-//				format = vk::Format::eR16G16B16A16Sfloat;
 				dim = 512;
 				break;
 			};
@@ -2052,7 +1593,7 @@ int main()
 	ClearPipeline clear_pipeline(context, render_target);
 	PresentPipeline present_pipeline(context, render_target, context->m_window->getSwapchain());
 
-	DrawHelper drawer{ context };
+	DrawHelper draw_helper{ context };
 
 	std::shared_ptr<Model> model = Model::LoadModel(*ctx, setup_cmd, btr::getResourceAppPath() + "pbr/DamagedHelmet.gltf");
 
@@ -2087,7 +1628,8 @@ int main()
 					ctx->execute(cmd);
 					skybox.execute_Render(cmd, *ctx, *render_target);
 					renderer.execute_Render(cmd, *render_target, *model);
-					drawer.draw(*context, cmd, *render_target, ctx->m_lut.m_brgf_lut);
+//					draw_helper.draw(*context, cmd, *render_target, ctx->m_lut.m_brgf_lut);
+					draw_helper.draw_texcube(*context, cmd, *render_target, ctx->m_environment);
 					sAppImGui::Order().Render(cmd);
 				}
 
