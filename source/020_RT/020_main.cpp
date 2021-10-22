@@ -976,6 +976,7 @@ struct Context
 
 		int32_t skybox_render_type;
 		float lod;
+		float ambient_power;
 
 	};
 
@@ -1002,6 +1003,7 @@ struct Context
 		m_render_config.gamma = 2.2f;
 		m_render_config.skybox_render_type = 0;
 		m_render_config.lod = 0.f;
+		m_render_config.ambient_power = 1.f;
 		u_render_config = ctx->m_uniform_memory.allocateMemory<RenderConfig>(1);
 		// descriptor set layout
 		{
@@ -1343,10 +1345,10 @@ struct Context
 			ImGui::SliderFloat("exposure", &this->m_render_config.exposure, 0.0f, 20.f);
 
 			ImGui::Separator();
-			m_render_config.skybox_render_type;
 			const char* types[] = { "normal", "irradiance", "prefiltered", };
 			ImGui::Combo("Skybox", &m_render_config.skybox_render_type, types, array_size(types));
 			ImGui::SliderFloat("lod", &m_render_config.lod, 0.f, 1.f);
+			ImGui::SliderFloat("ambient power", &m_render_config.ambient_power, 0.f, 1.f);
 
 			ImGui::End();
 
@@ -1629,7 +1631,7 @@ int main()
 					skybox.execute_Render(cmd, *ctx, *render_target);
 					renderer.execute_Render(cmd, *render_target, *model);
 //					draw_helper.draw(*context, cmd, *render_target, ctx->m_lut.m_brgf_lut);
-					draw_helper.draw_texcube(*context, cmd, *render_target, ctx->m_environment);
+//					draw_helper.draw_texcube(*context, cmd, *render_target, ctx->m_environment_filter[0]);
 					sAppImGui::Order().Render(cmd);
 				}
 

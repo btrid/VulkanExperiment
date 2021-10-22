@@ -94,16 +94,16 @@ vec3 getIBLContribution(PBRInfo pbrInputs, vec3 n, vec3 reflection)
 //	float lod = 0.;
 	// retrieve a scale and bias to F0. See [1], Figure 3
 	vec3 brdf = texture(t_brdf_lut, vec2(pbrInputs.NdotV, 1.0 - pbrInputs.perceptualRoughness)).rgb;
-	vec3 diffuseLight = SRGBtoLINEAR(tonemap(texture(t_environment_irradiance, n))).rgb * 0.1;
-	vec3 specularLight = SRGBtoLINEAR(tonemap(textureLod(t_environment_prefiltered, reflection, lod))).rgb * 0.1;
+	vec3 diffuseLight = SRGBtoLINEAR(tonemap(texture(t_environment_irradiance, n))).rgb;
+	vec3 specularLight = SRGBtoLINEAR(tonemap(textureLod(t_environment_prefiltered, reflection, lod))).rgb;
 	vec3 diffuse = diffuseLight * pbrInputs.diffuseColor;
 	vec3 specular = specularLight * (pbrInputs.specularColor * brdf.x + brdf.y);
 
 	// For presentation, this allows us to disable IBL terms
-//	diffuse *= uboParams.scaleIBLAmbient;
-//	specular *= uboParams.scaleIBLAmbient;
+	diffuse *= u_render_config.ambient_power;
+	specular *= u_render_config.ambient_power;
 
-	return diffuseLight + specular;
+	return diffuse + specular;
 }
 
 

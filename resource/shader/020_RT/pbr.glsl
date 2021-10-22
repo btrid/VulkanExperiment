@@ -17,6 +17,7 @@ struct RenderConfig
 	float gamma;
 	int skybox_render_type;
 	float lod;
+	float ambient_power;
 };
 
 layout(set=USE_Render_Scene, binding=0, std140) uniform UScene 
