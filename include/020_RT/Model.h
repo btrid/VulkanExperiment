@@ -1,6 +1,29 @@
 #pragma once
 
 
+struct Entity
+{
+	enum ID
+	{
+		Vertex,
+		Normal,
+		Texcoord,
+		Index,
+		Material,
+		Material_Index,
+		ID_MAX,
+	};
+	uint64_t v[ID_MAX];
+};
+
+struct BLAS
+{
+	vk::UniqueAccelerationStructureKHR m_AS;
+	btr::BufferMemory m_AS_buffer;
+
+};
+
+
 struct Model
 {
 	struct Info
@@ -39,7 +62,9 @@ struct Model
 	vk::UniqueDescriptorSet m_DS_Model;
 
 	Info m_info;
+	BLAS m_BLAS;
 
+	Entity m_entity;
 	static std::shared_ptr<Model> LoadModel(Context& ctx, vk::CommandBuffer cmd, const std::string& filename)
 	{
 		tinygltf::Model gltf_model;
@@ -201,14 +226,16 @@ struct Model
 			auto& gltf_mesh = gltf_model.meshes[mesh_index];
 			for (size_t i = 0; i < gltf_mesh.primitives.size(); ++i)
 			{
-				tinygltf::Primitive primitive = gltf_mesh.primitives[i];
-				tinygltf::Accessor indexAccessor = gltf_model.accessors[primitive.indices];
-				tinygltf::BufferView bufferview_index = gltf_model.bufferViews[indexAccessor.bufferView];
+				tinygltf::Primitive& primitive = gltf_mesh.primitives[i];
+				tinygltf::Accessor& indexAccessor = gltf_model.accessors[primitive.indices];
+				tinygltf::BufferView& bufferview_index = gltf_model.bufferViews[indexAccessor.bufferView];
+				model->m_entity.v[Entity::Index] = model->b_vertex[bufferview_index.buffer].getDeviceAddress() + bufferview_index.byteOffset;
+//				model->m_entity.v[Entity::Material_Index] model->b_material primitive.material
 
-				for (auto& attrib : primitive.attributes)
+					for (auto& attrib : primitive.attributes)
 				{
-					tinygltf::Accessor accessor = gltf_model.accessors[attrib.second];
-					tinygltf::BufferView bufferview = gltf_model.bufferViews[accessor.bufferView];
+					tinygltf::Accessor& accessor = gltf_model.accessors[attrib.second];
+					tinygltf::BufferView& bufferview = gltf_model.bufferViews[accessor.bufferView];
 
 					int size = 1;
 					if (accessor.type != TINYGLTF_TYPE_SCALAR)
@@ -217,9 +244,22 @@ struct Model
 					}
 
 					int vaa = -1;
-					if (attrib.first.compare("POSITION") == 0) vaa = 0;
-					if (attrib.first.compare("NORMAL") == 0) vaa = 1;
-					if (attrib.first.compare("TEXCOORD_0") == 0) vaa = 2;
+					if (attrib.first.compare("POSITION") == 0) 
+					{
+						model->m_entity.v[Entity::Vertex] = model->b_vertex[bufferview.buffer].getDeviceAddress() + bufferview.byteOffset;
+						vaa = 0;
+					}
+					else if (attrib.first.compare("NORMAL") == 0)
+					{
+						model->m_entity.v[Entity::Normal] = model->b_vertex[bufferview.buffer].getDeviceAddress() + bufferview.byteOffset;
+						vaa = 1;
+					}
+					else if (attrib.first.compare("TEXCOORD_0") == 0)
+					{
+						model->m_entity.v[Entity::Texcoord] = model->b_vertex[bufferview.buffer].getDeviceAddress() + bufferview.byteOffset;
+						vaa = 2;
+					}
+
 					if (vaa > -1)
 					{
 						model->m_meshes[mesh_index].vib_disc.push_back(vk::VertexInputBindingDescription().setBinding(vaa).setInputRate(vk::VertexInputRate::eVertex).setStride(accessor.ByteStride(bufferview)));
@@ -234,6 +274,119 @@ struct Model
 			}
 		}
 
+		// build BLAS
+		auto& _ctx = *ctx.m_ctx;
+		{
+			std::vector<vk::AccelerationStructureGeometryKHR> blas_geom;
+			std::vector<uint32_t> primitive_count;
+			std::vector<vk::AccelerationStructureBuildRangeInfoKHR> acceleration_buildrangeinfo;
+			for (size_t mesh_index = 0; mesh_index < gltf_model.meshes.size(); ++mesh_index)
+			{
+				auto& gltf_mesh = gltf_model.meshes[mesh_index];
+				for (size_t i = 0; i < gltf_mesh.primitives.size(); ++i)
+				{
+					tinygltf::Primitive& primitive = gltf_mesh.primitives[i];
+					auto vertex_attrib = primitive.attributes.find("POSITION");
+					const tinygltf::Accessor& vertex_accessor = gltf_model.accessors[vertex_attrib->second];
+					const tinygltf::BufferView& vertex_bufferview = gltf_model.bufferViews[vertex_accessor.bufferView];
+					const tinygltf::Accessor& accessor = gltf_model.accessors[primitive.indices];
+					const tinygltf::BufferView& bufferview = gltf_model.bufferViews[accessor.bufferView];
+
+					vk::IndexType indextype = vk::IndexType::eUint32;
+					switch (accessor.componentType)
+					{
+					case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT: indextype = vk::IndexType::eUint32; break;
+					case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT: indextype = vk::IndexType::eUint16; break;
+					case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: indextype = vk::IndexType::eUint8EXT; break;
+					default: assert(false); break;
+					}
+
+					vk::AccelerationStructureGeometryKHR ASGeom;
+					ASGeom.flags = vk::GeometryFlagBitsKHR::eNoDuplicateAnyHitInvocation;
+					ASGeom.geometryType = vk::GeometryTypeKHR::eTriangles;
+					ASGeom.geometry.triangles.maxVertex = model->m_info.m_vertex_num;
+					ASGeom.geometry.triangles.vertexFormat = vk::Format::eR32G32B32Sfloat;
+					ASGeom.geometry.triangles.vertexData.deviceAddress = model->b_vertex[vertex_bufferview.buffer].getDeviceAddress();
+					ASGeom.geometry.triangles.vertexStride = sizeof(vec3);
+					ASGeom.geometry.triangles.indexType = indextype;
+					ASGeom.geometry.triangles.indexData.deviceAddress = model->b_vertex[bufferview.buffer].getDeviceAddress();
+					blas_geom.push_back(ASGeom);
+
+					primitive_count.push_back(accessor.count);
+
+					acceleration_buildrangeinfo.emplace_back(accessor.count, 0, 0, 0);
+				}
+			}
+
+			vk::AccelerationStructureBuildGeometryInfoKHR AS_buildinfo;
+			AS_buildinfo.type = vk::AccelerationStructureTypeKHR::eBottomLevel;
+			AS_buildinfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace /*| vk::BuildAccelerationStructureFlagBitsKHR::eAllowCompaction*/;
+			AS_buildinfo.mode = vk::BuildAccelerationStructureModeKHR::eBuild;
+			AS_buildinfo.geometryCount = blas_geom.size();
+			AS_buildinfo.pGeometries = blas_geom.data();
+
+			auto size_info = _ctx.m_device.getAccelerationStructureBuildSizesKHR(vk::AccelerationStructureBuildTypeKHR::eDevice, AS_buildinfo, primitive_count);
+
+			auto AS_buffer = _ctx.m_storage_memory.allocateMemory(size_info.accelerationStructureSize);
+			vk::AccelerationStructureCreateInfoKHR accelerationCI;
+			accelerationCI.type = vk::AccelerationStructureTypeKHR::eBottomLevel;
+			accelerationCI.buffer = AS_buffer.getInfo().buffer;
+			accelerationCI.offset = AS_buffer.getInfo().offset;
+			accelerationCI.size = AS_buffer.getInfo().range;
+			auto AS = _ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
+			AS_buildinfo.dstAccelerationStructure = AS.get();
+
+			auto scratch_buffer = _ctx.m_storage_memory.allocateMemory(size_info.buildScratchSize, true);
+			AS_buildinfo.scratchData.deviceAddress = scratch_buffer.getDeviceAddress();
+
+			std::vector<const vk::AccelerationStructureBuildRangeInfoKHR*> ranges = { acceleration_buildrangeinfo.data() };
+			cmd.buildAccelerationStructuresKHR({ AS_buildinfo }, ranges);
+
+			// Compacting BLAS #todo queryÇ™cpuë§èàóùÇ»ÇÃÇ≈é¿ëïÇ™ìÔÇµÇ¢
+			if (0)
+			{
+				vk::QueryPoolCreateInfo qp_ci;
+				qp_ci.queryCount = 1;
+				qp_ci.queryType = vk::QueryType::eAccelerationStructureCompactedSizeKHR;
+				auto qp = _ctx.m_device.createQueryPoolUnique(qp_ci);
+
+				cmd.writeAccelerationStructuresPropertiesKHR(AS.get(), vk::QueryType::eAccelerationStructureCompactedSizeKHR, qp.get(), 0);
+
+
+				vk::DeviceSize compactSize = _ctx.m_device.getQueryPoolResult<vk::DeviceSize>(qp.get(), 0, 1, sizeof(vk::DeviceSize), vk::QueryResultFlagBits::eWait).value;
+
+				// Creating a compact version of the AS
+				auto AS_compact_buffer = _ctx.m_storage_memory.allocateMemory(compactSize);
+				vk::AccelerationStructureCreateInfoKHR as_ci;
+				as_ci.size = compactSize;
+				as_ci.type = vk::AccelerationStructureTypeKHR::eBottomLevel;
+				accelerationCI.buffer = AS_compact_buffer.getInfo().buffer;
+				accelerationCI.offset = AS_compact_buffer.getInfo().offset;
+				accelerationCI.size = AS_compact_buffer.getInfo().range;
+				auto AS_compact = _ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
+
+				vk::CopyAccelerationStructureInfoKHR copy_info;
+				copy_info.src = AS.get();
+				copy_info.dst = AS_compact.get();
+				copy_info.mode = vk::CopyAccelerationStructureModeKHR::eCompact;
+				cmd.copyAccelerationStructureKHR(copy_info);
+
+				model->m_BLAS.m_AS = std::move(AS_compact);
+				model->m_BLAS.m_AS_buffer = std::move(AS_compact_buffer);
+
+				vk::BufferMemoryBarrier barrier[] = { model->m_BLAS.m_AS_buffer.makeMemoryBarrier(vk::AccessFlagBits::eAccelerationStructureWriteKHR, vk::AccessFlagBits::eAccelerationStructureReadKHR), };
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
+
+				sDeleter::Order().enque(std::move(AS), std::move(AS_buffer), std::move(scratch_buffer));
+			}
+			else
+			{
+				model->m_BLAS.m_AS = std::move(AS);
+				model->m_BLAS.m_AS_buffer = std::move(AS_buffer);
+				sDeleter::Order().enque(std::move(scratch_buffer));
+
+			}
+		}
 		model->gltf_model = std::move(gltf_model);
 		return model;
 	}
@@ -558,15 +711,15 @@ struct ModelRenderer
 		auto& gltf_model = model.gltf_model;
 		for (size_t mesh_index = 0; mesh_index < gltf_model.meshes.size(); ++mesh_index)
 		{
-			auto& gltf_mesh = gltf_model.meshes[mesh_index];
+			const auto& gltf_mesh = gltf_model.meshes[mesh_index];
 
 			for (size_t i = 0; i < gltf_mesh.primitives.size(); ++i)
 			{
-				tinygltf::Primitive primitive = gltf_mesh.primitives[i];
+				const tinygltf::Primitive& primitive = gltf_mesh.primitives[i];
 				for (auto& attrib : primitive.attributes)
 				{
-					tinygltf::Accessor accessor = gltf_model.accessors[attrib.second];
-					tinygltf::BufferView bufferview = gltf_model.bufferViews[accessor.bufferView];
+					const tinygltf::Accessor& accessor = gltf_model.accessors[attrib.second];
+					const tinygltf::BufferView& bufferview = gltf_model.bufferViews[accessor.bufferView];
 
 					int vaa = -1;
 					if (attrib.first.compare("POSITION") == 0) vaa = 0;
@@ -582,8 +735,8 @@ struct ModelRenderer
 
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 1, { model.m_DS_material[primitive.material].get() }, {});
 				{
-					tinygltf::Accessor accessor = gltf_model.accessors[primitive.indices];
-					tinygltf::BufferView bufferview = gltf_model.bufferViews[accessor.bufferView];
+					const tinygltf::Accessor& accessor = gltf_model.accessors[primitive.indices];
+					const tinygltf::BufferView& bufferview = gltf_model.bufferViews[accessor.bufferView];
 
 					vk::IndexType indextype = vk::IndexType::eUint32;
 					switch (accessor.componentType)

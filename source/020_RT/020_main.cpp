@@ -402,9 +402,22 @@ struct BRDFLookupTable
 	}
 };
 
+struct TLAS
+{
+	vk::UniqueAccelerationStructureKHR m_AS;
+	btr::BufferMemory m_AS_buffer;
+	//		btr::BufferMemoryEx<vk::AccelerationStructureInstanceKHR> m_instance_buffer;
+	vk::AccelerationStructureBuildSizesInfoKHR m_size_info;
+
+};
 struct Environment
 {
-	enum Target { Target_IRRADIANCE = 0, Target_PREFILTEREDENV = 1, Target_Max, };
+	enum Target 
+	{
+		Target_IRRADIANCE,
+		Target_PREFILTEREDENV,
+		Target_Max,
+	};
 	struct PushBlockIrradiance
 	{
 		mat4 mvp;
@@ -981,16 +994,18 @@ struct Context
 	};
 
 	Environment m_env;
+	AppImage m_environment;
+	std::array<AppImage, 2> m_environment_filter;
 
 	RenderConfig m_render_config;
 	btr::BufferMemoryEx<RenderConfig> u_render_config;
 
 	BRDFLookupTable m_lut;
-	AppImage m_environment;
-	std::array<AppImage, 2> m_environment_filter;
 	AppImage m_environment_debug;
 
 	vk::UniqueDescriptorSet m_DS_Scene;
+
+	TLAS m_TLAS;
 
 	Context(std::shared_ptr<btr::Context>& ctx, vk::CommandBuffer cmd)
 		: m_env(*ctx, cmd)
@@ -1016,6 +1031,7 @@ struct Context
 					vk::DescriptorSetLayoutBinding(11, vk::DescriptorType::eCombinedImageSampler, 1, stage),
 					vk::DescriptorSetLayoutBinding(12, vk::DescriptorType::eCombinedImageSampler, 1, stage),
 					vk::DescriptorSetLayoutBinding(13, vk::DescriptorType::eCombinedImageSampler, 1, stage),
+					vk::DescriptorSetLayoutBinding(100, vk::DescriptorType::eAccelerationStructureKHR, 1, stage),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -1293,7 +1309,6 @@ struct Context
 			m_environment_debug.m_memory = std::move(image_memory);
 			m_environment_debug.m_view = ctx->m_device.createImageViewUnique(view_info);
 			m_environment_debug.m_sampler = ctx->m_device.createSamplerUnique(sampler_info);
-
 		}
 		{
 			vk::DescriptorSetLayout layouts[] =
@@ -1315,8 +1330,6 @@ struct Context
 				{
 					m_lut.m_brgf_lut.info(),
 					m_environment.info(),
-//					m_environment.info(),
-//					m_environment.info(),
 					m_environment_filter[0].info(),
 					m_environment_filter[1].info(),
 				};
@@ -1329,6 +1342,7 @@ struct Context
 
 			}
 		}
+
 	}
 
 
@@ -1337,22 +1351,22 @@ struct Context
 	void execute(vk::CommandBuffer cmd)
 	{
 		app::g_app_instance->m_window->getImgui()->pushImguiCmd([this]()
-		{
-			static bool is_open;
-			ImGui::SetNextWindowSize(ImVec2(150.f, 300.f));
-			ImGui::Begin("RenderConfig", &is_open, ImGuiWindowFlags_NoSavedSettings);
-			ImGui::DragFloat4("Light Dir", &m_render_config.LightDir[0], 0.01f, -1.f, 1.f);
-			ImGui::SliderFloat("exposure", &this->m_render_config.exposure, 0.0f, 20.f);
+			{
+				static bool is_open;
+				ImGui::SetNextWindowSize(ImVec2(150.f, 300.f));
+				ImGui::Begin("RenderConfig", &is_open, ImGuiWindowFlags_NoSavedSettings);
+				ImGui::DragFloat4("Light Dir", &m_render_config.LightDir[0], 0.01f, -1.f, 1.f);
+				ImGui::SliderFloat("exposure", &this->m_render_config.exposure, 0.0f, 20.f);
 
-			ImGui::Separator();
-			const char* types[] = { "normal", "irradiance", "prefiltered", };
-			ImGui::Combo("Skybox", &m_render_config.skybox_render_type, types, array_size(types));
-			ImGui::SliderFloat("lod", &m_render_config.lod, 0.f, 1.f);
-			ImGui::SliderFloat("ambient power", &m_render_config.ambient_power, 0.f, 1.f);
+				ImGui::Separator();
+				const char* types[] = { "normal", "irradiance", "prefiltered", };
+				ImGui::Combo("Skybox", &m_render_config.skybox_render_type, types, array_size(types));
+				ImGui::SliderFloat("lod", &m_render_config.lod, 0.f, 1.f);
+				ImGui::SliderFloat("ambient power", &m_render_config.ambient_power, 0.f, 1.f);
 
-			ImGui::End();
+				ImGui::End();
 
-		});
+			});
 		auto staging = m_ctx->m_staging_memory.allocateMemory<RenderConfig>(1, true);
 		memcpy_s(staging.getMappedPtr(), sizeof(RenderConfig), &m_render_config, sizeof(RenderConfig));
 		vk::BufferCopy copy = vk::BufferCopy(staging.getInfo().offset, u_render_config.getInfo().offset, staging.getInfo().range);
@@ -1360,8 +1374,80 @@ struct Context
 
 		{
 			vk::BufferMemoryBarrier to_read = u_render_config.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead);
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllGraphics, {}, {}, {to_read}, { });
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllGraphics, {}, {}, { to_read }, { });
 		}
+	}
+	void execute_tlas(vk::CommandBuffer cmd, btr::BufferMemoryEx<vk::AccelerationStructureInstanceKHR>& instances)
+	{
+		TLAS old = std::move(m_TLAS);
+		auto& _ctx = *m_ctx;
+
+// 		vk::TransformMatrixKHR transform_matrix =
+// 		{
+// 			std::array<std::array<float, 4>, 3>
+// 			{
+// 				std::array<float, 4>{1.f, 0.f, 0.f, 0.f},
+// 				std::array<float, 4>{0.f, 1.f, 0.f, 0.f},
+// 				std::array<float, 4>{0.f, 0.f, 1.f, 0.f},
+// 			}
+// 		};
+// 
+// 		vk::AccelerationStructureInstanceKHR instance;
+// 		instance.transform = transform_matrix;
+// 		instance.instanceCustomIndex = 0;
+// 		instance.mask = 0xFF;
+// 		instance.instanceShaderBindingTableRecordOffset = 0;
+// 		instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+// 		instance.accelerationStructureReference = _ctx.m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(m_BLAS.m_AS.get()));
+// 
+// 		auto instance_buffer = _ctx.m_storage_memory.allocateMemory<vk::AccelerationStructureInstanceKHR>(1, true);
+// 
+// 		cmd.updateBuffer<vk::AccelerationStructureInstanceKHR>(instance_buffer.getInfo().buffer, instance_buffer.getInfo().offset, { instance });
+// 		vk::BufferMemoryBarrier barrier[] = {
+// 			instance_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
+// 		};
+// 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
+
+		vk::AccelerationStructureGeometryKHR TLASGeom;
+		TLASGeom.flags = vk::GeometryFlagBitsKHR::eNoDuplicateAnyHitInvocation;
+		TLASGeom.geometryType = vk::GeometryTypeKHR::eInstances;
+		vk::AccelerationStructureGeometryInstancesDataKHR instance_data;
+		instance_data.data.deviceAddress = instances.getDeviceAddress();
+		TLASGeom.geometry.instances = instance_data;
+
+
+		vk::AccelerationStructureBuildGeometryInfoKHR TLAS_BI;
+		TLAS_BI.type = vk::AccelerationStructureTypeKHR::eTopLevel;
+		TLAS_BI.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastBuild | vk::BuildAccelerationStructureFlagBitsKHR::eAllowUpdate;
+		TLAS_BI.mode = vk::BuildAccelerationStructureModeKHR::eBuild;
+		TLAS_BI.geometryCount = 1;
+		TLAS_BI.pGeometries = &TLASGeom;
+
+		auto blas_count = instances.getDescriptor().element_num;
+		auto size_info = _ctx.m_device.getAccelerationStructureBuildSizesKHR(vk::AccelerationStructureBuildTypeKHR::eDevice, TLAS_BI, blas_count);
+
+		auto AS_buffer = _ctx.m_storage_memory.allocateMemory(size_info.accelerationStructureSize);
+		vk::AccelerationStructureCreateInfoKHR accelerationCI;
+		accelerationCI.type = vk::AccelerationStructureTypeKHR::eTopLevel;
+		accelerationCI.buffer = AS_buffer.getInfo().buffer;
+		accelerationCI.offset = AS_buffer.getInfo().offset;
+		accelerationCI.size = AS_buffer.getInfo().range;
+		m_TLAS.m_AS = _ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
+		TLAS_BI.dstAccelerationStructure = m_TLAS.m_AS.get();
+
+		auto scratch_buffer = _ctx.m_storage_memory.allocateMemory(size_info.buildScratchSize, true);
+		TLAS_BI.scratchData.deviceAddress = _ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo(scratch_buffer.getInfo().buffer)) + scratch_buffer.getInfo().offset;
+
+		vk::AccelerationStructureBuildRangeInfoKHR range;
+		range.primitiveCount = 1;
+		range.primitiveOffset = 0;
+		range.firstVertex = 0;
+		range.transformOffset = 0;
+
+		cmd.buildAccelerationStructuresKHR({ TLAS_BI }, { &range });
+		m_TLAS.m_AS_buffer = std::move(AS_buffer);
+
+		sDeleter::Order().enque(std::move(old), std::move(scratch_buffer));
 	}
 };
 struct Skybox
@@ -1602,7 +1688,36 @@ int main()
 	ModelRenderer renderer(*ctx, *app.m_window->getFrontBuffer());
 	Skybox skybox(*ctx, setup_cmd, *app.m_window->getFrontBuffer());
 
+	btr::BufferMemoryEx<vk::AccelerationStructureInstanceKHR> instance_buffer;
+	{
+		vk::TransformMatrixKHR transform_matrix =
+		{
+			std::array<std::array<float, 4>, 3>
+			{
+				std::array<float, 4>{1.f, 0.f, 0.f, 0.f},
+				std::array<float, 4>{0.f, 1.f, 0.f, 0.f},
+				std::array<float, 4>{0.f, 0.f, 1.f, 0.f},
+			}
+		};
+
+		vk::AccelerationStructureInstanceKHR instance;
+		instance.transform = transform_matrix;
+		instance.instanceCustomIndex = 0;
+		instance.mask = 0xFF;
+		instance.instanceShaderBindingTableRecordOffset = 0;
+		instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+		instance.accelerationStructureReference = context->m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(model->m_BLAS.m_AS.get()));
+		instance_buffer = context->m_storage_memory.allocateMemory<vk::AccelerationStructureInstanceKHR>(1, true);
+		setup_cmd.updateBuffer<vk::AccelerationStructureInstanceKHR>(instance_buffer.getInfo().buffer, instance_buffer.getInfo().offset, { instance });
+		vk::BufferMemoryBarrier barrier[] = {
+			instance_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
+		};
+		setup_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
+	}
+
+	ctx->execute_tlas(setup_cmd, instance_buffer);
 	app.setup();
+
 
 	while (true)
 	{

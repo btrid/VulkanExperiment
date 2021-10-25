@@ -547,8 +547,8 @@ struct Model
 			AS_buildinfo.geometryCount = 1;
 			AS_buildinfo.pGeometries = &accelerationStructureGeometry;
 
-			uint32_t primitive_count = model->m_info.m_primitive_num;
-			auto size_info = ctx.m_device.getAccelerationStructureBuildSizesKHR(vk::AccelerationStructureBuildTypeKHR::eDevice, AS_buildinfo, primitive_count);
+			uint32_t blas_count = 1;
+			auto size_info = ctx.m_device.getAccelerationStructureBuildSizesKHR(vk::AccelerationStructureBuildTypeKHR::eDevice, AS_buildinfo, blas_count);
 
 			auto AS_buffer = ctx.m_storage_memory.allocateMemory(size_info.accelerationStructureSize);
 			vk::AccelerationStructureCreateInfoKHR accelerationCI;

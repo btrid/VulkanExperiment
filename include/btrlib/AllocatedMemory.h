@@ -202,6 +202,8 @@ struct BufferMemory
 	{
 		std::shared_ptr<GPUMemoryAllocater> m_allocater;
 		vk::DescriptorBufferInfo m_buffer_info;
+		vk::DeviceAddress m_device_address;
+
 		void* m_mapped_memory;
 
 		~Resource()
@@ -223,6 +225,7 @@ public:
 	bool isValid()const { return !!m_resource; }
 	vk::DescriptorBufferInfo getInfo()const { return m_resource->m_buffer_info; }
 	vk::DescriptorBufferInfo getBufferInfo()const { return m_resource->m_buffer_info; } // @deprecated –¼‘O‚ª’·‚¢‚Ì‚Å
+	vk::DeviceAddress getDeviceAddress()const { return  m_resource->m_device_address; }
 	void* getMappedPtr()const { return m_resource->m_mapped_memory; }
 	template<typename T> T* getMappedPtr(size_t offset_num = 0)const { return static_cast<T*>(m_resource->m_mapped_memory) + offset_num; }
 
@@ -410,22 +413,19 @@ struct AllocatedMemory
 	}
 
 
-	BufferMemory allocateMemory(vk::DeviceSize size)
+	BufferMemory allocateMemory(vk::DeviceSize size, bool is_reverse = false)
 	{
 		BufferMemoryDescriptor desc;
 		desc.size = size;
-		desc.attribute = BufferMemoryAttributeFlags();
+		desc.attribute = is_reverse ? BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT : BufferMemoryAttributeFlags();
 		return allocateMemory(desc);
 	}
 	BufferMemory allocateMemory(const BufferMemoryDescriptor& desc)
 	{
-
-		// size0‚Í‚¨‚©‚µ‚¢‚æ‚Ë
-//		assert(desc.size != 0);
-
 		BufferMemory alloc;
 		alloc.m_resource = std::make_shared<BufferMemory::Resource>();
 		alloc.m_resource->m_buffer_info.buffer = m_resource->m_buffer.get();
+		alloc.m_resource->m_device_address = 0;
 
 		if (desc.size!=0)
 		{
@@ -442,37 +442,12 @@ struct AllocatedMemory
 			{
 				alloc.m_resource->m_mapped_memory = (char*)m_resource->m_mapped_memory + zone.m_start;
 			}
+			alloc.m_resource->m_device_address = m_resource->m_device_address + zone.m_start;
 		}
 
 		return alloc;
 	}
-	BufferMemory allocateMemory(uint32_t size, bool is_reverse)
-	{
-//		assert(size != 0);
 
-		BufferMemory alloc;
-		alloc.m_resource = std::make_shared<BufferMemory::Resource>();
-		alloc.m_resource->m_buffer_info.buffer = m_resource->m_buffer.get();
-
-		if (size != 0)
-		{
-			auto zone = m_resource->m_free_zone->alloc(size, is_reverse);
-
-			// alloc‚Å‚«‚½H
-			assert(zone.isValid());
-
-			alloc.m_resource->m_buffer_info.offset = zone.m_start;
-			alloc.m_resource->m_buffer_info.range = size;
-			alloc.m_resource->m_allocater = m_resource->m_free_zone;
-
-			alloc.m_resource->m_mapped_memory = nullptr;
-			if (m_resource->m_mapped_memory)
-			{
-				alloc.m_resource->m_mapped_memory = (char*)m_resource->m_mapped_memory + zone.m_start;
-			}
-		}
-		return alloc;
-	}
 
 	template<typename T>
 	BufferMemoryEx<T> allocateMemory(const BufferMemoryDescriptorEx<T>& desc)
