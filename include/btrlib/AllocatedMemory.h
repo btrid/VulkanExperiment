@@ -444,6 +444,11 @@ struct AllocatedMemory
 			}
 			alloc.m_resource->m_device_address = m_resource->m_device_address + zone.m_start;
 		}
+		else
+		{
+			// vkUpdateDescriptorSets()‚Å–³Œø’l
+			alloc.m_resource->m_buffer_info.range = VK_WHOLE_SIZE;
+		}
 
 		return alloc;
 	}

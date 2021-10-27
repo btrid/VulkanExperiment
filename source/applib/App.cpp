@@ -214,6 +214,9 @@ App::App(const AppDescriptor& desc)
  		DescriptorIndexing_Feature.descriptorBindingVariableDescriptorCount = VK_TRUE;
 		DescriptorIndexing_Feature.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
 		DescriptorIndexing_Feature.descriptorBindingPartiallyBound = VK_TRUE;
+		DescriptorIndexing_Feature.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
+		DescriptorIndexing_Feature.runtimeDescriptorArray = VK_TRUE;
+		DescriptorIndexing_Feature.descriptorBindingVariableDescriptorCount = VK_TRUE;
 		ScalarBlock_Feature.setPNext(&DescriptorIndexing_Feature);
 
 		vk::PhysicalDeviceSubgroupSizeControlFeaturesEXT Subgroup_Feature;

@@ -1,6 +1,20 @@
 #version 460
 #extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_ray_tracing : enable
+#extension GL_EXT_ray_query : require
+#extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_shader_explicit_arithmetic_types : require
+#extension GL_EXT_nonuniform_qualifier : require
 
+
+layout(location=1) in Vertex
+{
+	vec3 WorldPos;
+	vec3 Normal;
+	vec2 Texcoord_0;
+}In;
+layout(location = 0) out vec4 FragColor;
  // Encapsulate the various inputs used by the various functions in the shading equation
 // We store values in this struct to simplify the integration of alternative implementations
 // of the shading terms, outlined in the Readme.MD Appendix.
@@ -21,23 +35,6 @@ struct PBRInfo
 };
 
 
-
-#define SETPOINT_CAMERA 0
-#include "btrlib/Camera.glsl"
-
-#define USE_Model_Material 1
-#define USE_Render_Scene 2
-#include "pbr.glsl"
-
-layout(location=1) in Vertex
-{
-	vec3 WorldPos;
-	vec3 Normal;
-	vec2 Texcoord_0;
-}In;
-#define LightColor vec3(1.)
-
-#ifdef USE_Model_Material
 struct Material
 {
 	vec4 m_basecolor_factor;
@@ -47,22 +44,54 @@ struct Material
 	float _p2;
 	vec3  m_emissive_factor;
 	float _p11;
-};
 
-layout(set=USE_Model_Material, binding=0, std140) uniform U_Material 
+	uint TexID_Base;
+	uint TexID_MR;
+	uint TexID_AO;
+	uint TexID_Normal;
+
+	uint TexID_Emissive;
+	uint Tex_Base_;
+	uint Tex_Bas_e;
+	uint Tex_Ba_se;
+
+};
+Material u_material;
+
+struct Entity
 {
-	Material u_material;
+	uint64_t Vertex;
+	uint64_t Normal;
+
+	uint64_t Texcoord;
+	uint64_t Index;
+
+	uint64_t Material;
+	uint64_t Material_Index;
+
 };
-layout (set=USE_Model_Material, binding=10) uniform sampler2D t_basecolor;
-layout (set=USE_Model_Material, binding=11) uniform sampler2D t_mr;
-layout (set=USE_Model_Material, binding=12) uniform sampler2D t_normal;
-layout (set=USE_Model_Material, binding=13) uniform sampler2D t_occlusion;
-layout (set=USE_Model_Material, binding=14) uniform sampler2D t_emissive;
-#endif
-
-layout(location = 0) out vec4 FragColor;
 
 
+#define SETPOINT_CAMERA 0
+#include "btrlib/Camera.glsl"
+
+#define USE_Render_Scene 1
+#include "pbr.glsl"
+
+#define USE_Model_Resource 2
+layout(set=USE_Model_Resource, binding=0, scalar) buffer EntityBuffer { Entity b_entity[]; };
+layout(set=USE_Model_Resource, binding=1, buffer_reference, scalar) buffer V {vec3 b_v[]; };
+layout(set=USE_Model_Resource, binding=2, buffer_reference, scalar) buffer I {vec3 b_i[]; };
+layout(set=USE_Model_Resource, binding=3, buffer_reference, scalar) buffer MaterialBuffer {Material m[]; };
+
+#define USE_Model_Texture 3
+layout (set=USE_Model_Texture, binding=0) uniform sampler2D t_ModelTexture[];
+
+
+
+
+#define USE_Model_Entity 4
+layout(set=USE_Model_Entity, binding=0, scalar) buffer ModelEntityBuffer { Entity b_model_entity[]; };
 
 
 // Find the normal for this fragment, pulling either from a predefined normal map
@@ -70,7 +99,7 @@ layout(location = 0) out vec4 FragColor;
 vec3 getNormal()
 {
 	// Perturb normal, see http://www.thetenthplanet.de/archives/1180
-	vec3 tangentNormal = texture(t_normal, In.Texcoord_0).xyz * 2.0 - 1.0;
+	vec3 tangentNormal = texture(t_ModelTexture[nonuniformEXT(u_material.TexID_Normal)], In.Texcoord_0).xyz * 2.0 - 1.0;
 
 	vec3 q1 = dFdx(In.WorldPos.xyz);
 	vec3 q2 = dFdy(In.WorldPos.xyz);
@@ -169,34 +198,25 @@ float convertMetallic(vec3 diffuse, vec3 specular, float maxSpecular)
 // 0度でのフレネル反射率
 const vec3 f0 = vec3(0.04);
 
+
+
 void main()
 {
-	vec4 basecolor = SRGBtoLINEAR(texture(t_basecolor, In.Texcoord_0.xy)) * u_material.m_basecolor_factor;
+	Entity entity = b_model_entity[0];
+	MaterialBuffer mat  = MaterialBuffer(entity.Material);
+	u_material = mat.m[0];
+	vec4 basecolor = SRGBtoLINEAR(texture(t_ModelTexture[nonuniformEXT(u_material.TexID_Base)], In.Texcoord_0.xy)) * u_material.m_basecolor_factor;
 
-	float perceptualRoughness;
-	float metallic;
+	// Metallic and Roughness material properties are packed together
+	// In glTF, these factors can be specified by fixed scalar values
+	// or from a metallic-roughness map
 
-//	if (material.workflow == PBR_WORKFLOW_METALLIC_ROUGHNESS) 
-	{
-		// Metallic and Roughness material properties are packed together
-		// In glTF, these factors can be specified by fixed scalar values
-		// or from a metallic-roughness map
-//		if (material.physicalDescriptorTextureSet > -1) 
-		{
-			// Roughness is stored in the 'g' channel, metallic is stored in the 'b' channel.
-			// This layout intentionally reserves the 'r' channel for (optional) occlusion map data
-			vec4 mrSample = texture(t_mr, In.Texcoord_0.xy);
-			perceptualRoughness = mrSample.g * u_material.m_roughness_factor;
-			metallic = mrSample.b * u_material.m_metallic_factor;
-		}
-//		else 
-//		{
-//			perceptualRoughness = clamp(perceptualRoughness, c_MinRoughness, 1.0);
-//			metallic = clamp(metallic, 0.0, 1.0);
-//		}
-		// Roughness is authored as perceptual roughness; as is convention,
-		// convert to material roughness by squaring the perceptual roughness [2].
-	}
+	// Roughness is stored in the 'g' channel, metallic is stored in the 'b' channel.
+	// This layout intentionally reserves the 'r' channel for (optional) occlusion map data
+	vec4 mrSample = texture(t_ModelTexture[nonuniformEXT(u_material.TexID_MR)], In.Texcoord_0.xy);
+	float perceptualRoughness = mrSample.g * u_material.m_roughness_factor;
+	float metallic = mrSample.b * u_material.m_metallic_factor;
+
 	vec3 diffuseColor = basecolor.rgb * (vec3(1.0) - f0);
 	diffuseColor *= 1.0 - metallic;
 
@@ -241,6 +261,7 @@ void main()
 	vec3 diffuseContrib = (1.0 - F) * diffuse(pbrInputs);
 	vec3 specContrib = F * G * D / (4.0 * pbrInputs.NdotL * pbrInputs.NdotV);
 	// Obtain final intensity as reflectance (BRDF) scaled by the energy of the light (cosine law)
+#define LightColor vec3(1.)
 	vec3 color = pbrInputs.NdotL * LightColor * (diffuseContrib + specContrib);
 
 	// Calculate lighting contribution from image based lighting source (IBL)
@@ -250,13 +271,13 @@ void main()
 	// Apply optional PBR terms for additional (optional) shading
 //	if (material.occlusionTextureSet > -1) 
 	{
-		float ao = texture(t_occlusion, In.Texcoord_0).r;
+		float ao = texture(t_ModelTexture[nonuniformEXT(u_material.TexID_AO)], In.Texcoord_0).r;
 		color = mix(color, color * ao, u_OcclusionStrength);
 	}
 
 //	if (material.emissiveTextureSet > -1) 
 	{
-		vec3 emissive = SRGBtoLINEAR(texture(t_emissive, In.Texcoord_0)).rgb * u_material.m_emissive_factor;
+		vec3 emissive = SRGBtoLINEAR(texture(t_ModelTexture[nonuniformEXT(u_material.TexID_Emissive)], In.Texcoord_0)).rgb * u_material.m_emissive_factor;
 		color += emissive;
 	}
 	

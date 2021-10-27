@@ -6,7 +6,6 @@
 #include <btrlib/cInput.h>
 #include <btrlib/cCamera.h>
 #include <btrlib/sGlobal.h>
-#include <btrlib/GPU.h>
 #include <btrlib/cStopWatch.h>
 #include <btrlib/AllocatedMemory.h>
 #include <btrlib/cModel.h>
@@ -17,6 +16,7 @@
 #include <applib/sAppImGui.h>
 #include <applib/GraphicsResource.h>
 #include <applib/DrawHelper.h>
+#include <020_RT/ModelTexture.h>
 
 
 #define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
@@ -971,8 +971,8 @@ struct Context
 	enum DSL
 	{
 		DSL_Scene,
-		DSL_Model,
-		DSL_Model_Material,
+		DSL_Model_Buffer,
+		DSL_Model_Entity,
 		DSL_Num,
 	};
 
@@ -1004,13 +1004,15 @@ struct Context
 	AppImage m_environment_debug;
 
 	vk::UniqueDescriptorSet m_DS_Scene;
+	vk::UniqueDescriptorSet m_DS_Model;
 
+	ModelResource m_model_texture_resource;
 	TLAS m_TLAS;
 
 	Context(std::shared_ptr<btr::Context>& ctx, vk::CommandBuffer cmd)
 		: m_env(*ctx, cmd)
 		, m_lut(*ctx, cmd)
-		
+		, m_model_texture_resource(*ctx)
 	{
 		m_ctx = ctx;
 		m_render_config.LightDir = vec4(1.f);
@@ -1039,36 +1041,30 @@ struct Context
 				m_DSL[DSL_Scene] = ctx->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
 			}
 			{
-				auto stage = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex;
+				auto stage = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment;
 				vk::DescriptorSetLayoutBinding binding[] =
 				{
-					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eUniformBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
 				desc_layout_info.setPBindings(binding);
-				m_DSL[DSL_Model] = ctx->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
+				m_DSL[DSL_Model_Buffer] = ctx->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
 			}
 
 			{
 				auto stage = vk::ShaderStageFlagBits::eFragment;
 				vk::DescriptorSetLayoutBinding binding[] =
 				{
-					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eUniformBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(10, vk::DescriptorType::eCombinedImageSampler, 1, stage),
-					vk::DescriptorSetLayoutBinding(11, vk::DescriptorType::eCombinedImageSampler, 1, stage),
-					vk::DescriptorSetLayoutBinding(12, vk::DescriptorType::eCombinedImageSampler, 1, stage),
-					vk::DescriptorSetLayoutBinding(13, vk::DescriptorType::eCombinedImageSampler, 1, stage),
-					vk::DescriptorSetLayoutBinding(14, vk::DescriptorType::eCombinedImageSampler, 1, stage),
+					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
 				desc_layout_info.setPBindings(binding);
-				m_DSL[DSL_Model_Material] = ctx->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
+				m_DSL[DSL_Model_Entity] = ctx->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
 			}
 		}
 
@@ -1340,6 +1336,33 @@ struct Context
 				};
 				ctx->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
 
+			}
+		}
+		{
+			vk::DescriptorSetLayout layouts[] =
+			{
+				m_DSL[Context::DSL_Model_Buffer].get(),
+			};
+			vk::DescriptorSetAllocateInfo desc_info;
+			desc_info.setDescriptorPool(ctx->m_descriptor_pool.get());
+			desc_info.setDescriptorSetCount(array_length(layouts));
+			desc_info.setPSetLayouts(layouts);
+			m_DS_Model = std::move(ctx->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
+
+			{
+				vk::DescriptorBufferInfo storages[] =
+				{
+					ctx->m_vertex_memory.allocateMemory(0).getInfo(),
+					ctx->m_vertex_memory.allocateMemory(0).getInfo(),
+					ctx->m_vertex_memory.allocateMemory(0).getInfo(),
+					ctx->m_vertex_memory.allocateMemory(0).getInfo(),
+				};
+
+				vk::WriteDescriptorSet write[] =
+				{
+					vk::WriteDescriptorSet().setDstSet(*m_DS_Model).setDstBinding(0).setDescriptorType(vk::DescriptorType::eStorageBuffer).setDescriptorCount(array_length(storages)).setPBufferInfo(storages)
+				};
+				ctx->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
 			}
 		}
 

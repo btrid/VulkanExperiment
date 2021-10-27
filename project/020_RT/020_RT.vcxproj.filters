@@ -14,5 +14,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\020_RT\Model.h" />
+    <ClInclude Include="..\..\include\020_RT\ModelTexture.h" />
   </ItemGroup>
 </Project>

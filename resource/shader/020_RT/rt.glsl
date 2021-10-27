@@ -3,6 +3,7 @@
 #extension GL_EXT_ray_tracing : enable
 #extension GL_EXT_ray_query : require
 #extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_buffer_reference : require
 #extension GL_EXT_shader_explicit_arithmetic_types : require
 
 #if defined(USE_SceneModel)

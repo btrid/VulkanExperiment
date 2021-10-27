@@ -41,13 +41,7 @@ struct ResourceTexture
 		vk::UniqueImageView m_image_view;
 		vk::UniqueDeviceMemory m_memory;
 		vk::UniqueSampler m_sampler;
-
-		~Resource()
-		{
-			int a = 0;
-		}
 	};
-
 	std::shared_ptr<Resource> m_resource;
 
 	void load(const std::shared_ptr<btr::Context>& loader, vk::CommandBuffer cmd, const std::string& filename);

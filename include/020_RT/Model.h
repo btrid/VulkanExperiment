@@ -1,5 +1,6 @@
 #pragma once
 
+#include <020_RT/ModelTexture.h>
 
 struct Entity
 {
@@ -7,10 +8,13 @@ struct Entity
 	{
 		Vertex,
 		Normal,
+
 		Texcoord,
 		Index,
+
 		Material,
 		Material_Index,
+
 		ID_MAX,
 	};
 	uint64_t v[ID_MAX];
@@ -32,13 +36,6 @@ struct Model
 		vec4 m_aabb_max;
 		uint m_vertex_num;
 		uint m_primitive_num;
-		uvec3 m_voxel_reso;
-	};
-
-	struct Mesh
-	{
-		std::vector<vk::VertexInputBindingDescription> vib_disc;
-		std::vector<vk::VertexInputAttributeDescription> vid_disc;
 	};
 
 	struct Material
@@ -50,12 +47,26 @@ struct Model
 		float _p2;
 		vec3  m_emissive_factor;
 		float _p11;
+
+		enum TexID
+		{
+			TexID_Base,
+			TexID_MR,
+			TexID_AO,
+			TexID_Normal,
+
+			TexID_Emissive,
+			TexID_pad,
+			TexID_pad2,
+			TexID_pad3,
+
+			TexID_MAX,
+		};
+		int32_t t[TexID_MAX];
 	};
-	std::vector<Mesh> m_meshes;
 	std::vector<btr::BufferMemory> b_vertex;
-	std::vector<ResourceTexture> t_image;
-	std::vector<btr::BufferMemoryEx<Material>> b_material;
-	std::vector<vk::UniqueDescriptorSet> m_DS_material;
+	btr::BufferMemoryEx<Material> b_material;
+	std::vector<std::shared_ptr<ModelTexture>> t_image;
 
 	tinygltf::Model gltf_model;
 
@@ -65,6 +76,8 @@ struct Model
 	BLAS m_BLAS;
 
 	Entity m_entity;
+	btr::BufferMemoryEx<Entity> b_entity;
+
 	static std::shared_ptr<Model> LoadModel(Context& ctx, vk::CommandBuffer cmd, const std::string& filename)
 	{
 		tinygltf::Model gltf_model;
@@ -120,107 +133,60 @@ struct Model
 				image_info.initialLayout = vk::ImageLayout::eUndefined;
 				image_info.extent = vk::Extent3D(image.width, image.height, 1);
 
-				model->t_image[i].make(*ctx.m_ctx, cmd, image.uri, image_info, image.image);
+				model->t_image[i] = ctx.m_model_texture_resource.make(*ctx.m_ctx, cmd, image.uri, image_info, image.image);
 			}
 		}
 		// material
 		{
-			model->b_material.resize(gltf_model.materials.size());
-			model->m_DS_material.resize(gltf_model.materials.size());
-			vk::DescriptorSetLayout layouts[] =
-			{
-				ctx.m_DSL[Context::DSL_Model_Material].get(),
-			};
-			vk::DescriptorSetAllocateInfo desc_info;
-			desc_info.setDescriptorPool(ctx.m_ctx->m_descriptor_pool.get());
-			desc_info.setDescriptorSetCount(array_length(layouts));
-			desc_info.setPSetLayouts(layouts);
-
+			std::vector<Material> material(gltf_model.materials.size());
 			for (size_t i = 0; i < gltf_model.materials.size(); i++)
 			{
 				auto gltf_material = gltf_model.materials[i];
+				Material& m = material[i];
 
+				m.m_basecolor_factor.x = gltf_material.pbrMetallicRoughness.baseColorFactor[0];
+				m.m_basecolor_factor.y = gltf_material.pbrMetallicRoughness.baseColorFactor[1];
+				m.m_basecolor_factor.z = gltf_material.pbrMetallicRoughness.baseColorFactor[2];
+				m.m_basecolor_factor.w = gltf_material.pbrMetallicRoughness.baseColorFactor[3];
+				m.m_metallic_factor = gltf_material.pbrMetallicRoughness.metallicFactor;
+				m.m_roughness_factor = gltf_material.pbrMetallicRoughness.roughnessFactor;
+				m.m_emissive_factor.x = gltf_material.emissiveFactor[0];
+				m.m_emissive_factor.y = gltf_material.emissiveFactor[1];
+				m.m_emissive_factor.z = gltf_material.emissiveFactor[2];
 
-				Material material;
-				material.m_basecolor_factor.x = gltf_material.pbrMetallicRoughness.baseColorFactor[0];
-				material.m_basecolor_factor.y = gltf_material.pbrMetallicRoughness.baseColorFactor[1];
-				material.m_basecolor_factor.z = gltf_material.pbrMetallicRoughness.baseColorFactor[2];
-				material.m_basecolor_factor.w = gltf_material.pbrMetallicRoughness.baseColorFactor[3];
-				material.m_metallic_factor = gltf_material.pbrMetallicRoughness.metallicFactor;
-				material.m_roughness_factor = gltf_material.pbrMetallicRoughness.roughnessFactor;
-				material.m_emissive_factor.x = gltf_material.emissiveFactor[0];
-				material.m_emissive_factor.y = gltf_material.emissiveFactor[1];
-				material.m_emissive_factor.z = gltf_material.emissiveFactor[2];
-				model->b_material[i] = ctx.m_ctx->m_uniform_memory.allocateMemory<Material>(1);
-				cmd.updateBuffer<Material>(model->b_material[i].getInfo().buffer, model->b_material[i].getInfo().offset, material);
-
-				// descriptor set
+				m.t[Material::TexID_Base] = -1;
+				if (gltf_material.pbrMetallicRoughness.baseColorTexture.index >= 0)
 				{
-
-					model->m_DS_material[i] = std::move(ctx.m_ctx->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
-
-					vk::DescriptorBufferInfo uniforms[] =
-					{
-						model->b_material[i].getInfo(),
-					};
-					std::array<vk::DescriptorImageInfo, 5> samplers;
-					auto& t = sGraphicsResource::Order().getWhiteTexture();
-					samplers.fill(vk::DescriptorImageInfo(t.m_sampler.get(), t.m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal));
-
-					if (gltf_material.pbrMetallicRoughness.baseColorTexture.index >= 0)
-					{
-						samplers[0].sampler = model->t_image[gltf_material.pbrMetallicRoughness.baseColorTexture.index].getSampler();
-						samplers[0].imageView = model->t_image[gltf_material.pbrMetallicRoughness.baseColorTexture.index].getImageView();
-						samplers[0].imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-					}
-					if (gltf_material.pbrMetallicRoughness.metallicRoughnessTexture.index >= 0)
-					{
-						samplers[1].sampler = model->t_image[gltf_material.pbrMetallicRoughness.metallicRoughnessTexture.index].getSampler();
-						samplers[1].imageView = model->t_image[gltf_material.pbrMetallicRoughness.metallicRoughnessTexture.index].getImageView();
-						samplers[1].imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-					}
-					if (gltf_material.normalTexture.index >= 0)
-					{
-						samplers[2].sampler = model->t_image[gltf_material.normalTexture.index].getSampler();
-						samplers[2].imageView = model->t_image[gltf_material.normalTexture.index].getImageView();
-						samplers[2].imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-					}
-
-					if (gltf_material.occlusionTexture.index >= 0)
-					{
-						samplers[3].sampler = model->t_image[gltf_material.occlusionTexture.index].getSampler();
-						samplers[3].imageView = model->t_image[gltf_material.occlusionTexture.index].getImageView();
-						samplers[3].imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-					}
-					if (gltf_material.emissiveTexture.index >= 0)
-					{
-						samplers[4].sampler = model->t_image[gltf_material.emissiveTexture.index].getSampler();
-						samplers[4].imageView = model->t_image[gltf_material.emissiveTexture.index].getImageView();
-						samplers[4].imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-					}
-
-					vk::WriteDescriptorSet write[] =
-					{
-						vk::WriteDescriptorSet()
-						.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-						.setDescriptorCount(array_length(uniforms))
-						.setPBufferInfo(uniforms)
-						.setDstBinding(0)
-						.setDstSet(model->m_DS_material[i].get()),
-						vk::WriteDescriptorSet()
-						.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-						.setDescriptorCount(array_length(samplers))
-						.setPImageInfo(samplers.data())
-						.setDstBinding(10)
-						.setDstSet(model->m_DS_material[i].get()),
-					};
-					ctx.m_ctx->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
+					m.t[Material::TexID_Base] = model->t_image[gltf_material.pbrMetallicRoughness.baseColorTexture.index]->m_block;
+				}
+				m.t[Material::TexID_MR] = -1;
+				if (gltf_material.pbrMetallicRoughness.metallicRoughnessTexture.index >= 0)
+				{
+					m.t[Material::TexID_MR] = model->t_image[gltf_material.pbrMetallicRoughness.metallicRoughnessTexture.index]->m_block;
+				}
+				m.t[Material::TexID_Normal] = -1;
+				if (gltf_material.normalTexture.index >= 0)
+				{
+					m.t[Material::TexID_Normal] = model->t_image[gltf_material.normalTexture.index]->m_block;
+				}
+				m.t[Material::TexID_AO] = -1;
+				if (gltf_material.occlusionTexture.index >= 0)
+				{
+					m.t[Material::TexID_AO] = model->t_image[gltf_material.occlusionTexture.index]->m_block;
+				}
+				m.t[Material::TexID_Emissive] = -1;
+				if (gltf_material.emissiveTexture.index >= 0)
+				{
+					m.t[Material::TexID_Emissive] = model->t_image[gltf_material.emissiveTexture.index]->m_block;
 				}
 			}
+			model->b_material = ctx.m_ctx->m_vertex_memory.allocateMemory<Material>(material.size());
+			cmd.updateBuffer<Material>(model->b_material.getInfo().buffer, model->b_material.getInfo().offset, material);
 
-
+			model->m_entity.v[Entity::Material] = model->b_material.getDeviceAddress();
 		}
-		model->m_meshes.resize(gltf_model.meshes.size());
+
+
 		for (size_t mesh_index = 0; mesh_index < gltf_model.meshes.size(); ++mesh_index)
 		{
 			auto& gltf_mesh = gltf_model.meshes[mesh_index];
@@ -230,7 +196,6 @@ struct Model
 				tinygltf::Accessor& indexAccessor = gltf_model.accessors[primitive.indices];
 				tinygltf::BufferView& bufferview_index = gltf_model.bufferViews[indexAccessor.bufferView];
 				model->m_entity.v[Entity::Index] = model->b_vertex[bufferview_index.buffer].getDeviceAddress() + bufferview_index.byteOffset;
-//				model->m_entity.v[Entity::Material_Index] model->b_material primitive.material
 
 					for (auto& attrib : primitive.attributes)
 				{
@@ -262,17 +227,17 @@ struct Model
 
 					if (vaa > -1)
 					{
-						model->m_meshes[mesh_index].vib_disc.push_back(vk::VertexInputBindingDescription().setBinding(vaa).setInputRate(vk::VertexInputRate::eVertex).setStride(accessor.ByteStride(bufferview)));
-						model->m_meshes[mesh_index].vid_disc.push_back(vk::VertexInputAttributeDescription().setBinding(vaa).setLocation(vaa).setFormat(GLtoVK::toFormat(size, accessor.componentType)).setOffset(accessor.byteOffset));
 					}
 					else
 					{
 						std::cout << "vaa missing: " << attrib.first << std::endl;
 					}
 				}
-
 			}
 		}
+
+		model->b_entity = ctx.m_ctx->m_vertex_memory.allocateMemory<Entity>(1);
+		cmd.updateBuffer<Entity>(model->b_entity.getInfo().buffer, model->b_entity.getInfo().offset, model->m_entity);
 
 		// build BLAS
 		auto& _ctx = *ctx.m_ctx;
@@ -387,6 +352,29 @@ struct Model
 
 			}
 		}
+
+		{
+			vk::DescriptorSetLayout layouts[] =
+			{
+				ctx.m_DSL[Context::DSL_Model_Entity].get(),
+			};
+			vk::DescriptorSetAllocateInfo desc_info;
+			desc_info.setDescriptorPool(ctx.m_ctx->m_descriptor_pool.get());
+			desc_info.setDescriptorSetCount(array_length(layouts));
+			desc_info.setPSetLayouts(layouts);
+			model->m_DS_Model = std::move(ctx.m_ctx->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
+			{
+				vk::DescriptorBufferInfo storages[] =
+				{
+					model->b_entity.getInfo(),
+				};
+				vk::WriteDescriptorSet write[] =
+				{
+					vk::WriteDescriptorSet().setDstSet(*model->m_DS_Model).setDstBinding(0).setDescriptorType(vk::DescriptorType::eStorageBuffer).setDescriptorCount(array_length(storages)).setPBufferInfo(storages),
+				};
+				ctx.m_ctx->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
+			}
+		}
 		model->gltf_model = std::move(gltf_model);
 		return model;
 	}
@@ -499,11 +487,11 @@ struct ModelRenderer
 			{
 				vk::DescriptorSetLayout layouts[] =
 				{
-					//					m_DSL[DSL_Renderer].get(),
-										sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
-										ctx.m_DSL[Context::DSL_Model_Material].get(),
-										ctx.m_DSL[Context::DSL_Scene].get(),
-										//					RenderTarget::s_descriptor_set_layout.get(),
+					sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
+					ctx.m_DSL[Context::DSL_Scene].get(),
+					ctx.m_DSL[Context::DSL_Model_Buffer].get(),
+					ctx.m_model_texture_resource.m_DSL.get(),
+					ctx.m_DSL[Context::DSL_Model_Entity].get(),
 				};
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
@@ -698,9 +686,10 @@ struct ModelRenderer
 		}
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_Render].get());
-		//		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 0, { m_DS[DSL_Renderer].get() }, {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 0, { sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA) }, {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 2, { m_ctx->m_DS_Scene.get() }, {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 1, { m_ctx->m_DS_Scene.get() }, {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 2, { m_ctx->m_DS_Model.get() }, {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 3, { m_ctx->m_model_texture_resource.m_DS_ModelTexture.get() }, {});
 
 		vk::RenderPassBeginInfo begin_render_Info;
 		begin_render_Info.setRenderPass(m_renderpass.get());
@@ -733,7 +722,7 @@ struct ModelRenderer
 					}
 				}
 
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 1, { model.m_DS_material[primitive.material].get() }, {});
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 4, { model.m_DS_Model.get() }, {});
 				{
 					const tinygltf::Accessor& accessor = gltf_model.accessors[primitive.indices];
 					const tinygltf::BufferView& bufferview = gltf_model.bufferViews[accessor.bufferView];
