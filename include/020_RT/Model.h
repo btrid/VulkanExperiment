@@ -133,7 +133,7 @@ struct Model
 				image_info.initialLayout = vk::ImageLayout::eUndefined;
 				image_info.extent = vk::Extent3D(image.width, image.height, 1);
 
-				model->t_image[i] = ctx.m_model_texture_resource.make(*ctx.m_ctx, cmd, image.uri, image_info, image.image);
+				model->t_image[i] = ctx.m_model_resource.MakeTexture(*ctx.m_ctx, cmd, image.uri, image_info, image.image);
 			}
 		}
 		// material
@@ -489,8 +489,7 @@ struct ModelRenderer
 				{
 					sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
 					ctx.m_DSL[Context::DSL_Scene].get(),
-					ctx.m_DSL[Context::DSL_Model_Buffer].get(),
-					ctx.m_model_texture_resource.m_DSL.get(),
+					ctx.m_model_resource.m_DSL.get(),
 					ctx.m_DSL[Context::DSL_Model_Entity].get(),
 				};
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
@@ -688,8 +687,7 @@ struct ModelRenderer
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_Render].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 0, { sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA) }, {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 1, { m_ctx->m_DS_Scene.get() }, {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 2, { m_ctx->m_DS_Model.get() }, {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 3, { m_ctx->m_model_texture_resource.m_DS_ModelTexture.get() }, {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 2, { m_ctx->m_model_resource.m_DS_ModelResource.get() }, {});
 
 		vk::RenderPassBeginInfo begin_render_Info;
 		begin_render_Info.setRenderPass(m_renderpass.get());
@@ -722,7 +720,7 @@ struct ModelRenderer
 					}
 				}
 
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 4, { model.m_DS_Model.get() }, {});
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 3, { model.m_DS_Model.get() }, {});
 				{
 					const tinygltf::Accessor& accessor = gltf_model.accessors[primitive.indices];
 					const tinygltf::BufferView& bufferview = gltf_model.bufferViews[accessor.bufferView];

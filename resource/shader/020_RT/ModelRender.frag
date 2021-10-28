@@ -83,14 +83,9 @@ layout(set=USE_Model_Resource, binding=0, scalar) buffer EntityBuffer { Entity b
 layout(set=USE_Model_Resource, binding=1, buffer_reference, scalar) buffer V {vec3 b_v[]; };
 layout(set=USE_Model_Resource, binding=2, buffer_reference, scalar) buffer I {vec3 b_i[]; };
 layout(set=USE_Model_Resource, binding=3, buffer_reference, scalar) buffer MaterialBuffer {Material m[]; };
+layout(set=USE_Model_Resource, binding=10) uniform sampler2D t_ModelTexture[];
 
-#define USE_Model_Texture 3
-layout (set=USE_Model_Texture, binding=0) uniform sampler2D t_ModelTexture[];
-
-
-
-
-#define USE_Model_Entity 4
+#define USE_Model_Entity 3
 layout(set=USE_Model_Entity, binding=0, scalar) buffer ModelEntityBuffer { Entity b_model_entity[]; };
 
 

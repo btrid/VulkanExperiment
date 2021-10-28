@@ -35,10 +35,11 @@ struct ModelResource
 	uint32_t m_accume;
 	std::mutex m_mutex;
 
+	std::array<vk::DescriptorBufferInfo, 4> m_buffer_info;
 	std::array<vk::DescriptorImageInfo, 1024> m_image_info;
 	vk::UniqueDescriptorPool m_descriptor_pool;
 	vk::UniqueDescriptorSetLayout m_DSL;
-	vk::UniqueDescriptorSet m_DS_ModelTexture;
+	vk::UniqueDescriptorSet m_DS_ModelResource;
 	vk::UniqueDescriptorUpdateTemplate m_Texture_DUP;
 	ModelResource(btr::Context& ctx)
 	{
@@ -50,9 +51,11 @@ struct ModelResource
 		}
 
 		{
-			std::array<vk::DescriptorPoolSize, 1> pool_size;
-			pool_size[0].setType(vk::DescriptorType::eCombinedImageSampler);
-			pool_size[0].setDescriptorCount(m_active.size());
+			std::array<vk::DescriptorPoolSize, 2> pool_size;
+			pool_size[0].setType(vk::DescriptorType::eStorageBuffer);
+			pool_size[0].setDescriptorCount(m_buffer_info.size());
+			pool_size[1].setType(vk::DescriptorType::eCombinedImageSampler);
+			pool_size[1].setDescriptorCount(m_active.size());
 
 			vk::DescriptorPoolCreateInfo pool_info;
 			pool_info.setPoolSizeCount(array_length(pool_size));
@@ -67,7 +70,11 @@ struct ModelResource
 			auto stage = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment;
 			vk::DescriptorSetLayoutBinding binding[] =
 			{
-				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eCombinedImageSampler, 1024, stage),
+				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(10, vk::DescriptorType::eCombinedImageSampler, 1024, stage),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
@@ -75,11 +82,19 @@ struct ModelResource
 			m_DSL = ctx.m_device.createDescriptorSetLayoutUnique(desc_layout_info);
 		}
 
+		m_buffer_info = {
+			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
+			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
+			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
+			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
+		};
 		m_image_info.fill(vk::DescriptorImageInfo{ sGraphicsResource::Order().getWhiteTexture().m_sampler.get(), sGraphicsResource::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal });
+
 		{
-			vk::DescriptorUpdateTemplateEntry dutEntry[1];
-			dutEntry[0].setDstBinding(0).setDstArrayElement(0).setDescriptorCount(array_size(m_image_info)).setDescriptorType(vk::DescriptorType::eCombinedImageSampler).setOffset(offsetof(ModelResource, m_image_info)).setStride(sizeof(VkDescriptorImageInfo));
-		
+			vk::DescriptorUpdateTemplateEntry dutEntry[2];
+			dutEntry[0].setDstBinding(0).setDstArrayElement(0).setDescriptorCount(array_size(m_buffer_info)).setDescriptorType(vk::DescriptorType::eStorageBuffer).setOffset(offsetof(ModelResource, m_buffer_info)).setStride(sizeof(VkDescriptorBufferInfo));
+			dutEntry[1].setDstBinding(10).setDstArrayElement(0).setDescriptorCount(array_size(m_image_info)).setDescriptorType(vk::DescriptorType::eCombinedImageSampler).setOffset(offsetof(ModelResource, m_image_info)).setStride(sizeof(VkDescriptorImageInfo));
+
 			vk::DescriptorUpdateTemplateCreateInfo dutCI;
 			dutCI.setTemplateType(vk::DescriptorUpdateTemplateType::eDescriptorSet);
 			dutCI.descriptorSetLayout = m_DSL.get();
@@ -96,17 +111,15 @@ struct ModelResource
 			desc_info.setDescriptorPool(m_descriptor_pool.get());
 			desc_info.setDescriptorSetCount(array_length(layouts));
 			desc_info.setPSetLayouts(layouts);
-			m_DS_ModelTexture = std::move(ctx.m_device.allocateDescriptorSetsUnique(desc_info)[0]);
+			m_DS_ModelResource = std::move(ctx.m_device.allocateDescriptorSetsUnique(desc_info)[0]);
 
-			ctx.m_device.updateDescriptorSetWithTemplate(*m_DS_ModelTexture, *m_Texture_DUP, this);
+			ctx.m_device.updateDescriptorSetWithTemplate(*m_DS_ModelResource, *m_Texture_DUP, this);
 		}
 	}
 	/**
-	 * @brief	リソースの管理を行う
-	 *			@return true	すでに管理されている
-	 *					false	新しいリソースを生成した
+	 * @brief	テクスチャ読み込み
 	 */
-	std::shared_ptr<ModelTexture> make(btr::Context& ctx, vk::CommandBuffer cmd, const std::string& filename, const vk::ImageCreateInfo& info, const std::vector<byte>& data)
+	std::shared_ptr<ModelTexture> MakeTexture(btr::Context& ctx, vk::CommandBuffer cmd, const std::string& filename, const vk::ImageCreateInfo& info, const std::vector<byte>& data)
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 		auto it = m_resource_list.find(filename);
@@ -203,7 +216,7 @@ struct ModelResource
 		}
 
 		m_image_info[resource->m_block] = resource->info();
-		ctx.m_device.updateDescriptorSetWithTemplate(*m_DS_ModelTexture, *m_Texture_DUP, this);
+		ctx.m_device.updateDescriptorSetWithTemplate(*m_DS_ModelResource, *m_Texture_DUP, this);
 
 		m_resource_list[filename] = resource;
 		m_consume = (m_consume + 1) % m_active.size();
