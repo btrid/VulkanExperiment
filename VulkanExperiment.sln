@@ -113,7 +113,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "imgui", "external\imgui.vcx
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "016_DualContouring", "project\016_DualContouring\016_DualContouring.vcxproj", "{FD6AC8FC-C235-4C2F-B1CC-7C0F1D04D247}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "017_RayTracing_SW", "project\017_RayTracing\017_RayTracing.vcxproj", "{BE85004A-B86A-4E5E-851B-2523D82DC97C}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "017_RayTracing", "project\017_RayTracing\017_RayTracing.vcxproj", "{BE85004A-B86A-4E5E-851B-2523D82DC97C}"
 	ProjectSection(ProjectDependencies) = postProject
 		{6AB61332-963C-4D53-B5FF-04B3A9689E23} = {6AB61332-963C-4D53-B5FF-04B3A9689E23}
 		{D7234B59-605E-448A-8E53-D7E19C6CF2B6} = {D7234B59-605E-448A-8E53-D7E19C6CF2B6}
@@ -125,6 +125,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "019_Ortho", "project\019_Ortho\019_Ortho.vcxproj", "{D3AAFF1B-475C-467F-B25A-51F2E1999C50}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "020_RT", "project\020_RT\020_RT.vcxproj", "{BC029E17-6DB2-482F-8FEE-196A3E30233D}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "021_MeshShader", "project\021_MeshShader\021_MeshShader.vcxproj", "{25CFD7FF-7049-48A5-9FF5-6769377FD6B8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -288,6 +290,12 @@ Global
 		{BC029E17-6DB2-482F-8FEE-196A3E30233D}.Release|x64.ActiveCfg = Release|x64
 		{BC029E17-6DB2-482F-8FEE-196A3E30233D}.Release|x64.Build.0 = Release|x64
 		{BC029E17-6DB2-482F-8FEE-196A3E30233D}.Release|x86.ActiveCfg = Release|x64
+		{25CFD7FF-7049-48A5-9FF5-6769377FD6B8}.Debug|x64.ActiveCfg = Debug|x64
+		{25CFD7FF-7049-48A5-9FF5-6769377FD6B8}.Debug|x64.Build.0 = Debug|x64
+		{25CFD7FF-7049-48A5-9FF5-6769377FD6B8}.Debug|x86.ActiveCfg = Debug|x64
+		{25CFD7FF-7049-48A5-9FF5-6769377FD6B8}.Release|x64.ActiveCfg = Release|x64
+		{25CFD7FF-7049-48A5-9FF5-6769377FD6B8}.Release|x64.Build.0 = Release|x64
+		{25CFD7FF-7049-48A5-9FF5-6769377FD6B8}.Release|x86.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

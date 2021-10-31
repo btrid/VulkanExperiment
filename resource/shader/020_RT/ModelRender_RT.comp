@@ -1,0 +1,149 @@
+#version 460
+
+#extension GL_GOOGLE_include_directive : require
+
+layout (local_size_x = 8, local_size_y = 8) in;
+
+
+void MakeCameraRay(out vec3 pos, out vec3 dir)
+{
+	vec2 screen = (gl_GlobalInvocationID / vec3(gl_WorkGroupSize * gl_NumWorkGroups)).xy * 2. - 1.;
+	screen *= tan(u_camera[0].u_fov_y / 2.);
+
+	mat3 axis = transpose(mat3(u_camera[0].u_view));
+
+	dir = normalize(axis[2] + axis[0] * screen.x * u_camera[0].u_aspect + axis[1] * screen.y);
+	pos = u_camera[0].u_eye.xyz;
+}
+
+
+void main() 
+{
+	vec3 origin, dir;
+	MakeCameraRay(origin, dir);
+
+	const float tmax = 9999999.;
+	rayQueryEXT rayQuery;
+	rayQueryInitializeEXT(rayQuery,	u_scene_TLAS, gl_RayFlagsOpaqueEXT, 0xFF, origin, 0., dir, tmax);
+	while(rayQueryProceedEXT(rayQuery)) {}
+
+	float t = rayQueryGetIntersectionTEXT(rayQuery, true);
+	if(t >= tmax)
+	{ 
+		// 当たらなかった
+		return;
+	}
+
+	int custom_index = rayQueryGetIntersectionInstanceCustomIndexEXT(rayQuery, true);
+	uvec3 i0 = b_index[rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, true)];
+	vec3 a = b_vertex[i0.x];
+	vec3 b = b_vertex[i0.y];
+	vec3 c = b_vertex[i0.z];
+	vec3 normal = normalize(cross(b - a, c - a));
+
+
+	// loop
+	{
+
+		int index_a = b_ldc_point_link_head[grid];
+
+		LDCPoint point_a = g_invalid_point;
+		if(index_a>=0) 
+		{
+			point_a = b_ldc_point[index_a];
+			int next_a = b_ldc_point_link_next[index_a];
+			free_ldc_point(index_a);
+			index_a = next_a;
+		}
+
+		bool is_incident_a = false;
+		bool is_incident_b = false;
+
+		if((point_b.flag & LDCFlag_Exit) == LDCFlag_Exit)
+		{
+			LDCPoint point = {0., LDCFlag_Incident, pack_normal_octahedron(-f)};
+			int index = allocate_ldc_point();
+			if(head==-1) { b_ldc_point_link_head[grid] = index; }
+			else { b_ldc_point_link_next[head] = index; }
+			b_ldc_point[index] = point;
+
+			head = index;
+			is_incident_b = true;
+		}
+
+		LDCPoint point = g_invalid_point;
+		for(;is_valid(point_a)||is_valid(point_b);)
+		{
+			point = g_invalid_point;
+			if(point_b.p<=point_a.p)
+			{
+				if(!is_incident_a && !is_incident_b)
+				{
+					// 開始
+					point = point_b;
+				}
+				else if(!is_incident_a && is_incident_b)
+				{
+					// 終了
+					point = point_b;
+				}
+
+				is_incident_b = !is_incident_b;
+				point_b = getLDCPoint(t, tmax, origin, f);
+			}
+			else
+			{
+				if(!is_incident_a && !is_incident_b)
+				{
+					// 開始
+					point = point_a;
+				}
+				else if(is_incident_a && !is_incident_b)
+				{
+					// 終了
+					point = point_a;
+				}
+
+				is_incident_a = !is_incident_a;
+				if(index_a>=0)
+				{
+					point_a = b_ldc_point[index_a];
+					int next = b_ldc_point_link_next[index_a];
+					free_ldc_point(index_a);
+					index_a = next;
+				}
+				else
+				{
+					point_a = g_invalid_point;
+				}
+
+			}
+
+			if(is_valid(point))
+			{
+				int index = allocate_ldc_point();
+				if(head==-1) { b_ldc_point_link_head[grid] = index; }
+				else { b_ldc_point_link_next[head] = index; }
+				b_ldc_point[index] = point;
+				head = index;
+			}
+		}
+
+		if(is_incident_b || (point.p < tmax && (point.flag & LDCFlag_Incident) == LDCFlag_Incident) )
+		{
+			point = LDCPoint(tmax, LDCFlag_Exit, pack_normal_octahedron(f));
+			int index = allocate_ldc_point();
+			if(head==-1) { b_ldc_point_link_head[grid] = index; }
+			else { b_ldc_point_link_next[head] = index; }
+			b_ldc_point[index] = point;
+
+			head = index;
+			is_incident_b = false;
+		}
+
+		if(head==-1) { b_ldc_point_link_head[grid] = -1; }
+		else { b_ldc_point_link_next[head] = -1; }
+
+	}
+
+}

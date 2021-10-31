@@ -132,14 +132,16 @@ App::App(const AppDescriptor& desc)
 			VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
 			VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME, 
 			VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME,
+			VK_NV_MESH_SHADER_EXTENSION_NAME,
 		};
 
 		auto gpu_propaty = m_physical_device.getProperties();
 		auto gpu_feature = m_physical_device.getFeatures();
 		assert(gpu_feature.multiDrawIndirect);
-
+		auto p2 = m_physical_device.getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceMeshShaderPropertiesNV>();
+	
 		auto queueFamilyProperty = m_physical_device.getQueueFamilyProperties();
-
+		
 		std::vector<std::vector<float>> queue_priority(queueFamilyProperty.size());
 		for (size_t i = 0; i < queueFamilyProperty.size(); i++)
 		{
@@ -223,7 +225,13 @@ App::App(const AppDescriptor& desc)
 		Subgroup_Feature.subgroupSizeControl = VK_TRUE;
 		DescriptorIndexing_Feature.setPNext(&Subgroup_Feature);
 
+		vk::PhysicalDeviceMeshShaderFeaturesNV MeshShader_Feature;
+		MeshShader_Feature.meshShader = VK_TRUE;
+		MeshShader_Feature.taskShader = VK_TRUE;
+		Subgroup_Feature.setPNext(&MeshShader_Feature);
+
 		m_device = m_physical_device.createDeviceUnique(device_info, nullptr);
+
 	}
 	VULKAN_HPP_DEFAULT_DISPATCHER.init(m_instance.get(), vkGetInstanceProcAddr, m_device.get(), &::vkGetDeviceProcAddr);
 

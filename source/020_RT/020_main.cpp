@@ -160,10 +160,6 @@ namespace GLtoVK
 	{
 		// 間違ってる可能性はある
 		return (vk::Format)f;
-// 		switch (f)
-// 		{
-// 		case gli::FORMAT_UNDEFINED: return vk::Format::eUndefined;
-// 		}
 	}
 }
 

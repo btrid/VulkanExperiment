@@ -215,7 +215,7 @@ struct DrawHelper
 					| vk::ColorComponentFlagBits::eA)
 			};
 			vk::PipelineColorBlendStateCreateInfo blend_info;
-			blend_info.setAttachmentCount(blend_state.size());
+			blend_info.setAttachmentCount(array_size(blend_state));
 			blend_info.setPAttachments(blend_state.data());
 
 			vk::PipelineVertexInputStateCreateInfo visCI;
@@ -368,7 +368,7 @@ struct DrawHelper
 		for (int32_t i = 0; i < 6; i++)
 		{
 			cmd.setViewport(0, viewport[i]);
-			cmd.setScissor(0, vk::Rect2D(vk::Offset2D(viewport[i].x, viewport[i].y), vk::Extent2D(256, 256)));
+			cmd.setScissor(0, vk::Rect2D(vk::Offset2D((int32_t)viewport[i].x, (int32_t)viewport[i].y), vk::Extent2D(256, 256)));
 			cmd.pushConstants<int32_t>(m_pipeline_layout[PL_DrawTex].get(), vk::ShaderStageFlagBits::eFragment, 0, i);
 
 			cmd.draw(4, 1, 0, 0);
