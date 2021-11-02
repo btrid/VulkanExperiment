@@ -1,0 +1,162 @@
+
+#version 450
+
+#extension GL_GOOGLE_include_directive : require
+#extension GL_NV_mesh_shader : require
+#extension GL_KHR_shader_subgroup_ballot : require
+
+
+#define SETPOINT_CAMERA 0
+#include "btrlib/Camera.glsl"
+
+#define USE_Render_Scene 1
+#include "pbr.glsl"
+
+#define USE_Model_Resource 2
+#define USE_Model_Entity 3
+#include "Model.glsl"
+
+
+
+#define WARP_SIZE 30
+#define GROUP_SIZE WARP_SIZE
+layout(local_size_x=GROUP_SIZE) in;
+
+// https://developer.nvidia.com/blog/introduction-turing-mesh-shaders/
+// do not change
+#define NVMESHLET_VERTEX_COUNT      64
+#define NVMESHLET_PRIMITIVE_COUNT   126
+layout(max_vertices=NVMESHLET_VERTEX_COUNT, max_primitives=NVMESHLET_PRIMITIVE_COUNT) out;
+layout(triangles) out;
+
+/*
+layout (location = 0)out gl_MeshPerVertexNV 
+{
+	vec4  gl_Position;
+	float gl_PointSize;
+	float gl_ClipDistance[];
+	perviewNV float gl_ClipDistancePerViewNV[][];
+	perviewNV vec4 gl_PositionPerViewNV[];  // NVX_multiview_per_view_attributes
+} gl_MeshVerticesNV[];
+
+layout (location = 1)perprimitiveNV out gl_MeshPerPrimitiveNV 
+{
+	int gl_PrimitiveID;
+	int gl_Layer;
+	int gl_ViewportIndex;
+	int gl_ViewportMask[];          // NV_viewport_array2
+	perviewNV int gl_LayerPerViewNV[];
+	perviewNV int gl_ViewportMaskPerViewNV[][];
+} gl_MeshPrimitivesNV[];
+*/
+
+// Custom vertex output block
+ layout(location = 1) out PerVertex
+{
+	vec3 WorldPos;
+	vec3 Normal;
+	vec2 Texcoord_0;
+}Out[];
+
+/*
+mat4 skinning()
+{
+	mat4 transMat = mat4(0.0);
+	uint bone_offset = u_model_info.boneNum * gl_InstanceIndex;
+	for(uint i=0; i<4; i++)
+	{
+		if(inBoneID[i] != 255) 
+		{
+			transMat += inWeight[i] * b_bone_transform[bone_offset + inBoneID[i]];
+		}
+	}
+	return transMat;
+}
+*/
+
+void main()
+{
+	Entity entity = b_model_entity[0];
+	Index index  = Index(entity.IndexAddress);
+	Vertex vertex  = Vertex(entity.VertexAddress);
+	Vertex normal  = Vertex(entity.NormalAddress);
+	Texcoord texcoord  = Texcoord(entity.TexcoordAddress);
+
+	mat4 pv = u_camera[0].u_projection * u_camera[0].u_view;
+
+	if(gl_LocalInvocationID.x==0)
+	{
+		gl_PrimitiveCountNV = 0;
+	}
+
+#if 1
+	for(int i = 0; i < 2; i++)
+	{
+		uint v_idx = 2*gl_WorkGroupID.x*WARP_SIZE+gl_LocalInvocationID.x + i*WARP_SIZE;
+		uint out_idx = i*WARP_SIZE + gl_LocalInvocationID.x;
+		uint idx = index.b_i[v_idx];
+
+		// vertex
+		gl_MeshVerticesNV[out_idx].gl_Position = pv * vec4(vertex.b_v[idx], 1.0);
+
+		// Triangle indices
+		gl_PrimitiveIndicesNV[out_idx] = out_idx;
+
+		// attribute
+		Out[out_idx].WorldPos.xyz = gl_MeshVerticesNV[out_idx].gl_Position.xyz/gl_MeshVerticesNV[out_idx].gl_Position.w;
+		Out[out_idx].Normal = normal.b_v[idx];
+		Out[out_idx].Texcoord_0 = texcoord.b_t[idx];
+
+		uvec4 execbit = subgroupBallot(v_idx < entity.PrimitiveNum*3);
+		if(gl_LocalInvocationID.x==0)
+		{
+			uint primitivenum = subgroupBallotBitCount(execbit);
+			// Number of triangles  
+			gl_PrimitiveCountNV += primitivenum;
+		}  
+	}
+  
+	gl_PrimitiveCountNV /=3;
+
+#else
+//  for(int i = 0; i < NVMSH_VERTEX_RUNS; i++)
+	{
+		uint v_idx = gl_WorkGroupID.x*GROUP_SIZE+gl_LocalInvocationID.x;
+		if(v_idx < entity.PrimitiveNum)
+		{
+			uint out_idx = gl_LocalInvocationID.x;
+			uvec3 idx = index.b_i[v_idx];
+
+			gl_MeshVerticesNV[out_idx*3+0].gl_Position = pv * vec4(vertex.b_v[idx.x], 1.0);
+			gl_MeshVerticesNV[out_idx*3+1].gl_Position = pv * vec4(vertex.b_v[idx.y], 1.0);
+			gl_MeshVerticesNV[out_idx*3+2].gl_Position = pv * vec4(vertex.b_v[idx.z], 1.0);
+
+			// Triangle indices
+			gl_PrimitiveIndicesNV[out_idx*3+0] = out_idx*3+0;
+			gl_PrimitiveIndicesNV[out_idx*3+1] = out_idx*3+1;
+			gl_PrimitiveIndicesNV[out_idx*3+2] = out_idx*3+2;
+
+			Out[out_idx*3+0].WorldPos.xyz = gl_MeshVerticesNV[out_idx*3+0].gl_Position.xyz/gl_MeshVerticesNV[out_idx*3+0].gl_Position.w;
+			Out[out_idx*3+1].WorldPos.xyz = gl_MeshVerticesNV[out_idx*3+1].gl_Position.xyz/gl_MeshVerticesNV[out_idx*3+1].gl_Position.w;
+			Out[out_idx*3+2].WorldPos.xyz = gl_MeshVerticesNV[out_idx*3+2].gl_Position.xyz/gl_MeshVerticesNV[out_idx*3+2].gl_Position.w;
+
+			Out[out_idx*3+0].Normal = normal.b_v[idx.x];
+			Out[out_idx*3+1].Normal = normal.b_v[idx.y];
+			Out[out_idx*3+2].Normal = normal.b_v[idx.z];
+
+			Out[out_idx*3+0].Texcoord_0 = texcoord.b_t[idx.x];
+			Out[out_idx*3+1].Texcoord_0 = texcoord.b_t[idx.y];
+			Out[out_idx*3+2].Texcoord_0 = texcoord.b_t[idx.z];
+		}
+
+		uvec4 execbit = subgroupBallot(v_idx < entity.PrimitiveNum);
+		if(gl_LocalInvocationID.x==0)
+		{
+			uint primitivenum = subgroupBallotBitCount(execbit);
+			// Number of triangles  
+			gl_PrimitiveCountNV = primitivenum;
+		}  
+		barrier();
+	}
+#endif
+}

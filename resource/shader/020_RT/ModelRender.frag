@@ -2,13 +2,9 @@
 #extension GL_GOOGLE_include_directive : require
 #extension GL_EXT_ray_tracing : enable
 #extension GL_EXT_ray_query : require
-#extension GL_EXT_scalar_block_layout : require
-#extension GL_EXT_buffer_reference : require
-#extension GL_EXT_shader_explicit_arithmetic_types : require
-#extension GL_EXT_nonuniform_qualifier : require
 
 
-layout(location=1) in Vertex
+layout(location=1) in PerVertex
 {
 	vec3 WorldPos;
 	vec3 Normal;
@@ -35,42 +31,6 @@ struct PBRInfo
 };
 
 
-struct Material
-{
-	vec4 m_basecolor_factor;
-	float m_metallic_factor;
-	float m_roughness_factor;
-	float _p1;
-	float _p2;
-	vec3  m_emissive_factor;
-	float _p11;
-
-	uint TexID_Base;
-	uint TexID_MR;
-	uint TexID_AO;
-	uint TexID_Normal;
-
-	uint TexID_Emissive;
-	uint Tex_Base_;
-	uint Tex_Bas_e;
-	uint Tex_Ba_se;
-
-};
-Material u_material;
-
-struct Entity
-{
-	uint64_t Vertex;
-	uint64_t Normal;
-
-	uint64_t Texcoord;
-	uint64_t Index;
-
-	uint64_t Material;
-	uint64_t Material_Index;
-
-};
-
 
 #define SETPOINT_CAMERA 0
 #include "btrlib/Camera.glsl"
@@ -79,14 +39,10 @@ struct Entity
 #include "pbr.glsl"
 
 #define USE_Model_Resource 2
-layout(set=USE_Model_Resource, binding=0, scalar) buffer EntityBuffer { Entity b_entity[]; };
-layout(set=USE_Model_Resource, binding=1, buffer_reference, scalar) buffer V {vec3 b_v[]; };
-layout(set=USE_Model_Resource, binding=2, buffer_reference, scalar) buffer I {vec3 b_i[]; };
-layout(set=USE_Model_Resource, binding=3, buffer_reference, scalar) buffer MaterialBuffer {Material m[]; };
-layout(set=USE_Model_Resource, binding=10) uniform sampler2D t_ModelTexture[];
-
 #define USE_Model_Entity 3
-layout(set=USE_Model_Entity, binding=0, scalar) buffer ModelEntityBuffer { Entity b_model_entity[]; };
+#include "Model.glsl"
+
+Material u_material;
 
 
 // Find the normal for this fragment, pulling either from a predefined normal map
@@ -198,7 +154,7 @@ const vec3 f0 = vec3(0.04);
 void main()
 {
 	Entity entity = b_model_entity[0];
-	MaterialBuffer mat  = MaterialBuffer(entity.Material);
+	MaterialBuffer mat  = MaterialBuffer(entity.MaterialAddress);
 	u_material = mat.m[0];
 	vec4 basecolor = SRGBtoLINEAR(texture(t_ModelTexture[nonuniformEXT(u_material.TexID_Base)], In.Texcoord_0.xy)) * u_material.m_basecolor_factor;
 

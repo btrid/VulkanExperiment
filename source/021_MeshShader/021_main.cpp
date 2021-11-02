@@ -68,8 +68,8 @@ struct Renderer
 					sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
 				};
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
-// 				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
-// 				pipeline_layout_info.setPSetLayouts(layouts);
+ 				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
+ 				pipeline_layout_info.setPSetLayouts(layouts);
 				m_PL[PipelineLayout_Render] = ctx.m_device.createPipelineLayoutUnique(pipeline_layout_info);
 			}
 
@@ -244,7 +244,7 @@ struct Renderer
 		}
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_Render].get());
-// 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 0, { sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA) }, {});
+ 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 0, { sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA) }, {});
 
 		vk::RenderPassBeginInfo begin_render_Info;
 		begin_render_Info.setRenderPass(m_renderpass.get());

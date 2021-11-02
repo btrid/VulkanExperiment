@@ -1020,7 +1020,7 @@ struct Context
 		// descriptor set layout
 		{
 			{
-				auto stage = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment;
+				auto stage = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eMeshNV;
 				vk::DescriptorSetLayoutBinding binding[] =
 				{
 					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eUniformBuffer, 1, stage),
@@ -1039,7 +1039,7 @@ struct Context
 			}
 
 			{
-				auto stage = vk::ShaderStageFlagBits::eFragment;
+				auto stage = vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eMeshNV;
 				vk::DescriptorSetLayoutBinding binding[] =
 				{
 					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),

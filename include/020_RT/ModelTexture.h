@@ -35,7 +35,7 @@ struct ModelResource
 	uint32_t m_accume;
 	std::mutex m_mutex;
 
-	std::array<vk::DescriptorBufferInfo, 4> m_buffer_info;
+	std::array<vk::DescriptorBufferInfo, 5> m_buffer_info;
 	std::array<vk::DescriptorImageInfo, 1024> m_image_info;
 	vk::UniqueDescriptorPool m_descriptor_pool;
 	vk::UniqueDescriptorSetLayout m_DSL;
@@ -67,13 +67,14 @@ struct ModelResource
 		}
 
 		{
-			auto stage = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment;
+			auto stage = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eMeshNV;
 			vk::DescriptorSetLayoutBinding binding[] =
 			{
 				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(10, vk::DescriptorType::eCombinedImageSampler, 1024, stage),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
@@ -83,6 +84,7 @@ struct ModelResource
 		}
 
 		m_buffer_info = {
+			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
 			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
 			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
 			ctx.m_vertex_memory.allocateMemory(0).getInfo(),

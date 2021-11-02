@@ -18,6 +18,9 @@ struct Entity
 		ID_MAX,
 	};
 	uint64_t v[ID_MAX];
+
+	uint32_t primitive_num;
+	uint32_t _p;
 };
 
 struct BLAS
@@ -197,7 +200,7 @@ struct Model
 				tinygltf::BufferView& bufferview_index = gltf_model.bufferViews[indexAccessor.bufferView];
 				model->m_entity.v[Entity::Index] = model->b_vertex[bufferview_index.buffer].getDeviceAddress() + bufferview_index.byteOffset;
 
-					for (auto& attrib : primitive.attributes)
+				for (auto& attrib : primitive.attributes)
 				{
 					tinygltf::Accessor& accessor = gltf_model.accessors[attrib.second];
 					tinygltf::BufferView& bufferview = gltf_model.bufferViews[accessor.bufferView];
@@ -208,31 +211,25 @@ struct Model
 						size = accessor.type;
 					}
 
-					int vaa = -1;
 					if (attrib.first.compare("POSITION") == 0) 
 					{
 						model->m_entity.v[Entity::Vertex] = model->b_vertex[bufferview.buffer].getDeviceAddress() + bufferview.byteOffset;
-						vaa = 0;
 					}
 					else if (attrib.first.compare("NORMAL") == 0)
 					{
 						model->m_entity.v[Entity::Normal] = model->b_vertex[bufferview.buffer].getDeviceAddress() + bufferview.byteOffset;
-						vaa = 1;
 					}
 					else if (attrib.first.compare("TEXCOORD_0") == 0)
 					{
 						model->m_entity.v[Entity::Texcoord] = model->b_vertex[bufferview.buffer].getDeviceAddress() + bufferview.byteOffset;
-						vaa = 2;
-					}
-
-					if (vaa > -1)
-					{
 					}
 					else
 					{
 						std::cout << "vaa missing: " << attrib.first << std::endl;
 					}
 				}
+
+				model->m_entity.primitive_num = indexAccessor.count/3;
 			}
 		}
 
@@ -568,7 +565,7 @@ struct ModelRenderer
 			}
 			struct { const char* name; vk::ShaderStageFlagBits flag; } shader_param[] =
 			{
-				{"ModelRender.vert.spv", vk::ShaderStageFlagBits::eVertex},
+				{"ModelRender.mesh.spv", vk::ShaderStageFlagBits::eMeshNV},
 				{"ModelRender.frag.spv", vk::ShaderStageFlagBits::eFragment},
 
 			};
@@ -725,17 +722,20 @@ struct ModelRenderer
 					const tinygltf::Accessor& accessor = gltf_model.accessors[primitive.indices];
 					const tinygltf::BufferView& bufferview = gltf_model.bufferViews[accessor.bufferView];
 
-					vk::IndexType indextype = vk::IndexType::eUint32;
-					switch (accessor.componentType)
-					{
-					case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT: indextype = vk::IndexType::eUint32; break;
-					case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT: indextype = vk::IndexType::eUint16; break;
-					case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: indextype = vk::IndexType::eUint8EXT; break;
-					default: assert(false); break;
-					}
-					cmd.bindIndexBuffer(model.b_vertex[bufferview.buffer].getInfo().buffer, model.b_vertex[bufferview.buffer].getInfo().offset + bufferview.byteOffset, indextype);
+// 					vk::IndexType indextype = vk::IndexType::eUint32;
+// 					switch (accessor.componentType)
+// 					{
+// 					case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT: indextype = vk::IndexType::eUint32; break;
+// 					case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT: indextype = vk::IndexType::eUint16; break;
+// 					case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: indextype = vk::IndexType::eUint8EXT; break;
+// 					default: assert(false); break;
+// 					}
+// 					cmd.bindIndexBuffer(model.b_vertex[bufferview.buffer].getInfo().buffer, model.b_vertex[bufferview.buffer].getInfo().offset + bufferview.byteOffset, indextype);
+//					cmd.drawIndexed(accessor.count, 1, 0, 0, 0);
 
-					cmd.drawIndexed(accessor.count, 1, 0, 0, 0);
+					static const uint32_t MESHLETS_PER_TASK = 30;
+					uint32_t count = app::calcDipatchGroups(uvec3(accessor.count/2, 1, 1), uvec3(MESHLETS_PER_TASK, 1, 1)).x;
+					cmd.drawMeshTasksNV(count, 0);
 
 				}
 			}
