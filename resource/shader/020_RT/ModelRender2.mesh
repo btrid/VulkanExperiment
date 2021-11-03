@@ -1,0 +1,55 @@
+
+#version 450
+
+#extension GL_GOOGLE_include_directive : require
+#extension GL_NV_mesh_shader : require
+#extension GL_KHR_shader_subgroup_ballot : require
+
+
+#define SETPOINT_CAMERA 0
+#include "btrlib/Camera.glsl"
+
+#define USE_Render_Scene 1
+#include "pbr.glsl"
+
+#define USE_Model_Resource 2
+#define USE_Model_Entity 3
+#include "Model.glsl"
+
+
+
+#define WARP_SIZE 32
+#define GROUP_SIZE WARP_SIZE
+layout(local_size_x=GROUP_SIZE) in;
+
+// https://developer.nvidia.com/blog/introduction-turing-mesh-shaders/
+// do not change
+#define NVMESHLET_VERTEX_COUNT      64
+#define NVMESHLET_PRIMITIVE_COUNT   126
+layout(max_vertices=NVMESHLET_VERTEX_COUNT, max_primitives=NVMESHLET_PRIMITIVE_COUNT) out;
+layout(triangles) out;
+
+// Custom vertex output block
+ layout(location = 1) out PerVertex
+{
+	vec3 WorldPos;
+	vec3 Normal;
+	vec2 Texcoord_0;
+}Out[];
+
+void main()
+{
+	Entity entity = b_model_entity[0];
+	Index index  = Index(entity.IndexAddress);
+	Vertex vertex  = Vertex(entity.VertexAddress);
+	Vertex normal  = Vertex(entity.NormalAddress);
+	Texcoord texcoord  = Texcoord(entity.TexcoordAddress);
+
+	mat4 pv = u_camera[0].u_projection * u_camera[0].u_view;
+
+	if(gl_LocalInvocationID.x==0)
+	{
+		gl_PrimitiveCountNV = 0;
+	}
+
+}

@@ -16,7 +16,7 @@
 #include <applib/sAppImGui.h>
 #include <applib/GraphicsResource.h>
 #include <applib/DrawHelper.h>
-#include <020_RT/ModelTexture.h>
+
 
 
 #define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
@@ -27,142 +27,13 @@
 #pragma comment(lib, "vulkan-1.lib")
 #pragma comment(lib, "imgui.lib")
 
-#define TINYGLTF_IMPLEMENTATION
-#define TINYGLTF_NOEXCEPTION
-#define JSON_NOEXCEPTION
-//#define TINYGLTF_NO_STB_IMAGE
-//#define TINYGLTF_NO_STB_IMAGE_WRITE
-#define STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#define STBI_MSC_SECURE_CRT
-#include <tinygltf/tiny_gltf.h>
 
+#include <tinygltf/tiny_gltf.h>
 #include <gli/gli/gli.hpp>
 
+#include <020_RT/ModelResource.h>
+
 #define to_str(_a) #_a
-#define naming(_a) {\
-vk::DebugUtilsObjectNameInfoEXT name_info;\
-name_info.objectHandle = reinterpret_cast<uint64_t&>(_a);\
-name_info.objectType = vk::ObjectType::eImage;\
-name_info.pObjectName = to_str(_a);\
-ctx.m_device.setDebugUtilsObjectNameEXT(name_info);\
-}
-
-namespace GLtoVK
-{
-	vk::Format toFormat(int gltf_type, int component_type)
-	{
-		switch (gltf_type)
-		{
-		case TINYGLTF_TYPE_SCALAR:
-			switch (component_type)
-			{
-			case TINYGLTF_COMPONENT_TYPE_BYTE:
-			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-				return vk::Format::eR8Uint;
-			case TINYGLTF_COMPONENT_TYPE_SHORT:
-			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-				return vk::Format::eR16Uint;
-			case TINYGLTF_COMPONENT_TYPE_INT:
-			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-				return vk::Format::eR32Uint;
-			case TINYGLTF_COMPONENT_TYPE_FLOAT:
-				return vk::Format::eR32Sfloat;
-			}
-		case TINYGLTF_TYPE_VEC2:
-			switch (component_type)
-			{
-			case TINYGLTF_COMPONENT_TYPE_BYTE:
-			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-				return vk::Format::eR8G8Uint;
-			case TINYGLTF_COMPONENT_TYPE_SHORT:
-			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-				return vk::Format::eR16G16Uint;
-			case TINYGLTF_COMPONENT_TYPE_INT:
-			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-				return vk::Format::eR32G32Uint;
-			case TINYGLTF_COMPONENT_TYPE_FLOAT:
-				return vk::Format::eR32G32Sfloat;
-			}
-		case TINYGLTF_TYPE_VEC3:
-			switch (component_type)
-			{
-			case TINYGLTF_COMPONENT_TYPE_BYTE:
-			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-				return vk::Format::eR8G8B8Uint;
-			case TINYGLTF_COMPONENT_TYPE_SHORT:
-			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-				return vk::Format::eR16G16B16Uint;
-			case TINYGLTF_COMPONENT_TYPE_INT:
-			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-				return vk::Format::eR32G32B32Uint;
-			case TINYGLTF_COMPONENT_TYPE_FLOAT:
-				return vk::Format::eR32G32B32Sfloat;
-			}
-		case TINYGLTF_TYPE_VEC4:
-			switch (component_type)
-			{
-			case TINYGLTF_COMPONENT_TYPE_BYTE:
-			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-				return vk::Format::eR8G8B8A8Uint;
-			case TINYGLTF_COMPONENT_TYPE_SHORT:
-			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-				return vk::Format::eR16G16B16A16Uint;
-			case TINYGLTF_COMPONENT_TYPE_INT:
-			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-				return vk::Format::eR32G32B32A32Uint;
-			case TINYGLTF_COMPONENT_TYPE_FLOAT:
-				return vk::Format::eR32G32B32A32Sfloat;
-			}
-		}
-		assert(false);
-		return vk::Format::eUndefined;
-	}
-
-	vk::Format toFormat(int gltf_type, int component_num, int bits)
-	{
-		switch (component_num)
-		{
-		case 1:
-			switch (bits)
-			{
-			case 8: return vk::Format::eR8Unorm;
-			case 16: return vk::Format::eR16Unorm;
-			case 32: return vk::Format::eR32Sfloat;
-			}
-		case 2:
-			switch (bits)
-			{
-			case 8: return vk::Format::eR8G8Unorm;
-			case 16: return vk::Format::eR16G16Unorm;
-			case 32: return vk::Format::eR32G32Sfloat;
-			}
-		case 3:
-			switch (bits)
-			{
-			case 8: return vk::Format::eR8G8B8Unorm;
-			case 16: return vk::Format::eR16G16B16Unorm;
-			case 32: return vk::Format::eR32G32B32Sfloat;
-			}
-		case 4:
-			switch (bits)
-			{
-			case 8: return vk::Format::eR8G8B8A8Unorm;
-			case 16: return vk::Format::eR16G16B16A16Unorm;
-			case 32: return vk::Format::eR32G32B32A32Sfloat;
-			}
-		}
-		assert(false);
-		return vk::Format::eUndefined;
-	}
-
-	vk::Format toFormat(gli::format f)
-	{
-		// 間違ってる可能性はある
-		return (vk::Format)f;
-	}
-}
-
 
 struct BRDFLookupTable
 {
@@ -967,7 +838,6 @@ struct Context
 	enum DSL
 	{
 		DSL_Scene,
-		DSL_Model_Entity,
 		DSL_Num,
 	};
 
@@ -1035,20 +905,6 @@ struct Context
 				desc_layout_info.setPBindings(binding);
 				m_DSL[DSL_Scene] = ctx->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
 			}
-			{
-			}
-
-			{
-				auto stage = vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eMeshNV;
-				vk::DescriptorSetLayoutBinding binding[] =
-				{
-					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),
-				};
-				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
-				desc_layout_info.setBindingCount(array_length(binding));
-				desc_layout_info.setPBindings(binding);
-				m_DSL[DSL_Model_Entity] = ctx->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
-			}
 		}
 
 		// environment texture
@@ -1057,7 +913,7 @@ struct Context
 
 			vk::ImageCreateInfo image_info;
 			image_info.imageType = vk::ImageType::e2D;
-			image_info.format = GLtoVK::toFormat(tex.format());
+			image_info.format = (vk::Format)tex.format();
 			image_info.mipLevels = tex.levels();
 			image_info.arrayLayers = 6;
 			image_info.samples = vk::SampleCountFlagBits::e1;
@@ -1631,8 +1487,7 @@ struct Skybox
 	}
 };
 
-#include <020_RT/Model.h>
-
+#include <020_RT/ModelRenderer.h>
 
 int main()
 {
@@ -1662,7 +1517,7 @@ int main()
 
 	DrawHelper draw_helper{ context };
 
-	std::shared_ptr<Model> model = Model::LoadModel(*ctx, setup_cmd, btr::getResourceAppPath() + "pbr/DamagedHelmet.gltf");
+	std::shared_ptr<Model> model = ctx->m_model_resource.LoadModel(*context, setup_cmd, btr::getResourceAppPath() + "pbr/DamagedHelmet.gltf");
 
 	ModelRenderer renderer(*ctx, *app.m_window->getFrontBuffer());
 	Skybox skybox(*ctx, setup_cmd, *app.m_window->getFrontBuffer());

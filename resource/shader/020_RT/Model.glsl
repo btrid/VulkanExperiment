@@ -19,6 +19,8 @@ struct Entity
 
 	uint PrimitiveNum;
 	uint _p;
+	uint _p2;
+	uint _p3;
 };
 struct Material
 {
@@ -42,13 +44,13 @@ struct Material
 
 };
 
-layout(set=USE_Model_Entity, binding=0, scalar) buffer ModelEntityBuffer { Entity b_model_entity[]; };
-layout(set=USE_Model_Resource, binding=0, scalar) buffer EntityBuffer { Entity b_entity[]; };
+layout(set=USE_Model_Resource, binding=0, scalar) buffer EntityBuffer { Entity b_model_entity[]; };
 layout(set=USE_Model_Resource, binding=1, buffer_reference, scalar) buffer Vertex {vec3 b_v[]; };
 layout(set=USE_Model_Resource, binding=2, buffer_reference, scalar) buffer Index {uint16_t b_i[]; };
 //layout(set=USE_Model_Resource, binding=2, buffer_reference, scalar) buffer Index {u16vec3 b_i[]; };
 layout(set=USE_Model_Resource, binding=3, buffer_reference, scalar) buffer Texcoord {vec2 b_t[]; };
 layout(set=USE_Model_Resource, binding=4, buffer_reference, scalar) buffer MaterialBuffer {Material m[]; };
+
 layout(set=USE_Model_Resource, binding=10) uniform sampler2D t_ModelTexture[];
 
 

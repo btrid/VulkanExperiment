@@ -77,8 +77,8 @@ mat4 skinning()
 void main()
 {
 	Entity entity = b_model_entity[0];
-	Index index  = Index(entity.IndexAddress);
-	Vertex vertex  = Vertex(entity.VertexAddress);
+	Index index  = Index(nonuniformEXT(entity.IndexAddress));
+	Vertex vertex  = Vertex(nonuniformEXT(entity.VertexAddress));
 	Vertex normal  = Vertex(entity.NormalAddress);
 	Texcoord texcoord  = Texcoord(entity.TexcoordAddress);
 

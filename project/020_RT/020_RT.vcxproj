@@ -83,6 +83,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\020_RT\020_main.cpp" />
+    <ClCompile Include="..\..\source\020_RT\ModelResource.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -99,8 +100,10 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\include\020_RT\Model.h" />
-    <ClInclude Include="..\..\include\020_RT\ModelTexture.h" />
+    <ClInclude Include="..\..\include\020_RT\ModelRenderer.h" />
+    <ClInclude Include="..\..\include\020_RT\ModelResource.h" />
+    <ClInclude Include="..\..\include\020_RT\nvmeshlet_builder.hpp" />
+    <ClInclude Include="..\..\include\020_RT\nvmeshlet_packbasic.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
