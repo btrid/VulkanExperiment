@@ -34,7 +34,7 @@ struct ResourceManager2
 	/**
 		* @brief	リソースの管理を行う
 		*			@return true	すでに管理されている
-						false	新しいリソースを生成した
+							false	新しいリソースを生成した
 		*/
 	bool getOrCreate(std::shared_ptr<T>& resource, const std::string& filename)
 	{
@@ -167,17 +167,12 @@ struct Model
 
 struct ModelResource
 {
-	std::unordered_map<std::string, std::weak_ptr<ModelTexture>> m_resource_list;
-	std::array<uint32_t, 1024> m_active;
-	uint32_t m_consume;
-	uint32_t m_accume;
-	std::mutex m_mutex;
 
 	std::array<vk::DescriptorBufferInfo, 5> m_buffer_info;
 	std::array<vk::DescriptorImageInfo, 1024> m_image_info;
 
 	ResourceManager2<Model> m_model_manager;
-//	BindlessResource<ModelTexture>::Manager m_model_manager;
+	ResourceManager2<ModelTexture> m_texture_manager;
 	btr::BufferMemoryEx<Entity> b_model_entity;
 
 	vk::UniqueDescriptorPool m_descriptor_pool;
@@ -187,19 +182,12 @@ struct ModelResource
 
 	ModelResource(btr::Context& ctx)
 	{
-		m_consume = 0;
-		m_accume = 0;
-		for (size_t i = 0; i < m_active.size(); i++)
-		{
-			m_active[i] = i;
-		}
-
 		{
 			std::array<vk::DescriptorPoolSize, 2> pool_size;
 			pool_size[0].setType(vk::DescriptorType::eStorageBuffer);
 			pool_size[0].setDescriptorCount(m_buffer_info.size());
 			pool_size[1].setType(vk::DescriptorType::eCombinedImageSampler);
-			pool_size[1].setDescriptorCount(m_active.size());
+			pool_size[1].setDescriptorCount(m_image_info.size());
 
 			vk::DescriptorPoolCreateInfo pool_info;
 			pool_info.setPoolSizeCount(array_length(pool_size));
@@ -267,13 +255,4 @@ struct ModelResource
 	std::shared_ptr<Model> LoadModel(btr::Context& ctx, vk::CommandBuffer cmd, const std::string& filename);
 	std::shared_ptr<ModelTexture> LoadTexture(btr::Context& ctx, vk::CommandBuffer cmd, const std::string& filename, const vk::ImageCreateInfo& info, const std::vector<byte>& data);
 
-private:
-
-	void release(ModelTexture* p)
-	{
-		std::lock_guard<std::mutex> lock(m_mutex);
-		m_resource_list.erase(p->m_filename);
-		m_active[m_accume] = p->m_block;
-		m_accume = (m_accume + 1) % m_active.size();
-	}
 };

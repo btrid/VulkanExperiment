@@ -428,16 +428,11 @@ std::shared_ptr<Model> ModelResource::LoadModel(btr::Context& ctx, vk::CommandBu
 
 std::shared_ptr<ModelTexture> ModelResource::LoadTexture(btr::Context& ctx, vk::CommandBuffer cmd, const std::string& filename, const vk::ImageCreateInfo& info, const std::vector<byte>& data)
 {
-	std::lock_guard<std::mutex> lock(m_mutex);
-	auto it = m_resource_list.find(filename);
-	if (it != m_resource_list.end())
+	std::shared_ptr<ModelTexture> resource;
+	if (m_texture_manager.getOrCreate(resource, filename))
 	{
-		return it->second.lock();
+		return resource;
 	}
-	auto deleter = [&](ModelTexture* ptr) { release(ptr); sDeleter::Order().enque(std::unique_ptr<ModelTexture>(ptr)); };
-	auto resource = std::shared_ptr<ModelTexture>(new ModelTexture, deleter);
-	resource->m_filename = filename;
-	resource->m_block = m_active[m_consume];
 	{
 		vk::UniqueImage image = ctx.m_device.createImageUnique(info);
 
@@ -525,7 +520,5 @@ std::shared_ptr<ModelTexture> ModelResource::LoadTexture(btr::Context& ctx, vk::
 	m_image_info[resource->m_block] = resource->info();
 	ctx.m_device.updateDescriptorSetWithTemplate(*m_DS_ModelResource, *m_Texture_DUP, this);
 
-	m_resource_list[filename] = resource;
-	m_consume = (m_consume + 1) % m_active.size();
 	return resource;
 }
