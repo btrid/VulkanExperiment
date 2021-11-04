@@ -130,6 +130,11 @@ namespace GLtoVK
 
 std::shared_ptr<Model> ModelResource::LoadModel(btr::Context& ctx, vk::CommandBuffer cmd, const std::string& filename)
 {
+	std::shared_ptr<Model> model;
+	if (m_model_manager.getOrCreate(model, filename)) {
+		return model;
+	}
+
 	tinygltf::Model gltf_model;
 	{
 		tinygltf::TinyGLTF loader;
@@ -145,8 +150,6 @@ std::shared_ptr<Model> ModelResource::LoadModel(btr::Context& ctx, vk::CommandBu
 		if (!res) std::cout << "Failed to load glTF: " << filename << std::endl;
 		else std::cout << "Loaded glTF: " << filename << std::endl;
 	}
-
-	auto model = std::make_shared<Model>();
 
 	// buffer
 	{
@@ -272,7 +275,7 @@ std::shared_ptr<Model> ModelResource::LoadModel(btr::Context& ctx, vk::CommandBu
 				}
 				else
 				{
-					std::cout << "vaa missing: " << attrib.first << std::endl;
+					assert(false);
 				}
 			}
 
@@ -280,12 +283,8 @@ std::shared_ptr<Model> ModelResource::LoadModel(btr::Context& ctx, vk::CommandBu
 		}
 	}
 
-//	model->b_entity = ctx.m_vertex_memory.allocateMemory<Entity>(1);
-//	cmd.updateBuffer<Entity>(model->b_entity.getInfo().buffer, model->b_entity.getInfo().offset, model->m_entity);
-	cmd.updateBuffer<Entity>(b_model_entity.getInfo().buffer, b_model_entity.getInfo().offset, model->m_entity);
+	cmd.updateBuffer<Entity>(b_model_entity.getInfo().buffer, b_model_entity.getInfo().offset + sizeof(Entity) * model->m_block, model->m_entity);
 
-//	vk::BufferMemoryBarrier barrier[] = { model->m_BLAS.m_AS_buffer.makeMemoryBarrier(vk::AccessFlagBits::eAccelerationStructureWriteKHR, vk::AccessFlagBits::eAccelerationStructureReadKHR), };
-//	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
 
 	// build BLAS
 	auto& _ctx = ctx;

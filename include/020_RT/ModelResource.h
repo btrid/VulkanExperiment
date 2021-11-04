@@ -12,6 +12,59 @@
 
 #include <tinygltf/tiny_gltf.h>
 
+template<typename T>
+struct ResourceManager2
+{
+	std::unordered_map<std::string, std::weak_ptr<T>> m_resource_list;
+	std::vector<uint32_t> m_active;
+	uint32_t m_consume;
+	uint32_t m_accume;
+	std::mutex m_mutex;
+
+	ResourceManager2()
+	{
+		m_consume = 0;
+		m_accume = 0;
+		m_active.resize(1024);
+		for (size_t i = 0; i < m_active.size(); i++)
+		{
+			m_active[i] = i;
+		}
+	}
+	/**
+		* @brief	リソースの管理を行う
+		*			@return true	すでに管理されている
+						false	新しいリソースを生成した
+		*/
+	bool getOrCreate(std::shared_ptr<T>& resource, const std::string& filename)
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+		auto it = m_resource_list.find(filename);
+		if (it != m_resource_list.end()) {
+			resource = it->second.lock();
+			return true;
+		}
+		auto deleter = [&](T* ptr) { release(ptr); sDeleter::Order().enque(std::unique_ptr<T>(ptr)); };
+		resource = std::shared_ptr<T>(new T, deleter);
+		resource->m_filename = filename;
+		resource->m_block = m_active[m_consume];
+
+		m_resource_list[filename] = resource;
+		m_consume = (m_consume + 1) % m_active.size();
+		return false;
+	}
+
+private:
+	void release(T* p)
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+		m_resource_list.erase(p->m_filename);
+		m_active[m_accume] = p->m_block;
+		m_accume = (m_accume + 1) % m_active.size();
+	}
+};
+
+
 struct Entity
 {
 	enum ID
@@ -55,6 +108,9 @@ struct ModelTexture
 
 struct Model
 {
+	std::string m_filename;
+	uint32_t m_block;
+
 	struct BLAS
 	{
 		vk::UniqueAccelerationStructureKHR m_AS;
@@ -106,9 +162,9 @@ struct Model
 	BLAS m_BLAS;
 
  	Entity m_entity;
-// 	btr::BufferMemoryEx<Entity> b_entity;
 
 };
+
 struct ModelResource
 {
 	std::unordered_map<std::string, std::weak_ptr<ModelTexture>> m_resource_list;
@@ -120,6 +176,8 @@ struct ModelResource
 	std::array<vk::DescriptorBufferInfo, 5> m_buffer_info;
 	std::array<vk::DescriptorImageInfo, 1024> m_image_info;
 
+	ResourceManager2<Model> m_model_manager;
+//	BindlessResource<ModelTexture>::Manager m_model_manager;
 	btr::BufferMemoryEx<Entity> b_model_entity;
 
 	vk::UniqueDescriptorPool m_descriptor_pool;
