@@ -521,7 +521,8 @@ std::shared_ptr<Model> ModelResource::LoadModel(btr::Context& ctx, vk::CommandBu
 				statsLocal.fprint(stdout);
 			}
 
-			meshletBuilder.padTaskMeshlets(meshlet);
+//			meshletBuilder.padTaskMeshlets(meshlet);
+			meshlet.meshletDescriptors.resize(btr::align<uint32_t>(meshlet.meshletDescriptors.size(), 32));
 		}
 
 	}

@@ -190,7 +190,8 @@ struct ModelRenderer
 			}
 			struct { const char* name; vk::ShaderStageFlagBits flag; } shader_param[] =
 			{
-				{"ModelRender.mesh.spv", vk::ShaderStageFlagBits::eMeshNV},
+				{"ModelRender2.task.spv", vk::ShaderStageFlagBits::eTaskNV},
+				{"ModelRender2.mesh.spv", vk::ShaderStageFlagBits::eMeshNV},
 				{"ModelRender.frag.spv", vk::ShaderStageFlagBits::eFragment},
 
 			};
@@ -313,8 +314,11 @@ struct ModelRenderer
 					const tinygltf::Accessor& accessor = gltf_model.accessors[primitive.indices];
 					const tinygltf::BufferView& bufferview = gltf_model.bufferViews[accessor.bufferView];
 
-					static const uint32_t MESHLETS_PER_TASK = 30;
-					uint32_t count = app::calcDipatchGroups(uvec3(accessor.count/2, 1, 1), uvec3(MESHLETS_PER_TASK, 1, 1)).x;
+//					static const uint32_t MESHLETS_PER_TASK = 30;
+//					uint32_t count = app::calcDipatchGroups(uvec3(accessor.count / 2, 1, 1), uvec3(MESHLETS_PER_TASK, 1, 1)).x;
+//					cmd.drawMeshTasksNV(count, 0);
+					static const uint32_t MESHLETS_PER_TASK = 32;
+					uint32_t count = app::calcDipatchGroups(uvec3(model.m_MeshletGeometry[0].meshletDescriptors.size(), 1, 1), uvec3(MESHLETS_PER_TASK, 1, 1)).x;
 					cmd.drawMeshTasksNV(count, 0);
 
 				}

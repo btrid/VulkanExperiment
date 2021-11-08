@@ -14,7 +14,6 @@
 #include "pbr.glsl"
 
 #define USE_Model_Resource 2
-#define USE_Model_Entity 3
 #include "Model.glsl"
 
 // MESH CONFIG
@@ -36,12 +35,15 @@ taskNV in Task {
 ////////////////////////////////////////////////////////////
 // OUTPUT
 
-layout(location=0) out Interpolants 
+layout(location=1) out Interpolants 
 {
-  vec3  wPos;
-  float dummy;
-  vec3  wNormal;
-  flat uint meshletID;
+	vec3  wPos;
+	float _d1;
+	vec3  wNormal;
+	float _d2;
+	vec2 Texcoord_0;
+	vec2 _d3;
+	flat uint meshletID;
 } OUT[];
 
 //////////////////////////////////////////////////
@@ -50,27 +52,27 @@ layout(location=0) out Interpolants
 Entity u_entity;
 vec4 procVertex(uint meshletID, const uint vert, uint vidx)
 {
-	Entity entity = b_model_entity[0];
-	Vertex vertex  = Vertex(entity.VertexAddress);
+	Vertex vertex  = Vertex(u_entity.VertexAddress);
 
-  vec3 oPos = vertex.b_v[vidx];
-//  vec3 wPos = (object.worldMatrix  * vec4(oPos,1)).xyz;
-  vec3 wPos = oPos;
-  vec4 hPos = u_camera[0].u_projection * u_camera[0].u_view * vec4(wPos,1);
-  
-  gl_MeshVerticesNV[vert].gl_Position = hPos;
-  
-  OUT[vert].wPos = oPos;
-  OUT[vert].dummy = 0;
-  OUT[vert].meshletID = meshletID;
-  
+	vec3 oPos = vertex.b_v[vidx];
+	//  vec3 wPos = (object.worldMatrix  * vec4(oPos,1)).xyz;
+	vec3 wPos = oPos;
+	vec4 hPos = u_camera[0].u_projection * u_camera[0].u_view * vec4(wPos,1);
+
+	gl_MeshVerticesNV[vert].gl_Position = hPos;
+
+	OUT[vert].wPos = wPos;
+	OUT[vert]._d1 = 0;
+	OUT[vert]._d2 = 0;
+	OUT[vert].meshletID = meshletID;
+
 #if USE_CLIPPING
-  gl_MeshVerticesNV[vert].gl_ClipDistance[0] = dot(scene.wClipPlanes[0], vec4(wPos,1));
-  gl_MeshVerticesNV[vert].gl_ClipDistance[1] = dot(scene.wClipPlanes[1], vec4(wPos,1));
-  gl_MeshVerticesNV[vert].gl_ClipDistance[2] = dot(scene.wClipPlanes[2], vec4(wPos,1));
+	gl_MeshVerticesNV[vert].gl_ClipDistance[0] = dot(scene.wClipPlanes[0], vec4(wPos,1));
+	gl_MeshVerticesNV[vert].gl_ClipDistance[1] = dot(scene.wClipPlanes[1], vec4(wPos,1));
+	gl_MeshVerticesNV[vert].gl_ClipDistance[2] = dot(scene.wClipPlanes[2], vec4(wPos,1));
 #endif
-  
-  return hPos;
+
+	return hPos;
 }
 
 // To benefit from batched loading, and reduce latency 
@@ -79,12 +81,16 @@ vec4 procVertex(uint meshletID, const uint vert, uint vidx)
 
 struct TempAttributes {
   vec3 normal;
+  vec2 tex;
 };
 
 void fetchAttributes(inout TempAttributes temp, uint vert, uint vidx)
 {
 	Vertex normal  = Vertex(u_entity.IndexAddress);
 	temp.normal = normal.b_v[vidx];
+
+	Texcoord tex0 = Texcoord(u_entity.TexcoordAddress);
+	temp.tex = tex0.b_t[vidx];
 }
 
 void storeAttributes(inout TempAttributes temp, const uint vert, uint vidx)
@@ -92,6 +98,7 @@ void storeAttributes(inout TempAttributes temp, const uint vert, uint vidx)
   vec3 oNormal = temp.normal;
   vec3 wNormal = /*mat3(object.worldMatrixIT) **/ oNormal;
   OUT[vert].wNormal = wNormal;
+  OUT[vert].Texcoord_0 = temp.tex;
 }
 
 void procAttributes(uint meshletID, const uint vert, uint vidx)
@@ -134,10 +141,6 @@ void procAttributes(uint meshletID, const uint vert, uint vidx)
 void main()
 {
 	u_entity = b_model_entity[0];
-//	Index index  = Index(nonuniformEXT(entity.IndexAddress));
-//	Vertex vertex  = Vertex(nonuniformEXT(entity.VertexAddress));
-//	Vertex normal  = Vertex(entity.NormalAddress);
-//	Texcoord texcoord  = Texcoord(entity.TexcoordAddress);
 
 	// gl_WorkGroupID.x runs from [0 .. parentTask.gl_TaskCountNV - 1]
 	uint meshletID = IN.baseID + IN.subIDs[gl_WorkGroupID.x];

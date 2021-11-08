@@ -46,7 +46,8 @@ void main()
 	BindlessBufferU32x4 b_meshlet_desc = BindlessBufferU32x4(entity.MeshletDesc);
 	uvec4 desc = b_meshlet_desc.b_uvec4[baseID + laneID];
 
-	bool render = !(baseID + laneID > 300 /*|| earlyCull(desc, object)*/);
+//	bool render = !(baseID + laneID > 300 /*|| earlyCull(desc, object)*/);
+	bool render = !all(equal(desc, uvec4(0)));
 
 	uvec4 vote  = subgroupBallot(render);
 	uint  tasks = subgroupBallotBitCount(vote);

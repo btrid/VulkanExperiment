@@ -7,8 +7,12 @@
 layout(location=1) in PerVertex
 {
 	vec3 WorldPos;
+	float _d1;
 	vec3 Normal;
+	float _d2;
 	vec2 Texcoord_0;
+	vec2 _d3;
+	flat uint meshletID;
 }In;
 layout(location = 0) out vec4 FragColor;
  // Encapsulate the various inputs used by the various functions in the shading equation
