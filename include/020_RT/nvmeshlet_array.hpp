@@ -18,21 +18,57 @@
  */
 
 
-#ifndef _NV_MESHLET_PACKBASIC_H__
-#define _NV_MESHLET_PACKBASIC_H__
+#ifndef _NV_MESHLET_ARRAY_H__
+#define _NV_MESHLET_ARRAY_H__
 
 #include "nvmeshlet_builder.hpp"
 
 namespace NVMeshlet {
 
-static const uint32_t PACKBASIC_ALIGN = 16;
+// The default shown here packs uint8 tightly, and makes them accessible as 64-bit load.
+// Keep in sync with shader configuration!
+
 // how many indices are fetched per thread, 8 or 4
-static const uint32_t PACKBASIC_PRIMITIVE_INDICES_PER_FETCH = 8;
+static const uint32_t ARRAY_PRIMITIVE_INDICES_PER_FETCH = 8;
 
-typedef uint32_t PackBasicType;
+// Higher values mean slightly more wasted memory, but allow to use greater offsets within
+// the few bits we have, resulting in a higher total amount of triangles and vertices.
+static const uint32_t ARRAY_PRIMITIVE_PACKING_ALIGNMENT = 32;  // must be multiple of PRIMITIVE_INDICES_PER_FETCH
+static const uint32_t ARRAY_VERTEX_PACKING_ALIGNMENT    = 16;
 
-struct MeshletPackBasicDesc
+inline uint64_t arrayIndicesAlignedSize(uint64_t size)
 {
+  // To be able to store different data of the meshlet (prim & vertex indices) in the same buffer,
+  // we need to have a common alignment that keeps all the data natural aligned.
+
+  static const uint64_t align =
+      std::max(sizeof(uint8_t) * ARRAY_PRIMITIVE_PACKING_ALIGNMENT, sizeof(uint32_t) * ARRAY_VERTEX_PACKING_ALIGNMENT);
+  static_assert(align % sizeof(uint8_t) * ARRAY_PRIMITIVE_PACKING_ALIGNMENT == 0, "nvmeshlet failed common align");
+  static_assert(align % sizeof(uint32_t) * ARRAY_VERTEX_PACKING_ALIGNMENT == 0, "nvmeshlet failed common align");
+
+  return ((size + align - 1) / align) * align;
+}
+
+struct MeshletArrayDesc
+{
+  // A Meshlet contains a set of unique vertices
+  // and a group of primitives that are defined by
+  // indices into this local set of vertices.
+  //
+  // The information here is used by a single
+  // mesh shader's workgroup to execute vertex
+  // and primitive shading.
+  // It is packed into single "uvec4"/"uint4" value
+  // so the hardware can leverage 128-bit loads in the
+  // shading languages.
+  // The offsets used here are for the appropriate
+  // indices arrays.
+  //
+  // A bounding box as well as an angled cone is stored to allow
+  // quick culling in the task shader.
+  // The current packing is just a basic implementation, that
+  // may be customized, but ideally fits within 128 bit.
+
   //
   // Bitfield layout :
   //
@@ -52,15 +88,15 @@ struct MeshletPackBasicDesc
   //  ------------|:----:|----------------------------------------------
   //   Field.Z    |      |
   //  ------------|:----:|----------------------------------------------
+  //  vertexBegin | 20   | offset to the first vertex index, times alignment
   //  coneOctX    | 8    | octant coordinate for cone normal, SNORM8
-  //  coneOctY    | 8    | octant coordinate for cone normal, SNORM8
-  //  coneAngle   | 8    | -sin(cone.angle),  SNORM8
-  //  vertexPack  | 8    | vertex indices per 32 bits (1 or 2)
+  //  coneAngleLo | 4    | lower 4 bits of -sin(cone.angle),  SNORM8
   //  ------------|:----:|----------------------------------------------
   //   Field.W    |      |
   //  ------------|:----:|----------------------------------------------
-  //  packOffset  | 32   | index buffer value of the first vertex
-
+  //  primBegin   | 20   | offset to the first primitive index, times alignment
+  //  coneOctY    | 8    | octant coordinate for cone normal, SNORM8
+  //  coneAngleHi | 4    | higher 4 bits of -sin(cone.angle), SNORM8
   //
   // Note : the bitfield is not expanded in the struct due to differences in how
   //        GPU & CPU compilers pack bit-fields and endian-ness.
@@ -81,12 +117,13 @@ struct MeshletPackBasicDesc
       unsigned bboxMaxZ : 8;
       unsigned primMax : 8;
 
+      unsigned vertexBegin : 20;
       signed   coneOctX : 8;
-      signed   coneOctY : 8;
-      signed   coneAngle : 8;
-	  unsigned vertexPack : 8;   //16bit==2 32bit==1
+      unsigned coneAngleLo : 4;
 
-      unsigned packOffset : 32;
+      unsigned primBegin : 20;
+      signed   coneOctY : 8;
+      unsigned coneAngleHi : 4;
     } _debug;
 #endif
     struct
@@ -112,28 +149,20 @@ struct MeshletPackBasicDesc
     fieldY |= pack(num - 1, 8, 24);
   }
 
-  uint32_t getNumVertexPack() const { return unpack(fieldZ, 8, 24); }
-  void     setNumVertexPack(uint32_t num) { fieldZ |= pack(num, 8, 24); }
-
-  uint32_t getPackOffset() const { return fieldW; }
-  void     setPackOffset(uint32_t index) { fieldW = index; }
-
-  uint32_t getVertexStart() const { return 0; }
-  uint32_t getVertexSize() const
+  uint32_t getVertexBegin() const { return unpack(fieldZ, 20, 0) * ARRAY_VERTEX_PACKING_ALIGNMENT; }
+  void     setVertexBegin(uint32_t begin)
   {
-    uint32_t vertexDiv   = getNumVertexPack();
-    uint32_t vertexElems = ((getNumVertices() + vertexDiv - 1) / vertexDiv);
-
-    return vertexElems;
+    assert(begin % ARRAY_VERTEX_PACKING_ALIGNMENT == 0);
+    assert(begin / ARRAY_VERTEX_PACKING_ALIGNMENT < ((1 << 20) - 1));
+    fieldZ |= pack(begin / ARRAY_VERTEX_PACKING_ALIGNMENT, 20, 0);
   }
 
-  uint32_t getPrimStart() const { return (getVertexStart() + getVertexSize() + 1) & (~1u); }
-  uint32_t getPrimSize() const
+  uint32_t getPrimBegin() const { return unpack(fieldW, 20, 0) * ARRAY_PRIMITIVE_PACKING_ALIGNMENT; }
+  void     setPrimBegin(uint32_t begin)
   {
-    uint32_t primDiv   = 4;
-    uint32_t primElems = ((getNumPrims() * 3 + PACKBASIC_PRIMITIVE_INDICES_PER_FETCH - 1) / primDiv);
-
-    return primElems;
+    assert(begin % ARRAY_PRIMITIVE_PACKING_ALIGNMENT == 0);
+    assert(begin / ARRAY_PRIMITIVE_PACKING_ALIGNMENT < ((1 << 20) - 1));
+    fieldW |= pack(begin / ARRAY_PRIMITIVE_PACKING_ALIGNMENT, 20, 0);
   }
 
   // positions are relative to object's bbox treated as UNORM
@@ -146,12 +175,12 @@ struct MeshletPackBasicDesc
   void getBBox(uint8_t bboxMin[3], uint8_t bboxMax[3]) const
   {
     bboxMin[0] = unpack(fieldX, 8, 0);
-    bboxMin[0] = unpack(fieldX, 8, 8);
-    bboxMin[0] = unpack(fieldX, 8, 16);
+    bboxMin[1] = unpack(fieldX, 8, 8);
+    bboxMin[2] = unpack(fieldX, 8, 16);
 
     bboxMax[0] = unpack(fieldY, 8, 0);
-    bboxMax[0] = unpack(fieldY, 8, 8);
-    bboxMax[0] = unpack(fieldY, 8, 16);
+    bboxMax[1] = unpack(fieldY, 8, 8);
+    bboxMax[2] = unpack(fieldY, 8, 16);
   }
 
   // uses octant encoding for cone Normal
@@ -160,104 +189,37 @@ struct MeshletPackBasicDesc
   void setCone(int8_t coneOctX, int8_t coneOctY, int8_t minusSinAngle)
   {
     uint8_t anglebits = minusSinAngle;
-    fieldZ |= pack(coneOctX, 8, 0);
-    fieldZ |= pack(coneOctY, 8, 8);
-    fieldZ |= pack(minusSinAngle, 8, 16);
+    fieldZ |= pack(coneOctX, 8, 20);
+    fieldW |= pack(coneOctY, 8, 20);
+    fieldZ |= pack((anglebits >> 0) & 0xF, 4, 28);
+    fieldW |= pack((anglebits >> 4) & 0xF, 4, 28);
   }
 
   void getCone(int8_t& coneOctX, int8_t& coneOctY, int8_t& minusSinAngle) const
   {
-    coneOctX      = unpack(fieldZ, 8, 0);
-    coneOctY      = unpack(fieldZ, 8, 8);
-    minusSinAngle = unpack(fieldZ, 8, 16);
+    coneOctX      = unpack(fieldZ, 8, 20);
+    coneOctY      = unpack(fieldW, 8, 20);
+    minusSinAngle = unpack(fieldZ, 4, 28) | (unpack(fieldW, 4, 28) << 4);
   }
 
-  MeshletPackBasicDesc()
+  MeshletArrayDesc()
   {
     fieldX = 0;
     fieldY = 0;
     fieldZ = 0;
     fieldW = 0;
   }
+
+  static bool isPrimBeginLegal(uint32_t begin) { return begin / ARRAY_PRIMITIVE_PACKING_ALIGNMENT < ((1 << 20) - 1); }
+
+  static bool isVertexBeginLegal(uint32_t begin) { return begin / ARRAY_VERTEX_PACKING_ALIGNMENT < ((1 << 20) - 1); }
 };
 
-struct MeshletPackBasic
-{
 
-  // variable size
-  //
-  // aligned to PACKBASIC_ALIGN bytes
-  // - first squence is either 16 or 32 bit indices per vertex
-  //   (vertexPack is 2 or 1) respectively
-  // - second sequence aligned to 8 bytes, primitive many 8 bit values
-  //   
-  //
-  // { u32[numVertices/vertexPack ...], padding..., u8[(numPrimitives) * 3 ...] }
+//////////////////////////////////////////////////////////////////////////
 
-  union
-  {
-    uint32_t data32[1];
-    uint16_t data16[1];
-    uint8_t  data8[1];
-  };
-
-  inline void setVertexIndex(uint32_t PACKED_SIZE, uint32_t vertex, uint32_t vertexPack, uint32_t indexValue)
-  {
-#if 1
-    if (vertexPack == 1){
-      data32[vertex] = indexValue;
-    }
-    else {
-      data16[vertex] = indexValue;
-    }
-#else
-    uint32_t idx   = vertex / vertexPack;
-    uint32_t shift = vertex % vertexPack;
-
-    assert(idx < PACKED_SIZE);
-
-    data32[idx] |= indexValue << (shift * 16);
-#endif
-  }
-
-  inline uint32_t getVertexIndex(uint32_t vertex, uint32_t vertexPack) const
-  {
-#if 1
-    return (vertexPack == 1) ? data32[vertex] : data16[vertex];
-#else
-    uint32_t idx   = vertex / vertexPack;
-    uint32_t shift = vertex & (vertexPack-1);
-    uint32_t bits  = vertexPack == 2 ? 16 : 0;
-
-    uint32_t indexValue = data32[idx];
-    indexValue <<= ((1 - shift) * bits);
-    indexValue >>= (bits);
-    return indexValue;
-#endif
-  }
-
-  inline void setPrimIndices(uint32_t PACKED_SIZE, uint32_t prim, uint32_t primStart, const uint8_t indices[3])
-  {
-    uint32_t idx   = primStart * 4 + prim * 3;
-
-    assert(idx < PACKED_SIZE * 4);
-
-    data8[idx + 0] = indices[0];
-    data8[idx + 1] = indices[1];
-    data8[idx + 2] = indices[2];
-  }
-
-  inline void getPrimIndices(uint32_t prim, uint32_t primStart, uint8_t indices[3]) const
-  {
-    uint32_t idx = primStart * 4 + prim * 3;
-    
-    indices[0]   = data8[idx + 0];
-    indices[1]   = data8[idx + 1];
-    indices[2]   = data8[idx + 2];
-  }
-};
-
-class PackBasicBuilder
+template <class VertexIndexType>
+class ArrayBuilder
 {
 public:
   //////////////////////////////////////////////////////////////////////////
@@ -267,9 +229,19 @@ public:
 
   struct MeshletGeometry
   {
-    std::vector<PackBasicType>        meshletPacks;
-    std::vector<MeshletPackBasicDesc> meshletDescriptors;
-    std::vector<MeshletBbox>          meshletBboxes;
+    // The vertex indices are similar to provided to the provided
+    // triangle index buffer. Instead of each triangle using 3 vertex indices,
+    // each meshlet holds a unique set of variable vertex indices.
+    std::vector<VertexIndexType> vertexIndices;
+
+    // Each triangle is using 3 primitive indices, these indices
+    // are local to the meshlet's unique set of vertices.
+    // Due to alignment the number of primitiveIndices != input triangle indices.
+    std::vector<PrimitiveIndexType> primitiveIndices;
+
+    // Each meshlet contains offsets into the above arrays.
+    std::vector<MeshletArrayDesc> meshletDescriptors;
+    std::vector<MeshletBbox>      meshletBboxes;
   };
 
 
@@ -291,14 +263,18 @@ public:
     assert(maxPrimitiveCount <= MAX_PRIMITIVE_COUNT_LIMIT);
     assert(maxVertexCount <= MAX_VERTEX_COUNT_LIMIT);
 
-    m_maxVertexCount    = maxVertexCount;
-    m_maxPrimitiveCount = maxPrimitiveCount;
-    m_separateBboxes    = separateBboxes;
+    m_separateBboxes = separateBboxes;
+
+    m_maxVertexCount = maxVertexCount;
+    // we may reduce the number of actual triangles a bit to simplify
+    // index loader logic in shader. By using less primitives we
+    // guarantee to not overshoot the gl_PrimitiveIndices array when using the 32-bit
+    // write intrinsic.
 
     {
       uint32_t indices = maxPrimitiveCount * 3;
       // align to PRIMITIVE_INDICES_PER_FETCH
-      uint32_t indicesFit = (indices / PACKBASIC_PRIMITIVE_INDICES_PER_FETCH) * PACKBASIC_PRIMITIVE_INDICES_PER_FETCH;
+      uint32_t indicesFit = (indices / ARRAY_PRIMITIVE_INDICES_PER_FETCH) * ARRAY_PRIMITIVE_INDICES_PER_FETCH;
       uint32_t numTrisFit = indicesFit / 3;
 
       assert(numTrisFit > 0);
@@ -311,49 +287,44 @@ public:
 private:
   void addMeshlet(MeshletGeometry& geometry, const PrimitiveCache& cache) const
   {
-    uint32_t packOffset = uint32_t(geometry.meshletPacks.size());
-    uint32_t vertexPack = cache.m_numVertexAllBits <= 16 ? 2 : 1;
-
-    MeshletPackBasicDesc meshlet;
+    MeshletArrayDesc meshlet;
     meshlet.setNumPrims(cache.m_numPrims);
     meshlet.setNumVertices(cache.m_numVertices);
-    meshlet.setNumVertexPack(vertexPack);
-    meshlet.setPackOffset(packOffset);
+    meshlet.setPrimBegin(uint32_t(geometry.primitiveIndices.size()));
+    meshlet.setVertexBegin(uint32_t(geometry.vertexIndices.size()));
 
-    uint32_t vertexStart = meshlet.getVertexStart();
-    uint32_t vertexSize  = meshlet.getVertexSize();
-
-    uint32_t primStart = meshlet.getPrimStart();
-    uint32_t primSize  = meshlet.getPrimSize();
-
-    uint32_t packedSize = std::max(vertexStart + vertexSize, primStart + primSize);
-    packedSize          = alignedSize(packedSize, PACKBASIC_ALIGN);
-
-    geometry.meshletPacks.resize(geometry.meshletPacks.size() + packedSize, 0);
-    geometry.meshletDescriptors.push_back(meshlet);
-
-    MeshletPackBasic* pack = (MeshletPackBasic*)&geometry.meshletPacks[packOffset];
-
+    for(uint32_t v = 0; v < cache.m_numVertices; v++)
     {
-      for(uint32_t v = 0; v < cache.m_numVertices; v++)
-      {
-        pack->setVertexIndex(packedSize, v, vertexPack, cache.m_vertices[v]);
-      }
-
-      uint32_t primStart = meshlet.getPrimStart();
-
-      for(uint32_t p = 0; p < cache.m_numPrims; p++)
-      {
-        pack->setPrimIndices(packedSize, p, primStart, cache.m_primitives[p]);
-      }
+      geometry.vertexIndices.push_back(cache.m_vertices[v]);
     }
+
+    // pad with existing values to aid compression
+
+    for(uint32_t p = 0; p < cache.m_numPrims; p++)
+    {
+      geometry.primitiveIndices.push_back(cache.m_primitives[p][0]);
+      geometry.primitiveIndices.push_back(cache.m_primitives[p][1]);
+      geometry.primitiveIndices.push_back(cache.m_primitives[p][2]);
+    }
+
+    while((geometry.vertexIndices.size() % ARRAY_VERTEX_PACKING_ALIGNMENT) != 0)
+    {
+      geometry.vertexIndices.push_back(cache.m_vertices[cache.m_numVertices - 1]);
+    }
+    size_t idx = 0;
+    while((geometry.primitiveIndices.size() % ARRAY_PRIMITIVE_PACKING_ALIGNMENT) != 0)
+    {
+      geometry.primitiveIndices.push_back(cache.m_primitives[cache.m_numPrims - 1][idx % 3]);
+      idx++;
+    }
+
+    geometry.meshletDescriptors.push_back(meshlet);
   }
 
 public:
   // Returns the number of successfully processed indices.
   // If the returned number is lower than provided input, use the number
   // as starting offset and create a new geometry description.
-  template <class VertexIndexType>
   uint32_t buildMeshlets(MeshletGeometry& geometry, const uint32_t numIndices, const VertexIndexType* indices) const
   {
     assert(m_maxPrimitiveCount <= MAX_PRIMITIVE_COUNT_LIMIT);
@@ -366,11 +337,18 @@ public:
 
     for(uint32_t i = 0; i < numIndices / 3; i++)
     {
-      if(cache.cannotInsertBlock(indices[i * 3 + 0], indices[i * 3 + 1], indices[i * 3 + 2]))
+      if(cache.cannotInsert(indices[i * 3 + 0], indices[i * 3 + 1], indices[i * 3 + 2]))
       {
         // finish old and reset
         addMeshlet(geometry, cache);
         cache.reset();
+
+        // if we exhausted the index buffers, return early
+        if(!MeshletArrayDesc::isPrimBeginLegal(uint32_t(geometry.primitiveIndices.size()))
+           || !MeshletArrayDesc::isVertexBeginLegal(uint32_t(geometry.vertexIndices.size())))
+        {
+          return i * 3;
+        }
       }
       cache.insert(indices[i * 3 + 0], indices[i * 3 + 1], indices[i * 3 + 2]);
     }
@@ -391,7 +369,7 @@ public:
     // ensure we never have out-of-bounds memory access to array within task shader
     for(uint32_t i = 0; i < MESHLETS_PER_TASK - 1; i++)
     {
-      geometry.meshletDescriptors.push_back(MeshletPackBasicDesc());
+      geometry.meshletDescriptors.push_back(MeshletArrayDesc());
     }
   }
 
@@ -403,8 +381,8 @@ public:
   void buildMeshletEarlyCulling(MeshletGeometry& geometry,
                                 const float      objectBboxMin[3],
                                 const float      objectBboxMax[3],
-                                const float* positions,
-                                const size_t             positionStride) const
+                                const float*     positions,
+                                const size_t     positionStride) const
   {
     assert((positionStride % sizeof(float)) == 0);
 
@@ -412,20 +390,19 @@ public:
 
     vec objectBboxExtent = vec(objectBboxMax) - vec(objectBboxMin);
 
-    if(m_separateBboxes)
-    {
+    if (m_separateBboxes){
       geometry.meshletBboxes.resize(geometry.meshletDescriptors.size());
     }
 
     for(size_t i = 0; i < geometry.meshletDescriptors.size(); i++)
     {
-      MeshletPackBasicDesc&   meshlet = geometry.meshletDescriptors[i];
-      const MeshletPackBasic* pack    = (const MeshletPackBasic*)&geometry.meshletPacks[meshlet.getPackOffset()];
+      MeshletArrayDesc& meshlet = geometry.meshletDescriptors[i];
 
       uint32_t primCount   = meshlet.getNumPrims();
-      uint32_t primStart   = meshlet.getPrimStart();
       uint32_t vertexCount = meshlet.getNumVertices();
-      uint32_t vertexPack  = meshlet.getNumVertexPack();
+
+      uint32_t primBegin   = meshlet.getPrimBegin();
+      uint32_t vertexBegin = meshlet.getVertexBegin();
 
       vec bboxMin = vec(FLT_MAX);
       vec bboxMax = vec(-FLT_MAX);
@@ -439,15 +416,15 @@ public:
 
       for(uint32_t p = 0; p < primCount; p++)
       {
-        uint8_t  indices[3];
-        uint32_t idxA;
-        uint32_t idxB;
-        uint32_t idxC;
+        const uint32_t primStride = 3;
 
-        pack->getPrimIndices(p, primStart, indices);
-        idxA = pack->getVertexIndex(indices[0], vertexPack);
-        idxB = pack->getVertexIndex(indices[1], vertexPack);
-        idxC = pack->getVertexIndex(indices[2], vertexPack);
+        uint32_t idxA = geometry.primitiveIndices[primBegin + p * primStride + 0];
+        uint32_t idxB = geometry.primitiveIndices[primBegin + p * primStride + 1];
+        uint32_t idxC = geometry.primitiveIndices[primBegin + p * primStride + 2];
+
+        idxA = geometry.vertexIndices[vertexBegin + idxA];
+        idxB = geometry.vertexIndices[vertexBegin + idxB];
+        idxC = geometry.vertexIndices[vertexBegin + idxC];
 
         vec posA = vec(&positions[idxA * positionMul]);
         vec posB = vec(&positions[idxB * positionMul]);
@@ -484,7 +461,7 @@ public:
         }
       }
 
-      if(m_separateBboxes)
+      if (m_separateBboxes)
       {
         geometry.meshletBboxes[i].bboxMin[0] = bboxMin.x;
         geometry.meshletBboxes[i].bboxMin[1] = bboxMin.y;
@@ -549,12 +526,12 @@ public:
         mindot -= 1.0f / 127.0f;
         mindot = std::max(-1.0f, mindot);
 
-        // positive value for cluster not being backface cullable (normals > 90Â°)
+        // positive value for cluster not being backface cullable (normals > 90°)
         int8_t coneAngle = 127;
         if(mindot > 0)
         {
           // otherwise store -sin(cone angle)
-          // we test against dot product (cosine) so this is equivalent to cos(cone angle + 90Â°)
+          // we test against dot product (cosine) so this is equivalent to cos(cone angle + 90°)
           float angle = -sinf(acosf(mindot));
           coneAngle   = std::max(-127, std::min(127, int32_t(angle * 127.0f)));
         }
@@ -566,7 +543,6 @@ public:
 
   //////////////////////////////////////////////////////////////////////////
 
-  template <class VertexIndexType>
   StatusCode errorCheck(const MeshletGeometry& geometry,
                         uint32_t               minVertex,
                         uint32_t               maxVertex,
@@ -577,13 +553,13 @@ public:
 
     for(size_t i = 0; i < geometry.meshletDescriptors.size(); i++)
     {
-      const MeshletPackBasicDesc& meshlet = geometry.meshletDescriptors[i];
-      const MeshletPackBasic*     pack    = (const MeshletPackBasic*)&geometry.meshletPacks[meshlet.getPackOffset()];
+      const MeshletArrayDesc& meshlet = geometry.meshletDescriptors[i];
 
       uint32_t primCount   = meshlet.getNumPrims();
-      uint32_t primStart   = meshlet.getPrimStart();
       uint32_t vertexCount = meshlet.getNumVertices();
-      uint32_t vertexPack  = meshlet.getNumVertexPack();
+
+      uint32_t primBegin   = meshlet.getPrimBegin();
+      uint32_t vertexBegin = meshlet.getVertexBegin();
 
       // skip unset
       if(vertexCount == 1)
@@ -591,17 +567,20 @@ public:
 
       for(uint32_t p = 0; p < primCount; p++)
       {
-        uint8_t blockIndices[3];
-        pack->getPrimIndices(p, primStart, blockIndices);
+        const uint32_t primStride = 3;
 
-        if(blockIndices[0] >= m_maxVertexCount || blockIndices[1] >= m_maxVertexCount || blockIndices[2] >= m_maxVertexCount)
+        uint32_t idxA = geometry.primitiveIndices[primBegin + p * primStride + 0];
+        uint32_t idxB = geometry.primitiveIndices[primBegin + p * primStride + 1];
+        uint32_t idxC = geometry.primitiveIndices[primBegin + p * primStride + 2];
+
+        if(idxA >= m_maxVertexCount || idxB >= m_maxVertexCount || idxC >= m_maxVertexCount)
         {
           return STATUS_PRIM_OUT_OF_BOUNDS;
         }
 
-        uint32_t idxA = pack->getVertexIndex(blockIndices[0], vertexPack);
-        uint32_t idxB = pack->getVertexIndex(blockIndices[1], vertexPack);
-        uint32_t idxC = pack->getVertexIndex(blockIndices[2], vertexPack);
+        idxA = geometry.vertexIndices[vertexBegin + idxA];
+        idxB = geometry.vertexIndices[vertexBegin + idxB];
+        idxC = geometry.vertexIndices[vertexBegin + idxC];
 
         if(idxA < minVertex || idxA > maxVertex || idxB < minVertex || idxB > maxVertex || idxC < minVertex || idxC > maxVertex)
         {
@@ -642,6 +621,8 @@ public:
     }
 
     stats.meshletsStored += geometry.meshletDescriptors.size();
+    stats.primIndices += geometry.primitiveIndices.size();
+    stats.vertexIndices += geometry.vertexIndices.size();
 
     double primloadAvg   = 0;
     double primloadVar   = 0;
@@ -651,9 +632,9 @@ public:
     size_t meshletsTotal = 0;
     for(size_t i = 0; i < geometry.meshletDescriptors.size(); i++)
     {
-      const MeshletPackBasicDesc& meshlet     = geometry.meshletDescriptors[i];
-      uint32_t                    primCount   = meshlet.getNumPrims();
-      uint32_t                    vertexCount = meshlet.getNumVertices();
+      const MeshletArrayDesc& meshlet     = geometry.meshletDescriptors[i];
+      uint32_t                primCount   = meshlet.getNumPrims();
+      uint32_t                vertexCount = meshlet.getNumVertices();
 
       if(vertexCount == 1)
       {
@@ -682,10 +663,10 @@ public:
     vertexloadAvg /= statsNum;
     for(size_t i = 0; i < geometry.meshletDescriptors.size(); i++)
     {
-      const MeshletPackBasicDesc& meshlet     = geometry.meshletDescriptors[i];
-      uint32_t                    primCount   = meshlet.getNumPrims();
-      uint32_t                    vertexCount = meshlet.getNumVertices();
-      double                      diff;
+      const MeshletArrayDesc& meshlet     = geometry.meshletDescriptors[i];
+      uint32_t                primCount   = meshlet.getNumPrims();
+      uint32_t                vertexCount = meshlet.getNumVertices();
+      double                  diff;
 
       diff = primloadAvg - ((double(primCount) / double(m_maxPrimitiveCount)));
       primloadVar += diff * diff;
@@ -700,7 +681,7 @@ public:
     stats.primloadVar += primloadVar;
     stats.vertexloadAvg += vertexloadAvg;
     stats.vertexloadVar += vertexloadVar;
-    stats.appended += 1;
+    stats.appended += 1.0;
   }
 };
 }  // namespace NVMeshlet

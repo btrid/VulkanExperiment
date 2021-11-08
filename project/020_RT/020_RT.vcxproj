@@ -102,6 +102,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\include\020_RT\ModelRenderer.h" />
     <ClInclude Include="..\..\include\020_RT\ModelResource.h" />
+    <ClInclude Include="..\..\include\020_RT\nvmeshlet_array.hpp" />
     <ClInclude Include="..\..\include\020_RT\nvmeshlet_builder.hpp" />
     <ClInclude Include="..\..\include\020_RT\nvmeshlet_packbasic.hpp" />
   </ItemGroup>

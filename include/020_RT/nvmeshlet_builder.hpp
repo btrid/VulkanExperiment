@@ -21,11 +21,11 @@
 #ifndef _NV_MESHLET_BUILDER_H__
 #define _NV_MESHLET_BUILDER_H__
 
-#include <NvFoundation.h>
 #include <algorithm>
 #include <cstdint>
 #include <vector>
-#include <stdio.h>
+#include <cstdio>
+#include <cassert>
 
 #ifdef _MSC_VER
 #include <intrin.h>
@@ -287,10 +287,10 @@ inline vec float32x3_to_octn_precise(vec v, const int n)
   vec s = float32x3_to_oct(v);  // Remap to the square
                                 // Each snorm's max value interpreted as an integer,
                                 // e.g., 127.0 for snorm8
-  float M = float(1 << ((n / 2) - 1)) - 1.0;
+  float M = float(1 << ((n / 2) - 1)) - 1.0f;
   // Remap components to snorm(n/2) precision...with floor instead
   // of round (see equation 1)
-  s                        = vec_floor(vec_clamp(s, -1.0f, +1.0f) * M) * (1.0 / M);
+  s = vec_floor(vec_clamp(s, -1.0f, +1.0f) * M) * (1.0f / M);
   vec   bestRepresentation = s;
   float highestCosine      = vec_dot(oct_to_float32x3(s), v);
   // Test all combinations of floor and ceil and keep the best.
@@ -304,7 +304,7 @@ inline vec float32x3_to_octn_precise(vec v, const int n)
         // Offset the bit pattern (which is stored in floating
         // point!) to effectively change the rounding mode
         // (when i or j is 0: floor, when it is one: ceiling)
-        vec   candidate = vec(i, j, 0) * (1 / M) + s;
+        vec   candidate = vec((float)i, (float)j, (float)0) * (1.0f / M) + s;
         float cosine    = vec_dot(oct_to_float32x3(candidate), v);
         if(cosine > highestCosine)
         {
@@ -452,35 +452,35 @@ struct PrimitiveCache
   //  The cache is exhausted if either of the maximums is hit.
   //  The effective limits used with the cache must be < MAX.
 
-  PrimitiveIndexType  primitives[MAX_PRIMITIVE_COUNT_LIMIT][3];
-  uint32_t vertices[MAX_VERTEX_COUNT_LIMIT];
-  uint32_t numPrims;
-  uint32_t numVertices;
-  uint32_t numVertexDeltaBits;
-  uint32_t numVertexAllBits;
+  PrimitiveIndexType  m_primitives[MAX_PRIMITIVE_COUNT_LIMIT][3];
+  uint32_t m_vertices[MAX_VERTEX_COUNT_LIMIT];
+  uint32_t m_numPrims;
+  uint32_t m_numVertices;
+  uint32_t m_numVertexDeltaBits;
+  uint32_t m_numVertexAllBits;
 
-  uint32_t maxVertexSize;
-  uint32_t maxPrimitiveSize;
-  uint32_t primitiveBits = 1;
-  uint32_t maxBlockBits  = ~0;
+  uint32_t m_maxVertexSize;
+  uint32_t m_maxPrimitiveSize;
+  const uint32_t m_primitiveBits = 1;
+  const uint32_t m_maxBlockBits  = ~0;
 
-  bool empty() const { return numVertices == 0; }
+  bool empty() const { return m_numVertices == 0; }
 
   void reset()
   {
-    numPrims           = 0;
-    numVertices        = 0;
-    numVertexDeltaBits = 0;
-    numVertexAllBits   = 0;
+    m_numPrims           = 0;
+    m_numVertices        = 0;
+    m_numVertexDeltaBits = 0;
+    m_numVertexAllBits   = 0;
     // reset
-    memset(vertices, 0xFFFFFFFF, sizeof(vertices));
+    memset(m_vertices, 0xFFFFFFFF, sizeof(m_vertices));
   }
 
   bool fitsBlock() const
   {
-    uint32_t primBits = (numPrims - 1) * 3 * primitiveBits;
-    uint32_t vertBits = (numVertices - 1) * numVertexDeltaBits;
-    bool     state    = (primBits + vertBits) <= maxBlockBits;
+    uint32_t primBits = (m_numPrims - 1) * 3 * m_primitiveBits;
+    uint32_t vertBits = (m_numVertices - 1) * m_numVertexDeltaBits;
+    bool     state    = (primBits + vertBits) <= m_maxBlockBits;
     return state;
   }
 
@@ -497,19 +497,19 @@ struct PrimitiveCache
     }
 
     uint32_t found = 0;
-    for(uint32_t v = 0; v < numVertices; v++)
+    for(uint32_t v = 0; v < m_numVertices; v++)
     {
       for(int i = 0; i < 3; i++)
       {
         uint32_t idx = indices[i];
-        if(vertices[v] == idx)
+        if(m_vertices[v] == idx)
         {
           found++;
         }
       }
     }
     // out of bounds
-    return (numVertices + 3 - found) > maxVertexSize || (numPrims + 1) > maxPrimitiveSize;
+    return (m_numVertices + 3 - found) > m_maxVertexSize || (m_numPrims + 1) > m_maxPrimitiveSize;
   }
 
   bool cannotInsertBlock(uint32_t idxA, uint32_t idxB, uint32_t idxC) const
@@ -522,38 +522,38 @@ struct PrimitiveCache
     }
 
     uint32_t found = 0;
-    for(uint32_t v = 0; v < numVertices; v++)
+    for(uint32_t v = 0; v < m_numVertices; v++)
     {
       for(int i = 0; i < 3; i++)
       {
         uint32_t idx = indices[i];
-        if(vertices[v] == idx)
+        if(m_vertices[v] == idx)
         {
           found++;
         }
       }
     }
     // ensure one bit is set in deltas for findMSB returning 0
-    uint32_t firstVertex = numVertices ? vertices[0] : indices[0];
+    uint32_t firstVertex = m_numVertices ? m_vertices[0] : indices[0];
     uint32_t cmpBits     = std::max(findMSB((firstVertex ^ indices[0]) | 1),
                                 std::max(findMSB((firstVertex ^ indices[1]) | 1), findMSB((firstVertex ^ indices[2]) | 1)))
                        + 1;
 
-    uint32_t deltaBits = std::max(cmpBits, numVertexDeltaBits);
+    uint32_t deltaBits = std::max(cmpBits, m_numVertexDeltaBits);
 
-    uint32_t newVertices = numVertices + 3 - found;
-    uint32_t newPrims    = numPrims + 1;
+    uint32_t newVertices = m_numVertices + 3 - found;
+    uint32_t newPrims    = m_numPrims + 1;
 
     uint32_t newBits;
 
     {
       uint32_t newVertBits = (newVertices - 1) * deltaBits;
-      uint32_t newPrimBits = (newPrims - 1) * 3 * primitiveBits;
+      uint32_t newPrimBits = (newPrims - 1) * 3 * m_primitiveBits;
       newBits              = newVertBits + newPrimBits;
     }
 
     // out of bounds
-    return (newPrims > maxPrimitiveSize) || (newVertices > maxVertexSize) || (newBits > maxBlockBits);
+    return (newPrims > m_maxPrimitiveSize) || (newVertices > m_maxVertexSize) || (newBits > m_maxBlockBits);
   }
 
   void insert(uint32_t idxA, uint32_t idxB, uint32_t idxC)
@@ -571,9 +571,9 @@ struct PrimitiveCache
     {
       uint32_t idx   = indices[i];
       bool     found = false;
-      for(uint32_t v = 0; v < numVertices; v++)
+      for(uint32_t v = 0; v < m_numVertices; v++)
       {
-        if(idx == vertices[v])
+        if(idx == m_vertices[v])
         {
           tri[i] = v;
           found  = true;
@@ -582,23 +582,23 @@ struct PrimitiveCache
       }
       if(!found)
       {
-        vertices[numVertices] = idx;
-        tri[i]                = numVertices;
+        m_vertices[m_numVertices] = idx;
+        tri[i]                = m_numVertices;
 
-        if(numVertices)
+        if(m_numVertices)
         {
-          numVertexDeltaBits = std::max(findMSB((idx ^ vertices[0]) | 1) + 1, numVertexDeltaBits);
+          m_numVertexDeltaBits = std::max(findMSB((idx ^ m_vertices[0]) | 1) + 1, m_numVertexDeltaBits);
         }
-        numVertexAllBits = std::max(numVertexAllBits, findMSB(idx) + 1);
+        m_numVertexAllBits = std::max(m_numVertexAllBits, findMSB(idx) + 1);
 
-        numVertices++;
+        m_numVertices++;
       }
     }
 
-    primitives[numPrims][0] = tri[0];
-    primitives[numPrims][1] = tri[1];
-    primitives[numPrims][2] = tri[2];
-    numPrims++;
+    m_primitives[m_numPrims][0] = tri[0];
+    m_primitives[m_numPrims][1] = tri[1];
+    m_primitives[m_numPrims][2] = tri[2];
+    m_numPrims++;
 
     assert(fitsBlock());
   }

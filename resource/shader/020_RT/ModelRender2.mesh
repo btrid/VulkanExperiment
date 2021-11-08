@@ -1,10 +1,11 @@
 
 #version 450
 
-#extension GL_GOOGLE_include_directive : require
-#extension GL_NV_mesh_shader : require
-#extension GL_KHR_shader_subgroup_ballot : require
+#define NVMESHLET_USE_PACKBASIC 1
+#extension GL_GOOGLE_include_directive : enable
 
+#include "config.h"
+#include "common.h"
 
 #define SETPOINT_CAMERA 0
 #include "btrlib/Camera.glsl"
@@ -16,40 +17,196 @@
 #define USE_Model_Entity 3
 #include "Model.glsl"
 
+// MESH CONFIG
+#define GROUP_SIZE    WARP_SIZE
 
-
-#define WARP_SIZE 32
-#define GROUP_SIZE WARP_SIZE
 layout(local_size_x=GROUP_SIZE) in;
-
-// https://developer.nvidia.com/blog/introduction-turing-mesh-shaders/
-// do not change
-#define NVMESHLET_VERTEX_COUNT      64
-#define NVMESHLET_PRIMITIVE_COUNT   126
 layout(max_vertices=NVMESHLET_VERTEX_COUNT, max_primitives=NVMESHLET_PRIMITIVE_COUNT) out;
 layout(triangles) out;
 
-// Custom vertex output block
- layout(location = 1) out PerVertex
+#include "nvmeshlet_utils.glsl"
+
+/////////////////////////////////////////////////
+// MESH INPUT
+taskNV in Task {
+  uint    baseID;
+  uint8_t subIDs[GROUP_SIZE];
+} IN;
+
+////////////////////////////////////////////////////////////
+// OUTPUT
+
+layout(location=0) out Interpolants 
 {
-	vec3 WorldPos;
-	vec3 Normal;
-	vec2 Texcoord_0;
-}Out[];
+  vec3  wPos;
+  float dummy;
+  vec3  wNormal;
+  flat uint meshletID;
+} OUT[];
+
+//////////////////////////////////////////////////
+// EXECUTION
+
+Entity u_entity;
+vec4 procVertex(uint meshletID, const uint vert, uint vidx)
+{
+	Entity entity = b_model_entity[0];
+	Vertex vertex  = Vertex(entity.VertexAddress);
+
+  vec3 oPos = vertex.b_v[vidx];
+//  vec3 wPos = (object.worldMatrix  * vec4(oPos,1)).xyz;
+  vec3 wPos = oPos;
+  vec4 hPos = u_camera[0].u_projection * u_camera[0].u_view * vec4(wPos,1);
+  
+  gl_MeshVerticesNV[vert].gl_Position = hPos;
+  
+  OUT[vert].wPos = oPos;
+  OUT[vert].dummy = 0;
+  OUT[vert].meshletID = meshletID;
+  
+#if USE_CLIPPING
+  gl_MeshVerticesNV[vert].gl_ClipDistance[0] = dot(scene.wClipPlanes[0], vec4(wPos,1));
+  gl_MeshVerticesNV[vert].gl_ClipDistance[1] = dot(scene.wClipPlanes[1], vec4(wPos,1));
+  gl_MeshVerticesNV[vert].gl_ClipDistance[2] = dot(scene.wClipPlanes[2], vec4(wPos,1));
+#endif
+  
+  return hPos;
+}
+
+// To benefit from batched loading, and reduce latency 
+// let's make use of a dedicated load phase.
+// (explained at the end of the file in the USE_BATCHED_LATE_FETCH section)
+
+struct TempAttributes {
+  vec3 normal;
+};
+
+void fetchAttributes(inout TempAttributes temp, uint vert, uint vidx)
+{
+	Vertex normal  = Vertex(u_entity.IndexAddress);
+	temp.normal = normal.b_v[vidx];
+}
+
+void storeAttributes(inout TempAttributes temp, const uint vert, uint vidx)
+{
+  vec3 oNormal = temp.normal;
+  vec3 wNormal = /*mat3(object.worldMatrixIT) **/ oNormal;
+  OUT[vert].wNormal = wNormal;
+}
+
+void procAttributes(uint meshletID, const uint vert, uint vidx)
+{
+  TempAttributes  temp;
+  fetchAttributes(temp, vert, vidx);
+  storeAttributes(temp, vert, vidx);
+}
+
+
+//////////////////////////////////////////////////
+// MESH EXECUTION
+#define NVMSH_BARRIER() \
+  memoryBarrierShared(); \
+  barrier();
+  
+#define NVMSH_INDEX_BITS      8
+#define NVMSH_PACKED4X8_GET(packed, idx)   (((packed) >> (NVMSH_INDEX_BITS * (idx))) & 255)
+
+
+// only for tight packing case, 8 indices are loaded per thread
+#define NVMSH_PRIMITIVE_INDICES_RUNS  ((NVMESHLET_PRIMITIVE_COUNT * 3 + GROUP_SIZE * 8 - 1) / (GROUP_SIZE * 8))
+
+// processing loops
+#define NVMSH_VERTEX_RUNS     ((NVMESHLET_VERTEX_COUNT + GROUP_SIZE - 1) / GROUP_SIZE)
+#define NVMSH_PRIMITIVE_RUNS  ((NVMESHLET_PRIMITIVE_COUNT + GROUP_SIZE - 1) / GROUP_SIZE)
+  
+#if 1
+  #define nvmsh_writePackedPrimitiveIndices4x8NV writePackedPrimitiveIndices4x8NV
+#else
+  #define nvmsh_writePackedPrimitiveIndices4x8NV(idx, topology) {\
+        gl_PrimitiveIndicesNV[ (idx) + 0 ] = (NVMSH_PACKED4X8_GET((topology), 0)); \
+        gl_PrimitiveIndicesNV[ (idx) + 1 ] = (NVMSH_PACKED4X8_GET((topology), 1)); \
+        gl_PrimitiveIndicesNV[ (idx) + 2 ] = (NVMSH_PACKED4X8_GET((topology), 2)); \
+        gl_PrimitiveIndicesNV[ (idx) + 3 ] = (NVMSH_PACKED4X8_GET((topology), 3));} 
+#endif
+  
+///////////////////////////////////////////////////////////////////////////////
 
 void main()
 {
-	Entity entity = b_model_entity[0];
-	Index index  = Index(entity.IndexAddress);
-	Vertex vertex  = Vertex(entity.VertexAddress);
-	Vertex normal  = Vertex(entity.NormalAddress);
-	Texcoord texcoord  = Texcoord(entity.TexcoordAddress);
+	u_entity = b_model_entity[0];
+//	Index index  = Index(nonuniformEXT(entity.IndexAddress));
+//	Vertex vertex  = Vertex(nonuniformEXT(entity.VertexAddress));
+//	Vertex normal  = Vertex(entity.NormalAddress);
+//	Texcoord texcoord  = Texcoord(entity.TexcoordAddress);
 
-	mat4 pv = u_camera[0].u_projection * u_camera[0].u_view;
+	// gl_WorkGroupID.x runs from [0 .. parentTask.gl_TaskCountNV - 1]
+	uint meshletID = IN.baseID + IN.subIDs[gl_WorkGroupID.x];
+	uint laneID = gl_LocalInvocationID.x;
 
-	if(gl_LocalInvocationID.x==0)
+	// decode meshletDesc
+	BindlessBufferU32x4 MeshletDescs = BindlessBufferU32x4(u_entity.MeshletDesc);
+	uvec4 desc = MeshletDescs.b_uvec4[meshletID];
+	uint vertMax;
+	uint primMax;
+	uint vidxStart;
+	uint vidxBits;
+	uint vidxDiv;
+	uint primStart;
+	uint primDiv;
+	decodeMeshlet(desc, vertMax, primMax, primStart, primDiv, vidxStart, vidxBits, vidxDiv);
+
+	uint primCount = primMax + 1;
+	uint vertCount = vertMax + 1;
+
+	BindlessBufferU32 MeshletPack = BindlessBufferU32(u_entity.MeshletPack);
+	// LOAD PHASE
+	// VERTEX PROCESSING  
+	for (uint i = 0; i < uint(NVMSH_VERTEX_RUNS); i++) 
 	{
-		gl_PrimitiveCountNV = 0;
+		uint vert = laneID + i * GROUP_SIZE;
+		uint vertLoad = min(vert, vertMax);
+		{
+			uint idx   = (vertLoad) / vidxDiv;
+			uint shift = (vertLoad) & (vidxDiv-1);
+			
+			uint vidx = MeshletPack.b_uint[idx + vidxStart];
+			vidx <<= vidxBits * (1-shift); 
+			vidx >>= vidxBits;
+
+			vec4 hPos = procVertex(meshletID, vert, vidx);
+			
+			procAttributes(meshletID, vert, vidx);
+		}
 	}
 
+	// PRIMITIVE TOPOLOGY  
+	{
+		BindlessBufferU32x2 MeshletPack2 = BindlessBufferU32x2(u_entity.MeshletPack);
+		uint readBegin = primStart / 2;
+		uint readIndex = primCount * 3 - 1;
+		uint readMax   = readIndex / 8;
+
+		for (uint i = 0; i < uint(NVMSH_PRIMITIVE_INDICES_RUNS); i++)
+		{
+			uint read = laneID + i * GROUP_SIZE;
+			uint readUsed = min(read, readMax);
+			uvec2 topology = MeshletPack2.b_uvec2[readBegin + readUsed];
+			nvmsh_writePackedPrimitiveIndices4x8NV(readUsed * 8 + 0, topology.x);
+			nvmsh_writePackedPrimitiveIndices4x8NV(readUsed * 8 + 4, topology.y);
+		}
+	}
+
+
+
+	if (laneID == 0) 
+	{
+		gl_PrimitiveCountNV = primCount;
+		/* #if USE_STATS
+		atomicAdd(stats.meshletsOutput, 1);
+		atomicAdd(stats.trisOutput, primCount);
+		atomicAdd(stats.attrInput,  vertCount);
+		atomicAdd(stats.attrOutput, vertCount);
+		#endif
+		*/  
+	}
 }

@@ -210,7 +210,7 @@ struct ModelRenderer
 			// viewport
 			vk::Viewport viewport[] =
 			{
-				vk::Viewport(0.f, 0.f, rt.m_resolution.width, rt.m_resolution.height, 0.f, 1.f),
+				vk::Viewport(0.f, 0.f, (float)rt.m_resolution.width, (float)rt.m_resolution.height, 0.f, 1.f),
 			};
 			vk::Rect2D scissor[] =
 			{
@@ -250,14 +250,14 @@ struct ModelRenderer
 					| vk::ColorComponentFlagBits::eA)
 			};
 			vk::PipelineColorBlendStateCreateInfo blend_info;
-			blend_info.setAttachmentCount(blend_state.size());
+			blend_info.setAttachmentCount(array_size(blend_state));
 			blend_info.setPAttachments(blend_state.data());
 
 			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
 
 			vk::GraphicsPipelineCreateInfo graphics_pipeline_info =
 				vk::GraphicsPipelineCreateInfo()
-				.setStageCount(shaderStages.size())
+				.setStageCount(array_size(shaderStages))
 				.setPStages(shaderStages.data())
 				.setPVertexInputState(&vertex_input_info)
 				.setPInputAssemblyState(&assembly_info)
@@ -320,7 +320,6 @@ struct ModelRenderer
 				}
 			}
 		}
-
 
 		cmd.endRenderPass();
 

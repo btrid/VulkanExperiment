@@ -12,6 +12,9 @@
 
 #include <tinygltf/tiny_gltf.h>
 
+#include <020_RT/nvmeshlet_builder.hpp>
+#include <020_RT/nvmeshlet_packbasic.hpp>
+
 template<typename T>
 struct ResourceManager2
 {
@@ -28,7 +31,7 @@ struct ResourceManager2
 		m_active.resize(1024);
 		for (size_t i = 0; i < m_active.size(); i++)
 		{
-			m_active[i] = i;
+			m_active[i] = (uint32_t)i;
 		}
 	}
 	/**
@@ -77,6 +80,9 @@ struct Entity
 
 		Material,
 		Material_Index,
+
+		MeshletDesc,
+		MeshletPack,
 
 		ID_MAX,
 	};
@@ -163,17 +169,22 @@ struct Model
 
  	Entity m_entity;
 
+	std::vector<NVMeshlet::PackBasicBuilder::MeshletGeometry> m_MeshletGeometry;
+	btr::BufferMemoryEx<NVMeshlet::MeshletPackBasicDesc> b_MeshletDesc;
+	btr::BufferMemoryEx<NVMeshlet::PackBasicType> b_MeshletPack;
+
 };
 
 struct ModelResource
 {
 
-	std::array<vk::DescriptorBufferInfo, 5> m_buffer_info;
+	std::array<vk::DescriptorBufferInfo, 9> m_buffer_info;
 	std::array<vk::DescriptorImageInfo, 1024> m_image_info;
 
 	ResourceManager2<Model> m_model_manager;
 	ResourceManager2<ModelTexture> m_texture_manager;
 	btr::BufferMemoryEx<Entity> b_model_entity;
+//	btr::BufferMemoryEx<NVMeshlet::MeshletPackBasicDesc> b_meshlet_desc;
 
 	vk::UniqueDescriptorPool m_descriptor_pool;
 	vk::UniqueDescriptorSetLayout m_DSL;
@@ -185,9 +196,9 @@ struct ModelResource
 		{
 			std::array<vk::DescriptorPoolSize, 2> pool_size;
 			pool_size[0].setType(vk::DescriptorType::eStorageBuffer);
-			pool_size[0].setDescriptorCount(m_buffer_info.size());
+			pool_size[0].setDescriptorCount(array_size(m_buffer_info));
 			pool_size[1].setType(vk::DescriptorType::eCombinedImageSampler);
-			pool_size[1].setDescriptorCount(m_image_info.size());
+			pool_size[1].setDescriptorCount(array_size(m_image_info));
 
 			vk::DescriptorPoolCreateInfo pool_info;
 			pool_info.setPoolSizeCount(array_length(pool_size));
@@ -207,6 +218,10 @@ struct ModelResource
 				vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(7, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(8, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(10, vk::DescriptorType::eCombinedImageSampler, 1024, stage),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
@@ -216,12 +231,18 @@ struct ModelResource
 		}
 
 		b_model_entity = ctx.m_vertex_memory.allocateMemory<Entity>(1024);
+//		b_meshlet_desc = ctx.m_vertex_memory.allocateMemory<NVMeshlet::MeshletPackBasicDesc>(1024);
 		m_buffer_info = {
 			b_model_entity.getInfo(),
 			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
 			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
 			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
 			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
+			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
+			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
+			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
+			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
+												//			b_meshlet_desc.getInfo(),
 		};
 		m_image_info.fill(vk::DescriptorImageInfo{ sGraphicsResource::Order().getWhiteTexture().m_sampler.get(), sGraphicsResource::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal });
 

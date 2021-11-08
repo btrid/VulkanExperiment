@@ -232,14 +232,14 @@ struct BRDFLookupTable
 				.setColorWriteMask(vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA)
 			};
 			vk::PipelineColorBlendStateCreateInfo blend_info;
-			blend_info.setAttachmentCount(blend_state.size());
+			blend_info.setAttachmentCount(array_size(blend_state));
 			blend_info.setPAttachments(blend_state.data());
 
 			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
 
 			vk::GraphicsPipelineCreateInfo graphics_pipeline_info =
 				vk::GraphicsPipelineCreateInfo()
-				.setStageCount(shaderStages.size())
+				.setStageCount(array_size(shaderStages))
 				.setPStages(shaderStages.data())
 				.setPVertexInputState(&vertex_input_info)
 				.setPInputAssemblyState(&assembly_info)
@@ -490,7 +490,7 @@ struct Environment
 			// Pipeline layout
 			vk::PushConstantRange pushConstantRange;
 			pushConstantRange.stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment;
-			pushConstantRange.size = glm::max(sizeof(PushBlockIrradiance), sizeof(PushBlockPrefilterEnv));
+			pushConstantRange.size = (uint32_t)glm::max(sizeof(PushBlockIrradiance), sizeof(PushBlockPrefilterEnv));
 
 			vk::PipelineLayoutCreateInfo pipelineLayoutCI;
 			pipelineLayoutCI.setLayoutCount = 1;
@@ -658,7 +658,7 @@ struct Environment
 				sampler_info.mipLodBias = 0.0f;
 				sampler_info.compareOp = vk::CompareOp::eNever;
 				sampler_info.minLod = 0.0f;
-				sampler_info.maxLod = numMips;
+				sampler_info.maxLod = (float)numMips;
 				sampler_info.maxAnisotropy = 0;
 				sampler_info.anisotropyEnable = VK_FALSE;
 				sampler_info.borderColor = vk::BorderColor::eFloatTransparentBlack;
@@ -914,7 +914,7 @@ struct Context
 			vk::ImageCreateInfo image_info;
 			image_info.imageType = vk::ImageType::e2D;
 			image_info.format = (vk::Format)tex.format();
-			image_info.mipLevels = tex.levels();
+			image_info.mipLevels = (uint32_t)tex.levels();
 			image_info.arrayLayers = 6;
 			image_info.samples = vk::SampleCountFlagBits::e1;
 			image_info.tiling = vk::ImageTiling::eOptimal;
@@ -934,7 +934,7 @@ struct Context
 			vk::UniqueDeviceMemory image_memory = ctx->m_device.allocateMemoryUnique(memory_alloc_info);
 			ctx->m_device.bindImageMemory(image.get(), image_memory.get(), 0);
 
-			auto staging_buffer = ctx->m_staging_memory.allocateMemory<byte>(tex.size(), true);
+			auto staging_buffer = ctx->m_staging_memory.allocateMemory<byte>((uint32_t)tex.size(), true);
 			memcpy(staging_buffer.getMappedPtr(), tex.data(), tex.size());
 
 			vk::ImageSubresourceRange subresourceRange;
@@ -957,7 +957,7 @@ struct Context
 				}
 
 				std::vector<vk::BufferImageCopy> copys;
-				uint offset = staging_buffer.getInfo().offset;
+				auto offset = staging_buffer.getInfo().offset;
 				for (uint32_t face = 0; face < 6; face++)
 				{
 					for (uint32_t level = 0; level < tex.levels(); level++)
@@ -1011,7 +1011,7 @@ struct Context
 			sampler_info.mipLodBias = 0.0f;
 			sampler_info.compareOp = vk::CompareOp::eNever;
 			sampler_info.minLod = 0.0f;
-			sampler_info.maxLod = image_info.mipLevels;
+			sampler_info.maxLod = (float)image_info.mipLevels;
 			sampler_info.maxAnisotropy = 1.0;
 			sampler_info.anisotropyEnable = VK_FALSE;
 			sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
@@ -1081,7 +1081,7 @@ struct Context
 					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
 				}
 				std::vector<vk::BufferImageCopy> copys;
-				uint offset = staging_buffer.getInfo().offset;
+				auto offset = staging_buffer.getInfo().offset;
 				for (uint32_t face = 0; face < 6; face++)
 				{
 					for (uint32_t level = 0; level < image_info.mipLevels; level++)
@@ -1398,7 +1398,7 @@ struct Skybox
 			assembly_info.setTopology(vk::PrimitiveTopology::ePointList);
 
 			// viewport
-			vk::Viewport viewport[] = { vk::Viewport(0.f, 0.f, rt.m_resolution.width, rt.m_resolution.height, 0.f, 1.f) };
+			vk::Viewport viewport[] = { vk::Viewport(0.f, 0.f, (float)rt.m_resolution.width, (float)rt.m_resolution.height, 0.f, 1.f) };
 			vk::Rect2D scissor[] = { vk::Rect2D(vk::Offset2D(0, 0), rt.m_resolution) };
 			vk::PipelineViewportStateCreateInfo viewportInfo;
 			viewportInfo.setViewportCount(array_length(viewport));
@@ -1431,14 +1431,14 @@ struct Skybox
 				.setColorWriteMask(vk::ColorComponentFlagBits::eR| vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB| vk::ColorComponentFlagBits::eA)
 			};
 			vk::PipelineColorBlendStateCreateInfo blend_info;
-			blend_info.setAttachmentCount(blend_state.size());
+			blend_info.setAttachmentCount(array_size(blend_state));
 			blend_info.setPAttachments(blend_state.data());
 
 			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
 
 			vk::GraphicsPipelineCreateInfo graphics_pipeline_info =
 				vk::GraphicsPipelineCreateInfo()
-				.setStageCount(shaderStages.size())
+				.setStageCount(array_size(shaderStages))
 				.setPStages(shaderStages.data())
 				.setPVertexInputState(&vertex_input_info)
 				.setPInputAssemblyState(&assembly_info)
@@ -1492,6 +1492,21 @@ struct Skybox
 int main()
 {
 
+	{
+		uint32_t a = ~0;
+		uint32_t b = ~0;
+		auto c = a + b;
+		auto c2 = (a + b) < ~0;
+		auto A = 127;
+		auto B = 9217;
+		auto C = glm::findMSB(A ^ B);
+		uint32_t primitiveBits = 1;
+		uint32_t maxBlockBits = ~0;
+		uint32_t primBits = (200 - 1) * 3 * primitiveBits;
+		uint32_t vertBits = (300 - 1) * 571925;
+		bool     state = (primBits + vertBits) <= maxBlockBits;
+		int _ = 0;
+	}
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = vec3(-0.2f, 3.1f, 0.02f);
 	camera->getData().m_target = vec3(-0.2f, 1.1f, -0.03f);

@@ -1,0 +1,66 @@
+#version 450
+
+#extension GL_GOOGLE_include_directive : enable
+
+#define SETPOINT_CAMERA 0
+#include "btrlib/Camera.glsl"
+
+#define USE_Render_Scene 1
+#include "pbr.glsl"
+
+#define USE_Model_Resource 2
+#define USE_Model_Entity 3
+#include "Model.glsl"
+
+/////////////////////////////////////////////////////////////////////////
+
+#include "common.h"
+#include "nvmeshlet_utils.glsl"
+
+/////////////////////////////////////////////////////////////////////////
+
+#define WARP_SIZE  32
+#define GROUP_SIZE WARP_SIZE
+
+layout(local_size_x=GROUP_SIZE) in;
+
+//////////////////////////////////////////////////////////////////////////
+// OUTPUT
+
+taskNV out Task
+{
+  uint      baseID;
+  uint8_t   subIDs[GROUP_SIZE];
+} OUT;
+
+/////////////////////////////////////////////////
+// EXECUTION
+
+void main()
+{
+	Entity entity = b_model_entity[0];
+
+	uint baseID = gl_WorkGroupID.x * GROUP_SIZE;
+	uint laneID = gl_LocalInvocationID.x;
+
+	BindlessBufferU32x4 b_meshlet_desc = BindlessBufferU32x4(entity.MeshletDesc);
+	uvec4 desc = b_meshlet_desc.b_uvec4[baseID + laneID];
+
+	bool render = !(baseID + laneID > 300 /*|| earlyCull(desc, object)*/);
+
+	uvec4 vote  = subgroupBallot(render);
+	uint  tasks = subgroupBallotBitCount(vote);
+
+	if (laneID == 0) 
+	{
+		gl_TaskCountNV = tasks;
+		OUT.baseID = baseID;
+	}
+	{
+		uint idxOffset = subgroupBallotExclusiveBitCount(vote);
+		if (render)
+		{
+			OUT.subIDs[idxOffset] = uint8_t(laneID);
+		}
+	}
+}

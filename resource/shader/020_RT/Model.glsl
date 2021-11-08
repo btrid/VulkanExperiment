@@ -3,8 +3,14 @@
 
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_EXT_buffer_reference : require
+#extension GL_EXT_buffer_reference2 : require
 #extension GL_EXT_shader_explicit_arithmetic_types : require
 #extension GL_EXT_nonuniform_qualifier : require
+#extension GL_NV_mesh_shader : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int8 : enable
+#extension GL_KHR_shader_subgroup_basic : require
+#extension GL_KHR_shader_subgroup_ballot : require
+#extension GL_KHR_shader_subgroup_vote : require
 
 struct Entity
 {
@@ -16,6 +22,9 @@ struct Entity
 
 	uint64_t MaterialAddress;
 	uint64_t Material_Index;
+
+	uint64_t MeshletDesc;
+	uint64_t MeshletPack;
 
 	uint PrimitiveNum;
 	uint _p;
@@ -47,9 +56,20 @@ struct Material
 layout(set=USE_Model_Resource, binding=0, scalar) buffer EntityBuffer { Entity b_model_entity[]; };
 layout(set=USE_Model_Resource, binding=1, buffer_reference, scalar) buffer Vertex {vec3 b_v[]; };
 layout(set=USE_Model_Resource, binding=2, buffer_reference, scalar) buffer Index {uint16_t b_i[]; };
-//layout(set=USE_Model_Resource, binding=2, buffer_reference, scalar) buffer Index {u16vec3 b_i[]; };
 layout(set=USE_Model_Resource, binding=3, buffer_reference, scalar) buffer Texcoord {vec2 b_t[]; };
 layout(set=USE_Model_Resource, binding=4, buffer_reference, scalar) buffer MaterialBuffer {Material m[]; };
+layout(set=USE_Model_Resource, binding=5, buffer_reference, scalar) buffer BindlessBufferU32 {
+	uint b_uint[];
+};
+layout(set=USE_Model_Resource, binding=6, buffer_reference, scalar) buffer BindlessBufferU32x2 {
+	uvec2 b_uvec2[];
+};
+layout(set=USE_Model_Resource, binding=7, buffer_reference, scalar) buffer BindlessBufferU32x3 {
+	uvec3 b_uvec3[];
+};
+layout(set=USE_Model_Resource, binding=8, buffer_reference, scalar) buffer BindlessBufferU32x4 {
+	uvec4 b_uvec4[];
+};
 
 layout(set=USE_Model_Resource, binding=10) uniform sampler2D t_ModelTexture[];
 

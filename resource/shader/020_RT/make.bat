@@ -5,6 +5,8 @@ SET exe=glslangValidator.exe --target-env vulkan1.2 -V -I./ -I../include -g
 SET output=-o ../binary/
 
 %exe% %output%/ModelRender.vert.spv ModelRender.vert
+%exe% %output%/ModelRender.task.spv ModelRender2.task
+%exe% %output%/ModelRender.mesh.spv ModelRender2.mesh
 %exe% %output%/ModelRender.mesh.spv ModelRender.mesh
 %exe% %output%/ModelRender.frag.spv ModelRender.frag
 

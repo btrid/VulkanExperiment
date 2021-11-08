@@ -12,6 +12,7 @@
 
 #include <gli/gli/gli.hpp>
 
+#include <020_RT/nvmeshlet_array.hpp>
 
 namespace GLtoVK
 {
@@ -128,6 +129,55 @@ namespace GLtoVK
 	}
 }
 
+namespace 
+{
+struct MeshletTopology
+{
+	size_t vertSize;
+	size_t primSize;
+	size_t descSize;
+
+	int numMeshlets = 0;
+
+	// may not be used
+	void* primData = nullptr;
+	void* vertData = nullptr;
+	void* descData = nullptr;
+
+	~MeshletTopology()
+	{
+		if (primData)
+		{
+			free(primData);
+		}
+		if (descData)
+		{
+			free(descData);
+		}
+		if (vertData)
+		{
+			free(vertData);
+		}
+	}
+};
+
+#define NVMESHLET_PACK_ALIGNMENT    16
+void fillMeshletTopology(NVMeshlet::PackBasicBuilder::MeshletGeometry& geometry, MeshletTopology& topo, int useShorts)
+{
+	if (geometry.meshletDescriptors.empty())
+		return;
+
+	topo.vertSize = NVMESHLET_PACK_ALIGNMENT;
+	topo.descSize = sizeof(NVMeshlet::MeshletPackBasicDesc) * geometry.meshletDescriptors.size();
+	topo.primSize = sizeof(NVMeshlet::PackBasicType) * geometry.meshletPacks.size();
+
+	topo.descData = malloc(topo.descSize);
+	topo.primData = malloc(topo.primSize);
+
+	memcpy(topo.descData, geometry.meshletDescriptors.data(), topo.descSize);
+	memcpy(topo.primData, geometry.meshletPacks.data(), topo.primSize);
+}
+}
 std::shared_ptr<Model> ModelResource::LoadModel(btr::Context& ctx, vk::CommandBuffer cmd, const std::string& filename)
 {
 	std::shared_ptr<Model> model;
@@ -138,17 +188,35 @@ std::shared_ptr<Model> ModelResource::LoadModel(btr::Context& ctx, vk::CommandBu
 	tinygltf::Model gltf_model;
 	{
 		tinygltf::TinyGLTF loader;
-		//			loader.SetImageLoader()
+		//loader.SetImageLoader()
 		std::string err;
 		std::string warn;
 
-		//			loader.
+		// loader.
 		bool res = loader.LoadASCIIFromFile(&gltf_model, &err, &warn, filename);
 		if (!warn.empty()) { std::cout << "WARN: " << warn << std::endl; }
 		if (!err.empty()) { std::cout << "ERR: " << err << std::endl; }
 
 		if (!res) std::cout << "Failed to load glTF: " << filename << std::endl;
 		else std::cout << "Loaded glTF: " << filename << std::endl;
+	}
+
+	uint32_t vertex_count = 0;
+	uint32_t index_count = 0;
+	for (size_t mesh_index = 0; mesh_index < gltf_model.meshes.size(); ++mesh_index)
+	{
+		auto& gltf_mesh = gltf_model.meshes[mesh_index];
+		for (size_t i = 0; i < gltf_mesh.primitives.size(); ++i)
+		{
+			tinygltf::Primitive& primitive = gltf_mesh.primitives[i];
+			auto vertex_attrib = primitive.attributes.find("POSITION");
+			const tinygltf::Accessor& vertex_accessor = gltf_model.accessors[vertex_attrib->second];
+			vertex_count += (uint32_t)vertex_accessor.count;
+			const tinygltf::BufferView& vertex_bufferview = gltf_model.bufferViews[vertex_accessor.bufferView];
+			const tinygltf::Accessor& accessor = gltf_model.accessors[primitive.indices];
+			const tinygltf::BufferView& bufferview = gltf_model.bufferViews[accessor.bufferView];
+			index_count += (uint32_t)accessor.count;
+		}
 	}
 
 	// buffer
@@ -163,6 +231,7 @@ std::shared_ptr<Model> ModelResource::LoadModel(btr::Context& ctx, vk::CommandBu
 
 			vk::BufferCopy copy = vk::BufferCopy().setSize(gltf_model.buffers[i].data.size()).setSrcOffset(staging[i].getInfo().offset).setDstOffset(model->b_vertex[i].getInfo().offset);
 			cmd.copyBuffer(staging[i].getInfo().buffer, model->b_vertex[i].getInfo().buffer, copy);
+
 		}
 	}
 
@@ -197,15 +266,15 @@ std::shared_ptr<Model> ModelResource::LoadModel(btr::Context& ctx, vk::CommandBu
 			auto gltf_material = gltf_model.materials[i];
 			Model::Material& m = material[i];
 
-			m.m_basecolor_factor.x = gltf_material.pbrMetallicRoughness.baseColorFactor[0];
-			m.m_basecolor_factor.y = gltf_material.pbrMetallicRoughness.baseColorFactor[1];
-			m.m_basecolor_factor.z = gltf_material.pbrMetallicRoughness.baseColorFactor[2];
-			m.m_basecolor_factor.w = gltf_material.pbrMetallicRoughness.baseColorFactor[3];
-			m.m_metallic_factor = gltf_material.pbrMetallicRoughness.metallicFactor;
-			m.m_roughness_factor = gltf_material.pbrMetallicRoughness.roughnessFactor;
-			m.m_emissive_factor.x = gltf_material.emissiveFactor[0];
-			m.m_emissive_factor.y = gltf_material.emissiveFactor[1];
-			m.m_emissive_factor.z = gltf_material.emissiveFactor[2];
+			m.m_basecolor_factor.x = (float)gltf_material.pbrMetallicRoughness.baseColorFactor[0];
+			m.m_basecolor_factor.y = (float)gltf_material.pbrMetallicRoughness.baseColorFactor[1];
+			m.m_basecolor_factor.z = (float)gltf_material.pbrMetallicRoughness.baseColorFactor[2];
+			m.m_basecolor_factor.w = (float)gltf_material.pbrMetallicRoughness.baseColorFactor[3];
+			m.m_metallic_factor = (float)gltf_material.pbrMetallicRoughness.metallicFactor;
+			m.m_roughness_factor = (float)gltf_material.pbrMetallicRoughness.roughnessFactor;
+			m.m_emissive_factor.x = (float)gltf_material.emissiveFactor[0];
+			m.m_emissive_factor.y = (float)gltf_material.emissiveFactor[1];
+			m.m_emissive_factor.z = (float)gltf_material.emissiveFactor[2];
 
 			m.t[Model::Material::TexID_Base] = -1;
 			if (gltf_material.pbrMetallicRoughness.baseColorTexture.index >= 0)
@@ -240,6 +309,7 @@ std::shared_ptr<Model> ModelResource::LoadModel(btr::Context& ctx, vk::CommandBu
 	}
 
 
+	// mesh
 	for (size_t mesh_index = 0; mesh_index < gltf_model.meshes.size(); ++mesh_index)
 	{
 		auto& gltf_mesh = gltf_model.meshes[mesh_index];
@@ -279,11 +349,9 @@ std::shared_ptr<Model> ModelResource::LoadModel(btr::Context& ctx, vk::CommandBu
 				}
 			}
 
-			model->m_entity.primitive_num = indexAccessor.count / 3;
+			model->m_entity.primitive_num = (uint32_t)indexAccessor.count / 3;
 		}
 	}
-
-	cmd.updateBuffer<Entity>(b_model_entity.getInfo().buffer, b_model_entity.getInfo().offset + sizeof(Entity) * model->m_block, model->m_entity);
 
 
 	// build BLAS
@@ -400,29 +468,97 @@ std::shared_ptr<Model> ModelResource::LoadModel(btr::Context& ctx, vk::CommandBu
 		}
 	}
 
-// 	{
-// 		vk::DescriptorSetLayout layouts[] =
-// 		{
-// 			ctx.m_DSL[Context::DSL_Model_Entity].get(),
-// 		};
-// 		vk::DescriptorSetAllocateInfo desc_info;
-// 		desc_info.setDescriptorPool(ctx.m_descriptor_pool.get());
-// 		desc_info.setDescriptorSetCount(array_length(layouts));
-// 		desc_info.setPSetLayouts(layouts);
-// 		model->m_DS_Model = std::move(ctx.m_device.allocateDescriptorSetsUnique(desc_info)[0]);
-// 		{
-// 			vk::DescriptorBufferInfo storages[] =
-// 			{
-// 				model->b_entity.getInfo(),
-// 			};
-// 			vk::WriteDescriptorSet write[] =
-// 			{
-// 				vk::WriteDescriptorSet().setDstSet(*model->m_DS_Model).setDstBinding(0).setDescriptorType(vk::DescriptorType::eStorageBuffer).setDescriptorCount(array_length(storages)).setPBufferInfo(storages),
-// 			};
-// 			ctx.m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
-// 		}
-// 	}
+
+	// meshlet
+	NVMeshlet::PackBasicBuilder meshletBuilder;
+	meshletBuilder.setup(64, 126, false);
+
+	std::vector<NVMeshlet::PackBasicBuilder::MeshletGeometry> meshletGeometry(gltf_model.meshes.size());
+	for (size_t mesh_index = 0; mesh_index < gltf_model.meshes.size(); ++mesh_index)
+	{
+		auto& meshlet = meshletGeometry[mesh_index];
+		auto& gltf_mesh = gltf_model.meshes[mesh_index];
+		for (size_t i = 0; i < gltf_mesh.primitives.size(); ++i)
+		{
+			tinygltf::Primitive& primitive = gltf_mesh.primitives[i];
+			auto vertex_attrib = primitive.attributes.find("POSITION");
+			const tinygltf::Accessor& vertex_accessor = gltf_model.accessors[vertex_attrib->second];
+			const tinygltf::BufferView& vertex_bufferview = gltf_model.bufferViews[vertex_accessor.bufferView];
+			const tinygltf::Accessor& index_accessor = gltf_model.accessors[primitive.indices];
+			const tinygltf::BufferView& index_bufferview = gltf_model.bufferViews[index_accessor.bufferView];
+
+			
+			auto* indices = gltf_model.buffers[index_bufferview.buffer].data.data() + index_bufferview.byteOffset;
+
+			uint32_t processedIndices;
+			switch (index_accessor.componentType)
+			{
+			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT: processedIndices = meshletBuilder.buildMeshlets<uint32_t>(meshlet, (uint32_t)index_accessor.count, (uint32_t*)indices); break;
+			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT: processedIndices = meshletBuilder.buildMeshlets(meshlet, (uint32_t)index_accessor.count, (uint16_t*)indices); break;
+			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: processedIndices = meshletBuilder.buildMeshlets<uint8_t>(meshlet, (uint32_t)index_accessor.count, (uint8_t*)indices); break;
+			default: assert(false); break;
+			}
+			// std::cout << "warning: geometry meshlet incomplete" << std::endl;
+			assert(processedIndices == index_accessor.count);
+
+			float bbox_min[] = {-1.f,-1.f,-1.f };
+			float bbox_max[] = { 1.f, 1.f, 1.f };
+			auto* vertex = (float*)gltf_model.buffers[vertex_bufferview.buffer].data.data() + vertex_bufferview.byteOffset;
+			meshletBuilder.buildMeshletEarlyCulling(meshlet, bbox_min, bbox_max, vertex, sizeof(float) * 3);
+
+			{
+#if defined(_DEBUG)
+				NVMeshlet::StatusCode errorcode = meshletBuilder.errorCheck<uint16_t>(meshlet, 0, vertex_accessor.count - 1, index_accessor.count, (uint16_t*)indices);
+				if (errorcode)
+				{
+					std::cout << "geometry: meshlet error" << errorcode;
+					assert(errorcode == NVMeshlet::STATUS_NO_ERROR);
+				}
+#endif
+
+				NVMeshlet::Stats statsLocal;
+				meshletBuilder.appendStats(meshlet, statsLocal);
+				statsLocal.fprint(stdout);
+			}
+
+			meshletBuilder.padTaskMeshlets(meshlet);
+		}
+
+	}
+
+	model->m_MeshletGeometry = std::move(meshletGeometry);
+	model->b_MeshletDesc = ctx.m_vertex_memory.allocateMemory<NVMeshlet::MeshletPackBasicDesc>(model->m_MeshletGeometry[0].meshletDescriptors.size());
+	model->b_MeshletPack = ctx.m_vertex_memory.allocateMemory<NVMeshlet::PackBasicType>(model->m_MeshletGeometry[0].meshletPacks.size());
+
+	{
+		{
+			auto staging = ctx.m_staging_memory.allocateMemory<NVMeshlet::MeshletPackBasicDesc>(model->m_MeshletGeometry[0].meshletDescriptors.size());
+			memcpy_s(staging.getMappedPtr(), staging.getInfo().range, model->m_MeshletGeometry[0].meshletDescriptors.data(), staging.getInfo().range);
+			vk::BufferCopy copy;
+			copy.setSrcOffset(staging.getInfo().offset);
+			copy.setDstOffset(model->b_MeshletDesc.getInfo().offset);
+			copy.setSize(staging.getInfo().range);
+			cmd.copyBuffer(staging.getInfo().buffer, model->b_MeshletDesc.getInfo().buffer, copy);
+
+		}
+		{
+			auto staging = ctx.m_staging_memory.allocateMemory<NVMeshlet::PackBasicType>(model->m_MeshletGeometry[0].meshletPacks.size());
+			memcpy_s(staging.getMappedPtr(), staging.getInfo().range, model->m_MeshletGeometry[0].meshletPacks.data(), staging.getInfo().range);
+			vk::BufferCopy copy;
+			copy.setSrcOffset(staging.getInfo().offset);
+			copy.setDstOffset(model->b_MeshletPack.getInfo().offset);
+			copy.setSize(staging.getInfo().range);
+			cmd.copyBuffer(staging.getInfo().buffer, model->b_MeshletPack.getInfo().buffer, copy);
+		}
+	}
+
 	model->gltf_model = std::move(gltf_model);
+	model->m_entity.v[Entity::MeshletDesc] = model->b_MeshletDesc.getDeviceAddress();
+	model->m_entity.v[Entity::MeshletPack] = model->b_MeshletPack.getDeviceAddress();
+
+
+	// entity
+	cmd.updateBuffer<Entity>(b_model_entity.getInfo().buffer, b_model_entity.getInfo().offset + sizeof(Entity) * model->m_block, model->m_entity);
 	return model;
 }
 
