@@ -129,55 +129,7 @@ namespace GLtoVK
 	}
 }
 
-namespace 
-{
-struct MeshletTopology
-{
-	size_t vertSize;
-	size_t primSize;
-	size_t descSize;
 
-	int numMeshlets = 0;
-
-	// may not be used
-	void* primData = nullptr;
-	void* vertData = nullptr;
-	void* descData = nullptr;
-
-	~MeshletTopology()
-	{
-		if (primData)
-		{
-			free(primData);
-		}
-		if (descData)
-		{
-			free(descData);
-		}
-		if (vertData)
-		{
-			free(vertData);
-		}
-	}
-};
-
-#define NVMESHLET_PACK_ALIGNMENT    16
-void fillMeshletTopology(NVMeshlet::PackBasicBuilder::MeshletGeometry& geometry, MeshletTopology& topo, int useShorts)
-{
-	if (geometry.meshletDescriptors.empty())
-		return;
-
-	topo.vertSize = NVMESHLET_PACK_ALIGNMENT;
-	topo.descSize = sizeof(NVMeshlet::MeshletPackBasicDesc) * geometry.meshletDescriptors.size();
-	topo.primSize = sizeof(NVMeshlet::PackBasicType) * geometry.meshletPacks.size();
-
-	topo.descData = malloc(topo.descSize);
-	topo.primData = malloc(topo.primSize);
-
-	memcpy(topo.descData, geometry.meshletDescriptors.data(), topo.descSize);
-	memcpy(topo.primData, geometry.meshletPacks.data(), topo.primSize);
-}
-}
 std::shared_ptr<Model> ModelResource::LoadModel(btr::Context& ctx, vk::CommandBuffer cmd, const std::string& filename)
 {
 	std::shared_ptr<Model> model;
@@ -212,9 +164,7 @@ std::shared_ptr<Model> ModelResource::LoadModel(btr::Context& ctx, vk::CommandBu
 			auto vertex_attrib = primitive.attributes.find("POSITION");
 			const tinygltf::Accessor& vertex_accessor = gltf_model.accessors[vertex_attrib->second];
 			vertex_count += (uint32_t)vertex_accessor.count;
-			const tinygltf::BufferView& vertex_bufferview = gltf_model.bufferViews[vertex_accessor.bufferView];
 			const tinygltf::Accessor& accessor = gltf_model.accessors[primitive.indices];
-			const tinygltf::BufferView& bufferview = gltf_model.bufferViews[accessor.bufferView];
 			index_count += (uint32_t)accessor.count;
 		}
 	}
@@ -471,9 +421,10 @@ std::shared_ptr<Model> ModelResource::LoadModel(btr::Context& ctx, vk::CommandBu
 
 	// meshlet
 	NVMeshlet::PackBasicBuilder meshletBuilder;
-	meshletBuilder.setup(64, 126, false);
+	meshletBuilder.setup(64, 126, true);
 
 	std::vector<NVMeshlet::PackBasicBuilder::MeshletGeometry> meshletGeometry(gltf_model.meshes.size());
+	std::vector<Model::MeshInfo> meshinfo(gltf_model.meshes.size());
 	for (size_t mesh_index = 0; mesh_index < gltf_model.meshes.size(); ++mesh_index)
 	{
 		auto& meshlet = meshletGeometry[mesh_index];
@@ -487,8 +438,20 @@ std::shared_ptr<Model> ModelResource::LoadModel(btr::Context& ctx, vk::CommandBu
 			const tinygltf::Accessor& index_accessor = gltf_model.accessors[primitive.indices];
 			const tinygltf::BufferView& index_bufferview = gltf_model.bufferViews[index_accessor.bufferView];
 
-			
-			auto* indices = gltf_model.buffers[index_bufferview.buffer].data.data() + index_bufferview.byteOffset;
+			vec3 bbox_min{ FLT_MAX };
+			vec3 bbox_max{-FLT_MAX };
+			auto* vertex_v3 = (vec3*)(gltf_model.buffers[vertex_bufferview.buffer].data.data() + vertex_bufferview.byteOffset);
+			for (size_t vi = 0; vi < vertex_accessor.count/3; vi++)
+			{
+				bbox_max = glm::max(bbox_max, vertex_v3[vi]);
+				bbox_min = glm::min(bbox_min, vertex_v3[vi]);
+			}
+			meshinfo[mesh_index].m_aabb_min = bbox_min;
+			meshinfo[mesh_index].m_aabb_max = bbox_max;
+			meshinfo[mesh_index].m_vertex_num = vertex_accessor.count / 3;
+			meshinfo[mesh_index].m_primitive_num = index_accessor.count / 3;
+
+			auto* indices = (gltf_model.buffers[index_bufferview.buffer].data.data() + index_bufferview.byteOffset);
 
 			uint32_t processedIndices;
 			switch (index_accessor.componentType)
@@ -501,14 +464,18 @@ std::shared_ptr<Model> ModelResource::LoadModel(btr::Context& ctx, vk::CommandBu
 			// std::cout << "warning: geometry meshlet incomplete" << std::endl;
 			assert(processedIndices == index_accessor.count);
 
-			float bbox_min[] = {-1.f,-1.f,-1.f };
-			float bbox_max[] = { 1.f, 1.f, 1.f };
-			auto* vertex = (float*)gltf_model.buffers[vertex_bufferview.buffer].data.data() + vertex_bufferview.byteOffset;
-			meshletBuilder.buildMeshletEarlyCulling(meshlet, bbox_min, bbox_max, vertex, sizeof(float) * 3);
+			meshletBuilder.buildMeshletEarlyCulling(meshlet, (float*)&bbox_min, (float*)&bbox_max, (float*)vertex_v3, sizeof(float) * 3);
 
 			{
 #if defined(_DEBUG)
-				NVMeshlet::StatusCode errorcode = meshletBuilder.errorCheck<uint16_t>(meshlet, 0, vertex_accessor.count - 1, index_accessor.count, (uint16_t*)indices);
+				NVMeshlet::StatusCode errorcode = NVMeshlet::STATUS_NO_ERROR;
+				switch (index_accessor.componentType)
+				{
+				case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT: errorcode = meshletBuilder.errorCheck<uint32_t>(meshlet, 0, vertex_accessor.count - 1, index_accessor.count, (uint32_t*)indices); break;
+				case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT: errorcode = meshletBuilder.errorCheck<uint16_t>(meshlet, 0, vertex_accessor.count - 1, index_accessor.count, (uint16_t*)indices); break;
+				case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: errorcode = meshletBuilder.errorCheck<uint8_t>(meshlet, 0, vertex_accessor.count - 1, index_accessor.count, (uint8_t*)indices); break;
+				default: assert(false); break;
+				}
 				if (errorcode)
 				{
 					std::cout << "geometry: meshlet error" << errorcode;
@@ -521,12 +488,19 @@ std::shared_ptr<Model> ModelResource::LoadModel(btr::Context& ctx, vk::CommandBu
 				statsLocal.fprint(stdout);
 			}
 
-//			meshletBuilder.padTaskMeshlets(meshlet);
 			meshlet.meshletDescriptors.resize(btr::align<uint32_t>(meshlet.meshletDescriptors.size(), 32));
+			meshlet.meshletBboxes.resize(btr::align<uint32_t>(meshlet.meshletBboxes.size(), 32));
+
+			static const uint32_t MESHLETS_PER_TASK = 32;
+			meshinfo[mesh_index].m_task.setFirstTask(0);
+			meshinfo[mesh_index].m_task.setTaskCount(meshlet.meshletDescriptors.size()/ MESHLETS_PER_TASK);
 		}
 
 	}
-
+	model->b_mesh = ctx.m_vertex_memory.allocateMemory<Model::MeshInfo>(meshletGeometry[0].meshletDescriptors.size());
+	cmd.updateBuffer<Model::MeshInfo>(model->b_mesh.getInfo().buffer, model->b_mesh.getInfo().offset, meshinfo);
+	model->m_entity.v[Entity::Mesh] = model->b_mesh.getDeviceAddress();
+	model->m_mesh = std::move(meshinfo);
 	model->m_MeshletGeometry = std::move(meshletGeometry);
 	model->b_MeshletDesc = ctx.m_vertex_memory.allocateMemory<NVMeshlet::MeshletPackBasicDesc>(model->m_MeshletGeometry[0].meshletDescriptors.size());
 	model->b_MeshletPack = ctx.m_vertex_memory.allocateMemory<NVMeshlet::PackBasicType>(model->m_MeshletGeometry[0].meshletPacks.size());

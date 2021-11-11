@@ -1215,33 +1215,7 @@ struct Context
 	void execute_tlas(vk::CommandBuffer cmd, btr::BufferMemoryEx<vk::AccelerationStructureInstanceKHR>& instances)
 	{
 		TLAS old = std::move(m_TLAS);
-		auto& _ctx = *m_ctx;
-
-// 		vk::TransformMatrixKHR transform_matrix =
-// 		{
-// 			std::array<std::array<float, 4>, 3>
-// 			{
-// 				std::array<float, 4>{1.f, 0.f, 0.f, 0.f},
-// 				std::array<float, 4>{0.f, 1.f, 0.f, 0.f},
-// 				std::array<float, 4>{0.f, 0.f, 1.f, 0.f},
-// 			}
-// 		};
-// 
-// 		vk::AccelerationStructureInstanceKHR instance;
-// 		instance.transform = transform_matrix;
-// 		instance.instanceCustomIndex = 0;
-// 		instance.mask = 0xFF;
-// 		instance.instanceShaderBindingTableRecordOffset = 0;
-// 		instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
-// 		instance.accelerationStructureReference = _ctx.m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(m_BLAS.m_AS.get()));
-// 
-// 		auto instance_buffer = _ctx.m_storage_memory.allocateMemory<vk::AccelerationStructureInstanceKHR>(1, true);
-// 
-// 		cmd.updateBuffer<vk::AccelerationStructureInstanceKHR>(instance_buffer.getInfo().buffer, instance_buffer.getInfo().offset, { instance });
-// 		vk::BufferMemoryBarrier barrier[] = {
-// 			instance_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
-// 		};
-// 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
+		auto& ctx = *m_ctx;
 
 		vk::AccelerationStructureGeometryKHR TLASGeom;
 		TLASGeom.flags = vk::GeometryFlagBitsKHR::eNoDuplicateAnyHitInvocation;
@@ -1249,7 +1223,6 @@ struct Context
 		vk::AccelerationStructureGeometryInstancesDataKHR instance_data;
 		instance_data.data.deviceAddress = instances.getDeviceAddress();
 		TLASGeom.geometry.instances = instance_data;
-
 
 		vk::AccelerationStructureBuildGeometryInfoKHR TLAS_BI;
 		TLAS_BI.type = vk::AccelerationStructureTypeKHR::eTopLevel;
@@ -1259,19 +1232,19 @@ struct Context
 		TLAS_BI.pGeometries = &TLASGeom;
 
 		auto blas_count = instances.getDescriptor().element_num;
-		auto size_info = _ctx.m_device.getAccelerationStructureBuildSizesKHR(vk::AccelerationStructureBuildTypeKHR::eDevice, TLAS_BI, blas_count);
+		auto size_info = ctx.m_device.getAccelerationStructureBuildSizesKHR(vk::AccelerationStructureBuildTypeKHR::eDevice, TLAS_BI, blas_count);
 
-		auto AS_buffer = _ctx.m_storage_memory.allocateMemory(size_info.accelerationStructureSize);
+		auto AS_buffer = ctx.m_storage_memory.allocateMemory(size_info.accelerationStructureSize);
 		vk::AccelerationStructureCreateInfoKHR accelerationCI;
 		accelerationCI.type = vk::AccelerationStructureTypeKHR::eTopLevel;
 		accelerationCI.buffer = AS_buffer.getInfo().buffer;
 		accelerationCI.offset = AS_buffer.getInfo().offset;
 		accelerationCI.size = AS_buffer.getInfo().range;
-		m_TLAS.m_AS = _ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
+		m_TLAS.m_AS = ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
 		TLAS_BI.dstAccelerationStructure = m_TLAS.m_AS.get();
 
-		auto scratch_buffer = _ctx.m_storage_memory.allocateMemory(size_info.buildScratchSize, true);
-		TLAS_BI.scratchData.deviceAddress = _ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo(scratch_buffer.getInfo().buffer)) + scratch_buffer.getInfo().offset;
+		auto scratch_buffer = ctx.m_storage_memory.allocateMemory(size_info.buildScratchSize, true);
+		TLAS_BI.scratchData.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo(scratch_buffer.getInfo().buffer)) + scratch_buffer.getInfo().offset;
 
 		vk::AccelerationStructureBuildRangeInfoKHR range;
 		range.primitiveCount = 1;
@@ -1549,15 +1522,37 @@ int main()
 			}
 		};
 
-		vk::AccelerationStructureInstanceKHR instance;
-		instance.transform = transform_matrix;
-		instance.instanceCustomIndex = 0;
-		instance.mask = 0xFF;
-		instance.instanceShaderBindingTableRecordOffset = 0;
-		instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
-		instance.accelerationStructureReference = context->m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(model->m_BLAS.m_AS.get()));
-		instance_buffer = context->m_storage_memory.allocateMemory<vk::AccelerationStructureInstanceKHR>(1, true);
-		setup_cmd.updateBuffer<vk::AccelerationStructureInstanceKHR>(instance_buffer.getInfo().buffer, instance_buffer.getInfo().offset, { instance });
+		std::array<vk::AccelerationStructureInstanceKHR, 2> instance;
+		auto& instance1 = instance[0];
+		instance1.transform = transform_matrix;
+		instance1.instanceCustomIndex = 0;
+		instance1.mask = 0xFF;
+		instance1.instanceShaderBindingTableRecordOffset = 0;
+		instance1.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+		instance1.accelerationStructureReference = context->m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(model->m_BLAS.m_AS.get()));
+
+		vk::TransformMatrixKHR transform_matrix2 =
+		{
+			std::array<std::array<float, 4>, 3>
+			{
+				std::array<float, 4>{0.5f, 0.f, 0.f, 2.f},
+				std::array<float, 4>{0.f, 0.5f, 0.f, 0.f},
+				std::array<float, 4>{0.f, 0.f, 0.5f, 0.f},
+			}
+		};
+
+		auto& instance2 = instance[1];
+		instance2.transform = transform_matrix2;
+		instance2.instanceCustomIndex = 0;
+		instance2.mask = 0xFF;
+		instance2.instanceShaderBindingTableRecordOffset = 0;
+		instance2.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+		instance2.accelerationStructureReference = context->m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(model->m_BLAS.m_AS.get()));
+
+	
+		instance_buffer = context->m_storage_memory.allocateMemory<vk::AccelerationStructureInstanceKHR>(2, true);
+
+		setup_cmd.updateBuffer<vk::AccelerationStructureInstanceKHR>(instance_buffer.getInfo().buffer, instance_buffer.getInfo().offset, instance);
 		vk::BufferMemoryBarrier barrier[] = {
 			instance_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
 		};
@@ -1565,8 +1560,19 @@ int main()
 	}
 
 	ctx->execute_tlas(setup_cmd, instance_buffer);
-	app.setup();
 
+	btr::BufferMemoryEx<ModelRenderCmd> b_render_cmd = context->m_vertex_memory.allocateMemory<ModelRenderCmd>(2);
+	std::array<ModelRenderCmd, 2> render_cmd;
+	render_cmd[0].task = model->m_mesh[0].m_task;
+	render_cmd[0].InstanceIndex = 0;
+	render_cmd[1].task = model->m_mesh[0].m_task;
+	render_cmd[1].InstanceIndex = 1;
+	setup_cmd.updateBuffer<ModelRenderCmd>(b_render_cmd.getInfo().buffer, b_render_cmd.getInfo().offset, render_cmd);
+	btr::BufferMemoryEx<uint32_t> b_cmd_counter = context->m_vertex_memory.allocateMemory<uint32_t>(1);
+	setup_cmd.fillBuffer(b_cmd_counter.getInfo().buffer, b_cmd_counter.getInfo().offset, b_cmd_counter.getInfo().range, 2u);
+
+	app.setup();
+	context->m_device.waitIdle();
 
 	while (true)
 	{
@@ -1593,7 +1599,8 @@ int main()
 				{
 					ctx->execute(cmd);
 					skybox.execute_Render(cmd, *ctx, *render_target);
-					renderer.execute_Render(cmd, *render_target, *model);
+//					renderer.execute_Render(cmd, *render_target, *model);
+					renderer.execute_Render(cmd, *render_target, b_render_cmd.getInfo(), b_cmd_counter.getInfo(), instance_buffer.getInfo());
 //					draw_helper.draw(*context, cmd, *render_target, ctx->m_lut.m_brgf_lut);
 //					draw_helper.draw_texcube(*context, cmd, *render_target, ctx->m_environment_filter[0]);
 					sAppImGui::Order().Render(cmd);

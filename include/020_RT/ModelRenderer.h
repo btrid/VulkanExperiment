@@ -2,6 +2,12 @@
 
 #include <020_RT/ModelResource.h>
 
+struct ModelRenderCmd
+{
+	VkDrawMeshTasksIndirectCommandNV task;
+	uint32_t InstanceIndex;
+	uint32_t _p;
+};
 
 struct ModelRenderer
 {
@@ -42,68 +48,35 @@ struct ModelRenderer
 		m_ctx = &ctx;
 		//		auto cmd = ctx.m_ctx->m_cmd_pool->allocCmdTempolary(0);
 
-				// descriptor set layout
-		// 		{
-		// 			auto stage = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment;
-		// 			vk::DescriptorSetLayoutBinding binding[] = {
-		// 				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eUniformBuffer, 1, stage),
-		// 				vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
-		// 				vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
-		// 				vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
-		// 				vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
-		// 				vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
-		// 				vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
-		// 				vk::DescriptorSetLayoutBinding(10, vk::DescriptorType::eUniformBuffer, 1, stage),
-		// 			};
-		// 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
-		// 			desc_layout_info.setBindingCount(array_length(binding));
-		// 			desc_layout_info.setPBindings(binding);
-		// 			m_DSL[DSL_Renderer] = ctx.m_ctx->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
-		// 		}
-
-				// descriptor set
+		// descriptor set layout
 		{
-			// 			vk::DescriptorSetLayout layouts[] =
-			// 			{
-			// 				m_DSL[DSL_Renderer].get(),
-			// 			};
-			// 			vk::DescriptorSetAllocateInfo desc_info;
-			// 			desc_info.setDescriptorPool(ctx.m_ctx->m_descriptor_pool.get());
-			// 			desc_info.setDescriptorSetCount(array_length(layouts));
-			// 			desc_info.setPSetLayouts(layouts);
-			// 			m_DS[DS_Renderer] = std::move(ctx.m_ctx->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
-			//
-			// 			vk::DescriptorBufferInfo uniforms[] =
-			// 			{
-			// 				u_info.getInfo(),
-			// 			};
-			// 			vk::DescriptorBufferInfo storages[] =
-			// 			{
-			// 				b_hashmap.getInfo(),
-			// 				b_hashmap_mask.getInfo(),
-			// 				b_interior_counter.getInfo(),
-			// 				b_leaf_counter.getInfo(),
-			// 				b_interior.getInfo(),
-			// 				b_leaf.getInfo(),
-			// 			};
-			// 
-			// 			vk::WriteDescriptorSet write[] =
-			// 			{
-			// 				vk::WriteDescriptorSet()
-			// 				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-			// 				.setDescriptorCount(array_length(uniforms))
-			// 				.setPBufferInfo(uniforms)
-			// 				.setDstBinding(0)
-			// 				.setDstSet(m_DS[DS_Renderer].get()),
-			// 				vk::WriteDescriptorSet()
-			// 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			// 				.setDescriptorCount(array_length(storages))
-			// 				.setPBufferInfo(storages)
-			// 				.setDstBinding(1)
-			// 				.setDstSet(m_DS[DS_Renderer].get()),
-			// 			};
-			// 			ctx.m_ctx->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
+			auto stage = vk::ShaderStageFlagBits::eMeshNV| vk::ShaderStageFlagBits::eTaskNV;
+			vk::DescriptorSetLayoutBinding binding[] = {
+				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
+			};
+			vk::DescriptorSetLayoutCreateInfo dsl_CI;
+			dsl_CI.setBindingCount(array_length(binding));
+			dsl_CI.setPBindings(binding);
+			dsl_CI.setFlags(vk::DescriptorSetLayoutCreateFlagBits::eUpdateAfterBindPool);
+			vk::DescriptorSetLayoutBindingFlagsCreateInfo dslflagCI;
+			std::vector<vk::DescriptorBindingFlags> flags = { vk::DescriptorBindingFlagBits::eUpdateAfterBind | vk::DescriptorBindingFlagBits::ePartiallyBound, vk::DescriptorBindingFlagBits::eUpdateAfterBind | vk::DescriptorBindingFlagBits::ePartiallyBound };
+			dslflagCI.setBindingFlags(flags);
+			dsl_CI.setPNext(&dslflagCI);
+			m_DSL[DSL_Renderer] = ctx.m_ctx->m_device.createDescriptorSetLayoutUnique(dsl_CI);
+		}
 
+		// descriptor set
+		{
+			vk::DescriptorSetLayout layouts[] =
+			{
+				m_DSL[DSL_Renderer].get(),
+			};
+			vk::DescriptorSetAllocateInfo desc_info;
+			desc_info.setDescriptorPool(ctx.m_ctx->m_descriptor_pool.get());
+			desc_info.setDescriptorSetCount(array_length(layouts));
+			desc_info.setPSetLayouts(layouts);
+			m_DS[DS_Renderer] = std::move(ctx.m_ctx->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
 		}
 		// pipeline layout
 		{
@@ -113,6 +86,7 @@ struct ModelRenderer
 					sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
 					ctx.m_DSL[Context::DSL_Scene].get(),
 					ctx.m_model_resource.m_DSL.get(),
+					m_DSL[DSL_Renderer].get(),
 				};
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
@@ -314,18 +288,66 @@ struct ModelRenderer
 					const tinygltf::Accessor& accessor = gltf_model.accessors[primitive.indices];
 					const tinygltf::BufferView& bufferview = gltf_model.bufferViews[accessor.bufferView];
 
-//					static const uint32_t MESHLETS_PER_TASK = 30;
-//					uint32_t count = app::calcDipatchGroups(uvec3(accessor.count / 2, 1, 1), uvec3(MESHLETS_PER_TASK, 1, 1)).x;
-//					cmd.drawMeshTasksNV(count, 0);
+
 					static const uint32_t MESHLETS_PER_TASK = 32;
 					uint32_t count = app::calcDipatchGroups(uvec3(model.m_MeshletGeometry[0].meshletDescriptors.size(), 1, 1), uvec3(MESHLETS_PER_TASK, 1, 1)).x;
 					cmd.drawMeshTasksNV(count, 0);
-
 				}
 			}
 		}
 
 		cmd.endRenderPass();
+	}
 
+	void execute_Render(vk::CommandBuffer cmd, RenderTarget& rt, const vk::DescriptorBufferInfo& rendercmd, const vk::DescriptorBufferInfo& count, const vk::DescriptorBufferInfo& instance)
+	{
+		DebugLabel _label(cmd, __FUNCTION__);
+
+		vk::DescriptorBufferInfo storages[] =
+		{
+			rendercmd,
+			instance,
+		};
+		vk::WriteDescriptorSet write[] =
+		{
+			vk::WriteDescriptorSet()
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(array_length(storages))
+			.setPBufferInfo(storages)
+			.setDstBinding(0)
+			.setDstSet(m_DS[DS_Renderer].get()),
+		};
+		m_ctx->m_ctx->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
+
+		{
+			vk::ImageMemoryBarrier image_barrier[1];
+			image_barrier[0].setImage(rt.m_image);
+			image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+			image_barrier[0].setOldLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			image_barrier[0].setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+			image_barrier[0].setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eColorAttachmentOutput,
+				{}, {}, { /*array_size(to_read), to_read*/ }, { array_size(image_barrier), image_barrier });
+		}
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_Render].get());
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 0, { sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA) }, {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 1, { m_ctx->m_DS_Scene.get() }, {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 2, { m_ctx->m_model_resource.m_DS_ModelResource.get() }, {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 3, { m_DS[DS_Renderer].get()}, {});
+
+
+		vk::RenderPassBeginInfo begin_render_Info;
+		begin_render_Info.setRenderPass(m_renderpass.get());
+		begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), rt.m_resolution));
+		begin_render_Info.setFramebuffer(m_framebuffer.get());
+		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
+
+		cmd.drawMeshTasksIndirectCountNV(rendercmd.buffer, rendercmd.offset, count.buffer, count.offset, 1024, sizeof(ModelRenderCmd));
+//		cmd.drawMeshTasksIndirectNV(rendercmd.buffer, rendercmd.offset, 1, sizeof(ModelRenderCmd));
+
+		cmd.endRenderPass();
 	}
 };

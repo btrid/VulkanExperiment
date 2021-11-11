@@ -12,6 +12,7 @@
 
 #include <tinygltf/tiny_gltf.h>
 
+// https://developer.nvidia.com/blog/introduction-turing-mesh-shaders/
 #include <020_RT/nvmeshlet_builder.hpp>
 #include <020_RT/nvmeshlet_packbasic.hpp>
 
@@ -81,6 +82,9 @@ struct Entity
 		Material,
 		Material_Index,
 
+		Mesh,
+		_unuse,
+
 		MeshletDesc,
 		MeshletPack,
 
@@ -122,12 +126,14 @@ struct Model
 		vk::UniqueAccelerationStructureKHR m_AS;
 		btr::BufferMemory m_AS_buffer;
 	};
-	struct Info
+	struct MeshInfo
 	{
-		vec4 m_aabb_min;
-		vec4 m_aabb_max;
+		vec3 m_aabb_min;
 		uint m_vertex_num;
+		vec3 m_aabb_max;
 		uint m_primitive_num;
+
+		vk::DrawMeshTasksIndirectCommandNV m_task;
 	};
 
 	struct Material
@@ -162,9 +168,12 @@ struct Model
 	btr::BufferMemoryEx<Material> b_material;
 	std::vector<std::shared_ptr<ModelTexture>> t_image;
 
+	std::vector<MeshInfo> m_mesh;
+	btr::BufferMemoryEx<MeshInfo> b_mesh;
+
 	tinygltf::Model gltf_model;
 
-	Info m_info;
+	MeshInfo m_info;
 	BLAS m_BLAS;
 
  	Entity m_entity;
@@ -178,7 +187,7 @@ struct Model
 struct ModelResource
 {
 
-	std::array<vk::DescriptorBufferInfo, 9> m_buffer_info;
+	std::array<vk::DescriptorBufferInfo, 10> m_buffer_info;
 	std::array<vk::DescriptorImageInfo, 1024> m_image_info;
 
 	ResourceManager2<Model> m_model_manager;
@@ -222,6 +231,7 @@ struct ModelResource
 				vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(7, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(8, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(9, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(10, vk::DescriptorType::eCombinedImageSampler, 1024, stage),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
@@ -234,6 +244,7 @@ struct ModelResource
 //		b_meshlet_desc = ctx.m_vertex_memory.allocateMemory<NVMeshlet::MeshletPackBasicDesc>(1024);
 		m_buffer_info = {
 			b_model_entity.getInfo(),
+			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
 			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
 			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
 			ctx.m_vertex_memory.allocateMemory(0).getInfo(),

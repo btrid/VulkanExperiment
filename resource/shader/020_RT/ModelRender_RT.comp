@@ -17,7 +17,7 @@ void MakeCameraRay(out vec3 pos, out vec3 dir)
 }
 
 
-void main() 
+void main()
 {
 	vec3 origin, dir;
 	MakeCameraRay(origin, dir);

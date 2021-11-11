@@ -42,7 +42,6 @@
 #define USE_EARLY_CLIPPINGCULL 1
 #endif
 
-#if NVMESHLET_USE_PACKBASIC
   /*
   Pack
     // x
@@ -86,42 +85,6 @@ void decodeMeshlet( uvec4 meshletDesc,
   primStart  =  (packOffset + ((vMax + 1 + vidxDiv - 1) / vidxDiv) + 1) & ~1;
 }
 
-#elif NVMESHLET_USE_ARRAYS
-
-  /*
-  Array
-    // x
-    unsigned bboxMinX   : 8;
-    unsigned bboxMinY   : 8;
-    unsigned bboxMinZ   : 8;
-    unsigned vertMax    : 8;
-        
-    // y
-    unsigned bboxMaxX   : 8;
-    unsigned bboxMaxY   : 8;
-    unsigned bboxMaxZ   : 8;
-    unsigned primMax    : 8;
-    
-    // z
-    unsigned vertBegin  : 20;
-    signed   coneX      : 8;
-    unsigned coneAngleL : 4;
-
-    // w
-    unsigned primBegin  : 20;
-    signed   coneY      : 8;
-    unsigned coneAngleU : 4;
-  */
-
-void decodeMeshlet(uvec4 meshletDesc, out uint vertMax, out uint primMax, out uint vertBegin, out uint primBegin)
-{
-  vertBegin = (meshletDesc.z & 0xFFFFF) * NVMESHLET_VERTEX_ALIGNMENT;
-  primBegin = (meshletDesc.w & 0xFFFFF) * NVMESHLET_PRIM_ALIGNMENT;
-  vertMax   = (meshletDesc.x >> 24);
-  primMax   = (meshletDesc.y >> 24);
-}
-
-#endif
 
 bool isMeshletValid(uvec4 meshletDesc)
 {
@@ -160,14 +123,7 @@ vec3 oct_to_vec3(vec2 e) {
 
 void decodeNormalAngle(uvec4 meshletDesc, in ObjectData object, out vec3 oNormal, out float oAngle)
 {
-#if NVMESHLET_USE_PACKBASIC
   uint packedVec =  meshletDesc.z;
-#else
-  uint packedVec =  (((meshletDesc.z >> 20) & 0xFF) << 0)  |
-                    (((meshletDesc.w >> 20) & 0xFF) << 8)  |
-                    (((meshletDesc.z >> 28)       ) << 16) |
-                    (((meshletDesc.w >> 28)       ) << 20);
-#endif
   vec3 unpackedVec = unpackSnorm4x8(packedVec).xyz;
   
   oNormal = oct_to_vec3(unpackedVec.xy) * object.winding;
@@ -201,7 +157,8 @@ void pixelBboxEpsilon(inout vec2 pixelMin, inout vec2 pixelMax)
   pixelMax += epsilon;
 }
 
-bool pixelBboxCull(vec2 pixelMin, vec2 pixelMax){
+bool pixelBboxCull(vec2 pixelMin, vec2 pixelMax)
+{
   // bbox culling
   pixelMin = round(pixelMin);
   pixelMax = round(pixelMax);

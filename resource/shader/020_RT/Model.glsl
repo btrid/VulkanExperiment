@@ -23,6 +23,9 @@ struct Entity
 	uint64_t MaterialAddress;
 	uint64_t Material_Index;
 
+	uint64_t MeshAddress;
+	uint64_t _unuse;
+
 	uint64_t MeshletDesc;
 	uint64_t MeshletPack;
 
@@ -31,6 +34,14 @@ struct Entity
 	uint _p2;
 	uint _p3;
 };
+struct Mesh
+{
+	vec3 m_aabb_min;
+	uint m_vertex_num;
+	vec3 m_aabb_max;
+	uint m_primitive_num;
+};
+
 struct Material
 {
 	vec4 m_basecolor_factor;
@@ -50,7 +61,6 @@ struct Material
 	uint Tex_Base_;
 	uint Tex_Bas_e;
 	uint Tex_Ba_se;
-
 };
 
 layout(set=USE_Model_Resource, binding=0, scalar) buffer EntityBuffer { Entity b_model_entity[]; };
@@ -58,20 +68,48 @@ layout(set=USE_Model_Resource, binding=1, buffer_reference, scalar) buffer Verte
 layout(set=USE_Model_Resource, binding=2, buffer_reference, scalar) buffer Index {uint16_t b_i[]; };
 layout(set=USE_Model_Resource, binding=3, buffer_reference, scalar) buffer Texcoord {vec2 b_t[]; };
 layout(set=USE_Model_Resource, binding=4, buffer_reference, scalar) buffer MaterialBuffer {Material m[]; };
-layout(set=USE_Model_Resource, binding=5, buffer_reference, scalar) buffer BindlessBufferU32 {
+layout(set=USE_Model_Resource, binding=5, buffer_reference, scalar) buffer MeshBuffer {Mesh b_mesh[]; };
+layout(set=USE_Model_Resource, binding=6, buffer_reference, scalar) buffer BindlessBufferU32 {
 	uint b_uint[];
 };
-layout(set=USE_Model_Resource, binding=6, buffer_reference, scalar) buffer BindlessBufferU32x2 {
+layout(set=USE_Model_Resource, binding=7, buffer_reference, scalar) buffer BindlessBufferU32x2 {
 	uvec2 b_uvec2[];
 };
-layout(set=USE_Model_Resource, binding=7, buffer_reference, scalar) buffer BindlessBufferU32x3 {
+layout(set=USE_Model_Resource, binding=8, buffer_reference, scalar) buffer BindlessBufferU32x3 {
 	uvec3 b_uvec3[];
 };
-layout(set=USE_Model_Resource, binding=8, buffer_reference, scalar) buffer BindlessBufferU32x4 {
+layout(set=USE_Model_Resource, binding=9, buffer_reference, scalar) buffer BindlessBufferU32x4 {
 	uvec4 b_uvec4[];
 };
 
 layout(set=USE_Model_Resource, binding=10) uniform sampler2D t_ModelTexture[];
 
+#ifdef USE_Model_Render
+struct VkAccelerationStructureInstance 
+{
+    mat3x4				          transform;
+//    uint32_t                      instanceCustomIndex:24;
+//    uint32_t                      mask:8;
+	uint index_mask;
+//    uint32_t                      instanceShaderBindingTableRecordOffset:24;
+//    VkGeometryInstanceFlagsKHR    flags:8;
+	uint _d;
+    uint64_t                      accelerationStructureReference;
+} ;
+uint instanceCustomIndex(VkAccelerationStructureInstance instance){ return instance.index_mask&((1<<24)-1);}
 
+struct VkDrawMeshTasksIndirectCommand
+{
+    uint    taskCount;
+    uint    firstTask;
+};
+struct IndirectCmd
+{
+	VkDrawMeshTasksIndirectCommand task;
+	int InstanceIndex;
+};
+layout(set=USE_Model_Render, binding=0, /*buffer_reference,*/ scalar) buffer IndirectCmdBuffer { IndirectCmd b_cmd[]; };
+layout(set=USE_Model_Render, binding=1, /*buffer_reference,*/ scalar) buffer InstanceBuffer { VkAccelerationStructureInstance b_instance[]; };
+
+#endif // USE_Model_Render
 #endif
