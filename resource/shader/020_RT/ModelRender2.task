@@ -1,7 +1,6 @@
 #version 450
 
 #extension GL_GOOGLE_include_directive : enable
-#extension GL_ARB_shader_draw_parameters : require
 #define SETPOINT_CAMERA 0
 #include "btrlib/Camera.glsl"
 
@@ -39,16 +38,17 @@ taskNV out Task
 void main()
 {
 	IndirectCmd RenderCmd = b_cmd[gl_DrawIDARB];
-	VkAccelerationStructureInstance instance = b_instance[RenderCmd.InstanceIndex];
-	Entity entity = b_model_entity[instanceCustomIndex(instance)];
+	ObjectData instance = b_object[gl_DrawIDARB];
+	Entity entity = b_model_entity[instance.modelID];
 
 	uint baseID = gl_WorkGroupID.x * GROUP_SIZE;
 	uint laneID = gl_LocalInvocationID.x;
 
 	BindlessBufferU32x4 b_meshlet_desc = BindlessBufferU32x4(entity.MeshletDesc);
 	uvec4 desc = b_meshlet_desc.b_uvec4[baseID + laneID];
+	Mesh mesh = MeshBuffer(entity.MeshAddress).b_mesh[0];
 
-//	bool render = !(baseID + laneID > 300 /*|| earlyCull(desc, object)*/);
+//	bool render = !(all(equal(desc, uvec4(0))) || earlyCull(desc, mesh, instance));
 	bool render = !all(equal(desc, uvec4(0)));
 
 	uvec4 vote  = subgroupBallot(render);

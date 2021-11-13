@@ -1,6 +1,7 @@
 #ifndef MODEL_H_
 #define MODEL_H_
 
+#extension GL_ARB_shader_draw_parameters : require
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_EXT_buffer_reference : require
 #extension GL_EXT_buffer_reference2 : require
@@ -36,9 +37,9 @@ struct Entity
 };
 struct Mesh
 {
-	vec3 m_aabb_min;
+	vec3 bboxMin;
 	uint m_vertex_num;
-	vec3 m_aabb_max;
+	vec3 bboxMax;
 	uint m_primitive_num;
 };
 
@@ -87,14 +88,14 @@ layout(set=USE_Model_Resource, binding=10) uniform sampler2D t_ModelTexture[];
 #ifdef USE_Model_Render
 struct VkAccelerationStructureInstance 
 {
-    mat3x4				          transform;
-//    uint32_t                      instanceCustomIndex:24;
-//    uint32_t                      mask:8;
+    mat3x4 transform;
+//  uint32_t instanceCustomIndex:24;
+//  uint32_t mask:8;
 	uint index_mask;
-//    uint32_t                      instanceShaderBindingTableRecordOffset:24;
-//    VkGeometryInstanceFlagsKHR    flags:8;
+//  uint32_t instanceShaderBindingTableRecordOffset:24;
+//  VkGeometryInstanceFlagsKHR flags:8;
 	uint _d;
-    uint64_t                      accelerationStructureReference;
+    uint64_t accelerationStructureReference;
 } ;
 uint instanceCustomIndex(VkAccelerationStructureInstance instance){ return instance.index_mask&((1<<24)-1);}
 
@@ -108,8 +109,20 @@ struct IndirectCmd
 	VkDrawMeshTasksIndirectCommand task;
 	int InstanceIndex;
 };
+// must match cadscene!
+
+struct ObjectData 
+{
+  mat4 worldMatrix;
+  mat4 worldMatrixIT;
+  int modelID;
+};
+
+
 layout(set=USE_Model_Render, binding=0, /*buffer_reference,*/ scalar) buffer IndirectCmdBuffer { IndirectCmd b_cmd[]; };
-layout(set=USE_Model_Render, binding=1, /*buffer_reference,*/ scalar) buffer InstanceBuffer { VkAccelerationStructureInstance b_instance[]; };
+//layout(set=USE_Model_Render, binding=1, /*buffer_reference,*/ scalar) buffer ASInstanceBuffer { VkAccelerationStructureInstance b_AS_instance[]; };
+layout(set=USE_Model_Render, binding=1, /*buffer_reference,*/ scalar) buffer ObjectDataBuffer { ObjectData b_object[]; };
 
 #endif // USE_Model_Render
 #endif
+

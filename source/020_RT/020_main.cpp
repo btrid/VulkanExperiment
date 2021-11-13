@@ -1244,7 +1244,7 @@ struct Context
 		TLAS_BI.dstAccelerationStructure = m_TLAS.m_AS.get();
 
 		auto scratch_buffer = ctx.m_storage_memory.allocateMemory(size_info.buildScratchSize, true);
-		TLAS_BI.scratchData.deviceAddress = ctx.m_device.getBufferAddress(vk::BufferDeviceAddressInfo(scratch_buffer.getInfo().buffer)) + scratch_buffer.getInfo().offset;
+		TLAS_BI.scratchData.deviceAddress = scratch_buffer.getDeviceAddress();
 
 		vk::AccelerationStructureBuildRangeInfoKHR range;
 		range.primitiveCount = 1;
@@ -1559,6 +1559,33 @@ int main()
 		setup_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
 	}
 
+	struct ObjectData
+	{
+		mat4 worldMatrix;
+		mat4 worldMatrixIT;
+		int32_t modelID;
+	};
+	btr::BufferMemoryEx<ObjectData> object_buffer;
+	{
+		std::array<ObjectData, 2> obj;
+
+		obj[0].worldMatrix = glm::translate(mat4(1.f), vec3(0.f));
+		obj[1].worldMatrix = glm::translate(mat4(0.5f), vec3(1.f));
+		for (auto& o : obj )
+		{
+			o.modelID = 0;
+			o.worldMatrixIT = glm::inverseTranspose(o.worldMatrix);
+		}
+
+		object_buffer = context->m_storage_memory.allocateMemory<ObjectData>(2);
+
+		setup_cmd.updateBuffer<ObjectData>(object_buffer.getInfo().buffer, object_buffer.getInfo().offset, obj);
+		vk::BufferMemoryBarrier barrier[] = {
+			object_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+		};
+		setup_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eTaskShaderNV, {}, {}, { array_size(barrier), barrier }, {});
+	}
+
 	ctx->execute_tlas(setup_cmd, instance_buffer);
 
 	btr::BufferMemoryEx<ModelRenderCmd> b_render_cmd = context->m_vertex_memory.allocateMemory<ModelRenderCmd>(2);
@@ -1600,7 +1627,7 @@ int main()
 					ctx->execute(cmd);
 					skybox.execute_Render(cmd, *ctx, *render_target);
 //					renderer.execute_Render(cmd, *render_target, *model);
-					renderer.execute_Render(cmd, *render_target, b_render_cmd.getInfo(), b_cmd_counter.getInfo(), instance_buffer.getInfo());
+					renderer.execute_Render(cmd, *render_target, b_render_cmd.getInfo(), b_cmd_counter.getInfo(), object_buffer.getInfo());
 //					draw_helper.draw(*context, cmd, *render_target, ctx->m_lut.m_brgf_lut);
 //					draw_helper.draw_texcube(*context, cmd, *render_target, ctx->m_environment_filter[0]);
 					sAppImGui::Order().Render(cmd);

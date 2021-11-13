@@ -96,15 +96,15 @@ uint getMeshletNumTriangles(uvec4 meshletDesc)
   return (meshletDesc.y >> 24) + 1;
 }
 
-void decodeBbox(uvec4 meshletDesc, in ObjectData object, out vec3 oBboxMin, out vec3 oBboxMax)
+void decodeBbox(uvec4 meshletDesc, in Mesh mesh, out vec3 oBboxMin, out vec3 oBboxMax)
 {
   vec3 bboxMin = unpackUnorm4x8(meshletDesc.x).xyz;
   vec3 bboxMax = unpackUnorm4x8(meshletDesc.y).xyz;
   
-  vec3 objectExtent = (object.bboxMax.xyz - object.bboxMin.xyz);
+  vec3 objectExtent = (mesh.bboxMax.xyz - mesh.bboxMin.xyz);
 
-  oBboxMin = bboxMin * objectExtent + object.bboxMin.xyz;
-  oBboxMax = bboxMax * objectExtent + object.bboxMin.xyz;
+  oBboxMin = bboxMin * objectExtent + mesh.bboxMin.xyz;
+  oBboxMax = bboxMax * objectExtent + mesh.bboxMin.xyz;
 }
 
 // oct_ code from "A Survey of Efficient Representations for Independent Unit Vectors"
@@ -126,7 +126,7 @@ void decodeNormalAngle(uvec4 meshletDesc, in ObjectData object, out vec3 oNormal
   uint packedVec =  meshletDesc.z;
   vec3 unpackedVec = unpackSnorm4x8(packedVec).xyz;
   
-  oNormal = oct_to_vec3(unpackedVec.xy) * object.winding;
+  oNormal = oct_to_vec3(unpackedVec.xy)/* * object.winding*/;
   oAngle = unpackedVec.z;
 }
 
@@ -195,11 +195,11 @@ vec4 getBoxCorner(vec3 bboxMin, vec3 bboxMax, int n)
 #endif
 }
 
-bool earlyCull(uvec4 meshletDesc, in ObjectData object)
+bool earlyCull(uvec4 meshletDesc, in Mesh mesh, in ObjectData object)
 {
   vec3 bboxMin;
   vec3 bboxMax;
-  decodeBbox(meshletDesc, object, bboxMin, bboxMax);
+  decodeBbox(meshletDesc, mesh, bboxMin, bboxMax);
 
 #if USE_EARLY_BACKFACECULL && USE_BACKFACECULL
   vec3  oGroupNormal;
@@ -218,17 +218,17 @@ bool earlyCull(uvec4 meshletDesc, in ObjectData object)
   vec3 clipMin = vec3( 100000);
   vec3 clipMax = vec3(-100000);
   
-  /*
+  Camera cam = u_camera[0];
   for (int n = 0; n < 8; n++)
   {
     vec4 wPos = object.worldMatrix * getBoxCorner(bboxMin, bboxMax, n);
-    vec4 hPos = scene.viewProjMatrix * wPos;
+    vec4 hPos = cam.u_projection * cam.u_view * wPos;
     frustumBits &= getCullBits(hPos);
     
   #if USE_EARLY_BACKFACECULL && USE_BACKFACECULL
     // approximate backface cone culling by testing against
     // bbox corners
-    vec3 wDir = normalize(scene.viewPos.xyz - wPos.xyz);
+    vec3 wDir = normalize(cam.u_eye.xyz - wPos.xyz);
     backface = backface && (dot(wGroupNormal, wDir) < angle);
   #endif
   #if USE_EARLY_CLIPPINGCULL && USE_CLIPPING
@@ -242,7 +242,7 @@ bool earlyCull(uvec4 meshletDesc, in ObjectData object)
     clipMin = min(clipMin, hPos.xyz / hPos.w);
     clipMax = max(clipMax, hPos.xyz / hPos.w);
   }
-  */
+
 #if !USE_EARLY_FRUSTUMCULL
   frustumBits = 0;
 #endif

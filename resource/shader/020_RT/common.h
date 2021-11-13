@@ -63,17 +63,6 @@ struct SceneData {
   vec4  wClipPlanes[NUM_CLIPPING_PLANES];
 };
 
-// must match cadscene!
-struct ObjectData {
-  mat4 worldMatrix;
-  mat4 worldMatrixIT;
-  mat4 objectMatrix;
-  vec4 bboxMin;
-  vec4 bboxMax;
-  vec3 _pad0;
-  float winding;
-  vec4 color;
-};
 
 struct CullStats {
   uint  tasksInput;

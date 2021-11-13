@@ -225,7 +225,7 @@ public:
 	bool isValid()const { return !!m_resource; }
 	vk::DescriptorBufferInfo getInfo()const { return m_resource->m_buffer_info; }
 	vk::DescriptorBufferInfo getBufferInfo()const { return m_resource->m_buffer_info; } // @deprecated –¼‘O‚ª’·‚¢‚Ì‚Å
-	vk::DeviceAddress getDeviceAddress()const { return  m_resource->m_device_address; }
+	vk::DeviceAddress getDeviceAddress()const { return  m_resource->m_device_address/*+ m_resource->m_buffer_info.offset*/; }
 	void* getMappedPtr()const { return m_resource->m_mapped_memory; }
 	template<typename T> T* getMappedPtr(size_t offset_num = 0)const { return static_cast<T*>(m_resource->m_mapped_memory) + offset_num; }
 

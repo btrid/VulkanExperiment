@@ -14,6 +14,7 @@
 #include "pbr.glsl"
 
 #define USE_Model_Resource 2
+#define USE_Model_Render 3
 #include "Model.glsl"
 
 // MESH CONFIG
@@ -50,13 +51,15 @@ layout(location=1) out Interpolants
 // EXECUTION
 
 Entity u_entity;
+//Mesh u_mesh;
+ObjectData u_object;
+
 vec4 procVertex(uint meshletID, const uint vert, uint vidx)
 {
 	Vertex vertex  = Vertex(u_entity.VertexAddress);
 
 	vec3 oPos = vertex.b_v[vidx];
-	//  vec3 wPos = (object.worldMatrix  * vec4(oPos,1)).xyz;
-	vec3 wPos = oPos;
+	vec3 wPos = (u_object.worldMatrix  * vec4(oPos,1)).xyz;
 	vec4 hPos = u_camera[0].u_projection * u_camera[0].u_view * vec4(wPos,1);
 
 	gl_MeshVerticesNV[vert].gl_Position = hPos;
@@ -96,7 +99,7 @@ void fetchAttributes(inout TempAttributes temp, uint vert, uint vidx)
 void storeAttributes(inout TempAttributes temp, const uint vert, uint vidx)
 {
   vec3 oNormal = temp.normal;
-  vec3 wNormal = /*mat3(object.worldMatrixIT) **/ oNormal;
+  vec3 wNormal = mat3(u_object.worldMatrixIT) * oNormal;
   OUT[vert].wNormal = wNormal;
   OUT[vert].Texcoord_0 = temp.tex;
 }
@@ -140,7 +143,10 @@ void procAttributes(uint meshletID, const uint vert, uint vidx)
 
 void main()
 {
-	u_entity = b_model_entity[0];
+	IndirectCmd RenderCmd = b_cmd[gl_DrawIDARB];
+	u_object = b_object[gl_DrawIDARB];
+	u_entity = b_model_entity[u_object.modelID];
+//	u_mesh = MeshBuffer(u_entity.MeshAddress).b_mesh[0];
 
 	// gl_WorkGroupID.x runs from [0 .. parentTask.gl_TaskCountNV - 1]
 	uint meshletID = IN.baseID + IN.subIDs[gl_WorkGroupID.x];
