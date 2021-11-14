@@ -1,6 +1,6 @@
 #pragma once
 
-#include <020_RT/ModelResource.h>
+#include <020_RT/Resource.h>
 
 struct ModelRenderCmd
 {
@@ -9,7 +9,7 @@ struct ModelRenderCmd
 	uint32_t _p;
 };
 
-struct ModelRenderer
+struct Renderer
 {
 	enum
 	{
@@ -43,7 +43,7 @@ struct ModelRenderer
 	vk::UniqueFramebuffer m_framebuffer;
 
 	Context* m_ctx;
-	ModelRenderer(Context& ctx, RenderTarget& rt)
+	Renderer(Context& ctx, RenderTarget& rt)
 	{
 		m_ctx = &ctx;
 		//		auto cmd = ctx.m_ctx->m_cmd_pool->allocCmdTempolary(0);

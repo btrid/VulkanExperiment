@@ -8,14 +8,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\020_RT\020_main.cpp" />
-    <ClCompile Include="..\..\source\020_RT\ModelResource.cpp" />
+    <ClCompile Include="..\..\source\020_RT\Resource.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\include\020_RT\ModelRenderer.h" />
-    <ClInclude Include="..\..\include\020_RT\ModelResource.h" />
+    <ClInclude Include="..\..\include\020_RT\Renderer.h" />
+    <ClInclude Include="..\..\include\020_RT\Resource.h" />
     <ClInclude Include="..\..\include\020_RT\nvmeshlet_builder.hpp" />
     <ClInclude Include="..\..\include\020_RT\nvmeshlet_packbasic.hpp" />
     <ClInclude Include="..\..\include\020_RT\nvmeshlet_array.hpp" />
