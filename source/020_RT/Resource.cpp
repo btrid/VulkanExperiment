@@ -1,4 +1,4 @@
-#include <020_RT/ModelResource.h>
+#include <020_RT/Resource.h>
 
 #define TINYGLTF_IMPLEMENTATION
 #define TINYGLTF_NOEXCEPTION
@@ -130,7 +130,7 @@ namespace GLtoVK
 }
 
 
-std::shared_ptr<Model> ModelResource::LoadModel(btr::Context& ctx, vk::CommandBuffer cmd, const std::string& filename)
+std::shared_ptr<Model> Resource::LoadModel(btr::Context& ctx, vk::CommandBuffer cmd, const std::string& filename)
 {
 	std::shared_ptr<Model> model;
 	if (m_model_manager.getOrCreate(model, filename)) {
@@ -537,7 +537,7 @@ std::shared_ptr<Model> ModelResource::LoadModel(btr::Context& ctx, vk::CommandBu
 	return model;
 }
 
-std::shared_ptr<ModelTexture> ModelResource::LoadTexture(btr::Context& ctx, vk::CommandBuffer cmd, const std::string& filename, const vk::ImageCreateInfo& info, const std::vector<byte>& data)
+std::shared_ptr<ModelTexture> Resource::LoadTexture(btr::Context& ctx, vk::CommandBuffer cmd, const std::string& filename, const vk::ImageCreateInfo& info, const std::vector<byte>& data)
 {
 	std::shared_ptr<ModelTexture> resource;
 	if (m_texture_manager.getOrCreate(resource, filename))

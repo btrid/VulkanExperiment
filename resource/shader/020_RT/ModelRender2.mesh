@@ -51,7 +51,6 @@ layout(location=1) out Interpolants
 // EXECUTION
 
 Entity u_entity;
-//Mesh u_mesh;
 ObjectData u_object;
 
 vec4 procVertex(uint meshletID, const uint vert, uint vidx)
@@ -146,7 +145,6 @@ void main()
 	IndirectCmd RenderCmd = b_cmd[gl_DrawIDARB];
 	u_object = b_object[gl_DrawIDARB];
 	u_entity = b_model_entity[u_object.modelID];
-//	u_mesh = MeshBuffer(u_entity.MeshAddress).b_mesh[0];
 
 	// gl_WorkGroupID.x runs from [0 .. parentTask.gl_TaskCountNV - 1]
 	uint meshletID = IN.baseID + IN.subIDs[gl_WorkGroupID.x];

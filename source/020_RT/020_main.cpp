@@ -31,7 +31,7 @@
 #include <tinygltf/tiny_gltf.h>
 #include <gli/gli/gli.hpp>
 
-#include <020_RT/ModelResource.h>
+#include <020_RT/Resource.h>
 
 #define to_str(_a) #_a
 
@@ -871,7 +871,7 @@ struct Context
 	vk::UniqueDescriptorSet m_DS_Scene;
 	vk::UniqueDescriptorSet m_DS_Model;
 
-	ModelResource m_model_resource;
+	Resource m_model_resource;
 	TLAS m_TLAS;
 
 	Context(std::shared_ptr<btr::Context>& ctx, vk::CommandBuffer cmd)
@@ -1460,8 +1460,7 @@ struct Skybox
 	}
 };
 
-#include <020_RT/ModelRenderer.h>
-
+#include <020_RT/Renderer.h>
 int main()
 {
 
@@ -1507,7 +1506,7 @@ int main()
 
 	std::shared_ptr<Model> model = ctx->m_model_resource.LoadModel(*context, setup_cmd, btr::getResourceAppPath() + "pbr/DamagedHelmet.gltf");
 
-	ModelRenderer renderer(*ctx, *app.m_window->getFrontBuffer());
+	Renderer renderer(*ctx, *app.m_window->getFrontBuffer());
 	Skybox skybox(*ctx, setup_cmd, *app.m_window->getFrontBuffer());
 
 	btr::BufferMemoryEx<vk::AccelerationStructureInstanceKHR> instance_buffer;

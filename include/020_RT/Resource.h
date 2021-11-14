@@ -184,7 +184,7 @@ struct Model
 
 };
 
-struct ModelResource
+struct Resource
 {
 
 	std::array<vk::DescriptorBufferInfo, 10> m_buffer_info;
@@ -200,7 +200,7 @@ struct ModelResource
 	vk::UniqueDescriptorSet m_DS_ModelResource;
 	vk::UniqueDescriptorUpdateTemplate m_Texture_DUP;
 
-	ModelResource(btr::Context& ctx)
+	Resource(btr::Context& ctx)
 	{
 		{
 			std::array<vk::DescriptorPoolSize, 2> pool_size;
@@ -259,8 +259,8 @@ struct ModelResource
 
 		{
 			vk::DescriptorUpdateTemplateEntry dutEntry[2];
-			dutEntry[0].setDstBinding(0).setDstArrayElement(0).setDescriptorCount(array_size(m_buffer_info)).setDescriptorType(vk::DescriptorType::eStorageBuffer).setOffset(offsetof(ModelResource, m_buffer_info)).setStride(sizeof(VkDescriptorBufferInfo));
-			dutEntry[1].setDstBinding(10).setDstArrayElement(0).setDescriptorCount(array_size(m_image_info)).setDescriptorType(vk::DescriptorType::eCombinedImageSampler).setOffset(offsetof(ModelResource, m_image_info)).setStride(sizeof(VkDescriptorImageInfo));
+			dutEntry[0].setDstBinding(0).setDstArrayElement(0).setDescriptorCount(array_size(m_buffer_info)).setDescriptorType(vk::DescriptorType::eStorageBuffer).setOffset(offsetof(Resource, m_buffer_info)).setStride(sizeof(VkDescriptorBufferInfo));
+			dutEntry[1].setDstBinding(10).setDstArrayElement(0).setDescriptorCount(array_size(m_image_info)).setDescriptorType(vk::DescriptorType::eCombinedImageSampler).setOffset(offsetof(Resource, m_image_info)).setStride(sizeof(VkDescriptorImageInfo));
 
 			vk::DescriptorUpdateTemplateCreateInfo dutCI;
 			dutCI.setTemplateType(vk::DescriptorUpdateTemplateType::eDescriptorSet);
