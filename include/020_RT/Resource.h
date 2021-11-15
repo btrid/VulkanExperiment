@@ -66,23 +66,51 @@ private:
 		m_active[m_accume] = p->m_block;
 		m_accume = (m_accume + 1) % m_active.size();
 	}
+}; template<typename T>
+struct ResourceManager3
+{
+	std::unordered_map<std::string, std::weak_ptr<T>> m_resource_list;
+	std::mutex m_mutex;
+
+	ResourceManager3()
+	{
+	}
+	/**
+		* @brief	リソースの管理を行う
+		*			@return true	すでに管理されている
+							false	新しいリソースを生成した
+		*/
+	bool getOrCreate(std::shared_ptr<T>& resource, const std::string& filename)
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+		auto it = m_resource_list.find(filename);
+		if (it != m_resource_list.end()) {
+			resource = it->second.lock();
+			return true;
+		}
+		resource = std::make_shared<T>();
+		resource->m_filename = filename;
+
+		m_resource_list[filename] = resource;
+		return false;
+	}
 };
 
 
-struct Entity
+struct Primitive
 {
+	vk::DrawMeshTasksIndirectCommandNV m_task;
+	uint64_t PrimitiveAddress;
+
 	enum ID
 	{
 		Vertex,
-		Normal,
-
-		Texcoord,
 		Index,
 
-		Material,
-		Material_Index,
+		Normal,
+		Texcoord,
 
-		Mesh,
+		Material,
 		_unuse,
 
 		MeshletDesc,
@@ -92,13 +120,45 @@ struct Entity
 	};
 	uint64_t v[ID_MAX];
 
-	uint32_t primitive_num;
-	uint32_t _p;
-	uint32_t _p2;
-	uint32_t _p3;
+	vec3 m_aabb_min;
+	uint _p;
+	vec3 m_aabb_max;
+	uint _p2;
 };
 
-struct ModelTexture
+namespace gltf
+{
+
+struct Material
+{
+	vec4 m_basecolor_factor;
+
+	float m_metallic_factor;
+	float m_roughness_factor;
+	float _p1;
+	float _p2;
+
+	vec3  m_emissive_factor;
+	float _p11;
+
+	enum TexID
+	{
+		TexID_Base,
+		TexID_MR,
+		TexID_AO,
+		TexID_Normal,
+
+		TexID_Emissive,
+		TexID_pad,
+		TexID_pad2,
+		TexID_pad3,
+
+		TexID_MAX,
+	};
+	int32_t t[TexID_MAX];
+};
+	
+struct Texture
 {
 	std::string m_filename;
 	uint32_t m_block;
@@ -115,85 +175,61 @@ struct ModelTexture
 
 };
 
+struct Mesh
+{
+	std::vector<Primitive> m_primitive;
+	btr::BufferMemoryEx<Primitive> b_primitive;
 
-struct Model
+	std::vector<NVMeshlet::PackBasicBuilder::MeshletGeometry> m_MeshletGeometry;
+	std::vector<btr::BufferMemoryEx<NVMeshlet::MeshletPackBasicDesc>> b_MeshletDesc;
+	std::vector<btr::BufferMemoryEx<NVMeshlet::PackBasicType>> b_MeshletPack;
+
+// private:
+// 	~Mesh() = delete;
+};
+
+struct Light
+{
+	vec3 pos;
+};
+
+struct Camera
+{
+	vec3 pos;
+};
+struct gltfResource
 {
 	std::string m_filename;
-	uint32_t m_block;
+	tinygltf::Model gltf_model;
+
+	std::vector<btr::BufferMemory> b_buffer;
+	btr::BufferMemoryEx<Material> b_material;
+	std::vector<std::shared_ptr<Texture>> t_image;
+
+	std::vector<Mesh> m_mesh;
+
+	std::vector<Light> m_lights;
+	std::vector<Camera> m_camera;
+
 
 	struct BLAS
 	{
 		vk::UniqueAccelerationStructureKHR m_AS;
 		btr::BufferMemory m_AS_buffer;
 	};
-	struct MeshInfo
-	{
-		vec3 m_aabb_min;
-		uint m_vertex_num;
-		vec3 m_aabb_max;
-		uint m_primitive_num;
-
-		vk::DrawMeshTasksIndirectCommandNV m_task;
-	};
-
-	struct Material
-	{
-		vec4 m_basecolor_factor;
-
-		float m_metallic_factor;
-		float m_roughness_factor;
-		float _p1;
-		float _p2;
-
-		vec3  m_emissive_factor;
-		float _p11;
-
-		enum TexID
-		{
-			TexID_Base,
-			TexID_MR,
-			TexID_AO,
-			TexID_Normal,
-
-			TexID_Emissive,
-			TexID_pad,
-			TexID_pad2,
-			TexID_pad3,
-
-			TexID_MAX,
-		};
-		int32_t t[TexID_MAX];
-	};
-	std::vector<btr::BufferMemory> b_vertex;
-	btr::BufferMemoryEx<Material> b_material;
-	std::vector<std::shared_ptr<ModelTexture>> t_image;
-
-	std::vector<MeshInfo> m_mesh;
-	btr::BufferMemoryEx<MeshInfo> b_mesh;
-
-	tinygltf::Model gltf_model;
-
-	MeshInfo m_info;
 	BLAS m_BLAS;
-
- 	Entity m_entity;
-
-	std::vector<NVMeshlet::PackBasicBuilder::MeshletGeometry> m_MeshletGeometry;
-	btr::BufferMemoryEx<NVMeshlet::MeshletPackBasicDesc> b_MeshletDesc;
-	btr::BufferMemoryEx<NVMeshlet::PackBasicType> b_MeshletPack;
 
 };
 
+}
+
 struct Resource
 {
-
 	std::array<vk::DescriptorBufferInfo, 10> m_buffer_info;
 	std::array<vk::DescriptorImageInfo, 1024> m_image_info;
 
-	ResourceManager2<Model> m_model_manager;
-	ResourceManager2<ModelTexture> m_texture_manager;
-	btr::BufferMemoryEx<Entity> b_model_entity;
-//	btr::BufferMemoryEx<NVMeshlet::MeshletPackBasicDesc> b_meshlet_desc;
+	ResourceManager3<gltf::gltfResource> m_gltf_manager;
+	ResourceManager2<gltf::Texture> m_texture_manager;
 
 	vk::UniqueDescriptorPool m_descriptor_pool;
 	vk::UniqueDescriptorSetLayout m_DSL;
@@ -240,10 +276,8 @@ struct Resource
 			m_DSL = ctx.m_device.createDescriptorSetLayoutUnique(desc_layout_info);
 		}
 
-		b_model_entity = ctx.m_vertex_memory.allocateMemory<Entity>(1024);
-//		b_meshlet_desc = ctx.m_vertex_memory.allocateMemory<NVMeshlet::MeshletPackBasicDesc>(1024);
 		m_buffer_info = {
-			b_model_entity.getInfo(),
+			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
 			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
 			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
 			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
@@ -284,7 +318,8 @@ struct Resource
 		}
 	}
 
-	std::shared_ptr<Model> LoadModel(btr::Context& ctx, vk::CommandBuffer cmd, const std::string& filename);
-	std::shared_ptr<ModelTexture> LoadTexture(btr::Context& ctx, vk::CommandBuffer cmd, const std::string& filename, const vk::ImageCreateInfo& info, const std::vector<byte>& data);
+	std::shared_ptr<gltf::gltfResource> LoadScene(btr::Context& ctx, vk::CommandBuffer cmd, const std::string& filename);
+private:
+	std::shared_ptr<gltf::Texture> LoadTexture(btr::Context& ctx, vk::CommandBuffer cmd, const std::string& filename, const vk::ImageCreateInfo& info, const std::vector<byte>& data);
 
 };

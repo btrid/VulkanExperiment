@@ -14,8 +14,8 @@
 #define USE_Model_Resource 2
 #include "Model.glsl"
 
-#define USE_Model_Entity 3
-layout(set=USE_Model_Entity, binding=0, scalar) buffer ModelEntityBuffer { Entity b_model_entity[]; };
+#define USE_Model_Primitive 3
+layout(set=USE_Model_Primitive, binding=0, scalar) buffer ModelPrimitiveBuffer { Primitive b_model_primitive[]; };
 
 layout(location = 0) out gl_PerVertex{
 	vec4 gl_Position;
@@ -46,8 +46,8 @@ mat4 skinning()
 
 void main()
 {
-	Entity entity = b_model_entity[0];
-	I Index  = I(entity.Index);
+	Primitive primitive = b_model_primitive[0];
+	I Index  = I(primitive.Index);
 	V vertex  = Index.b_i[gl_VertexIndex];
 	vertex[v];
 

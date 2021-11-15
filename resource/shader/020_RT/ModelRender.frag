@@ -4,6 +4,17 @@
 #extension GL_EXT_ray_query : require
 
 
+#define SETPOINT_CAMERA 0
+#include "btrlib/Camera.glsl"
+
+#define USE_Render_Scene 1
+#include "pbr.glsl"
+
+#define USE_Model_Resource 2
+#define USE_Model_Render 3
+#include "Model.glsl"
+
+
 layout(location=1) in PerVertex
 {
 	vec3 WorldPos;
@@ -11,7 +22,7 @@ layout(location=1) in PerVertex
 	vec3 Normal;
 	float _d2;
 	vec2 Texcoord_0;
-	vec2 _d3;
+	flat uint64_t MaterialAddress;
 	flat uint meshletID;
 }In;
 layout(location = 0) out vec4 FragColor;
@@ -33,18 +44,6 @@ struct PBRInfo
 	vec3 diffuseColor;            // color contribution from diffuse lighting
 	vec3 specularColor;           // color contribution from specular lighting
 };
-
-
-
-#define SETPOINT_CAMERA 0
-#include "btrlib/Camera.glsl"
-
-#define USE_Render_Scene 1
-#include "pbr.glsl"
-
-#define USE_Model_Resource 2
-#define USE_Model_Entity 3
-#include "Model.glsl"
 
 Material u_material;
 
@@ -157,8 +156,13 @@ const vec3 f0 = vec3(0.04);
 
 void main()
 {
-	Entity entity = b_model_entity[0];
-	MaterialBuffer mat  = MaterialBuffer(entity.MaterialAddress);
+//	IndirectCmd RenderCmd = b_cmd[gl_DrawIDARB];
+//	u_object = b_object[gl_DrawIDARB];
+//	Mesh mesh = MeshBuffer(RenderCmd.PrimitiveAddress).b_mesh[0];
+//	FragColor = vec4(1.);
+//	return;
+
+	MaterialBuffer mat  = MaterialBuffer(In.MaterialAddress);
 	u_material = mat.m[0];
 	vec4 basecolor = SRGBtoLINEAR(texture(t_ModelTexture[nonuniformEXT(u_material.TexID_Base)], In.Texcoord_0.xy)) * u_material.m_basecolor_factor;
 

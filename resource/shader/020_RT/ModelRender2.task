@@ -39,14 +39,13 @@ void main()
 {
 	IndirectCmd RenderCmd = b_cmd[gl_DrawIDARB];
 	ObjectData instance = b_object[gl_DrawIDARB];
-	Entity entity = b_model_entity[instance.modelID];
+	Mesh mesh = MeshBuffer(RenderCmd.PrimitiveAddress).b_mesh[0];
 
 	uint baseID = gl_WorkGroupID.x * GROUP_SIZE;
 	uint laneID = gl_LocalInvocationID.x;
 
-	BindlessBufferU32x4 b_meshlet_desc = BindlessBufferU32x4(entity.MeshletDesc);
+	BindlessBufferU32x4 b_meshlet_desc = BindlessBufferU32x4(mesh.MeshletDesc);
 	uvec4 desc = b_meshlet_desc.b_uvec4[baseID + laneID];
-	Mesh mesh = MeshBuffer(entity.MeshAddress).b_mesh[0];
 
 //	bool render = !(all(equal(desc, uvec4(0))) || earlyCull(desc, mesh, instance));
 	bool render = !all(equal(desc, uvec4(0)));

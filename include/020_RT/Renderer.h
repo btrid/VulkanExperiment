@@ -2,11 +2,10 @@
 
 #include <020_RT/Resource.h>
 
-struct ModelRenderCmd
+struct IndirectCmd
 {
 	VkDrawMeshTasksIndirectCommandNV task;
-	uint32_t InstanceIndex;
-	uint32_t _p;
+	uint64_t PrimitiveAddress;
 };
 
 struct Renderer
@@ -249,54 +248,41 @@ struct Renderer
 
 	}
 
-	void execute_Render(vk::CommandBuffer cmd, RenderTarget& rt, Model& model)
+	void execute_Render(vk::CommandBuffer cmd, RenderTarget& rt, gltf::gltfResource& model)
 	{
-		DebugLabel _label(cmd, __FUNCTION__);
+		struct ObjectData
 		{
-			vk::ImageMemoryBarrier image_barrier[1];
-			image_barrier[0].setImage(rt.m_image);
-			image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-			image_barrier[0].setOldLayout(vk::ImageLayout::eColorAttachmentOptimal);
-			image_barrier[0].setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
-			image_barrier[0].setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
-			image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+			mat4 worldMatrix;
+			mat4 worldMatrixIT;
+		};
+		btr::BufferMemoryEx<ObjectData> object_buffer;
+		{
+			std::array<ObjectData, 1> obj;
 
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eColorAttachmentOutput,
-				{}, {}, { /*array_size(to_read), to_read*/ }, { array_size(image_barrier), image_barrier });
+			obj[0].worldMatrix = glm::translate(mat4(1.f), vec3(0.f));
+			obj[0].worldMatrixIT = glm::inverseTranspose(obj[0].worldMatrix);
+			object_buffer = m_ctx->m_ctx->m_vertex_memory.allocateMemory<ObjectData>(1);
+
+			cmd.updateBuffer<ObjectData>(object_buffer.getInfo().buffer, object_buffer.getInfo().offset, obj);
 		}
 
-		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_Render].get());
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 0, { sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA) }, {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 1, { m_ctx->m_DS_Scene.get() }, {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 2, { m_ctx->m_model_resource.m_DS_ModelResource.get() }, {});
 
-		vk::RenderPassBeginInfo begin_render_Info;
-		begin_render_Info.setRenderPass(m_renderpass.get());
-		begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), rt.m_resolution));
-		begin_render_Info.setFramebuffer(m_framebuffer.get());
-		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
+		btr::BufferMemoryEx<IndirectCmd> b_render_cmd = m_ctx->m_ctx->m_vertex_memory.allocateMemory<IndirectCmd>(1);
+		std::array<IndirectCmd, 1> render_cmd;
+		render_cmd[0].task = model.m_mesh[0].m_primitive[0].m_task;
+		render_cmd[0].PrimitiveAddress = model.m_mesh[0].b_primitive.getDeviceAddress();
+		cmd.updateBuffer<IndirectCmd>(b_render_cmd.getInfo().buffer, b_render_cmd.getInfo().offset, render_cmd);
+		btr::BufferMemoryEx<uint32_t> b_cmd_counter = m_ctx->m_ctx->m_vertex_memory.allocateMemory<uint32_t>(1);
+		cmd.fillBuffer(b_cmd_counter.getInfo().buffer, b_cmd_counter.getInfo().offset, b_cmd_counter.getInfo().range, 1u);
 
-		auto& gltf_model = model.gltf_model;
-		for (size_t mesh_index = 0; mesh_index < gltf_model.meshes.size(); ++mesh_index)
-		{
-			const auto& gltf_mesh = gltf_model.meshes[mesh_index];
+		vk::BufferMemoryBarrier barrier[] = {
+			object_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			b_render_cmd.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eIndirectCommandRead),
+			b_cmd_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eIndirectCommandRead),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eTaskShaderNV|vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, { array_size(barrier), barrier }, {});
+		execute_Render(cmd, rt, b_render_cmd.getInfo(), b_cmd_counter.getInfo(), object_buffer.getInfo());
 
-			for (size_t i = 0; i < gltf_mesh.primitives.size(); ++i)
-			{
-				const tinygltf::Primitive& primitive = gltf_mesh.primitives[i];
-				{
-					const tinygltf::Accessor& accessor = gltf_model.accessors[primitive.indices];
-					const tinygltf::BufferView& bufferview = gltf_model.bufferViews[accessor.bufferView];
-
-
-					static const uint32_t MESHLETS_PER_TASK = 32;
-					uint32_t count = app::calcDipatchGroups(uvec3(model.m_MeshletGeometry[0].meshletDescriptors.size(), 1, 1), uvec3(MESHLETS_PER_TASK, 1, 1)).x;
-					cmd.drawMeshTasksNV(count, 0);
-				}
-			}
-		}
-
-		cmd.endRenderPass();
 	}
 
 	void execute_Render(vk::CommandBuffer cmd, RenderTarget& rt, const vk::DescriptorBufferInfo& rendercmd, const vk::DescriptorBufferInfo& count, const vk::DescriptorBufferInfo& instance)
@@ -345,8 +331,8 @@ struct Renderer
 		begin_render_Info.setFramebuffer(m_framebuffer.get());
 		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
-		cmd.drawMeshTasksIndirectCountNV(rendercmd.buffer, rendercmd.offset, count.buffer, count.offset, 1024, sizeof(ModelRenderCmd));
-//		cmd.drawMeshTasksIndirectNV(rendercmd.buffer, rendercmd.offset, 1, sizeof(ModelRenderCmd));
+//		cmd.drawMeshTasksIndirectCountNV(rendercmd.buffer, rendercmd.offset, count.buffer, count.offset, 1024, sizeof(IndirectCmd));
+		cmd.drawMeshTasksIndirectNV(rendercmd.buffer, rendercmd.offset, 1, sizeof(IndirectCmd));
 
 		cmd.endRenderPass();
 	}

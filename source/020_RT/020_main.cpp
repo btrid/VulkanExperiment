@@ -1504,7 +1504,8 @@ int main()
 
 	DrawHelper draw_helper{ context };
 
-	std::shared_ptr<Model> model = ctx->m_model_resource.LoadModel(*context, setup_cmd, btr::getResourceAppPath() + "pbr/DamagedHelmet.gltf");
+	std::shared_ptr<gltf::gltfResource> model = ctx->m_model_resource.LoadScene(*context, setup_cmd, btr::getResourceAppPath() + "pbr/DamagedHelmet.gltf");
+//	std::shared_ptr<gltf::gltfResource> model = ctx->m_model_resource.LoadScene(*context, setup_cmd, btr::getResourceAppPath() + "pbr/cube.glb");
 
 	Renderer renderer(*ctx, *app.m_window->getFrontBuffer());
 	Skybox skybox(*ctx, setup_cmd, *app.m_window->getFrontBuffer());
@@ -1557,12 +1558,12 @@ int main()
 		};
 		setup_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
 	}
+	ctx->execute_tlas(setup_cmd, instance_buffer);
 
 	struct ObjectData
 	{
 		mat4 worldMatrix;
 		mat4 worldMatrixIT;
-		int32_t modelID;
 	};
 	btr::BufferMemoryEx<ObjectData> object_buffer;
 	{
@@ -1572,7 +1573,6 @@ int main()
 		obj[1].worldMatrix = glm::translate(mat4(0.5f), vec3(1.f));
 		for (auto& o : obj )
 		{
-			o.modelID = 0;
 			o.worldMatrixIT = glm::inverseTranspose(o.worldMatrix);
 		}
 
@@ -1585,17 +1585,14 @@ int main()
 		setup_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eTaskShaderNV, {}, {}, { array_size(barrier), barrier }, {});
 	}
 
-	ctx->execute_tlas(setup_cmd, instance_buffer);
 
-	btr::BufferMemoryEx<ModelRenderCmd> b_render_cmd = context->m_vertex_memory.allocateMemory<ModelRenderCmd>(2);
-	std::array<ModelRenderCmd, 2> render_cmd;
-	render_cmd[0].task = model->m_mesh[0].m_task;
-	render_cmd[0].InstanceIndex = 0;
-	render_cmd[1].task = model->m_mesh[0].m_task;
-	render_cmd[1].InstanceIndex = 1;
-	setup_cmd.updateBuffer<ModelRenderCmd>(b_render_cmd.getInfo().buffer, b_render_cmd.getInfo().offset, render_cmd);
+	btr::BufferMemoryEx<IndirectCmd> b_render_cmd = context->m_vertex_memory.allocateMemory<IndirectCmd>(1);
+	std::array<IndirectCmd, 1> render_cmd;
+ 	render_cmd[0].task = model->m_mesh[0].m_primitive[0].m_task;
+ 	render_cmd[0].PrimitiveAddress = model->m_mesh[0].b_primitive.getDeviceAddress();
+	setup_cmd.updateBuffer<IndirectCmd>(b_render_cmd.getInfo().buffer, b_render_cmd.getInfo().offset, render_cmd);
 	btr::BufferMemoryEx<uint32_t> b_cmd_counter = context->m_vertex_memory.allocateMemory<uint32_t>(1);
-	setup_cmd.fillBuffer(b_cmd_counter.getInfo().buffer, b_cmd_counter.getInfo().offset, b_cmd_counter.getInfo().range, 2u);
+	setup_cmd.fillBuffer(b_cmd_counter.getInfo().buffer, b_cmd_counter.getInfo().offset, b_cmd_counter.getInfo().range, 1u);
 
 	app.setup();
 	context->m_device.waitIdle();

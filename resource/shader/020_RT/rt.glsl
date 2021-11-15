@@ -7,14 +7,14 @@
 #extension GL_EXT_shader_explicit_arithmetic_types : require
 
 #if defined(USE_SceneModel)
-struct Entity
+struct Primitive
 {
 	uint64_t vertices;
 	uint64_t indices;
 	uint64_t materials;
 	uint64_t materialIndices;
 };
-layout(set=USE_SceneModel, binding=0, scalar) buffer EntityBuffer { Entity b_entity[]; };
+layout(set=USE_SceneModel, binding=0, scalar) buffer PrimitiveBuffer { Primitive b_mesh[]; };
 layout(set=USE_SceneModel, binding=1, buffer_reference, scalar) buffer V {vec3 b_v[]; };
 layout(set=USE_SceneModel, binding=2, buffer_reference, scalar) buffer I {vec3 b_i[]; };
 layout(set=USE_SceneModel, binding=3, buffer_reference, scalar) buffer M {int m[]; };

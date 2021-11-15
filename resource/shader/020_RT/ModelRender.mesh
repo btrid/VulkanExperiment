@@ -13,7 +13,7 @@
 #include "pbr.glsl"
 
 #define USE_Model_Resource 2
-#define USE_Model_Entity 3
+#define USE_Model_Primitive 3
 #include "Model.glsl"
 
 
@@ -76,11 +76,11 @@ mat4 skinning()
 
 void main()
 {
-	Entity entity = b_model_entity[0];
-	Index index  = Index(nonuniformEXT(entity.IndexAddress));
-	Vertex vertex  = Vertex(nonuniformEXT(entity.VertexAddress));
-	Vertex normal  = Vertex(entity.NormalAddress);
-	Texcoord texcoord  = Texcoord(entity.TexcoordAddress);
+	Primitive primitive = b_model_primitive[0];
+	Index index  = Index(nonuniformEXT(primitive.IndexAddress));
+	Vertex vertex  = Vertex(nonuniformEXT(primitive.VertexAddress));
+	Vertex normal  = Vertex(primitive.NormalAddress);
+	Texcoord texcoord  = Texcoord(primitive.TexcoordAddress);
 
 	mat4 pv = u_camera[0].u_projection * u_camera[0].u_view;
 
@@ -107,7 +107,7 @@ void main()
 		Out[out_idx].Normal = normal.b_v[idx];
 		Out[out_idx].Texcoord_0 = texcoord.b_t[idx];
 
-		uvec4 execbit = subgroupBallot(v_idx < entity.PrimitiveNum*3);
+		uvec4 execbit = subgroupBallot(v_idx < primitive.PrimitiveNum*3);
 		if(gl_LocalInvocationID.x==0)
 		{
 			uint primitivenum = subgroupBallotBitCount(execbit);
@@ -122,7 +122,7 @@ void main()
 //  for(int i = 0; i < NVMSH_VERTEX_RUNS; i++)
 	{
 		uint v_idx = gl_WorkGroupID.x*GROUP_SIZE+gl_LocalInvocationID.x;
-		if(v_idx < entity.PrimitiveNum)
+		if(v_idx < primitive.PrimitiveNum)
 		{
 			uint out_idx = gl_LocalInvocationID.x;
 			uvec3 idx = index.b_i[v_idx];
@@ -149,7 +149,7 @@ void main()
 			Out[out_idx*3+2].Texcoord_0 = texcoord.b_t[idx.z];
 		}
 
-		uvec4 execbit = subgroupBallot(v_idx < entity.PrimitiveNum);
+		uvec4 execbit = subgroupBallot(v_idx < primitive.PrimitiveNum);
 		if(gl_LocalInvocationID.x==0)
 		{
 			uint primitivenum = subgroupBallotBitCount(execbit);
