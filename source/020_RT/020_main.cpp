@@ -1505,7 +1505,7 @@ int main()
 	DrawHelper draw_helper{ context };
 
 	std::shared_ptr<gltf::gltfResource> model = ctx->m_model_resource.LoadScene(*context, setup_cmd, btr::getResourceAppPath() + "pbr/DamagedHelmet.gltf");
-//	std::shared_ptr<gltf::gltfResource> model = ctx->m_model_resource.LoadScene(*context, setup_cmd, btr::getResourceAppPath() + "pbr/cube.glb");
+//	std::shared_ptr<gltf::gltfResource> model = ctx->m_model_resource.LoadScene(*context, setup_cmd, btr::getResourceAppPath() + "Sponza/Sponza.gltf");
 
 	Renderer renderer(*ctx, *app.m_window->getFrontBuffer());
 	Skybox skybox(*ctx, setup_cmd, *app.m_window->getFrontBuffer());
@@ -1622,8 +1622,8 @@ int main()
 				{
 					ctx->execute(cmd);
 					skybox.execute_Render(cmd, *ctx, *render_target);
-//					renderer.execute_Render(cmd, *render_target, *model);
-					renderer.execute_Render(cmd, *render_target, b_render_cmd.getInfo(), b_cmd_counter.getInfo(), object_buffer.getInfo());
+					renderer.execute_Render(cmd, *render_target, *model);
+//					renderer.execute_Render(cmd, *render_target, b_render_cmd.getInfo(), b_cmd_counter.getInfo(), object_buffer.getInfo());
 //					draw_helper.draw(*context, cmd, *render_target, ctx->m_lut.m_brgf_lut);
 //					draw_helper.draw_texcube(*context, cmd, *render_target, ctx->m_environment_filter[0]);
 					sAppImGui::Order().Render(cmd);

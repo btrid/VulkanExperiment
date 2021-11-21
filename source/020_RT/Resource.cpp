@@ -281,6 +281,10 @@ std::shared_ptr<gltf::gltfResource> Resource::LoadScene(btr::Context& ctx, vk::C
 				{
 					primitive.v[Primitive::Texcoord] = resource->b_buffer[bufferview.buffer].getDeviceAddress() + bufferview.byteOffset;
 				}
+				else if (attrib.first.compare("TANGENT") == 0)
+				{
+					primitive.v[Primitive::TANGENT] = resource->b_buffer[bufferview.buffer].getDeviceAddress() + bufferview.byteOffset;
+				}
 				else
 				{
 					assert(false);

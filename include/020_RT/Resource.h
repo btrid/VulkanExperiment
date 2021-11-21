@@ -110,8 +110,8 @@ struct Primitive
 		Normal,
 		Texcoord,
 
+		TANGENT,
 		Material,
-		_unuse,
 
 		MeshletDesc,
 		MeshletPack,
@@ -196,6 +196,7 @@ struct Light
 struct Camera
 {
 	vec3 pos;
+	vec3 rot;
 };
 struct gltfResource
 {
@@ -208,8 +209,10 @@ struct gltfResource
 
 	std::vector<Mesh> m_mesh;
 
-	std::vector<Light> m_lights;
-	std::vector<Camera> m_camera;
+// 	std::vector<Light> m_lights;
+// 	std::vector<Camera> m_camera;
+// 	
+// 	Camera m_default_camera;
 
 
 	struct BLAS

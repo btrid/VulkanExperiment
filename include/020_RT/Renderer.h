@@ -258,11 +258,9 @@ struct Renderer
 		btr::BufferMemoryEx<ObjectData> object_buffer;
 		{
 			std::array<ObjectData, 1> obj;
-
 			obj[0].worldMatrix = glm::translate(mat4(1.f), vec3(0.f));
 			obj[0].worldMatrixIT = glm::inverseTranspose(obj[0].worldMatrix);
 			object_buffer = m_ctx->m_ctx->m_vertex_memory.allocateMemory<ObjectData>(1);
-
 			cmd.updateBuffer<ObjectData>(object_buffer.getInfo().buffer, object_buffer.getInfo().offset, obj);
 		}
 

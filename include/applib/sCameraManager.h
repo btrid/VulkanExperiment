@@ -38,28 +38,15 @@ struct sCameraManager : public Singleton<sCameraManager>
 			m_camera.setup(update_desc);
 			m_camera_frustom.setup(update_desc);
 		}
-
-		std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_SET_LAYOUT_NUM);
-		auto stage = vk::ShaderStageFlagBits::eAll;
-		bindings[DESCRIPTOR_SET_LAYOUT_CAMERA] =
 		{
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(stage)
-			.setDescriptorCount(1)
-			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-			.setBinding(0),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(stage)
-			.setDescriptorCount(1)
-			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-			.setBinding(1),
-		};
-		for (size_t i = 0; i < DESCRIPTOR_SET_LAYOUT_NUM; i++)
-		{
-			vk::DescriptorSetLayoutCreateInfo descriptor_set_layout_info = vk::DescriptorSetLayoutCreateInfo()
-				.setBindingCount((uint32_t)bindings[i].size())
-				.setPBindings(bindings[i].data());
-			m_descriptor_set_layout[i] = context->m_device.createDescriptorSetLayout(descriptor_set_layout_info);
+			auto stage = vk::ShaderStageFlagBits::eAll;
+			vk::DescriptorSetLayoutBinding bindings[] =
+			{
+				vk::DescriptorSetLayoutBinding().setBinding(0).setDescriptorCount(1).setDescriptorType(vk::DescriptorType::eUniformBuffer).setStageFlags(stage),
+				vk::DescriptorSetLayoutBinding().setBinding(1).setDescriptorCount(1).setDescriptorType(vk::DescriptorType::eUniformBuffer).setStageFlags(stage),
+			};
+			vk::DescriptorSetLayoutCreateInfo dslCI = vk::DescriptorSetLayoutCreateInfo().setBindingCount(array_size(bindings)).setPBindings(bindings);
+			m_descriptor_set_layout[DESCRIPTOR_SET_CAMERA] = context->m_device.createDescriptorSetLayout(dslCI);
 		}
 
 		vk::DescriptorSetAllocateInfo alloc_info;
@@ -101,7 +88,8 @@ struct sCameraManager : public Singleton<sCameraManager>
 		auto& device = context->m_device;
 		auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 
-		std::vector<vk::BufferMemoryBarrier> to_transfer = {
+		std::vector<vk::BufferMemoryBarrier> to_transfer = 
+		{
 			m_camera.getBufferMemory().makeMemoryBarrierEx().setDstAccessMask(vk::AccessFlagBits::eTransferWrite),
 			m_camera_frustom.getBufferMemory().makeMemoryBarrierEx().setDstAccessMask(vk::AccessFlagBits::eTransferWrite),
 		};

@@ -29,8 +29,8 @@ struct Mesh
 	uint64_t NormalAddress;
 	uint64_t TexcoordAddress;
 
+	uint64_t TangentAddress;
 	uint64_t MaterialAddress;
-	uint64_t _UNUSE;
 
 	uint64_t MeshletDesc;
 	uint64_t MeshletPack;
