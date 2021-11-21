@@ -250,6 +250,27 @@ struct Renderer
 
 	void execute_Render(vk::CommandBuffer cmd, RenderTarget& rt, gltf::gltfResource& model)
 	{
+		DebugLabel _label(cmd, __FUNCTION__);
+
+		{
+			vk::ImageMemoryBarrier image_barrier[1];
+			image_barrier[0].setImage(rt.m_image);
+			image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+			image_barrier[0].setOldLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			image_barrier[0].setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+			image_barrier[0].setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eColorAttachmentOutput,
+				{}, {}, { /*array_size(to_read), to_read*/ }, { array_size(image_barrier), image_barrier });
+		}
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_Render].get());
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 0, { sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA) }, {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 1, { m_ctx->m_DS_Scene.get() }, {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 2, { m_ctx->m_model_resource.m_DS_ModelResource.get() }, {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_Render].get(), 3, { m_DS[DS_Renderer].get() }, {});
+
 		struct ObjectData
 		{
 			mat4 worldMatrix;
@@ -257,29 +278,48 @@ struct Renderer
 		};
 		btr::BufferMemoryEx<ObjectData> object_buffer;
 		{
-			std::array<ObjectData, 1> obj;
-			obj[0].worldMatrix = glm::translate(mat4(1.f), vec3(0.f));
-			obj[0].worldMatrixIT = glm::inverseTranspose(obj[0].worldMatrix);
-			object_buffer = m_ctx->m_ctx->m_vertex_memory.allocateMemory<ObjectData>(1);
-			cmd.updateBuffer<ObjectData>(object_buffer.getInfo().buffer, object_buffer.getInfo().offset, obj);
+			{
+				std::array<ObjectData, 1> obj;
+				obj[0].worldMatrix = glm::translate(mat4(1.f), vec3(0.f));
+				obj[0].worldMatrixIT = glm::inverseTranspose(obj[0].worldMatrix);
+				object_buffer = m_ctx->m_ctx->m_vertex_memory.allocateMemory<ObjectData>(1);
+				cmd.updateBuffer<ObjectData>(object_buffer.getInfo().buffer, object_buffer.getInfo().offset, obj);
+			}
+
+			vk::BufferMemoryBarrier barrier[] = {
+				object_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eTaskShaderNV | vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, { array_size(barrier), barrier }, {});
+
 		}
 
+		vk::RenderPassBeginInfo begin_render_Info;
+		begin_render_Info.setRenderPass(m_renderpass.get());
+		begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), rt.m_resolution));
+		begin_render_Info.setFramebuffer(m_framebuffer.get());
+		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
-		btr::BufferMemoryEx<IndirectCmd> b_render_cmd = m_ctx->m_ctx->m_vertex_memory.allocateMemory<IndirectCmd>(1);
-		std::array<IndirectCmd, 1> render_cmd;
-		render_cmd[0].task = model.m_mesh[0].m_primitive[0].m_task;
-		render_cmd[0].PrimitiveAddress = model.m_mesh[0].b_primitive.getDeviceAddress();
-		cmd.updateBuffer<IndirectCmd>(b_render_cmd.getInfo().buffer, b_render_cmd.getInfo().offset, render_cmd);
-		btr::BufferMemoryEx<uint32_t> b_cmd_counter = m_ctx->m_ctx->m_vertex_memory.allocateMemory<uint32_t>(1);
-		cmd.fillBuffer(b_cmd_counter.getInfo().buffer, b_cmd_counter.getInfo().offset, b_cmd_counter.getInfo().range, 1u);
-
-		vk::BufferMemoryBarrier barrier[] = {
-			object_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-			b_render_cmd.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eIndirectCommandRead),
-			b_cmd_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eIndirectCommandRead),
-		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eTaskShaderNV|vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, { array_size(barrier), barrier }, {});
-		execute_Render(cmd, rt, b_render_cmd.getInfo(), b_cmd_counter.getInfo(), object_buffer.getInfo());
+		for (auto& mesh : model.m_mesh)
+		{
+			vk::DescriptorBufferInfo storages[] =
+			{
+				mesh.b_primitive.getInfo(),
+				object_buffer.getInfo(),
+			};
+			vk::WriteDescriptorSet write[] =
+			{
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(array_length(storages))
+				.setPBufferInfo(storages)
+				.setDstBinding(0)
+				.setDstSet(m_DS[DS_Renderer].get()),
+			};
+			m_ctx->m_ctx->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
+			
+			cmd.drawMeshTasksIndirectNV(mesh.b_primitive.getInfo().buffer, mesh.b_primitive.getInfo().offset, mesh.m_primitive.size(), sizeof(Primitive));
+		}
+		cmd.endRenderPass();
 
 	}
 

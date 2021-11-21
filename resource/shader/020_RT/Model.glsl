@@ -18,6 +18,7 @@ struct VkDrawMeshTasksIndirectCommand
     uint    taskCount;
     uint    firstTask;
 };
+
 struct Mesh
 {
 	VkDrawMeshTasksIndirectCommand task;
@@ -53,15 +54,15 @@ struct Material
 	vec3  m_emissive_factor;
 	float _p11;
 
-	uint TexID_Base;
-	uint TexID_MR;
-	uint TexID_AO;
-	uint TexID_Normal;
+	int TexID_Base;
+	int TexID_MR;
+	int TexID_AO;
+	int TexID_Normal;
 
-	uint TexID_Emissive;
-	uint Tex_Base_;
-	uint Tex_Bas_e;
-	uint Tex_Ba_se;
+	int TexID_Emissive;
+	int Tex_Base_;
+	int Tex_Bas_e;
+	int Tex_Ba_se;
 };
 
 layout(set=USE_Model_Resource, binding=0, buffer_reference, scalar) buffer MeshBuffer {Mesh b_mesh[]; };

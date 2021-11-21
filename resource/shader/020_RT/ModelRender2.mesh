@@ -143,9 +143,9 @@ void procAttributes(uint meshletID, const uint vert, uint vidx)
 
 void main()
 {
-	IndirectCmd RenderCmd = b_cmd[gl_DrawIDARB];
-	u_object = b_object[gl_DrawIDARB];
-	u_mesh = MeshBuffer(RenderCmd.PrimitiveAddress).b_mesh[0];
+	IndirectCmd RenderCmd = b_cmd[0];
+	u_object = b_object[0];
+	u_mesh = MeshBuffer(RenderCmd.PrimitiveAddress).b_mesh[gl_DrawIDARB];
 
 	// gl_WorkGroupID.x runs from [0 .. parentTask.gl_TaskCountNV - 1]
 	uint meshletID = IN.baseID + IN.subIDs[gl_WorkGroupID.x];

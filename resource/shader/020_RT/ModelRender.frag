@@ -228,13 +228,13 @@ void main()
 
 	const float u_OcclusionStrength = 1.0f;
 	// Apply optional PBR terms for additional (optional) shading
-//	if (material.occlusionTextureSet > -1) 
+	if (u_material.TexID_AO > -1) 
 	{
 		float ao = texture(t_ModelTexture[nonuniformEXT(u_material.TexID_AO)], In.Texcoord_0).r;
 		color = mix(color, color * ao, u_OcclusionStrength);
 	}
 
-//	if (material.emissiveTextureSet > -1) 
+	if (u_material.TexID_Emissive > -1) 
 	{
 		vec3 emissive = SRGBtoLINEAR(texture(t_ModelTexture[nonuniformEXT(u_material.TexID_Emissive)], In.Texcoord_0)).rgb * u_material.m_emissive_factor;
 		color += emissive;

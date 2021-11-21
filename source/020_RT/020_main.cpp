@@ -1504,8 +1504,8 @@ int main()
 
 	DrawHelper draw_helper{ context };
 
-	std::shared_ptr<gltf::gltfResource> model = ctx->m_model_resource.LoadScene(*context, setup_cmd, btr::getResourceAppPath() + "pbr/DamagedHelmet.gltf");
-//	std::shared_ptr<gltf::gltfResource> model = ctx->m_model_resource.LoadScene(*context, setup_cmd, btr::getResourceAppPath() + "Sponza/Sponza.gltf");
+//	std::shared_ptr<gltf::gltfResource> model = ctx->m_model_resource.LoadScene(*context, setup_cmd, btr::getResourceAppPath() + "pbr/DamagedHelmet.gltf");
+	std::shared_ptr<gltf::gltfResource> model = ctx->m_model_resource.LoadScene(*context, setup_cmd, btr::getResourceAppPath() + "Sponza/Sponza.gltf");
 
 	Renderer renderer(*ctx, *app.m_window->getFrontBuffer());
 	Skybox skybox(*ctx, setup_cmd, *app.m_window->getFrontBuffer());

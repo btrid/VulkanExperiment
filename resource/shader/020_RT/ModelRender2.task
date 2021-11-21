@@ -37,9 +37,9 @@ taskNV out Task
 
 void main()
 {
-	IndirectCmd RenderCmd = b_cmd[gl_DrawIDARB];
-	ObjectData instance = b_object[gl_DrawIDARB];
-	Mesh mesh = MeshBuffer(RenderCmd.PrimitiveAddress).b_mesh[0];
+	IndirectCmd RenderCmd = b_cmd[0];
+	ObjectData instance = b_object[0];
+	Mesh mesh = MeshBuffer(RenderCmd.PrimitiveAddress).b_mesh[gl_DrawIDARB];
 
 	uint baseID = gl_WorkGroupID.x * GROUP_SIZE;
 	uint laneID = gl_LocalInvocationID.x;
