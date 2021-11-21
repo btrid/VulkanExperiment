@@ -1463,26 +1463,10 @@ struct Skybox
 #include <020_RT/Renderer.h>
 int main()
 {
-
-	{
-		uint32_t a = ~0;
-		uint32_t b = ~0;
-		auto c = a + b;
-		auto c2 = (a + b) < ~0;
-		auto A = 127;
-		auto B = 9217;
-		auto C = glm::findMSB(A ^ B);
-		uint32_t primitiveBits = 1;
-		uint32_t maxBlockBits = ~0;
-		uint32_t primBits = (200 - 1) * 3 * primitiveBits;
-		uint32_t vertBits = (300 - 1) * 571925;
-		bool     state = (primBits + vertBits) <= maxBlockBits;
-		int _ = 0;
-	}
 	auto camera = cCamera::sCamera::Order().create();
-	camera->getData().m_position = vec3(-0.2f, 3.1f, 0.02f);
-	camera->getData().m_target = vec3(-0.2f, 1.1f, -0.03f);
-	camera->getData().m_up = vec3(0.f, 0.f, 1.f);
+	camera->getData().m_position = vec3(-30.0f, 3.1f, 0.02f);
+	camera->getData().m_target = vec3(0.f);
+	camera->getData().m_up = vec3(0.f, -1.f, 0.f);
 	camera->getData().m_width = 1024;
 	camera->getData().m_height = 1024;
 	camera->getData().m_far = 5000.f;
@@ -1621,7 +1605,7 @@ int main()
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				{
 					ctx->execute(cmd);
-					skybox.execute_Render(cmd, *ctx, *render_target);
+//					skybox.execute_Render(cmd, *ctx, *render_target);
 					renderer.execute_Render(cmd, *render_target, *model);
 //					renderer.execute_Render(cmd, *render_target, b_render_cmd.getInfo(), b_cmd_counter.getInfo(), object_buffer.getInfo());
 //					draw_helper.draw(*context, cmd, *render_target, ctx->m_lut.m_brgf_lut);

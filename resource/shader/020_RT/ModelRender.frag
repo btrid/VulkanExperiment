@@ -164,7 +164,7 @@ void main()
 
 	MaterialBuffer mat  = MaterialBuffer(In.MaterialAddress);
 	u_material = mat.m[0];
-	vec4 basecolor = SRGBtoLINEAR(texture(t_ModelTexture[nonuniformEXT(u_material.TexID_Base)], In.Texcoord_0.xy)) * u_material.m_basecolor_factor;
+	vec4 basecolor = SRGBtoLINEAR(texture(t_ModelTexture[nonuniformEXT(u_material.TexID_Base)], In.Texcoord_0.xy)) * u_material.m_basecolor_factor * 2.;
 
 	// Metallic and Roughness material properties are packed together
 	// In glTF, these factors can be specified by fixed scalar values

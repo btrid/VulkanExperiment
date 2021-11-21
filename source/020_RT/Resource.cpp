@@ -181,7 +181,7 @@ std::shared_ptr<gltf::gltfResource> Resource::LoadScene(btr::Context& ctx, vk::C
 
 			vk::ImageCreateInfo image_info;
 			image_info.imageType = vk::ImageType::e2D;
-			image_info.format = vk::Format::eR8G8B8A8Unorm;//GLtoVK::toFormat(image.pixel_type, image.component, image.bits);
+			image_info.format = GLtoVK::toFormat(image.pixel_type, image.component, image.bits);
 			image_info.mipLevels = 1;
 			image_info.arrayLayers = 1;
 			image_info.samples = vk::SampleCountFlagBits::e1;

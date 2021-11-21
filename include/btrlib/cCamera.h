@@ -88,7 +88,8 @@ public:
 			m_data.m_position += (s*move.x + f*move.y) * distance * deltaTime;
 			m_data.m_target += (s*move.x + f*move.y) * distance * deltaTime;
 
-		}else if (input.m_mouse.isHold(cMouse::BUTTON_LEFT))
+		}
+		else if (input.m_mouse.isHold(cMouse::BUTTON_LEFT))
 		{
 			// XY•½–Ê‚ÌˆÚ“®
 			auto move = vec2(input.m_mouse.getMove());
