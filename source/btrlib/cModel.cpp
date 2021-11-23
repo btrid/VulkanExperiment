@@ -12,6 +12,7 @@
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 #include <assimp/material.h>
+#include <assimp/pbrmaterial.h>
 
 namespace {
 	glm::mat4 AI_TO(aiMatrix4x4& from)
@@ -54,11 +55,11 @@ std::vector<cModel::Material> loadMaterial(const aiScene* scene, const std::stri
 		_copy(color, mat.mEmissive);
 		aiMat->Get(AI_MATKEY_SHININESS, mat.mShininess);
 #undef _copy
+		
 		aiString str;
 		aiTextureMapMode mapmode[3];
 		aiTextureMapping mapping;
 		unsigned uvIndex;
-
 		struct  
 		{
 			aiTextureType type;
@@ -72,15 +73,18 @@ std::vector<cModel::Material> loadMaterial(const aiScene* scene, const std::stri
 			{aiTextureType_HEIGHT, cModel::ResourceTextureIndex_Height},
 			{aiTextureType_BASE_COLOR, cModel::ResourceTextureIndex_Base},
 			{aiTextureType_NORMAL_CAMERA, cModel::ResourceTextureIndex_NormalCamera},
-			{aiTextureType_EMISSION_COLOR, cModel::ResourceTextureIndex_Emissive},
+ 			{aiTextureType_EMISSION_COLOR, cModel::ResourceTextureIndex_Emissive},
 			{aiTextureType_METALNESS, cModel::ResourceTextureIndex_Metalness},
 			{aiTextureType_DIFFUSE_ROUGHNESS, cModel::ResourceTextureIndex_DiffuseRoughness},
 			{aiTextureType_AMBIENT_OCCLUSION, cModel::ResourceTextureIndex_AmbientOcclusion},
-		};
+ 		};
 		for (auto& t : tex_type)
 		{
-			if (aiMat->GetTexture(t.type, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode)) { mat.mTex[t.index].load(context, cmd, path + "/" + str.C_Str()); }
+			if (aiMat->GetTexture(t.type, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode) == aiReturn_SUCCESS) { mat.mTex[t.index].load(context, cmd, path + "/" + str.C_Str()); }
 		}
+		if (aiMat->GetTexture(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE, &str, &mapping, &uvIndex, NULL, NULL, mapmode) == aiReturn_SUCCESS) { mat.mTex[cModel::ResourceTextureIndex_Diffuse].load(context, cmd, path + "/" + str.C_Str()); };
+		if (aiMat->GetTexture(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE, &str, &mapping, &uvIndex, NULL, NULL, mapmode) == aiReturn_SUCCESS) { mat.mTex[cModel::ResourceTextureIndex_Metalness].load(context, cmd, path + "/" + str.C_Str()); };
+		//		AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE
 	}
 	return material;
 }
@@ -178,7 +182,6 @@ void cModel::load(const std::shared_ptr<btr::Context>& context, const std::strin
 		| aiProcess_RemoveRedundantMaterials
 		| aiProcess_SplitLargeMeshes
 		| aiProcess_SortByPType
-//		| aiProcess_OptimizeMeshes
 		| aiProcess_Triangulate
 //		| aiProcess_MakeLeftHanded
 		;

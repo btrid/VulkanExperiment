@@ -52,6 +52,7 @@ Material u_material;
 // or from the interpolated mesh normal and tangent attributes.
 vec3 getNormal()
 {
+	return In.Normal;
 	// Perturb normal, see http://www.thetenthplanet.de/archives/1180
 	vec3 tangentNormal = texture(t_ModelTexture[nonuniformEXT(u_material.TexID_Normal)], In.Texcoord_0).xyz * 2.0 - 1.0;
 
@@ -130,24 +131,20 @@ float microfacetDistribution(PBRInfo pbrInputs)
 	return roughnessSq / (M_PI * f * f);
 }
 
-// Gets metallic factor from specular glossiness workflow inputs 
-/*
-float convertMetallic(vec3 diffuse, vec3 specular, float maxSpecular) 
-{
-	float perceivedDiffuse = sqrt(0.299 * diffuse.r * diffuse.r + 0.587 * diffuse.g * diffuse.g + 0.114 * diffuse.b * diffuse.b);
-	float perceivedSpecular = sqrt(0.299 * specular.r * specular.r + 0.587 * specular.g * specular.g + 0.114 * specular.b * specular.b);
-	if (perceivedSpecular < c_MinRoughness) 
-	{
-		return 0.0;
-	}
-	float a = c_MinRoughness;
-	float b = perceivedDiffuse * (1.0 - maxSpecular) / (1.0 - c_MinRoughness) + perceivedSpecular - 2.0 * c_MinRoughness;
-	float c = c_MinRoughness - perceivedSpecular;
-	float D = max(b * b - 4.0 * a * c, 0.0);
-	return clamp((-b + sqrt(D)) / (2.0 * a), 0.0, 1.0);
-}
-*/
 
+vec3 light()
+{
+	float t = 0.;
+	float tmax = 99999.;
+	rayQueryEXT rq;
+	rayQueryInitializeEXT(rq, u_TLAS_Scene, gl_RayFlagsOpaqueEXT, 0xFF, In.WorldPos, t, In.Normal, tmax);
+	while(rayQueryProceedEXT(rq)) {}
+
+	t = rayQueryGetIntersectionTEXT(rq, true);
+	float isOcclude = t<tmax ? 1. : 0.;
+
+	return In.WorldPos;
+};
 
 // 0度でのフレネル反射率
 const vec3 f0 = vec3(0.04);
@@ -156,22 +153,11 @@ const vec3 f0 = vec3(0.04);
 
 void main()
 {
-//	IndirectCmd RenderCmd = b_cmd[gl_DrawIDARB];
-//	u_object = b_object[gl_DrawIDARB];
-//	Mesh mesh = MeshBuffer(RenderCmd.PrimitiveAddress).b_mesh[0];
-//	FragColor = vec4(1.);
-//	return;
 
 	MaterialBuffer mat  = MaterialBuffer(In.MaterialAddress);
 	u_material = mat.m[0];
-	vec4 basecolor = SRGBtoLINEAR(texture(t_ModelTexture[nonuniformEXT(u_material.TexID_Base)], In.Texcoord_0.xy)) * u_material.m_basecolor_factor * 2.;
+	vec4 basecolor = SRGBtoLINEAR(texture(t_ModelTexture[nonuniformEXT(u_material.TexID_Base)], In.Texcoord_0.xy)) * u_material.m_basecolor_factor;
 
-	// Metallic and Roughness material properties are packed together
-	// In glTF, these factors can be specified by fixed scalar values
-	// or from a metallic-roughness map
-
-	// Roughness is stored in the 'g' channel, metallic is stored in the 'b' channel.
-	// This layout intentionally reserves the 'r' channel for (optional) occlusion map data
 	vec4 mrSample = texture(t_ModelTexture[nonuniformEXT(u_material.TexID_MR)], In.Texcoord_0.xy);
 	float perceptualRoughness = mrSample.g * u_material.m_roughness_factor;
 	float metallic = mrSample.b * u_material.m_metallic_factor;
@@ -193,7 +179,7 @@ void main()
 
 	vec3 n = getNormal();
 	vec3 v = normalize(u_camera[0].u_eye.xyz - In.WorldPos.xyz);
-	vec3 l = normalize(vec3(0.6, -1.5, 0.5));
+	vec3 l = normalize(vec3(0.6, 1.5, 0.5));
 	vec3 h = normalize(l+v);
 	vec3 reflection = -normalize(reflect(v, n));
 	reflection.y *= -1.0f;
@@ -220,11 +206,9 @@ void main()
 	vec3 diffuseContrib = (1.0 - F) * diffuse(pbrInputs);
 	vec3 specContrib = F * G * D / (4.0 * pbrInputs.NdotL * pbrInputs.NdotV);
 	// Obtain final intensity as reflectance (BRDF) scaled by the energy of the light (cosine law)
-#define LightColor vec3(1.)
+#define LightColor vec3(10.)
 	vec3 color = pbrInputs.NdotL * LightColor * (diffuseContrib + specContrib);
-
-	// Calculate lighting contribution from image based lighting source (IBL)
-	color += getIBLContribution(pbrInputs, n, reflection);
+//	color += getIBLContribution(pbrInputs, n, reflection);
 
 	const float u_OcclusionStrength = 1.0f;
 	// Apply optional PBR terms for additional (optional) shading

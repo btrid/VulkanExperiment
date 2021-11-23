@@ -1,6 +1,8 @@
 #ifndef PBR_H_
 #define PBR_H_
 
+#extension GL_EXT_ray_query : require
+
 // https://substance3d.adobe.com/tutorials/courses/the-pbr-guide-part-1
 // https://substance3d.adobe.com/tutorials/courses/the-pbr-guide-part-2
 
@@ -24,11 +26,12 @@ layout(set=USE_Render_Scene, binding=0, std140) uniform UScene
 {
 	RenderConfig u_render_config;
 };
-layout (set=USE_Render_Scene, binding=10) uniform sampler2D t_brdf_lut;
-layout (set=USE_Render_Scene, binding=11) uniform samplerCube t_environment;
-layout (set=USE_Render_Scene, binding=12) uniform samplerCube t_environment_irradiance;
-layout (set=USE_Render_Scene, binding=13) uniform samplerCube t_environment_prefiltered;
+layout(set=USE_Render_Scene, binding=10) uniform sampler2D t_brdf_lut;
+layout(set=USE_Render_Scene, binding=11) uniform samplerCube t_environment;
+layout(set=USE_Render_Scene, binding=12) uniform samplerCube t_environment_irradiance;
+layout(set=USE_Render_Scene, binding=13) uniform samplerCube t_environment_prefiltered;
 
+layout(set=USE_Render_Scene, binding=50) uniform accelerationStructureEXT u_TLAS_Scene;
 
 
 vec3 Uncharted2Tonemap(vec3 color)

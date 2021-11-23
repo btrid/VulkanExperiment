@@ -251,6 +251,7 @@ void ResourceTexture::load(const std::shared_ptr<btr::Context>& context, vk::Com
 	m_resource->m_memory = std::move(image_memory);
 	m_resource->m_image_view = context->m_device.createImageViewUnique(view_info);
 	m_resource->m_sampler = context->m_device.createSamplerUnique(sampler_info);
+	m_resource->m_filename = filename;
 }
 
 void ResourceTexture::make(btr::Context& ctx, vk::CommandBuffer cmd, const std::string& filename, const vk::ImageCreateInfo& info, const std::vector<byte>& data)
