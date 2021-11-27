@@ -168,6 +168,11 @@ std::shared_ptr<gltf::gltfResource> Resource::LoadScene(btr::Context& ctx, vk::C
 			vk::BufferCopy copy = vk::BufferCopy().setSize(gltf_model.buffers[i].data.size()).setSrcOffset(staging[i].getInfo().offset).setDstOffset(resource->b_buffer[i].getInfo().offset);
 			cmd.copyBuffer(staging[i].getInfo().buffer, resource->b_buffer[i].getInfo().buffer, copy);
 
+			vk::BufferMemoryBarrier barrier[] = {
+				resource->b_buffer[i].makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
+
 		}
 	}
 
@@ -394,11 +399,11 @@ std::shared_ptr<gltf::gltfResource> Resource::LoadScene(btr::Context& ctx, vk::C
 				auto vertex_attrib = primitive.attributes.find("POSITION");
 				const tinygltf::Accessor& vertex_accessor = gltf_model.accessors[vertex_attrib->second];
 				const tinygltf::BufferView& vertex_bufferview = gltf_model.bufferViews[vertex_accessor.bufferView];
-				const tinygltf::Accessor& accessor = gltf_model.accessors[primitive.indices];
-				const tinygltf::BufferView& bufferview = gltf_model.bufferViews[accessor.bufferView];
+				const tinygltf::Accessor& index_accessor = gltf_model.accessors[primitive.indices];
+				const tinygltf::BufferView& index_bufferview = gltf_model.bufferViews[index_accessor.bufferView];
 
 				vk::IndexType indextype = vk::IndexType::eUint32;
-				switch (accessor.componentType)
+				switch (index_accessor.componentType)
 				{
 				case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT: indextype = vk::IndexType::eUint32; break;
 				case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT: indextype = vk::IndexType::eUint16; break;
@@ -409,17 +414,17 @@ std::shared_ptr<gltf::gltfResource> Resource::LoadScene(btr::Context& ctx, vk::C
 				vk::AccelerationStructureGeometryKHR ASGeom;
 				ASGeom.flags = vk::GeometryFlagBitsKHR::eNoDuplicateAnyHitInvocation;
 				ASGeom.geometryType = vk::GeometryTypeKHR::eTriangles;
-				ASGeom.geometry.triangles.maxVertex = vertex_accessor.count/3;
+				ASGeom.geometry.triangles.maxVertex = vertex_accessor.count;
 				ASGeom.geometry.triangles.vertexFormat = vk::Format::eR32G32B32Sfloat;
-				ASGeom.geometry.triangles.vertexData.deviceAddress = resource->b_buffer[vertex_bufferview.buffer].getDeviceAddress();
+				ASGeom.geometry.triangles.vertexData.deviceAddress = resource->b_buffer[vertex_bufferview.buffer].getDeviceAddress() + vertex_bufferview.byteOffset;
 				ASGeom.geometry.triangles.vertexStride = sizeof(vec3);
 				ASGeom.geometry.triangles.indexType = indextype;
-				ASGeom.geometry.triangles.indexData.deviceAddress = resource->b_buffer[bufferview.buffer].getDeviceAddress();
+				ASGeom.geometry.triangles.indexData.deviceAddress = resource->b_buffer[index_bufferview.buffer].getDeviceAddress() + index_bufferview.byteOffset;
 				blas_geom.push_back(ASGeom);
 
-				primitive_count.push_back(accessor.count/3);
+				primitive_count.push_back(index_accessor.count/3);
 
-				acceleration_buildrangeinfo.emplace_back(accessor.count/3 , 0, 0, 0);
+				acceleration_buildrangeinfo.emplace_back(index_accessor.count/3 , 0, 0, 0);
 			}
 		}
 

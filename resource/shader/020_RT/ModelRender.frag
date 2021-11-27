@@ -134,10 +134,10 @@ float microfacetDistribution(PBRInfo pbrInputs)
 
 vec3 DirectLight()
 {
-	float t = 0.;
-	float tmax = 9.;
+	float t = 0.0001;
+	float tmax = 99999.;
 	rayQueryEXT rq;
-	rayQueryInitializeEXT(rq, u_TLAS_Scene, gl_RayFlagsOpaqueEXT, 0xFF, In.WorldPos, t, u_light_dir, tmax);
+	rayQueryInitializeEXT(rq, u_TLAS_Scene, gl_RayFlagsOpaqueEXT, 0xFF, In.WorldPos.xyz, t, u_light_dir, tmax);
 	while(rayQueryProceedEXT(rq)) {}
 
 	t = rayQueryGetIntersectionTEXT(rq, true);
@@ -154,7 +154,7 @@ const vec3 f0 = vec3(0.04);
 
 void main()
 {
-	u_light_dir = normalize(vec3(0.6, 1.5, 0.5));
+	u_light_dir = normalize(vec3(0.2, 1.5, 0.2));
 	MaterialBuffer mat  = MaterialBuffer(In.MaterialAddress);
 	u_material = mat.m[0];
 	vec4 basecolor = SRGBtoLINEAR(texture(t_ModelTexture[nonuniformEXT(u_material.TexID_Base)], In.Texcoord_0.xy)) * u_material.m_basecolor_factor;
