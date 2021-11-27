@@ -46,7 +46,7 @@ struct PBRInfo
 };
 
 Material u_material;
-
+vec3 u_light_dir;
 
 // Find the normal for this fragment, pulling either from a predefined normal map
 // or from the interpolated mesh normal and tangent attributes.
@@ -132,18 +132,19 @@ float microfacetDistribution(PBRInfo pbrInputs)
 }
 
 
-vec3 light()
+vec3 DirectLight()
 {
 	float t = 0.;
-	float tmax = 99999.;
+	float tmax = 9.;
 	rayQueryEXT rq;
-	rayQueryInitializeEXT(rq, u_TLAS_Scene, gl_RayFlagsOpaqueEXT, 0xFF, In.WorldPos, t, In.Normal, tmax);
+	rayQueryInitializeEXT(rq, u_TLAS_Scene, gl_RayFlagsOpaqueEXT, 0xFF, In.WorldPos, t, u_light_dir, tmax);
 	while(rayQueryProceedEXT(rq)) {}
 
 	t = rayQueryGetIntersectionTEXT(rq, true);
-	float isOcclude = t<tmax ? 1. : 0.;
+	float LightPower = t>=tmax ? 1. : 0.;
 
-	return In.WorldPos;
+#define LightColor vec3(10.)
+	return LightPower * LightColor;
 };
 
 // 0度でのフレネル反射率
@@ -153,7 +154,7 @@ const vec3 f0 = vec3(0.04);
 
 void main()
 {
-
+	u_light_dir = normalize(vec3(0.6, 1.5, 0.5));
 	MaterialBuffer mat  = MaterialBuffer(In.MaterialAddress);
 	u_material = mat.m[0];
 	vec4 basecolor = SRGBtoLINEAR(texture(t_ModelTexture[nonuniformEXT(u_material.TexID_Base)], In.Texcoord_0.xy)) * u_material.m_basecolor_factor;
@@ -179,7 +180,7 @@ void main()
 
 	vec3 n = getNormal();
 	vec3 v = normalize(u_camera[0].u_eye.xyz - In.WorldPos.xyz);
-	vec3 l = normalize(vec3(0.6, 1.5, 0.5));
+	vec3 l = u_light_dir;
 	vec3 h = normalize(l+v);
 	vec3 reflection = -normalize(reflect(v, n));
 	reflection.y *= -1.0f;
@@ -206,8 +207,7 @@ void main()
 	vec3 diffuseContrib = (1.0 - F) * diffuse(pbrInputs);
 	vec3 specContrib = F * G * D / (4.0 * pbrInputs.NdotL * pbrInputs.NdotV);
 	// Obtain final intensity as reflectance (BRDF) scaled by the energy of the light (cosine law)
-#define LightColor vec3(10.)
-	vec3 color = pbrInputs.NdotL * LightColor * (diffuseContrib + specContrib);
+	vec3 color = pbrInputs.NdotL * DirectLight() * (diffuseContrib + specContrib);
 //	color += getIBLContribution(pbrInputs, n, reflection);
 
 	const float u_OcclusionStrength = 1.0f;

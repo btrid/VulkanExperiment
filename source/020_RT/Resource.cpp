@@ -302,17 +302,8 @@ std::shared_ptr<gltf::gltfResource> Resource::LoadScene(btr::Context& ctx, vk::C
 			const tinygltf::Accessor& vertex_accessor = gltf_model.accessors[vertex_attrib->second];
 			const tinygltf::BufferView& vertex_bufferview = gltf_model.bufferViews[vertex_accessor.bufferView];
 
-			vec3 bbox_min{ FLT_MAX };
-			vec3 bbox_max{ -FLT_MAX };
-			auto* vertex_v3 = (vec3*)(gltf_model.buffers[vertex_bufferview.buffer].data.data() + vertex_bufferview.byteOffset);
-			for (size_t vi = 0; vi < vertex_accessor.count / 3; vi++)
-			{
-				bbox_max = glm::max(bbox_max, vertex_v3[vi]);
-				bbox_min = glm::min(bbox_min, vertex_v3[vi]);
-			}
-			primitive.m_aabb_min = bbox_min;
-			primitive.m_aabb_max = bbox_max;
-
+			primitive.m_aabb_min = vec3(vertex_accessor.minValues[0], vertex_accessor.minValues[1], vertex_accessor.minValues[2]);
+			primitive.m_aabb_max = vec3(vertex_accessor.maxValues[0], vertex_accessor.maxValues[1], vertex_accessor.maxValues[2]);;
 			auto* indices = (gltf_model.buffers[bufferview_index.buffer].data.data() + bufferview_index.byteOffset);
 
 			uint32_t processedIndices;
@@ -326,16 +317,17 @@ std::shared_ptr<gltf::gltfResource> Resource::LoadScene(btr::Context& ctx, vk::C
 			// std::cout << "warning: geometry meshlet incomplete" << std::endl;
 			assert(processedIndices == indexAccessor.count);
 
-			meshletBuilder.buildMeshletEarlyCulling(meshlet, (float*)&bbox_min, (float*)&bbox_max, (float*)vertex_v3, sizeof(float) * 3);
+			auto* vertex = (float*)(gltf_model.buffers[vertex_bufferview.buffer].data.data() + vertex_bufferview.byteOffset);
+			meshletBuilder.buildMeshletEarlyCulling(meshlet, (float*)&primitive.m_aabb_min, (float*)&primitive.m_aabb_min, vertex, sizeof(float) * 3);
 
 			{
 #if defined(_DEBUG)
 				NVMeshlet::StatusCode errorcode = NVMeshlet::STATUS_NO_ERROR;
 				switch (indexAccessor.componentType)
 				{
-				case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT: errorcode = meshletBuilder.errorCheck<uint32_t>(meshlet, 0, vertex_accessor.count - 1, indexAccessor.count, (uint32_t*)indices); break;
-				case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT: errorcode = meshletBuilder.errorCheck<uint16_t>(meshlet, 0, vertex_accessor.count - 1, indexAccessor.count, (uint16_t*)indices); break;
-				case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: errorcode = meshletBuilder.errorCheck<uint8_t>(meshlet, 0, vertex_accessor.count - 1, indexAccessor.count, (uint8_t*)indices); break;
+				case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT: errorcode = meshletBuilder.errorCheck<uint32_t>(meshlet, 0, vertex_accessor.count, indexAccessor.count, (uint32_t*)indices); break;
+				case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT: errorcode = meshletBuilder.errorCheck<uint16_t>(meshlet, 0, vertex_accessor.count, indexAccessor.count, (uint16_t*)indices); break;
+				case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: errorcode = meshletBuilder.errorCheck<uint8_t>(meshlet, 0, vertex_accessor.count, indexAccessor.count, (uint8_t*)indices); break;
 				default: assert(false); break;
 				}
 				if (errorcode)
@@ -343,11 +335,12 @@ std::shared_ptr<gltf::gltfResource> Resource::LoadScene(btr::Context& ctx, vk::C
 					std::cout << "geometry: meshlet error" << errorcode;
 					assert(errorcode == NVMeshlet::STATUS_NO_ERROR);
 				}
+
+// 				NVMeshlet::Stats statsLocal;
+// 				meshletBuilder.appendStats(meshlet, statsLocal);
+// 				statsLocal.fprint(stdout);
 #endif
 
-				NVMeshlet::Stats statsLocal;
-				meshletBuilder.appendStats(meshlet, statsLocal);
-				statsLocal.fprint(stdout);
 			}
 
 			meshlet.meshletDescriptors.resize(btr::align<uint32_t>(meshlet.meshletDescriptors.size(), 32));
@@ -357,7 +350,6 @@ std::shared_ptr<gltf::gltfResource> Resource::LoadScene(btr::Context& ctx, vk::C
 			primitive.m_task.setFirstTask(0);
 			primitive.m_task.setTaskCount(meshlet.meshletDescriptors.size() / MESHLETS_PER_TASK);
 
-//			primitive.MeshletPack
 			mesh.b_MeshletDesc[i] = ctx.m_vertex_memory.allocateMemory<NVMeshlet::MeshletPackBasicDesc>(meshlet.meshletDescriptors.size());
 			mesh.b_MeshletPack[i] = ctx.m_vertex_memory.allocateMemory<NVMeshlet::PackBasicType>(meshlet.meshletPacks.size());
 
@@ -425,9 +417,9 @@ std::shared_ptr<gltf::gltfResource> Resource::LoadScene(btr::Context& ctx, vk::C
 				ASGeom.geometry.triangles.indexData.deviceAddress = resource->b_buffer[bufferview.buffer].getDeviceAddress();
 				blas_geom.push_back(ASGeom);
 
-				primitive_count.push_back(accessor.count);
+				primitive_count.push_back(accessor.count/3);
 
-				acceleration_buildrangeinfo.emplace_back(accessor.count, 0, 0, 0);
+				acceleration_buildrangeinfo.emplace_back(accessor.count/3 , 0, 0, 0);
 			}
 		}
 

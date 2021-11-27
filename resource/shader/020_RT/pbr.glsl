@@ -31,7 +31,7 @@ layout(set=USE_Render_Scene, binding=11) uniform samplerCube t_environment;
 layout(set=USE_Render_Scene, binding=12) uniform samplerCube t_environment_irradiance;
 layout(set=USE_Render_Scene, binding=13) uniform samplerCube t_environment_prefiltered;
 
-layout(set=USE_Render_Scene, binding=50) uniform accelerationStructureEXT u_TLAS_Scene;
+layout(set=USE_Render_Scene, binding=100) uniform accelerationStructureEXT u_TLAS_Scene;
 
 
 vec3 Uncharted2Tonemap(vec3 color)

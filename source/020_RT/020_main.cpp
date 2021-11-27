@@ -843,6 +843,7 @@ struct Context
 
 	std::shared_ptr<btr::Context> m_ctx;
 	vk::UniqueDescriptorSetLayout m_DSL[DSL_Num];
+	vk::UniqueDescriptorSet m_DS_Scene;
 
 
 	struct RenderConfig
@@ -861,18 +862,16 @@ struct Context
 	Environment m_env;
 	AppImage m_environment;
 	std::array<AppImage, 2> m_environment_filter;
+	AppImage m_environment_debug;
 
 	RenderConfig m_render_config;
 	btr::BufferMemoryEx<RenderConfig> u_render_config;
 
 	BRDFLookupTable m_lut;
-	AppImage m_environment_debug;
 
-	vk::UniqueDescriptorSet m_DS_Scene;
-	vk::UniqueDescriptorSet m_DS_Model;
 
 	Resource m_model_resource;
-	TLAS m_TLAS;
+	TLAS u_TLAS_Scene;
 
 	Context(std::shared_ptr<btr::Context>& ctx, vk::CommandBuffer cmd)
 		: m_env(*ctx, cmd)
@@ -1214,7 +1213,7 @@ struct Context
 	}
 	void execute_tlas(vk::CommandBuffer cmd, btr::BufferMemoryEx<vk::AccelerationStructureInstanceKHR>& instances)
 	{
-		TLAS old = std::move(m_TLAS);
+		TLAS old = std::move(u_TLAS_Scene);
 		auto& ctx = *m_ctx;
 
 		vk::AccelerationStructureGeometryKHR TLASGeom;
@@ -1240,22 +1239,37 @@ struct Context
 		accelerationCI.buffer = AS_buffer.getInfo().buffer;
 		accelerationCI.offset = AS_buffer.getInfo().offset;
 		accelerationCI.size = AS_buffer.getInfo().range;
-		m_TLAS.m_AS = ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
-		TLAS_BI.dstAccelerationStructure = m_TLAS.m_AS.get();
+		u_TLAS_Scene.m_AS = ctx.m_device.createAccelerationStructureKHRUnique(accelerationCI);
+		TLAS_BI.dstAccelerationStructure = u_TLAS_Scene.m_AS.get();
 
 		auto scratch_buffer = ctx.m_storage_memory.allocateMemory(size_info.buildScratchSize, true);
 		TLAS_BI.scratchData.deviceAddress = scratch_buffer.getDeviceAddress();
 
 		vk::AccelerationStructureBuildRangeInfoKHR range;
-		range.primitiveCount = 1;
+		range.primitiveCount = instances.getDescriptor().element_num;
 		range.primitiveOffset = 0;
 		range.firstVertex = 0;
 		range.transformOffset = 0;
 
 		cmd.buildAccelerationStructuresKHR({ TLAS_BI }, { &range });
-		m_TLAS.m_AS_buffer = std::move(AS_buffer);
+		u_TLAS_Scene.m_AS_buffer = std::move(AS_buffer);
 
 		sDeleter::Order().enque(std::move(old), std::move(scratch_buffer));
+
+
+
+		{
+			vk::WriteDescriptorSetAccelerationStructureKHR as;
+			as.accelerationStructureCount = 1;
+			as.pAccelerationStructures = &u_TLAS_Scene.m_AS.get();
+
+			vk::WriteDescriptorSet write[] =
+			{
+				vk::WriteDescriptorSet().setDstSet(*m_DS_Scene).setDstBinding(100).setDescriptorType(vk::DescriptorType::eAccelerationStructureKHR).setDescriptorCount(1).setPNext(&as),
+			};
+			m_ctx->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
+
+		}
 	}
 };
 struct Skybox
@@ -1506,7 +1520,7 @@ int main()
 			}
 		};
 
-		std::array<vk::AccelerationStructureInstanceKHR, 2> instance;
+		std::array<vk::AccelerationStructureInstanceKHR, 1> instance;
 		auto& instance1 = instance[0];
 		instance1.transform = transform_matrix;
 		instance1.instanceCustomIndex = 0;
@@ -1514,27 +1528,27 @@ int main()
 		instance1.instanceShaderBindingTableRecordOffset = 0;
 		instance1.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
 		instance1.accelerationStructureReference = context->m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(model->m_BLAS.m_AS.get()));
-
-		vk::TransformMatrixKHR transform_matrix2 =
-		{
-			std::array<std::array<float, 4>, 3>
-			{
-				std::array<float, 4>{0.5f, 0.f, 0.f, 2.f},
-				std::array<float, 4>{0.f, 0.5f, 0.f, 0.f},
-				std::array<float, 4>{0.f, 0.f, 0.5f, 0.f},
-			}
-		};
-
-		auto& instance2 = instance[1];
-		instance2.transform = transform_matrix2;
-		instance2.instanceCustomIndex = 0;
-		instance2.mask = 0xFF;
-		instance2.instanceShaderBindingTableRecordOffset = 0;
-		instance2.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
-		instance2.accelerationStructureReference = context->m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(model->m_BLAS.m_AS.get()));
+// 
+// 		vk::TransformMatrixKHR transform_matrix2 =
+// 		{
+// 			std::array<std::array<float, 4>, 3>
+// 			{
+// 				std::array<float, 4>{0.5f, 0.f, 0.f, 2.f},
+// 				std::array<float, 4>{0.f, 0.5f, 0.f, 0.f},
+// 				std::array<float, 4>{0.f, 0.f, 0.5f, 0.f},
+// 			}
+// 		};
+// 
+// 		auto& instance2 = instance[1];
+// 		instance2.transform = transform_matrix2;
+// 		instance2.instanceCustomIndex = 0;
+// 		instance2.mask = 0xFF;
+// 		instance2.instanceShaderBindingTableRecordOffset = 0;
+// 		instance2.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+// 		instance2.accelerationStructureReference = context->m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(model->m_BLAS.m_AS.get()));
 
 	
-		instance_buffer = context->m_storage_memory.allocateMemory<vk::AccelerationStructureInstanceKHR>(2, true);
+		instance_buffer = context->m_storage_memory.allocateMemory<vk::AccelerationStructureInstanceKHR>(instance.size(), true);
 
 		setup_cmd.updateBuffer<vk::AccelerationStructureInstanceKHR>(instance_buffer.getInfo().buffer, instance_buffer.getInfo().offset, instance);
 		vk::BufferMemoryBarrier barrier[] = {
