@@ -6,7 +6,4 @@
   <ItemGroup>
     <ClInclude Include="..\..\source\015_Shadertoy\Sky.h" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
 </Project>

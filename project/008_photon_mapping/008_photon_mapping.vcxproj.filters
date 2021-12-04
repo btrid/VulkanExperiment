@@ -9,7 +9,4 @@
   <ItemGroup>
     <ClCompile Include="..\..\source\008_photon_mapping\008_main.cpp" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
 </Project>

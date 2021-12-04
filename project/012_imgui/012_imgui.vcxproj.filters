@@ -9,7 +9,4 @@
   <ItemGroup>
     <ClCompile Include="..\..\source\012_imgui\012_main.cpp" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
 </Project>
