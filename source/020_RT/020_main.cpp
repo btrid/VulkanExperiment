@@ -274,7 +274,6 @@ struct TLAS
 	vk::UniqueAccelerationStructureKHR m_AS;
 	btr::BufferMemory m_AS_buffer;
 	//		btr::BufferMemoryEx<vk::AccelerationStructureInstanceKHR> m_instance_buffer;
-	vk::AccelerationStructureBuildSizesInfoKHR m_size_info;
 
 };
 struct Environment
@@ -583,8 +582,123 @@ struct Environment
 
 	}
 
-	std::array<AppImage, Target_Max> execute(btr::Context& ctx, vk::CommandBuffer cmd, AppImage& env)
+	// originalcubemap, Target_IRRADIANCE, Target_PREFILTEREDENV,
+	std::array<AppImage, 3> execute(btr::Context& ctx, vk::CommandBuffer cmd, const std::string& filename)
 	{
+		AppImage env;
+		{
+			gli::texture_cube tex(gli::load(filename));
+
+			vk::ImageCreateInfo image_info;
+			image_info.imageType = vk::ImageType::e2D;
+			image_info.format = (vk::Format)tex.format();
+			image_info.mipLevels = (uint32_t)tex.levels();
+			image_info.arrayLayers = 6;
+			image_info.samples = vk::SampleCountFlagBits::e1;
+			image_info.tiling = vk::ImageTiling::eOptimal;
+			image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
+			image_info.sharingMode = vk::SharingMode::eExclusive;
+			image_info.initialLayout = vk::ImageLayout::eUndefined;
+			image_info.flags = vk::ImageCreateFlagBits::eCubeCompatible;
+			image_info.extent = vk::Extent3D(tex.extent().x, tex.extent().y, 1);
+
+			vk::UniqueImage image = ctx.m_device.createImageUnique(image_info);
+
+			vk::MemoryRequirements memory_request = ctx.m_device.getImageMemoryRequirements(image.get());
+			vk::MemoryAllocateInfo memory_alloc_info;
+			memory_alloc_info.allocationSize = memory_request.size;
+			memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(ctx.m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+			vk::UniqueDeviceMemory image_memory = ctx.m_device.allocateMemoryUnique(memory_alloc_info);
+			ctx.m_device.bindImageMemory(image.get(), image_memory.get(), 0);
+
+			auto staging_buffer = ctx.m_staging_memory.allocateMemory<byte>((uint32_t)tex.size(), true);
+			memcpy(staging_buffer.getMappedPtr(), tex.data(), tex.size());
+
+			vk::ImageSubresourceRange subresourceRange;
+			subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+			subresourceRange.baseArrayLayer = 0;
+			subresourceRange.baseMipLevel = 0;
+			subresourceRange.layerCount = VK_REMAINING_MIP_LEVELS;
+			subresourceRange.levelCount = VK_REMAINING_ARRAY_LAYERS;
+
+			{
+				// staging_bufferからimageへコピー
+				{
+					vk::ImageMemoryBarrier to_copy_barrier;
+					to_copy_barrier.image = image.get();
+					to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
+					to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
+					to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+					to_copy_barrier.subresourceRange = subresourceRange;
+					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+				}
+
+				std::vector<vk::BufferImageCopy> copys;
+				auto offset = staging_buffer.getInfo().offset;
+				for (uint32_t face = 0; face < 6; face++)
+				{
+					for (uint32_t level = 0; level < tex.levels(); level++)
+					{
+						vk::BufferImageCopy copy = {};
+						copy.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+						copy.imageSubresource.mipLevel = level;
+						copy.imageSubresource.baseArrayLayer = face;
+						copy.imageSubresource.layerCount = 1;
+						copy.imageExtent.width = static_cast<uint32_t>(tex[face][level].extent().x);
+						copy.imageExtent.height = static_cast<uint32_t>(tex[face][level].extent().y);
+						copy.imageExtent.depth = 1;
+						copy.bufferOffset = offset;
+
+						copys.push_back(copy);
+
+						// Increase offset into staging buffer for next level / face
+						offset += tex[face][level].size();
+					}
+				}
+				cmd.copyBufferToImage(staging_buffer.getInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, copys);
+
+				{
+					vk::ImageMemoryBarrier to_shader_read_barrier;
+					to_shader_read_barrier.image = image.get();
+					to_shader_read_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
+					to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+					to_shader_read_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+					to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+					to_shader_read_barrier.subresourceRange = subresourceRange;
+					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
+				}
+
+			}
+
+			vk::ImageViewCreateInfo view_info;
+			view_info.viewType = vk::ImageViewType::eCube;
+			view_info.components = { vk::ComponentSwizzle::eR, vk::ComponentSwizzle::eG, vk::ComponentSwizzle::eB,vk::ComponentSwizzle::eA };
+			view_info.flags = vk::ImageViewCreateFlags();
+			view_info.format = image_info.format;
+			view_info.image = image.get();
+			view_info.subresourceRange = subresourceRange;
+
+			vk::SamplerCreateInfo sampler_info;
+			sampler_info.magFilter = vk::Filter::eLinear;
+			sampler_info.minFilter = vk::Filter::eLinear;
+			sampler_info.mipmapMode = vk::SamplerMipmapMode::eLinear;
+			sampler_info.addressModeU = vk::SamplerAddressMode::eRepeat;
+			sampler_info.addressModeV = vk::SamplerAddressMode::eRepeat;
+			sampler_info.addressModeW = vk::SamplerAddressMode::eRepeat;
+			sampler_info.mipLodBias = 0.0f;
+			sampler_info.compareOp = vk::CompareOp::eNever;
+			sampler_info.minLod = 0.0f;
+			sampler_info.maxLod = (float)image_info.mipLevels;
+			sampler_info.maxAnisotropy = 1.0;
+			sampler_info.anisotropyEnable = VK_FALSE;
+			sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
+
+			env.m_image = std::move(image);
+			env.m_memory = std::move(image_memory);
+			env.m_view = ctx.m_device.createImageViewUnique(view_info);
+			env.m_sampler = ctx.m_device.createSamplerUnique(sampler_info);
+		}
 		std::array<AppImage, Target_Max> cubemaps;
 		vk::DescriptorImageInfo images[] = {
 			env.info(),
@@ -830,7 +944,7 @@ struct Environment
 		name_info.objectType = vk::ObjectType::eImage;
 		name_info.pObjectName = to_str(cubemaps[1].m_image.get());
 		ctx.m_device.setDebugUtilsObjectNameEXT(name_info);
-		return cubemaps;
+		return std::array<AppImage, 3>{ std::move(env), std::move(cubemaps[0]), std::move(cubemaps[1])};
 	}
 };
 struct Context
@@ -860,15 +974,13 @@ struct Context
 	};
 
 	Environment m_env;
-	AppImage m_environment;
-	std::array<AppImage, 2> m_environment_filter;
+	std::array<AppImage, 3> m_environment;
 	AppImage m_environment_debug;
 
 	RenderConfig m_render_config;
 	btr::BufferMemoryEx<RenderConfig> u_render_config;
 
 	BRDFLookupTable m_lut;
-
 
 	Resource m_model_resource;
 	TLAS u_TLAS_Scene;
@@ -908,120 +1020,7 @@ struct Context
 
 		// environment texture
 		{
-			gli::texture_cube tex(gli::load(btr::getResourceAppPath() + "environments/papermill.ktx"));
-
-			vk::ImageCreateInfo image_info;
-			image_info.imageType = vk::ImageType::e2D;
-			image_info.format = (vk::Format)tex.format();
-			image_info.mipLevels = (uint32_t)tex.levels();
-			image_info.arrayLayers = 6;
-			image_info.samples = vk::SampleCountFlagBits::e1;
-			image_info.tiling = vk::ImageTiling::eOptimal;
-			image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
-			image_info.sharingMode = vk::SharingMode::eExclusive;
-			image_info.initialLayout = vk::ImageLayout::eUndefined;
-			image_info.flags = vk::ImageCreateFlagBits::eCubeCompatible;
-			image_info.extent = vk::Extent3D(tex.extent().x, tex.extent().y, 1);
-
-			vk::UniqueImage image = ctx->m_device.createImageUnique(image_info);
-
-			vk::MemoryRequirements memory_request = ctx->m_device.getImageMemoryRequirements(image.get());
-			vk::MemoryAllocateInfo memory_alloc_info;
-			memory_alloc_info.allocationSize = memory_request.size;
-			memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(ctx->m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
-
-			vk::UniqueDeviceMemory image_memory = ctx->m_device.allocateMemoryUnique(memory_alloc_info);
-			ctx->m_device.bindImageMemory(image.get(), image_memory.get(), 0);
-
-			auto staging_buffer = ctx->m_staging_memory.allocateMemory<byte>((uint32_t)tex.size(), true);
-			memcpy(staging_buffer.getMappedPtr(), tex.data(), tex.size());
-
-			vk::ImageSubresourceRange subresourceRange;
-			subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-			subresourceRange.baseArrayLayer = 0;
-			subresourceRange.baseMipLevel = 0;
-			subresourceRange.layerCount = VK_REMAINING_MIP_LEVELS;
-			subresourceRange.levelCount = VK_REMAINING_ARRAY_LAYERS;
-
-			{
-				// staging_bufferからimageへコピー
-				{
-					vk::ImageMemoryBarrier to_copy_barrier;
-					to_copy_barrier.image = image.get();
-					to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
-					to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
-					to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
-					to_copy_barrier.subresourceRange = subresourceRange;
-					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
-				}
-
-				std::vector<vk::BufferImageCopy> copys;
-				auto offset = staging_buffer.getInfo().offset;
-				for (uint32_t face = 0; face < 6; face++)
-				{
-					for (uint32_t level = 0; level < tex.levels(); level++)
-					{
-						vk::BufferImageCopy copy = {};
-						copy.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
-						copy.imageSubresource.mipLevel = level;
-						copy.imageSubresource.baseArrayLayer = face;
-						copy.imageSubresource.layerCount = 1;
-						copy.imageExtent.width = static_cast<uint32_t>(tex[face][level].extent().x);
-						copy.imageExtent.height = static_cast<uint32_t>(tex[face][level].extent().y);
-						copy.imageExtent.depth = 1;
-						copy.bufferOffset = offset;
-
-						copys.push_back(copy);
-
-						// Increase offset into staging buffer for next level / face
-						offset += tex[face][level].size();
-					}
-				}
-				cmd.copyBufferToImage(staging_buffer.getInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, copys);
-
-				{
-					vk::ImageMemoryBarrier to_shader_read_barrier;
-					to_shader_read_barrier.image = image.get();
-					to_shader_read_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
-					to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-					to_shader_read_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-					to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-					to_shader_read_barrier.subresourceRange = subresourceRange;
-					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
-				}
-
-			}
-
-			vk::ImageViewCreateInfo view_info;
-			view_info.viewType = vk::ImageViewType::eCube;
-			view_info.components = { vk::ComponentSwizzle::eR, vk::ComponentSwizzle::eG, vk::ComponentSwizzle::eB,vk::ComponentSwizzle::eA };
-			view_info.flags = vk::ImageViewCreateFlags();
-			view_info.format = image_info.format;
-			view_info.image = image.get();
-			view_info.subresourceRange = subresourceRange;
-
-			vk::SamplerCreateInfo sampler_info;
-			sampler_info.magFilter = vk::Filter::eLinear;
-			sampler_info.minFilter = vk::Filter::eLinear;
-			sampler_info.mipmapMode = vk::SamplerMipmapMode::eLinear;
-			sampler_info.addressModeU = vk::SamplerAddressMode::eRepeat;
-			sampler_info.addressModeV = vk::SamplerAddressMode::eRepeat;
-			sampler_info.addressModeW = vk::SamplerAddressMode::eRepeat;
-			sampler_info.mipLodBias = 0.0f;
-			sampler_info.compareOp = vk::CompareOp::eNever;
-			sampler_info.minLod = 0.0f;
-			sampler_info.maxLod = (float)image_info.mipLevels;
-			sampler_info.maxAnisotropy = 1.0;
-			sampler_info.anisotropyEnable = VK_FALSE;
-			sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
-
-			m_environment.m_image = std::move(image);
-			m_environment.m_memory = std::move(image_memory);
-			m_environment.m_view = ctx->m_device.createImageViewUnique(view_info);
-			m_environment.m_sampler = ctx->m_device.createSamplerUnique(sampler_info);
-
-			m_environment_filter = m_env.execute(*ctx, cmd, m_environment);
-
+			m_environment = m_env.execute(*ctx, cmd, btr::getResourceAppPath() + "environments/papermill.ktx");
 		}
 
 		// debug cube map
@@ -1163,9 +1162,9 @@ struct Context
 				vk::DescriptorImageInfo images[] = 
 				{
 					m_lut.m_brgf_lut.info(),
-					m_environment.info(),
-					m_environment_filter[0].info(),
-					m_environment_filter[1].info(),
+					m_environment[0].info(),
+					m_environment[1].info(),
+					m_environment[2].info(),
 				};
 				vk::WriteDescriptorSet write[] =
 				{
