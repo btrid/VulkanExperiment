@@ -1477,9 +1477,9 @@ struct Skybox
 int main()
 {
 	auto camera = cCamera::sCamera::Order().create();
-	camera->getData().m_position = vec3(-30.0f, 3.1f, 0.02f);
-	camera->getData().m_target = vec3(0.f);
-	camera->getData().m_up = vec3(0.f, -1.f, 0.f);
+	camera->getData().m_position = vec3(0.0f, 5.0f, -1.0f);
+	camera->getData().m_target = vec3(0.f, 0.f, -1.f);
+	camera->getData().m_up = vec3(0.f, 0.f, 1.f);
 	camera->getData().m_width = 1024;
 	camera->getData().m_height = 1024;
 	camera->getData().m_far = 5000.f;
@@ -1502,12 +1502,12 @@ int main()
 	DrawHelper draw_helper{ context };
 
 //	std::shared_ptr<gltf::gltfResource> model = ctx->m_model_resource.LoadScene(*context, setup_cmd, btr::getResourceAppPath() + "pbr/DamagedHelmet.gltf");
-	std::shared_ptr<gltf::gltfResource> model = ctx->m_model_resource.LoadScene(*context, setup_cmd, btr::getResourceAppPath() + "Sponza/Sponza.gltf");
+//	std::shared_ptr<gltf::gltfResource> model = ctx->m_model_resource.LoadScene(*context, setup_cmd, btr::getResourceAppPath() + "Sponza/Sponza.gltf");
+	std::shared_ptr<gltf::gltfResource> model = ctx->m_model_resource.LoadScene(*context, setup_cmd, btr::getResourceAppPath() + "pbr/cornel.glb");
 
 	Renderer renderer(*ctx, *app.m_window->getFrontBuffer());
 	Skybox skybox(*ctx, setup_cmd, *app.m_window->getFrontBuffer());
 
-	btr::BufferMemoryEx<vk::AccelerationStructureInstanceKHR> instance_buffer;
 	{
 		vk::TransformMatrixKHR transform_matrix =
 		{
@@ -1547,6 +1547,7 @@ int main()
 // 		instance2.accelerationStructureReference = context->m_device.getAccelerationStructureAddressKHR(vk::AccelerationStructureDeviceAddressInfoKHR(model->m_BLAS.m_AS.get()));
 
 	
+		btr::BufferMemoryEx<vk::AccelerationStructureInstanceKHR> instance_buffer;
 		instance_buffer = context->m_storage_memory.allocateMemory<vk::AccelerationStructureInstanceKHR>(instance.size(), true);
 
 		setup_cmd.updateBuffer<vk::AccelerationStructureInstanceKHR>(instance_buffer.getInfo().buffer, instance_buffer.getInfo().offset, instance);
@@ -1554,8 +1555,8 @@ int main()
 			instance_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eAccelerationStructureReadKHR),
 		};
 		setup_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, {}, { array_size(barrier), barrier }, {});
+		ctx->execute_tlas(setup_cmd, instance_buffer);
 	}
-	ctx->execute_tlas(setup_cmd, instance_buffer);
 
 	struct ObjectData
 	{

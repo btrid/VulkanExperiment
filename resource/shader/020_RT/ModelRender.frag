@@ -54,7 +54,12 @@ vec3 getNormal()
 {
 	return In.Normal;
 	// Perturb normal, see http://www.thetenthplanet.de/archives/1180
-	vec3 tangentNormal = texture(t_ModelTexture[nonuniformEXT(u_material.TexID_Normal)], In.Texcoord_0).xyz * 2.0 - 1.0;
+	if(u_material.TexID_Normal>-1)
+	{
+
+	}
+
+	vec3 tangentNormal = texture(t_ModelTexture[u_material.TexID_Normal], In.Texcoord_0).xyz * 2.0 - 1.0;
 
 	vec3 q1 = dFdx(In.WorldPos.xyz);
 	vec3 q2 = dFdy(In.WorldPos.xyz);
@@ -157,11 +162,20 @@ void main()
 	u_light_dir = normalize(vec3(0.2, 1.5, 0.2));
 	MaterialBuffer mat  = MaterialBuffer(In.MaterialAddress);
 	u_material = mat.m[0];
-	vec4 basecolor = SRGBtoLINEAR(texture(t_ModelTexture[nonuniformEXT(u_material.TexID_Base)], In.Texcoord_0.xy)) * u_material.m_basecolor_factor;
+	vec4 basecolor = u_material.m_basecolor_factor;
+	if(u_material.TexID_Base>-1)
+	{
+		basecolor *= SRGBtoLINEAR(texture(t_ModelTexture[u_material.TexID_Base], In.Texcoord_0.xy));
+	}
 
-	vec4 mrSample = texture(t_ModelTexture[nonuniformEXT(u_material.TexID_MR)], In.Texcoord_0.xy);
-	float perceptualRoughness = mrSample.g * u_material.m_roughness_factor;
-	float metallic = mrSample.b * u_material.m_metallic_factor;
+	float perceptualRoughness = u_material.m_roughness_factor;
+	float metallic = u_material.m_metallic_factor;
+	if(u_material.TexID_MR > -1)
+	{
+		vec4 mrSample = texture(t_ModelTexture[u_material.TexID_MR], In.Texcoord_0.xy);
+		perceptualRoughness *= mrSample.g;
+		metallic *= mrSample.b;
+	}
 
 	vec3 diffuseColor = basecolor.rgb * (vec3(1.0) - f0);
 	diffuseColor *= 1.0 - metallic;
@@ -207,7 +221,7 @@ void main()
 	vec3 diffuseContrib = (1.0 - F) * diffuse(pbrInputs);
 	vec3 specContrib = F * G * D / (4.0 * pbrInputs.NdotL * pbrInputs.NdotV);
 	// Obtain final intensity as reflectance (BRDF) scaled by the energy of the light (cosine law)
-	vec3 color = pbrInputs.NdotL * DirectLight() * (diffuseContrib + specContrib);
+	vec3 color = /*pbrInputs.NdotL * DirectLight() * */ (diffuseContrib + specContrib);
 //	color += getIBLContribution(pbrInputs, n, reflection);
 
 	const float u_OcclusionStrength = 1.0f;
@@ -224,5 +238,5 @@ void main()
 		color += emissive;
 	}
 	
-	FragColor = vec4(color, basecolor.a);
+	FragColor = vec4(color, 1.);
 }

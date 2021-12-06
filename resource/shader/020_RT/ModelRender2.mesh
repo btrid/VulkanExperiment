@@ -88,11 +88,18 @@ struct TempAttributes {
 
 void fetchAttributes(inout TempAttributes temp, uint vert, uint vidx)
 {
-	Vertex normal  = Vertex(u_mesh.NormalAddress);
-	temp.normal = normal.b_v[vidx];
+	if(u_mesh.NormalAddress!=0)
+	{
+		Vertex normal  = Vertex(u_mesh.NormalAddress);
+		temp.normal = normal.b_v[vidx];
 
-	Texcoord tex0 = Texcoord(u_mesh.TexcoordAddress);
-	temp.tex = tex0.b_t[vidx];
+	}
+
+	if(u_mesh.TexcoordAddress!=0)
+	{
+		Texcoord tex0 = Texcoord(u_mesh.TexcoordAddress);
+		temp.tex = tex0.b_t[vidx];
+	}
 }
 
 void storeAttributes(inout TempAttributes temp, const uint vert, uint vidx)
