@@ -96,15 +96,15 @@ uint getMeshletNumTriangles(uvec4 meshletDesc)
   return (meshletDesc.y >> 24) + 1;
 }
 
-void decodeBbox(uvec4 meshletDesc, in Mesh mesh, out vec3 oBboxMin, out vec3 oBboxMax)
+void decodeBbox(uvec4 meshletDesc, in Primitive primitive, out vec3 oBboxMin, out vec3 oBboxMax)
 {
   vec3 bboxMin = unpackUnorm4x8(meshletDesc.x).xyz;
   vec3 bboxMax = unpackUnorm4x8(meshletDesc.y).xyz;
   
-  vec3 objectExtent = (mesh.bboxMax.xyz - mesh.bboxMin.xyz);
+  vec3 objectExtent = (primitive.bboxMax.xyz - primitive.bboxMin.xyz);
 
-  oBboxMin = bboxMin * objectExtent + mesh.bboxMin.xyz;
-  oBboxMax = bboxMax * objectExtent + mesh.bboxMin.xyz;
+  oBboxMin = bboxMin * objectExtent + primitive.bboxMin.xyz;
+  oBboxMax = bboxMax * objectExtent + primitive.bboxMin.xyz;
 }
 
 // oct_ code from "A Survey of Efficient Representations for Independent Unit Vectors"
@@ -195,11 +195,11 @@ vec4 getBoxCorner(vec3 bboxMin, vec3 bboxMax, int n)
 #endif
 }
 
-bool earlyCull(uvec4 meshletDesc, in Mesh mesh, in ObjectData object)
+bool earlyCull(uvec4 meshletDesc, in Primitive primitive, in ObjectData object)
 {
   vec3 bboxMin;
   vec3 bboxMax;
-  decodeBbox(meshletDesc, mesh, bboxMin, bboxMax);
+  decodeBbox(meshletDesc, primitive, bboxMin, bboxMax);
 
 #if USE_EARLY_BACKFACECULL && USE_BACKFACECULL
   vec3  oGroupNormal;

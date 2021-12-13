@@ -1178,9 +1178,6 @@ struct Context
 
 	}
 
-
-
-
 	void execute(vk::CommandBuffer cmd)
 	{
 		app::g_app_instance->m_window->getImgui()->pushImguiCmd([this]()
@@ -1474,8 +1471,10 @@ struct Skybox
 };
 
 #include <020_RT/Renderer.h>
+
 int main()
 {
+
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = vec3(0.0f, 5.0f, -1.0f);
 	camera->getData().m_target = vec3(0.f, 0.f, -1.f);
@@ -1500,6 +1499,7 @@ int main()
 	PresentPipeline present_pipeline(context, render_target, context->m_window->getSwapchain());
 
 	DrawHelper draw_helper{ context };
+
 
 //	std::shared_ptr<gltf::gltfResource> model = ctx->m_model_resource.LoadScene(*context, setup_cmd, btr::getResourceAppPath() + "pbr/DamagedHelmet.gltf");
 //	std::shared_ptr<gltf::gltfResource> model = ctx->m_model_resource.LoadScene(*context, setup_cmd, btr::getResourceAppPath() + "Sponza/Sponza.gltf");

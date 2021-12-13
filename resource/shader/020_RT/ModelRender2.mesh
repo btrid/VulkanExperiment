@@ -50,12 +50,12 @@ layout(location=1) out Interpolants
 //////////////////////////////////////////////////
 // EXECUTION
 
-Mesh u_mesh;
+Primitive u_primitive;
 ObjectData u_object;
 
 vec4 procVertex(uint meshletID, const uint vert, uint vidx)
 {
-	Vertex vertex  = Vertex(u_mesh.VertexAddress);
+	Vertex vertex  = Vertex(u_primitive.VertexAddress);
 
 	vec3 oPos = vertex.b_v[vidx];
 	vec3 wPos = (u_object.worldMatrix  * vec4(oPos,1)).xyz;
@@ -88,16 +88,16 @@ struct TempAttributes {
 
 void fetchAttributes(inout TempAttributes temp, uint vert, uint vidx)
 {
-	if(u_mesh.NormalAddress!=0)
+	if(u_primitive.NormalAddress!=0)
 	{
-		Vertex normal  = Vertex(u_mesh.NormalAddress);
+		Vertex normal  = Vertex(u_primitive.NormalAddress);
 		temp.normal = normal.b_v[vidx];
 
 	}
 
-	if(u_mesh.TexcoordAddress!=0)
+	if(u_primitive.TexcoordAddress!=0)
 	{
-		Texcoord tex0 = Texcoord(u_mesh.TexcoordAddress);
+		Texcoord tex0 = Texcoord(u_primitive.TexcoordAddress);
 		temp.tex = tex0.b_t[vidx];
 	}
 }
@@ -108,7 +108,7 @@ void storeAttributes(inout TempAttributes temp, const uint vert, uint vidx)
   vec3 wNormal = mat3(u_object.worldMatrixIT) * oNormal;
   OUT[vert].wNormal = wNormal;
   OUT[vert].Texcoord_0 = temp.tex;
-  OUT[vert].MaterialAddress = u_mesh.MaterialAddress;
+  OUT[vert].MaterialAddress = u_primitive.MaterialAddress;
 }
 
 void procAttributes(uint meshletID, const uint vert, uint vidx)
@@ -152,14 +152,15 @@ void main()
 {
 	IndirectCmd RenderCmd = b_cmd[0];
 	u_object = b_object[0];
-	u_mesh = MeshBuffer(RenderCmd.PrimitiveAddress).b_mesh[gl_DrawIDARB];
+//	Primitive primitive = PrimitiveBuffer(RenderCmd.PrimitiveAddress).b_primitive[gl_DrawIDARB];
+	u_primitive = PrimitiveBuffer(RenderCmd.PrimitiveAddress).b_primitive[gl_DrawIDARB];
 
 	// gl_WorkGroupID.x runs from [0 .. parentTask.gl_TaskCountNV - 1]
 	uint meshletID = IN.baseID + IN.subIDs[gl_WorkGroupID.x];
 	uint laneID = gl_LocalInvocationID.x;
 
 	// decode meshletDesc
-	BindlessBufferU32x4 MeshletDescs = BindlessBufferU32x4(u_mesh.MeshletDesc);
+	BindlessBufferU32x4 MeshletDescs = BindlessBufferU32x4(u_primitive.MeshletDesc);
 	uvec4 desc = MeshletDescs.b_uvec4[meshletID];
 	uint vertMax;
 	uint primMax;
@@ -173,7 +174,7 @@ void main()
 	uint primCount = primMax + 1;
 	uint vertCount = vertMax + 1;
 
-	BindlessBufferU32 MeshletPack = BindlessBufferU32(u_mesh.MeshletPack);
+	BindlessBufferU32 MeshletPack = BindlessBufferU32(u_primitive.MeshletPack);
 	// LOAD PHASE
 	// VERTEX PROCESSING  
 	for (uint i = 0; i < uint(NVMSH_VERTEX_RUNS); i++) 
@@ -196,7 +197,7 @@ void main()
 
 	// PRIMITIVE TOPOLOGY  
 	{
-		BindlessBufferU32x2 MeshletPack2 = BindlessBufferU32x2(u_mesh.MeshletPack);
+		BindlessBufferU32x2 MeshletPack2 = BindlessBufferU32x2(u_primitive.MeshletPack);
 		uint readBegin = primStart / 2;
 		uint readIndex = primCount * 3 - 1;
 		uint readMax   = readIndex / 8;

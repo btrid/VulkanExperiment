@@ -11,20 +11,13 @@
 #define USE_Model_Render 3
 #include "Model.glsl"
 
-/////////////////////////////////////////////////////////////////////////
-
 #include "common.h"
 #include "nvmeshlet_utils.glsl"
-
-/////////////////////////////////////////////////////////////////////////
 
 #define WARP_SIZE  32
 #define GROUP_SIZE WARP_SIZE
 
 layout(local_size_x=GROUP_SIZE) in;
-
-//////////////////////////////////////////////////////////////////////////
-// OUTPUT
 
 taskNV out Task
 {
@@ -32,22 +25,25 @@ taskNV out Task
   uint8_t   subIDs[GROUP_SIZE];
 } OUT;
 
-/////////////////////////////////////////////////
-// EXECUTION
-
+/*layout(push_constant) uniform pushConstants 
+{
+	int modelID;
+	int meshIndex;
+} constants;
+*/
 void main()
 {
 	IndirectCmd RenderCmd = b_cmd[0];
 	ObjectData instance = b_object[0];
-	Mesh mesh = MeshBuffer(RenderCmd.PrimitiveAddress).b_mesh[gl_DrawIDARB];
+	Primitive primitive = PrimitiveBuffer(RenderCmd.PrimitiveAddress).b_primitive[gl_DrawIDARB];
 
 	uint baseID = gl_WorkGroupID.x * GROUP_SIZE;
 	uint laneID = gl_LocalInvocationID.x;
 
-	BindlessBufferU32x4 b_meshlet_desc = BindlessBufferU32x4(mesh.MeshletDesc);
+	BindlessBufferU32x4 b_meshlet_desc = BindlessBufferU32x4(primitive.MeshletDesc);
 	uvec4 desc = b_meshlet_desc.b_uvec4[baseID + laneID];
 
-//	bool render = !(all(equal(desc, uvec4(0))) || earlyCull(desc, mesh, instance));
+//	bool render = !(all(equal(desc, uvec4(0))) || earlyCull(desc, primitive, instance));
 	bool render = !all(equal(desc, uvec4(0)));
 
 	uvec4 vote  = subgroupBallot(render);

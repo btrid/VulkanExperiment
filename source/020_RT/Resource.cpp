@@ -500,6 +500,16 @@ std::shared_ptr<gltf::gltfResource> Resource::LoadScene(btr::Context& ctx, vk::C
 
 
 	resource->gltf_model = std::move(gltf_model);
+	resource->b_mesh = ctx.m_vertex_memory.allocateMemory<uint64_t>(resource->m_mesh.size());
+	cmd.updateBuffer<uint64_t>(b_models.getInfo().buffer, b_models.getInfo().offset+resource->m_block*sizeof(uint64_t), { resource->b_mesh.getDeviceAddress()});
+
+	std::vector<uint64_t> submesh_address(resource->m_mesh.size());
+	for (size_t i = 0; i < submesh_address.size(); i++)
+	{
+		submesh_address[i] = resource->m_mesh[i].b_primitive.getDeviceAddress();
+	}
+	cmd.updateBuffer<uint64_t>(resource->b_mesh.getInfo().buffer, resource->b_mesh.getInfo().offset, submesh_address);
+
 	return resource;
 }
 
