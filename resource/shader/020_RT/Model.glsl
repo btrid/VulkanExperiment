@@ -53,7 +53,7 @@ struct Material
 
 	float m_metallic_factor;
 	float m_roughness_factor;
-	float _p1;
+	bool m_is_emissive;
 	float _p2;
 
 	vec3  m_emissive_factor;

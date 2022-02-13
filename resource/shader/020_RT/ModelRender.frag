@@ -159,7 +159,7 @@ const vec3 f0 = vec3(0.04);
 
 void main()
 {
-	u_light_dir = normalize(vec3(0.2, 1.5, 0.2));
+	u_light_dir = normalize(u_render_config.light_dir.xyz);
 	MaterialBuffer mat  = MaterialBuffer(In.MaterialAddress);
 	u_material = mat.m[0];
 	vec4 basecolor = u_material.m_basecolor_factor;
@@ -221,7 +221,10 @@ void main()
 	vec3 diffuseContrib = (1.0 - F) * diffuse(pbrInputs);
 	vec3 specContrib = F * G * D / (4.0 * pbrInputs.NdotL * pbrInputs.NdotV);
 	// Obtain final intensity as reflectance (BRDF) scaled by the energy of the light (cosine law)
-	vec3 color = /*pbrInputs.NdotL * DirectLight() * */ (diffuseContrib + specContrib);
+	vec3 color = (diffuseContrib + specContrib);
+	if(u_render_config.use_light){
+//		color = (diffuseContrib + specContrib) * pbrInputs.NdotL * DirectLight();
+	}
 //	color += getIBLContribution(pbrInputs, n, reflection);
 
 	const float u_OcclusionStrength = 1.0f;

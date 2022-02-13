@@ -962,15 +962,16 @@ struct Context
 
 	struct RenderConfig
 	{
-		vec4 LightDir;
+		vec3 LightDir = normalize(vec3(0.2, 1.5, 0.2));
+		float _p;
 
-		float exposure;
-		float gamma;
+		bool useLight = true;
+		float exposure = 10.f;
+		float gamma = 2.2f;
+		int32_t skybox_render_type = 0;
 
-		int32_t skybox_render_type;
-		float lod;
-		float ambient_power;
-
+		float lod = 0.f;
+		float ambient_power = 1.f;
 	};
 
 	Environment m_env;
@@ -991,12 +992,6 @@ struct Context
 		, m_model_resource(*ctx)
 	{
 		m_ctx = ctx;
-		m_render_config.LightDir = vec4(1.f);
-		m_render_config.exposure = 10.f;
-		m_render_config.gamma = 2.2f;
-		m_render_config.skybox_render_type = 0;
-		m_render_config.lod = 0.f;
-		m_render_config.ambient_power = 1.f;
 		u_render_config = ctx->m_uniform_memory.allocateMemory<RenderConfig>(1);
 		// descriptor set layout
 		{
@@ -1183,20 +1178,26 @@ struct Context
 		app::g_app_instance->m_window->getImgui()->pushImguiCmd([this]()
 			{
 				static bool is_open;
-				ImGui::SetNextWindowSize(ImVec2(150.f, 300.f));
+				ImGui::SetNextWindowSize(ImVec2(400.f, 300.f), ImGuiCond_Once);
 				ImGui::Begin("RenderConfig", &is_open, ImGuiWindowFlags_NoSavedSettings);
-				ImGui::DragFloat4("Light Dir", &m_render_config.LightDir[0], 0.01f, -1.f, 1.f);
+				if (ImGui::TreeNode("Directional Light"))
+				{
+					ImGui::Checkbox("Enable", &m_render_config.useLight);
+					ImGui::DragFloat3("Light Dir", &m_render_config.LightDir[0], 0.01f, -1.f, 1.f);
+					ImGui::TreePop();
+				}
 				ImGui::SliderFloat("exposure", &this->m_render_config.exposure, 0.0f, 20.f);
 
 				ImGui::Separator();
 				const char* types[] = { "normal", "irradiance", "prefiltered", };
 				ImGui::Combo("Skybox", &m_render_config.skybox_render_type, types, array_size(types));
 				ImGui::SliderFloat("lod", &m_render_config.lod, 0.f, 1.f);
-				ImGui::SliderFloat("ambient power", &m_render_config.ambient_power, 0.f, 1.f);
+				ImGui::SliderFloat("ambient power", &m_render_config.ambient_power, 0.f, 10.f);
 
 				ImGui::End();
 
 			});
+
 		auto staging = m_ctx->m_staging_memory.allocateMemory<RenderConfig>(1, true);
 		memcpy_s(staging.getMappedPtr(), sizeof(RenderConfig), &m_render_config, sizeof(RenderConfig));
 		vk::BufferCopy copy = vk::BufferCopy(staging.getInfo().offset, u_render_config.getInfo().offset, staging.getInfo().range);
@@ -1474,14 +1475,13 @@ struct Skybox
 
 int main()
 {
-
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = vec3(0.0f, 5.0f, -1.0f);
 	camera->getData().m_target = vec3(0.f, 0.f, -1.f);
 	camera->getData().m_up = vec3(0.f, 0.f, 1.f);
 	camera->getData().m_width = 1024;
 	camera->getData().m_height = 1024;
-	camera->getData().m_far = 5000.f;
+	camera->getData().m_far = 50000.f;
 	camera->getData().m_near = 0.01f;
 
 	app::AppDescriptor app_desc;

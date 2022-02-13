@@ -184,7 +184,7 @@ struct Primitive
 	vec3 m_aabb_min;
 	uint _p;
 	vec3 m_aabb_max;
-	uint _p2;
+	bool m_is_emissive = false;
 };
 
 namespace gltf
@@ -196,7 +196,7 @@ struct Material
 
 	float m_metallic_factor;
 	float m_roughness_factor;
-	float _p1;
+	bool m_is_emissive_material = false;
 	float _p2;
 
 	vec3  m_emissive_factor;
@@ -266,6 +266,7 @@ struct gltfResource
 	tinygltf::Model gltf_model;
 
 	std::vector<btr::BufferMemory> b_buffer;
+	std::vector<Material> m_material;
 	btr::BufferMemoryEx<Material> b_material;
 	std::vector<std::shared_ptr<Texture>> t_image;
 

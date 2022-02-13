@@ -241,10 +241,12 @@ std::shared_ptr<gltf::gltfResource> Resource::LoadScene(btr::Context& ctx, vk::C
 			if (gltf_material.emissiveTexture.index >= 0)
 			{
 				m.t[gltf::Material::TexID_Emissive] = resource->t_image[gltf_material.emissiveTexture.index]->m_block;
+				m.m_is_emissive_material = true;
 			}
 		}
 		resource->b_material = ctx.m_vertex_memory.allocateMemory<gltf::Material>(material.size());
 		cmd.updateBuffer<gltf::Material>(resource->b_material.getInfo().buffer, resource->b_material.getInfo().offset, material);
+		resource->m_material = std::move(material);
 	}
 
 
@@ -297,6 +299,7 @@ std::shared_ptr<gltf::gltfResource> Resource::LoadScene(btr::Context& ctx, vk::C
 			}
 			primitive.PrimitiveAddress = mesh.b_primitive.getDeviceAddress() + i * sizeof(Primitive);
 			primitive.v[Primitive::Material] = resource->b_material.getDeviceAddress() + gltf_primitive.material * sizeof(gltf::Material);
+			primitive.m_is_emissive = resource->m_material[gltf_primitive.material].m_is_emissive_material;
 
 			// meshlet
 			NVMeshlet::PackBasicBuilder meshletBuilder;
@@ -361,7 +364,7 @@ std::shared_ptr<gltf::gltfResource> Resource::LoadScene(btr::Context& ctx, vk::C
 			{
 				{
 					auto staging = ctx.m_staging_memory.allocateMemory<NVMeshlet::MeshletPackBasicDesc>(meshlet.meshletDescriptors.size());
-					memcpy_s(staging.getMappedPtr(), staging.getInfo().range, meshlet.meshletDescriptors.data(), staging.getInfo().range);
+					memcpy_s(staging.getMappedPtr(), staging.getInfo().range, meshlet.meshletDescriptors.data(), vector_sizeof(meshlet.meshletDescriptors));
 					vk::BufferCopy copy;
 					copy.setSrcOffset(staging.getInfo().offset);
 					copy.setDstOffset(mesh.b_MeshletDesc[i].getInfo().offset);
@@ -371,7 +374,7 @@ std::shared_ptr<gltf::gltfResource> Resource::LoadScene(btr::Context& ctx, vk::C
 				}
 				{
 					auto staging = ctx.m_staging_memory.allocateMemory<NVMeshlet::PackBasicType>(meshlet.meshletPacks.size());
-					memcpy_s(staging.getMappedPtr(), staging.getInfo().range, meshlet.meshletPacks.data(), staging.getInfo().range);
+					memcpy_s(staging.getMappedPtr(), staging.getInfo().range, meshlet.meshletPacks.data(), vector_sizeof(meshlet.meshletPacks));
 					vk::BufferCopy copy;
 					copy.setSrcOffset(staging.getInfo().offset);
 					copy.setDstOffset(mesh.b_MeshletPack[i].getInfo().offset);

@@ -104,7 +104,8 @@ public:
 			auto move = vec2(input.m_mouse.getMove());
 			if (!glm::epsilonEqual(dot(move, move), 0.f, FLT_EPSILON))
 			{
-				quat rot = glm::angleAxis(glm::radians(1.0f), normalize(move.y*s + move.x*u));
+				quat rot = glm::angleAxis(glm::radians(move.x), s) * glm::angleAxis(glm::radians(move.y), u);
+
 				f = normalize(rot * f);
 				m_data.m_target = m_data.m_position + f*distance;
 				s = normalize(cross(m_data.m_up, f));

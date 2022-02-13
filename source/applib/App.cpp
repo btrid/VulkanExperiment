@@ -468,8 +468,11 @@ void App::preUpdate()
 	m_window_request.clear();
 
 	{
-		auto& m_camera = cCamera::sCamera::Order().getCameraList()[0];
-		m_camera->control(m_window->getInput(), 0.016f);
+		if (!ImGui::IsAnyWindowHovered())
+		{
+			auto& m_camera = cCamera::sCamera::Order().getCameraList()[0];
+			m_camera->control(m_window->getInput(), 0.016f);
+		}
 	}
 
 	enum 
