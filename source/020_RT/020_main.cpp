@@ -962,13 +962,14 @@ struct Context
 
 	struct RenderConfig
 	{
-		vec3 LightDir = normalize(vec3(0.2, 1.5, 0.2));
-		float _p;
-
-		bool useLight = true;
+		int useLight = true;
 		float exposure = 10.f;
 		float gamma = 2.2f;
 		int32_t skybox_render_type = 0;
+
+		vec3 LightDir = normalize(vec3(0.2, 1.5, 0.2));
+		float _p;
+
 
 		float lod = 0.f;
 		float ambient_power = 1.f;
@@ -1182,7 +1183,7 @@ struct Context
 				ImGui::Begin("RenderConfig", &is_open, ImGuiWindowFlags_NoSavedSettings);
 				if (ImGui::TreeNode("Directional Light"))
 				{
-					ImGui::Checkbox("Enable", &m_render_config.useLight);
+					ImGui::Checkbox("Enable", (bool*)&m_render_config.useLight);
 					ImGui::DragFloat3("Light Dir", &m_render_config.LightDir[0], 0.01f, -1.f, 1.f);
 					ImGui::TreePop();
 				}

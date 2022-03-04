@@ -43,7 +43,7 @@ vec3 importanceSample_GGX(vec2 Xi, float roughness, vec3 normal)
 {
 	// Maps a 2D point to a hemisphere with spread based on roughness
 	float alpha = roughness * roughness;
-	float phi = 2.0 * PI * Xi.x + random(normal.xz) * 0.1;
+	float phi = 2.0 * PI * Xi.x /*+ random(normal.xz) * 0.1*/;
 	float cosTheta = sqrt((1.0 - Xi.y) / (1.0 + (alpha*alpha - 1.0) * Xi.y));
 	float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
 	vec3 H = vec3(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta);

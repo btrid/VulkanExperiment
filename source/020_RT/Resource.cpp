@@ -217,31 +217,36 @@ std::shared_ptr<gltf::gltfResource> Resource::LoadScene(btr::Context& ctx, vk::C
 			m.m_emissive_factor.y = (float)gltf_material.emissiveFactor[1];
 			m.m_emissive_factor.z = (float)gltf_material.emissiveFactor[2];
 
-			m.t[gltf::Material::TexID_Base] = -1;
+// 			m.m_is_emissive_material = false;
+// 			if (dot(m.m_emissive_factor, vec3(1.f)) > 0.f)
+// 			{
+// 				m.m_is_emissive_material = true;
+// 			}
+
+			m.TexID_Base = -1;
 			if (gltf_material.pbrMetallicRoughness.baseColorTexture.index >= 0)
 			{
-				m.t[gltf::Material::TexID_Base] = resource->t_image[gltf_material.pbrMetallicRoughness.baseColorTexture.index]->m_block;
+				m.TexID_Base = resource->t_image[gltf_material.pbrMetallicRoughness.baseColorTexture.index]->m_block;
 			}
-			m.t[gltf::Material::TexID_MR] = -1;
+			m.TexID_MR = -1;
 			if (gltf_material.pbrMetallicRoughness.metallicRoughnessTexture.index >= 0)
 			{
-				m.t[gltf::Material::TexID_MR] = resource->t_image[gltf_material.pbrMetallicRoughness.metallicRoughnessTexture.index]->m_block;
+				m.TexID_MR = resource->t_image[gltf_material.pbrMetallicRoughness.metallicRoughnessTexture.index]->m_block;
 			}
-			m.t[gltf::Material::TexID_Normal] = -1;
+			m.TexID_Normal = -1;
 			if (gltf_material.normalTexture.index >= 0)
 			{
-				m.t[gltf::Material::TexID_Normal] = resource->t_image[gltf_material.normalTexture.index]->m_block;
+				m.TexID_Normal = resource->t_image[gltf_material.normalTexture.index]->m_block;
 			}
-			m.t[gltf::Material::TexID_AO] = -1;
+			m.TexID_AO = -1;
 			if (gltf_material.occlusionTexture.index >= 0)
 			{
-				m.t[gltf::Material::TexID_AO] = resource->t_image[gltf_material.occlusionTexture.index]->m_block;
+				m.TexID_AO = resource->t_image[gltf_material.occlusionTexture.index]->m_block;
 			}
-			m.t[gltf::Material::TexID_Emissive] = -1;
+			m.TexID_Emissive = -1;
 			if (gltf_material.emissiveTexture.index >= 0)
 			{
-				m.t[gltf::Material::TexID_Emissive] = resource->t_image[gltf_material.emissiveTexture.index]->m_block;
-				m.m_is_emissive_material = true;
+				m.TexID_Emissive = resource->t_image[gltf_material.emissiveTexture.index]->m_block;
 			}
 		}
 		resource->b_material = ctx.m_vertex_memory.allocateMemory<gltf::Material>(material.size());
@@ -269,7 +274,7 @@ std::shared_ptr<gltf::gltfResource> Resource::LoadScene(btr::Context& ctx, vk::C
 			// index
 			tinygltf::Accessor& indexAccessor = gltf_model.accessors[gltf_primitive.indices];
 			tinygltf::BufferView& bufferview_index = gltf_model.bufferViews[indexAccessor.bufferView];
-			primitive.v[Primitive::Index] = resource->b_buffer[bufferview_index.buffer].getDeviceAddress() + bufferview_index.byteOffset;
+			primitive.IndexAddress = resource->b_buffer[bufferview_index.buffer].getDeviceAddress() + bufferview_index.byteOffset;
 
 			// vertex
 			for (auto& attrib : gltf_primitive.attributes)
@@ -278,19 +283,19 @@ std::shared_ptr<gltf::gltfResource> Resource::LoadScene(btr::Context& ctx, vk::C
 				tinygltf::BufferView& bufferview = gltf_model.bufferViews[accessor.bufferView];
 				if (attrib.first.compare("POSITION") == 0)
 				{
-					primitive.v[Primitive::Vertex] = resource->b_buffer[bufferview.buffer].getDeviceAddress() + bufferview.byteOffset;
+					primitive.VertexAddress = resource->b_buffer[bufferview.buffer].getDeviceAddress() + bufferview.byteOffset;
 				}
 				else if (attrib.first.compare("NORMAL") == 0)
 				{
-					primitive.v[Primitive::Normal] = resource->b_buffer[bufferview.buffer].getDeviceAddress() + bufferview.byteOffset;
+					primitive.NormalAddress = resource->b_buffer[bufferview.buffer].getDeviceAddress() + bufferview.byteOffset;
 				}
 				else if (attrib.first.compare("TEXCOORD_0") == 0)
 				{
-					primitive.v[Primitive::Texcoord] = resource->b_buffer[bufferview.buffer].getDeviceAddress() + bufferview.byteOffset;
+					primitive.TexcoordAddress = resource->b_buffer[bufferview.buffer].getDeviceAddress() + bufferview.byteOffset;
 				}
 				else if (attrib.first.compare("TANGENT") == 0)
 				{
-					primitive.v[Primitive::TANGENT] = resource->b_buffer[bufferview.buffer].getDeviceAddress() + bufferview.byteOffset;
+					primitive.TangentAddress = resource->b_buffer[bufferview.buffer].getDeviceAddress() + bufferview.byteOffset;
 				}
 				else
 				{
@@ -298,8 +303,8 @@ std::shared_ptr<gltf::gltfResource> Resource::LoadScene(btr::Context& ctx, vk::C
 				}
 			}
 			primitive.PrimitiveAddress = mesh.b_primitive.getDeviceAddress() + i * sizeof(Primitive);
-			primitive.v[Primitive::Material] = resource->b_material.getDeviceAddress() + gltf_primitive.material * sizeof(gltf::Material);
-			primitive.m_is_emissive = resource->m_material[gltf_primitive.material].m_is_emissive_material;
+			primitive.MaterialAddress = resource->b_material.getDeviceAddress() + gltf_primitive.material * sizeof(gltf::Material);
+//			primitive.m_is_emissive = resource->m_material[gltf_primitive.material].m_is_emissive_material;
 
 			// meshlet
 			NVMeshlet::PackBasicBuilder meshletBuilder;
@@ -310,8 +315,8 @@ std::shared_ptr<gltf::gltfResource> Resource::LoadScene(btr::Context& ctx, vk::C
 			const tinygltf::Accessor& vertex_accessor = gltf_model.accessors[vertex_attrib->second];
 			const tinygltf::BufferView& vertex_bufferview = gltf_model.bufferViews[vertex_accessor.bufferView];
 
-			primitive.m_aabb_min = vec3(vertex_accessor.minValues[0], vertex_accessor.minValues[1], vertex_accessor.minValues[2]);
-			primitive.m_aabb_max = vec3(vertex_accessor.maxValues[0], vertex_accessor.maxValues[1], vertex_accessor.maxValues[2]);;
+			primitive.m_aabb_min = vec4(vertex_accessor.minValues[0], vertex_accessor.minValues[1], vertex_accessor.minValues[2], 0.f);
+			primitive.m_aabb_max = vec4(vertex_accessor.maxValues[0], vertex_accessor.maxValues[1], vertex_accessor.maxValues[2], 0.f);
 			auto* indices = (gltf_model.buffers[bufferview_index.buffer].data.data() + bufferview_index.byteOffset);
 
 			uint32_t processedIndices;
@@ -382,8 +387,8 @@ std::shared_ptr<gltf::gltfResource> Resource::LoadScene(btr::Context& ctx, vk::C
 					cmd.copyBuffer(staging.getInfo().buffer, mesh.b_MeshletPack[i].getInfo().buffer, copy);
 				}
 			}
-			primitive.v[Primitive::MeshletDesc] = mesh.b_MeshletDesc[i].getDeviceAddress();
-			primitive.v[Primitive::MeshletPack] = mesh.b_MeshletPack[i].getDeviceAddress();
+			primitive.MeshletDesc = mesh.b_MeshletDesc[i].getDeviceAddress();
+			primitive.MeshletPack = mesh.b_MeshletPack[i].getDeviceAddress();
 		}
 		cmd.updateBuffer<Primitive>(mesh.b_primitive.getInfo().buffer, mesh.b_primitive.getInfo().offset, mesh.m_primitive);
 	}
@@ -512,6 +517,13 @@ std::shared_ptr<gltf::gltfResource> Resource::LoadScene(btr::Context& ctx, vk::C
 		submesh_address[i] = resource->m_mesh[i].b_primitive.getDeviceAddress();
 	}
 	cmd.updateBuffer<uint64_t>(resource->b_mesh.getInfo().buffer, resource->b_mesh.getInfo().offset, submesh_address);
+
+ 	vk::BufferMemoryBarrier barrier[] = {
+ 		b_models.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eMemoryRead),
+		resource->b_mesh.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eMemoryRead),
+		resource->b_material.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eMemoryRead),
+	};
+ 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, { array_size(barrier), barrier }, {});
 
 	return resource;
 }

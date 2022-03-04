@@ -44,7 +44,7 @@ int gi2d_path::path_finding()
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
 	gi2d_debug.executeUpdateMap(cmd, pf.m_field),
-		app.setup();
+	app.setup();
 
 	gi2d_make_hierarchy.setTarget({ i16vec2(171,171) });
 

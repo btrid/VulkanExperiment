@@ -41,10 +41,9 @@ struct Primitive
 	uint64_t MeshletDesc;
 	uint64_t MeshletPack;
 
-	vec3 bboxMin;
-	uint m_unuse;
-	vec3 bboxMax;
-	uint m_primitive_num_unuse;
+	vec4 bboxMin;
+	vec4 bboxMax;
+//	bool m_is_emissive;
 };
 
 struct Material
@@ -53,11 +52,10 @@ struct Material
 
 	float m_metallic_factor;
 	float m_roughness_factor;
-	bool m_is_emissive;
 	float _p2;
+	float _p3;
 
-	vec3  m_emissive_factor;
-	float _p11;
+	vec4  m_emissive_factor;
 
 	int TexID_Base;
 	int TexID_MR;
@@ -68,6 +66,11 @@ struct Material
 	int Tex_Base_;
 	int Tex_Bas_e;
 	int Tex_Ba_se;
+
+//	bool m_is_emissive;
+//	float _p32;
+//	float _p33;
+//	float _p34;
 };
 
 layout(set=USE_Model_Resource, binding=0, scalar) buffer ModelBuffer { Mesh b_mesh[];};

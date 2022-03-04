@@ -128,6 +128,13 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "020_RT", "project\020_RT\02
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "021_MeshShader", "project\021_MeshShader\021_MeshShader.vcxproj", "{25CFD7FF-7049-48A5-9FF5-6769377FD6B8}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "022_SurfaceNet", "project\022_SurfaceNet\022_SurfaceNet.vcxproj", "{86CA8F67-1EFB-47B2-876B-4911BDC49C73}"
+	ProjectSection(ProjectDependencies) = postProject
+		{6AB61332-963C-4D53-B5FF-04B3A9689E23} = {6AB61332-963C-4D53-B5FF-04B3A9689E23}
+		{D7234B59-605E-448A-8E53-D7E19C6CF2B6} = {D7234B59-605E-448A-8E53-D7E19C6CF2B6}
+		{4C880FFD-9EA8-4E57-A6CD-FE406E798948} = {4C880FFD-9EA8-4E57-A6CD-FE406E798948}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -296,6 +303,12 @@ Global
 		{25CFD7FF-7049-48A5-9FF5-6769377FD6B8}.Release|x64.ActiveCfg = Release|x64
 		{25CFD7FF-7049-48A5-9FF5-6769377FD6B8}.Release|x64.Build.0 = Release|x64
 		{25CFD7FF-7049-48A5-9FF5-6769377FD6B8}.Release|x86.ActiveCfg = Release|x64
+		{86CA8F67-1EFB-47B2-876B-4911BDC49C73}.Debug|x64.ActiveCfg = Debug|x64
+		{86CA8F67-1EFB-47B2-876B-4911BDC49C73}.Debug|x64.Build.0 = Debug|x64
+		{86CA8F67-1EFB-47B2-876B-4911BDC49C73}.Debug|x86.ActiveCfg = Debug|x64
+		{86CA8F67-1EFB-47B2-876B-4911BDC49C73}.Release|x64.ActiveCfg = Release|x64
+		{86CA8F67-1EFB-47B2-876B-4911BDC49C73}.Release|x64.Build.0 = Release|x64
+		{86CA8F67-1EFB-47B2-876B-4911BDC49C73}.Release|x86.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

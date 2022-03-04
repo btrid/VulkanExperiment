@@ -14,12 +14,13 @@
 
 struct RenderConfig
 {
-	vec4 light_dir;
-
-	bool use_light;
+	int use_light;
 	float exposure;
 	float gamma;
 	int skybox_render_type;
+
+	vec4 light_dir;
+
 
 	float lod;
 	float ambient_power;

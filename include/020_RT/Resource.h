@@ -163,28 +163,22 @@ struct Primitive
 	vk::DrawMeshTasksIndirectCommandNV m_task;
 	uint64_t PrimitiveAddress;
 
-	enum ID
-	{
-		Vertex,
-		Index,
+	uint64_t VertexAddress;
+	uint64_t IndexAddress;
 
-		Normal,
-		Texcoord,
+	uint64_t NormalAddress;
+	uint64_t TexcoordAddress;
 
-		TANGENT,
-		Material,
+	uint64_t TangentAddress;
+	uint64_t MaterialAddress;
 
-		MeshletDesc,
-		MeshletPack,
+	uint64_t MeshletDesc;
+	uint64_t MeshletPack;
 
-		ID_MAX,
-	};
-	uint64_t v[ID_MAX];
-
-	vec3 m_aabb_min;
-	uint _p;
-	vec3 m_aabb_max;
-	bool m_is_emissive = false;
+	vec4 m_aabb_min;
+//	uint _p;
+	vec4 m_aabb_max;
+//	bool m_is_emissive = false;
 };
 
 namespace gltf
@@ -196,27 +190,25 @@ struct Material
 
 	float m_metallic_factor;
 	float m_roughness_factor;
-	bool m_is_emissive_material = false;
 	float _p2;
+	float _p3;
 
-	vec3  m_emissive_factor;
-	float _p11;
+	vec4  m_emissive_factor;
 
-	enum TexID
-	{
-		TexID_Base,
-		TexID_MR,
-		TexID_AO,
-		TexID_Normal,
+	int TexID_Base;
+	int TexID_MR;
+	int TexID_AO;
+	int TexID_Normal;
 
-		TexID_Emissive,
-		TexID_pad,
-		TexID_pad2,
-		TexID_pad3,
+	int TexID_Emissive;
+	int TexID_p1;
+	int TexID_p2;
+	int TexID_p3;
 
-		TexID_MAX,
-	};
-	int32_t t[TexID_MAX];
+// 	bool m_is_emissive_material;
+// 	float _p32;
+// 	float _p33;
+// 	float _p34;
 };
 	
 struct Texture
