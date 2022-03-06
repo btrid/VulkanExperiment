@@ -105,19 +105,6 @@ MMGeometryGL::~MMGeometryGL()
 	delete[] m_indices;
 }
 
-void MMGeometryGL::origin(float origin[3])
-{
-	origin[0] = m_origin[0];
-	origin[1] = m_origin[1];
-	origin[2] = m_origin[2];
-}
-void MMGeometryGL::maxSize(float size[3])
-{
-	size[0] = m_size[0];
-	size[1] = m_size[1];
-	size[2] = m_size[2];
-}
-
 void MMGeometryGL::makeGLQuad(float *positions, unsigned short tissueLabels[2],
 	float *quadVerts, unsigned int *quadIndices, int idxOffset)
 {

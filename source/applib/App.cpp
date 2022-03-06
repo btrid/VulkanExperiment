@@ -61,6 +61,11 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_messenger_callback(
 	printf("%s\n", message);
 	fflush(stdout);
 	free(message);
+
+	if (messageSeverity< VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+	{
+		return true;
+	}
 	// Don't bail out, but keep going.
 	DebugBreak();
 	return false;
@@ -76,7 +81,7 @@ App::App(const AppDescriptor& desc)
 	// ウインドウリストを取りたいけどいい考えがない。後で考える
 	g_app_instance = this;
 
-	vk::ApplicationInfo appInfo = { "Vulkan Test", 1, "EngineName", 0, VK_API_VERSION_1_2 };
+	vk::ApplicationInfo appInfo = { "Vulkan Test", 1, "EngineName", 0, VK_API_VERSION_1_3 };
 	std::vector<const char*> LayerName =
 	{
  #if _DEBUG
@@ -129,6 +134,7 @@ App::App(const AppDescriptor& desc)
 			VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
 			VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
 			VK_KHR_RAY_QUERY_EXTENSION_NAME,
+			VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
 			VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
 			VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME, 
 			VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME,
@@ -229,6 +235,10 @@ App::App(const AppDescriptor& desc)
 		MeshShader_Feature.meshShader = VK_TRUE;
 		MeshShader_Feature.taskShader = VK_TRUE;
 		Subgroup_Feature.setPNext(&MeshShader_Feature);
+
+		vk::PhysicalDeviceDynamicRenderingFeaturesKHR DynamicRender_Feature;
+		DynamicRender_Feature.dynamicRendering = VK_TRUE;
+		MeshShader_Feature.setPNext(&DynamicRender_Feature);
 
 		m_device = m_physical_device.createDeviceUnique(device_info, nullptr);
 

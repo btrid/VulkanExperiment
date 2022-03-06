@@ -25,9 +25,6 @@ public:
 	MMGeometryGL(MMSurfaceNet* surfaceNet);
 	~MMGeometryGL();
 
-	void origin(float origin[3]);
-	void maxSize(float size[3]);
-
 	// Vertices are returned as a sequential list of C-style float[8] arrays (i.e., 
 	// {pos[0], pos[1], pos[2], norm[0], norm[1], norm[2], tex[0], tex[1]}). Indices 
 	// are returned as a sequential list of C-style int[3] arrays (i.e., {v0, v1, v2}).
