@@ -275,7 +275,7 @@ struct SurfaceNets
 
 		cmd.beginRenderingKHR(rendering_info);
 
-		cmd.drawIndexed(inum*3, 1, 0, 0, 0);
+		cmd.drawIndexed(inum, 1, 0, 0, 0);
 
 		cmd.endRenderingKHR();
 
@@ -309,7 +309,7 @@ int main()
 
 	int dimensions[3] = {64, 64, 64};
 	float voxelSize[3] = {1.f, 1.f, 1.f};
-	int numSpheres = 1;
+	int numSpheres = 10;
 
 	// Create the model and its SurfaceNet
 	auto modeldata = makeSpheres(numSpheres, dimensions, voxelSize);
