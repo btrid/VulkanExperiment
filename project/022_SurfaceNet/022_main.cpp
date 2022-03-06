@@ -170,12 +170,12 @@ struct SurfaceNets
 		viewportInfo.setScissorCount(1);
 		viewportInfo.setPScissors(&scissor);
 
-
 		vk::PipelineRasterizationStateCreateInfo rasterization_info;
-		rasterization_info.setPolygonMode(vk::PolygonMode::eLine);
+		rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
 		rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
 		rasterization_info.setCullMode(vk::CullModeFlagBits::eNone);
 		rasterization_info.setLineWidth(1.f);
+//		rasterization_info.setRasterizerDiscardEnable(VK_TRUE);
 
 		vk::PipelineMultisampleStateCreateInfo sample_info;
 		sample_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);
@@ -189,7 +189,7 @@ struct SurfaceNets
 
 
 		vk::PipelineColorBlendAttachmentState blend_state;
-		blend_state.setBlendEnable(VK_FALSE);
+		blend_state.setBlendEnable(VK_TRUE);
 		blend_state.setColorBlendOp(vk::BlendOp::eAdd);
 		blend_state.setSrcColorBlendFactor(vk::BlendFactor::eOne);
 		blend_state.setDstColorBlendFactor(vk::BlendFactor::eZero);
@@ -275,7 +275,7 @@ struct SurfaceNets
 
 		cmd.beginRenderingKHR(rendering_info);
 
-		cmd.drawIndexed(inum, 1, 0, 0, 0);
+		cmd.drawIndexed(inum*3, 1, 0, 0, 0);
 
 		cmd.endRenderingKHR();
 
@@ -309,7 +309,7 @@ int main()
 
 	int dimensions[3] = {64, 64, 64};
 	float voxelSize[3] = {1.f, 1.f, 1.f};
-	int numSpheres = 20;
+	int numSpheres = 1;
 
 	// Create the model and its SurfaceNet
 	auto modeldata = makeSpheres(numSpheres, dimensions, voxelSize);
@@ -327,12 +327,12 @@ int main()
 	auto index = context->m_vertex_memory.allocateMemory<uint>(Geometry.numIndices());
 	{
 		auto staging_vertex = context->m_staging_memory.allocateMemory<MMGeometryGL::GLVertex>(Geometry.numVertices(), true);
-		memcpy(staging_vertex.getMappedPtr(), Geometry.vertices(), sizeof(MMGeometryGL::GLVertex) * Geometry.numVertices());
+		memcpy(staging_vertex.getMappedPtr(), Geometry.vertices(), staging_vertex.getInfo().range);
 		auto staging_index = context->m_staging_memory.allocateMemory<uint>(Geometry.numIndices(), true);
-		memcpy(staging_index.getMappedPtr(), Geometry.indices(), sizeof(uint) * Geometry.numIndices());
+		memcpy(staging_index.getMappedPtr(), Geometry.indices(), staging_index.getInfo().range);
 		vk::BufferCopy copy[] = {
-			vk::BufferCopy().setSize(sizeof(MMGeometryGL::GLVertex) * Geometry.numVertices()).setSrcOffset(staging_vertex.getInfo().offset).setDstOffset(vertex.getInfo().offset),
-			vk::BufferCopy().setSize(sizeof(uint) * Geometry.numIndices()).setSrcOffset(staging_index.getInfo().offset).setDstOffset(index.getInfo().offset),
+			vk::BufferCopy().setSize(staging_vertex.getInfo().range).setSrcOffset(staging_vertex.getInfo().offset).setDstOffset(vertex.getInfo().offset),
+			vk::BufferCopy().setSize(staging_index.getInfo().range).setSrcOffset(staging_index.getInfo().offset).setDstOffset(index.getInfo().offset),
 		};
 		setup_cmd.copyBuffer(staging_index.getInfo().buffer, vertex.getInfo().buffer, array_size(copy), copy);
 	}

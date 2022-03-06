@@ -5,25 +5,32 @@ layout(location=1) in PerVertex
 {
 	vec3 WorldPos;
 	vec3 Normal;
-	vec2 Texcoord_0;
+	flat uvec2 MaterialID;
 }In;
 
 layout(location = 0) out vec4 FragColor;
 
-void main() 
+uint xor(uint y) 
 {
-	FragColor = vec4(1.0);
-/*    vec3 L = normalize(v_vert - u_lightPos);
-    float NL = dot(normalize(v_vertNormal), L);
-    if (gl_FrontFacing) 
-	{
-        if (v_frontColor.a == 0.0) discard;
- 		gl_FragColor = clamp(v_frontColor * 0.4 + v_frontColor * 0.6 * NL, 0.0, 1.0);
-    }
- 	else 
-	 {
-        if (v_backColor.a == 0.0) discard;
-        gl_FragColor = clamp(v_backColor * 0.4 - v_backColor * 0.6 * NL, 0.0, 1.0);
-    }
-*/
+    y = y ^ (y << 13); y = y ^ (y >> 17);
+    return y = y ^ (y << 5);
+}
+
+vec3 colortable(uint id)
+{
+	uint r1 = xor(id+100);
+	uint r2 = xor(r1);
+	uint r3 = xor(r2);
+	return fract(sin(vec3(r1, r2, r3)*0.063147));
+}
+void main()
+{
+	uint id = In.MaterialID[int(gl_FrontFacing)];
+//	uint id = In.MaterialID.x;
+	if (id == 0) discard;
+
+	vec3 L = normalize(vec3(1.));
+    float NL = dot(normalize(In.Normal), L);
+	vec3 color = colortable(id);
+	FragColor = vec4(clamp(color * 0.4 + color * 0.6 /** NL*/, 0.0, 1.0), 1.);
 }
