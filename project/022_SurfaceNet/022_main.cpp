@@ -30,7 +30,21 @@
 #include "SNLib/MMSurfaceNet.h"
 #include "SNLib/MMGeometryGL.h"
 
-std::vector<uint16_t> makeSpheres(int numSpheres, int demension[3], float voxelSize[3])
+// std::vector<uint16_t> map(int numSpheres, ivec3 demension, vec3 voxelSize)
+// {
+// 
+// }
+
+vec3 opTx(vec3 p, mat3 t)
+{
+	return inverse(t) * p;
+}
+float sdBox(vec3 p, vec3 b)
+{
+	vec3 q = abs(p) - b;
+	return glm::length(glm::max(q, vec3(0.f))) + glm::min(glm::max(q.x, glm::max(q.y, q.z)), 0.f);
+}
+std::vector<uint16_t> makeSpheres(int numSpheres, ivec3 demension, vec3 voxelSize)
 {
 	int size = demension[0] * demension[1] * demension[2];
 	std::vector<float> dists(size);
@@ -56,29 +70,50 @@ std::vector<uint16_t> makeSpheres(int numSpheres, int demension[3], float voxelS
 	float invLargePrime = 1.0f / 7919.0f;
 	srand(time(NULL));
 	float meanRadius = (float(maxSize)) / sqrt(2.0 + float(numSpheres));
-	for (int idx = 0; idx < numSpheres; idx++) {
-		unsigned short index = (unsigned short)idx + 1;
-		float cx = demension[0] * ((rand() % largePrime) * invLargePrime);
-		float cy = demension[1] * ((rand() % largePrime) * invLargePrime);
-		float cz = demension[2] * ((rand() % largePrime) * invLargePrime);
-		float radius = meanRadius * (0.5f + (rand() % largePrime) * invLargePrime);
-		int i0 = std::max(0, (int)(cx - radius));
-		int i1 = std::min(demension[0] - 1, (int)(cx + radius));
-		int j0 = std::max(0, (int)(cy - radius));
-		int j1 = std::min(demension[1] - 1, (int)(cy + radius));
-		int k0 = std::max(0, (int)(cz - radius));
-		int k1 = std::min(demension[2] - 1, (int)(cz + radius));
-		for (int k = k0; k <= k1; k++) {
-			float dzSqr = (cz - k) * (cz - k);
-			for (int j = j0; j <= j1; j++) {
-				float dySqr = (cy - j) * (cy - j);
-				for (int i = i0; i <= i1; i++) {
-					float dxSqr = (cx - i) * (cx - i);
-					float distSqr = dxSqr + dySqr + dzSqr;
-					if (distSqr < radius * radius) {
+	int index = 0;
+// 	for (int idx = 0; idx < numSpheres; idx++) {
+// 		index++;
+// 		vec3 center = glm::linearRand(vec3(0.f), vec3(demension));
+// 		float radius = glm::linearRand(0.f, meanRadius) + 1.f;
+// 		vec3 i0 = glm::max(ivec3(0.f), ivec3(center - radius));
+// 		vec3 i1 = glm::min(ivec3(demension - 1), ivec3(center + radius));
+// 		for (int k = i0.z; k <= i1.z; k++) {
+// 			for (int j = i0.y; j <= i1.y; j++) {
+// 				for (int i = i0.x; i <= i1.x; i++) {
+// 					float dSqr = glm::distance2(center, vec3(i, j, k));
+// 					if (dSqr < radius * radius) {
+// 						int idx = i + j * demension[0] + k * demension[0] * demension[1];
+// 						float dist = radius - sqrt(dSqr);
+// 						if (dist > dists[idx]) {
+// 							data[idx] = index;
+// 							dists[idx] = dist;
+// 						}
+// 					}
+// 				}
+// 			}
+// 		}
+// 	}
+
+	int numbox = 3;
+	for (int idx = 0; idx < numbox; idx++) {
+		index++;
+		vec3 center = glm::linearRand(vec3(0.f), vec3(demension));
+		mat3 rotate = glm::mat3(glm::eulerAngleXYZ(1.2f, 1.3f, 0.6f));
+//		mat3 rotate = glm::mat3(glm::eulerAngleXYZ(glm::linearRand(0.f, glm::radians(180.f)), glm::linearRand(0.f, glm::radians(180.f)), glm::linearRand(0.f, glm::radians(180.f))));
+		rotate = inverse(rotate);
+		vec3 i0 = ivec3(0);
+		vec3 i1 = ivec3(demension - 1);
+		for (int k = i0.z; k <= i1.z; k++) {
+			for (int j = i0.y; j <= i1.y; j++) {
+				for (int i = i0.x; i <= i1.x; i++) {
+//					float dSqr = glm::distance2(center, vec3(i, j, k));
+//					if (dSqr < radius * radius) 
+					{
 						int idx = i + j * demension[0] + k * demension[0] * demension[1];
-						float dist = radius - sqrt(distSqr);
-						if (dist > dists[idx]) {
+						vec3 p = vec3(i, j, k);
+//						float dist = radius - sqrt(dSqr);
+						float dist = -sdBox(rotate * p - center, vec3(10.f));
+						if (dist >= 0 && dist > dists[idx]) {
 							data[idx] = index;
 							dists[idx] = dist;
 						}
@@ -87,6 +122,7 @@ std::vector<uint16_t> makeSpheres(int numSpheres, int demension[3], float voxelS
 			}
 		}
 	}
+
 	return data;
 }
 
@@ -278,7 +314,72 @@ struct SurfaceNets
 		cmd.drawIndexed(inum, 1, 0, 0, 0);
 
 		cmd.endRenderingKHR();
+	}
 
+	void execute(vk::CommandBuffer cmd)
+	{
+		ivec3 dimensions = { 64, 64, 64 };
+		vec3 voxelSize = { 1.f, 1.f, 1.f };
+		int numSpheres = 10;
+
+		// Create the model and its SurfaceNet
+		auto modeldata = makeSpheres(numSpheres, dimensions, voxelSize);
+
+		MMSurfaceNet surfaceNet(modeldata.data(), &dimensions.x, &voxelSize.x);
+		MMSurfaceNet::RelaxAttrs relaxAttrs;
+		relaxAttrs.relaxFactor = 0.5f;
+		relaxAttrs.numRelaxIterations = 20;
+		relaxAttrs.maxDistFromCellCenter = 1.0f;
+		surfaceNet.relax(relaxAttrs);
+
+		MMGeometryGL Geometry(&surfaceNet);
+
+		auto vertex = context->m_vertex_memory.allocateMemory<MMGeometryGL::GLVertex>(Geometry.numVertices());
+		auto index = context->m_vertex_memory.allocateMemory<uint>(Geometry.numIndices());
+		{
+			auto staging_vertex = context->m_staging_memory.allocateMemory<MMGeometryGL::GLVertex>(Geometry.numVertices(), true);
+			memcpy(staging_vertex.getMappedPtr(), Geometry.vertices(), staging_vertex.getInfo().range);
+			auto staging_index = context->m_staging_memory.allocateMemory<uint>(Geometry.numIndices(), true);
+			memcpy(staging_index.getMappedPtr(), Geometry.indices(), staging_index.getInfo().range);
+			vk::BufferCopy copy[] = {
+				vk::BufferCopy().setSize(staging_vertex.getInfo().range).setSrcOffset(staging_vertex.getInfo().offset).setDstOffset(vertex.getInfo().offset),
+				vk::BufferCopy().setSize(staging_index.getInfo().range).setSrcOffset(staging_index.getInfo().offset).setDstOffset(index.getInfo().offset),
+			};
+			setup_cmd.copyBuffer(staging_index.getInfo().buffer, vertex.getInfo().buffer, array_size(copy), copy);
+		}
+
+		app::g_app_instance->m_window->getImgui()->pushImguiCmd([this]()
+			{
+				static bool is_open;
+				ImGui::SetNextWindowSize(ImVec2(400.f, 300.f), ImGuiCond_Once);
+				ImGui::Begin("RenderConfig", &is_open, ImGuiWindowFlags_NoSavedSettings);
+				if (ImGui::TreeNode("Directional Light"))
+				{
+					ImGui::Checkbox("Enable", (bool*)&m_render_config.useLight);
+					ImGui::DragFloat3("Light Dir", &m_render_config.LightDir[0], 0.01f, -1.f, 1.f);
+					ImGui::TreePop();
+				}
+				ImGui::SliderFloat("exposure", &this->m_render_config.exposure, 0.0f, 20.f);
+
+				ImGui::Separator();
+				const char* types[] = { "normal", "irradiance", "prefiltered", };
+				ImGui::Combo("Skybox", &m_render_config.skybox_render_type, types, array_size(types));
+				ImGui::SliderFloat("lod", &m_render_config.lod, 0.f, 1.f);
+				ImGui::SliderFloat("ambient power", &m_render_config.ambient_power, 0.f, 10.f);
+
+				ImGui::End();
+
+			});
+
+		auto staging = m_ctx->m_staging_memory.allocateMemory<RenderConfig>(1, true);
+		memcpy_s(staging.getMappedPtr(), sizeof(RenderConfig), &m_render_config, sizeof(RenderConfig));
+		vk::BufferCopy copy = vk::BufferCopy(staging.getInfo().offset, u_render_config.getInfo().offset, staging.getInfo().range);
+		cmd.copyBuffer(staging.getInfo().buffer, u_render_config.getInfo().buffer, copy);
+
+		{
+			vk::BufferMemoryBarrier to_read = u_render_config.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllGraphics, {}, {}, { to_read }, { });
+		}
 	}
 };
 int main()
@@ -307,35 +408,6 @@ int main()
 
 	DrawHelper draw_helper{ context };
 
-	int dimensions[3] = {64, 64, 64};
-	float voxelSize[3] = {1.f, 1.f, 1.f};
-	int numSpheres = 10;
-
-	// Create the model and its SurfaceNet
-	auto modeldata = makeSpheres(numSpheres, dimensions, voxelSize);
-
-	MMSurfaceNet surfaceNet(modeldata.data(), dimensions, voxelSize);
-	MMSurfaceNet::RelaxAttrs relaxAttrs;
-	relaxAttrs.relaxFactor = 0.5f;
-	relaxAttrs.numRelaxIterations = 20;
-	relaxAttrs.maxDistFromCellCenter = 1.0f;
-	surfaceNet.relax(relaxAttrs);
-
-	MMGeometryGL Geometry(&surfaceNet);
-	
-	auto vertex = context->m_vertex_memory.allocateMemory<MMGeometryGL::GLVertex>(Geometry.numVertices());
-	auto index = context->m_vertex_memory.allocateMemory<uint>(Geometry.numIndices());
-	{
-		auto staging_vertex = context->m_staging_memory.allocateMemory<MMGeometryGL::GLVertex>(Geometry.numVertices(), true);
-		memcpy(staging_vertex.getMappedPtr(), Geometry.vertices(), staging_vertex.getInfo().range);
-		auto staging_index = context->m_staging_memory.allocateMemory<uint>(Geometry.numIndices(), true);
-		memcpy(staging_index.getMappedPtr(), Geometry.indices(), staging_index.getInfo().range);
-		vk::BufferCopy copy[] = {
-			vk::BufferCopy().setSize(staging_vertex.getInfo().range).setSrcOffset(staging_vertex.getInfo().offset).setDstOffset(vertex.getInfo().offset),
-			vk::BufferCopy().setSize(staging_index.getInfo().range).setSrcOffset(staging_index.getInfo().offset).setDstOffset(index.getInfo().offset),
-		};
-		setup_cmd.copyBuffer(staging_index.getInfo().buffer, vertex.getInfo().buffer, array_size(copy), copy);
-	}
 	SurfaceNets sn(*context, render_target);
 
 	app.setup();
