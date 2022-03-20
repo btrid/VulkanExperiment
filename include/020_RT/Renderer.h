@@ -4,7 +4,7 @@
 
 struct IndirectCmd
 {
-	VkDrawMeshTasksIndirectCommandNV task;
+	vk::DrawMeshTasksIndirectCommandNV task;
 	uint64_t PrimitiveAddress;
 };
 
