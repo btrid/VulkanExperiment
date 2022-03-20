@@ -3,7 +3,7 @@
 #include <memory>
 #include <functional>
 
-#define USE_FREEIMAGE
+//#define USE_FREEIMAGE
 //#define USE_DEVIL
 
 #ifdef USE_FREEIMAGE
