@@ -337,46 +337,59 @@ struct Resource
 			m_DSL = ctx.m_device.createDescriptorSetLayoutUnique(desc_layout_info);
 		}
 
-		m_buffer_info = {
-			b_models.getInfo(),
-			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
-			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
-			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
-			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
-			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
-			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
-			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
-			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
-			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
-			ctx.m_vertex_memory.allocateMemory(0).getInfo(),
-		};
-		m_image_info.fill(vk::DescriptorImageInfo{ sGraphicsResource::Order().getWhiteTexture().m_sampler.get(), sGraphicsResource::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal });
-
 		{
-			vk::DescriptorUpdateTemplateEntry dutEntry[2];
-			dutEntry[0].setDstBinding(0).setDstArrayElement(0).setDescriptorCount(array_size(m_buffer_info)).setDescriptorType(vk::DescriptorType::eStorageBuffer).setOffset(offsetof(Resource, m_buffer_info)).setStride(sizeof(VkDescriptorBufferInfo));
-			dutEntry[1].setDstBinding(100).setDstArrayElement(0).setDescriptorCount(array_size(m_image_info)).setDescriptorType(vk::DescriptorType::eCombinedImageSampler).setOffset(offsetof(Resource, m_image_info)).setStride(sizeof(VkDescriptorImageInfo));
-
-			vk::DescriptorUpdateTemplateCreateInfo dutCI;
-			dutCI.setTemplateType(vk::DescriptorUpdateTemplateType::eDescriptorSet);
-			dutCI.descriptorSetLayout = m_DSL.get();
-			dutCI.descriptorUpdateEntryCount = array_size(dutEntry);
-			dutCI.pDescriptorUpdateEntries = dutEntry;
-			m_Texture_DUP = ctx.m_device.createDescriptorUpdateTemplateUnique(dutCI);
-		}
-		{
-			vk::DescriptorSetLayout layouts[] =
-			{
-				m_DSL.get(),
+			m_buffer_info = {
+				b_models.getInfo(),
+				ctx.m_vertex_memory.getDummyInfo(),
+				ctx.m_vertex_memory.getDummyInfo(),
+				ctx.m_vertex_memory.getDummyInfo(),
+				ctx.m_vertex_memory.getDummyInfo(),
+				ctx.m_vertex_memory.getDummyInfo(),
+				ctx.m_vertex_memory.getDummyInfo(),
+				ctx.m_vertex_memory.getDummyInfo(),
+				ctx.m_vertex_memory.getDummyInfo(),
+				ctx.m_vertex_memory.getDummyInfo(),
+				ctx.m_vertex_memory.getDummyInfo(),
 			};
-			vk::DescriptorSetAllocateInfo desc_info;
-			desc_info.setDescriptorPool(m_descriptor_pool.get());
-			desc_info.setDescriptorSetCount(array_length(layouts));
-			desc_info.setPSetLayouts(layouts);
-			m_DS_ModelResource = std::move(ctx.m_device.allocateDescriptorSetsUnique(desc_info)[0]);
+			m_image_info.fill(vk::DescriptorImageInfo{ sGraphicsResource::Order().getWhiteTexture().m_sampler.get(), sGraphicsResource::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal });
 
-			ctx.m_device.updateDescriptorSetWithTemplate(*m_DS_ModelResource, *m_Texture_DUP, this);
-		}
+			{
+				vk::DescriptorSetLayout layouts[] =
+				{
+					m_DSL.get(),
+				};
+				vk::DescriptorSetAllocateInfo desc_info;
+				desc_info.setDescriptorPool(m_descriptor_pool.get());
+				desc_info.setDescriptorSetCount(array_length(layouts));
+				desc_info.setPSetLayouts(layouts);
+				m_DS_ModelResource = std::move(ctx.m_device.allocateDescriptorSetsUnique(desc_info)[0]);
+
+			}
+
+#if 0 // updateDescriptorSetWithTemplate‚ªƒoƒO‚Á‚Ä‚é
+			{
+				vk::DescriptorUpdateTemplateEntry dutEntry[2];
+				dutEntry[0].setDstBinding(0).setDstArrayElement(0).setDescriptorCount(array_size(m_buffer_info)).setDescriptorType(vk::DescriptorType::eStorageBuffer).setOffset(offsetof(Resource, m_buffer_info)).setStride(sizeof(VkDescriptorBufferInfo));
+				dutEntry[1].setDstBinding(100).setDstArrayElement(0).setDescriptorCount(array_size(m_image_info)).setDescriptorType(vk::DescriptorType::eCombinedImageSampler).setOffset(offsetof(Resource, m_image_info)).setStride(sizeof(VkDescriptorImageInfo));
+
+				vk::DescriptorUpdateTemplateCreateInfo dutCI;
+				dutCI.setTemplateType(vk::DescriptorUpdateTemplateType::eDescriptorSet);
+				dutCI.descriptorSetLayout = m_DSL.get();
+				dutCI.descriptorUpdateEntryCount = array_size(dutEntry);
+				dutCI.pDescriptorUpdateEntries = dutEntry;
+				m_Texture_DUP = ctx.m_device.createDescriptorUpdateTemplateUnique(dutCI);
+				ctx.m_device.updateDescriptorSetWithTemplate(*m_DS_ModelResource, *m_Texture_DUP, this);
+			}
+#else
+			vk::WriteDescriptorSet write[] =
+			{
+				vk::WriteDescriptorSet().setDstSet(*m_DS_ModelResource).setDstBinding(0).setDescriptorType(vk::DescriptorType::eStorageBuffer).setBufferInfo(m_buffer_info),
+				vk::WriteDescriptorSet().setDstSet(*m_DS_ModelResource).setDstBinding(100).setDescriptorType(vk::DescriptorType::eCombinedImageSampler).setImageInfo(m_image_info),
+			};
+			ctx.m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
+
+#endif
+	}
 	}
 
 	std::shared_ptr<gltf::gltfResource> LoadScene(btr::Context& ctx, vk::CommandBuffer cmd, const std::string& filename);

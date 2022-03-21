@@ -531,7 +531,7 @@ struct AllocatedMemory
 	const vk::BufferCreateInfo& getBufferCreateInfo()const { return m_resource->m_buffer_info; }
 	vk::Buffer getBuffer()const { return m_resource->m_buffer.get(); }
 
-	vk::DescriptorBufferInfo getDummyInfo()const { return vk::DescriptorBufferInfo(m_resource->m_buffer.get(), 0, m_resource->m_memory_request.alignment); }
+	vk::DescriptorBufferInfo getDummyInfo()const { return vk::DescriptorBufferInfo(m_resource->m_buffer.get(), 0, m_resource->m_buffer_info.size); }
 };
 
 struct UpdateBufferDescriptor
