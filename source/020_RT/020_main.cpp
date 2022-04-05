@@ -13,11 +13,11 @@
 #include <applib/App.h>
 #include <applib/AppPipeline.h>
 #include <applib/sCameraManager.h>
-#include <applib/sAppImGui.h>
 #include <applib/GraphicsResource.h>
 #include <applib/DrawHelper.h>
 
 
+#include <applib/sAppImGui.h>
 #define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 #include <imgui/imgui.h>
 

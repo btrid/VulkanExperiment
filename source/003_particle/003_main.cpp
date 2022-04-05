@@ -12,132 +12,127 @@
 #include <chrono>
 #include <memory>
 #include <filesystem>
-#include <btrlib/Define.h>
+#include <btrlib/Singleton.h>
 #include <btrlib/cWindow.h>
-#include <btrlib/cInput.h>
-#include <btrlib/cCamera.h>
+#include <btrlib/cThreadPool.h>
+#include <btrlib/cDebug.h>
 #include <btrlib/sGlobal.h>
-#include <btrlib/GPU.h>
 #include <btrlib/cStopWatch.h>
 #include <btrlib/AllocatedMemory.h>
-
-#include <applib/App.h>
-#include <applib/cModelPipeline.h>
-#include <applib/DrawHelper.h>
+//#include <applib/DrawHelper.h>
 #include <applib/sCameraManager.h>
-#include <btrlib/Context.h>
-
-#include <applib/sParticlePipeline.h>
+#include <applib/App.h>
+#include <applib/AppPipeline.h>
 
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
 #pragma comment(lib, "vulkan-1.lib")
+#pragma comment(lib, "imgui.lib")
+
+
+#include <applib/sAppImGui.h>
+
+struct Fluid
+{
+};
+struct Particle
+{
+	Particle(btr::Context& ctx)
+	{
+
+	}
+	void execute(vk::CommandBuffer cmd, btr::Context& ctx)
+	{
+		app::g_app_instance->m_window->getImgui()->pushImguiCmd([this]()
+			{
+				ImGui::SetNextWindowSize(ImVec2(400.f, 300.f), ImGuiCond_Once);
+				static bool is_open;
+				ImGui::Begin("RenderConfig", &is_open, ImGuiWindowFlags_NoSavedSettings| ImGuiWindowFlags_HorizontalScrollbar);
+				if (ImGui::BeginChild("editor", ImVec2(-1, -1), false, ImGuiWindowFlags_HorizontalScrollbar)) {
+					static char text[1024 * 16] =
+						"/*\n"
+						" The Pentium F00F bug, shorthand for F0 0F C7 C8,\n"
+						" the hexadecimal encoding of one offending instruction,\n"
+						" more formally, the invalid operand with locked CMPXCHG8B\n"
+						" instruction bug, is a design flaw in the majority of\n"
+						" Intel Pentium, Pentium MMX, and Pentium OverDrive\n"
+						" processors (all in the P5 microarchitecture).\n"
+						"*/\n\n"
+						"label:\n"
+						"\tlock cmpxchg8b eax\n";
+					ImGui::InputTextMultiline("##source", text, std::size(text), ImVec2(-1, -1), ImGuiInputTextFlags_AllowTabInput);
+				}
+
+				ImGui::EndChild();
+				ImGui::End();
+			});
+
+	}
+	void draw(vk::CommandBuffer cmd)
+	{
+
+	}
+
+};
 
 int main()
 {
 	btr::setResourceAppPath("..\\..\\resource\\003_particle\\");
 	auto camera = cCamera::sCamera::Order().create();
-	camera->getData().m_position = glm::vec3(20.f, 10.f, 30.f);
-	camera->getData().m_target = glm::vec3(0.f, 0.f, 0.f);
+	camera->getData().m_position = glm::vec3(0.f, -500.f, -800.f);
+	camera->getData().m_target = glm::vec3(0.f, -100.f, 0.f);
 	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
-	camera->getData().m_width = 640;
-	camera->getData().m_height = 480;
-	camera->getData().m_far = 5000.f;
+	camera->getData().m_width = 1024;
+	camera->getData().m_height = 1024;
+	camera->getData().m_far = 100000.f;
 	camera->getData().m_near = 0.01f;
 
-	auto gpu = sGlobal::Order().getGPU(0);
-	auto device = sGlobal::Order().getGPU(0).getDevice();
-
-	app::App app;
-	{
-		app::AppDescriptor desc;
-		desc.m_gpu = gpu;
-		desc.m_window_size = uvec2(640, 480);
-		app.setup(desc);
-	}
+	app::AppDescriptor app_desc;
+	app_desc.m_window_size = uvec2(1024, 1024);
+	app::App app(app_desc);
 
 	auto context = app.m_context;
 
-	cModel model;
-	model.load(context, btr::getResourceAppPath() + "tiny.x");
+	ClearPipeline clear_render_target(context, app.m_window->getFrontBuffer());
+	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), context->m_window->getSwapchain());
 
-	cModelPipeline renderer;
-	renderer.setup(context, nullptr);
-	auto render = renderer.createRender(context, model.getResource());
-
-	{
-		{
-			PlayMotionDescriptor desc;
-			desc.m_data = model.getResource()->getAnimation().m_motion[0];
-			desc.m_play_no = 0;
-			desc.m_start_time = 0.f;
-			render->m_animation->getPlayList().play(desc);
-
-			auto& transform = render->m_animation->getTransform();
-			transform.m_local_scale = glm::vec3(0.002f);
-			transform.m_local_rotate = glm::quat(1.f, 0.f, 0.f, 0.f);
-			transform.m_local_translate = glm::vec3(0.f, 280.f, 0.f);
-		}
-	}
-
-	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), 0);
+	Particle particle(*context);
+	app.setup();
 	while (true)
 	{
 		cStopWatch time;
 
 		app.preUpdate();
 		{
+			enum cmds
 			{
-				render->m_animation->getTransform().m_global = glm::mat4(1.f);
-			}
-
-			SynchronizedPoint motion_worker_syncronized_point(1);
+				cmd_clear,
+				cmd_particle,
+				cmd_present,
+				cmd_num,
+			};
+			std::vector<vk::CommandBuffer> render_cmds(cmd_num);
 			{
-				cThreadJob job;
-				job.mFinish =
-					[&]()
-				{
-					render->m_animation->animationUpdate();
-					motion_worker_syncronized_point.arrive();
-				};
-				sGlobal::Order().getThreadPool().enque(job);
-			}
-
-			SynchronizedPoint render_syncronized_point(2);
-			std::vector<vk::CommandBuffer> render_cmds(3);
-			{
-				cThreadJob job;
-				job.mJob.emplace_back(
-					[&]()
-				{
-					render_cmds[0] = renderer.draw(context);
-					render_syncronized_point.arrive();
-				}
-				);
-				sGlobal::Order().getThreadPool().enque(job);
+				render_cmds[cmd_clear] = clear_render_target.execute();
+				render_cmds[cmd_present] = present_pipeline.execute();
 			}
 
 			{
-				cThreadJob job;
-				job.mJob.emplace_back(
-					[&]()
-				{
-					render_cmds[1] = sParticlePipeline::Order().execute(context);
-					render_cmds[2] = sParticlePipeline::Order().draw(context);
-					render_syncronized_point.arrive();
-				}
-				);
-				sGlobal::Order().getThreadPool().enque(job);
+				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+
+				particle.execute(cmd, *context);
+				sAppImGui::Order().Render(cmd);
+
+				cmd.end();
+				render_cmds[cmd_particle] = cmd;
 			}
 
-			render_syncronized_point.wait();
 
 			app.submit(std::move(render_cmds));
-
-			motion_worker_syncronized_point.wait();
 		}
+
 		app.postUpdate();
-		printf("%6.3fs\n", time.getElapsedTimeAsSeconds());
+		printf("%6.4fms\n", time.getElapsedTimeAsMilliSeconds());
 	}
 
 	return 0;

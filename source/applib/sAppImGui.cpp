@@ -375,11 +375,36 @@ void sAppImGui::Render(vk::CommandBuffer& cmd)
 			io.KeyShift = is_shift;
 			io.KeyCtrl = keyboard.isHold(VK_CONTROL);
 			io.KeyAlt = keyboard.isHold(VK_MENU);
-			int32_t input_count = 0;
+			io.KeyMap[ImGuiKey_Tab] = VK_TAB;
+			io.KeyMap[ImGuiKey_LeftArrow] = VK_LEFT;
+			io.KeyMap[ImGuiKey_RightArrow] = VK_RIGHT;
+			io.KeyMap[ImGuiKey_UpArrow] = VK_UP;
+			io.KeyMap[ImGuiKey_DownArrow] = VK_DOWN;
+			io.KeyMap[ImGuiKey_PageUp] = VK_NAVIGATION_UP;
+			io.KeyMap[ImGuiKey_PageDown] = VK_NAVIGATION_DOWN;
+			io.KeyMap[ImGuiKey_Home] = VK_HOME;
+			io.KeyMap[ImGuiKey_End] = VK_END;
+			io.KeyMap[ImGuiKey_Delete] = VK_DELETE;
+			io.KeyMap[ImGuiKey_Backspace] = VK_BACK;
+			io.KeyMap[ImGuiKey_Enter] = VK_RETURN;
+			io.KeyMap[ImGuiKey_Escape] = VK_ESCAPE;
+			io.KeyMap[ImGuiKey_A] = 256 + 'A';
+			io.KeyMap[ImGuiKey_C] = 256 + 'C';
+ 			io.KeyMap[ImGuiKey_V] = 256 + 'V';
+ 			io.KeyMap[ImGuiKey_X] = 256 + 'X';
+ 			io.KeyMap[ImGuiKey_Y] = 256 + 'Y';
+ 			io.KeyMap[ImGuiKey_Z] = 256 + 'Z';
+
 			for (uint32_t i = 0; i < 256; i++)
 			{
-				io.KeysDown[i] = keyboard.isHold(i);
+				io.KeysDown[i] = keyboard.isOn(i);
 			}
+			io.KeysDown[256 + 'A'] = keyboard.isHold(VK_CONTROL) && keyboard.isOn('A');
+			io.KeysDown[256 + 'X'] = keyboard.isHold(VK_CONTROL) && keyboard.isOn('C');
+			io.KeysDown[256 + 'V'] = keyboard.isHold(VK_CONTROL) && keyboard.isOn('V');
+			io.KeysDown[256 + 'X'] = keyboard.isHold(VK_CONTROL) && keyboard.isOn('X');
+			io.KeysDown[256 + 'Y'] = keyboard.isHold(VK_CONTROL) && keyboard.isOn('Y');
+			io.KeysDown[256 + 'Z'] = keyboard.isHold(VK_CONTROL) && keyboard.isOn('Z');
 			for (uint32_t i = 0; i < keyboard.m_char_count; i++)
 			{
 				io.AddInputCharacter(keyboard.m_char[i]);
