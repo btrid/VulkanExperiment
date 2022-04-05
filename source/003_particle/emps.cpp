@@ -67,7 +67,7 @@ int ToGridIndex(const ivec3& i){	return i.x + i.y * GridCellNum.x + i.z * GridCe
 int ToGridIndex(const dvec3& p){	return ToGridIndex(ToGridCellIndex(p));}
 void AlcBkt(FluidContext& cFluid)
 {
-	cFluid.PNum = 5000;
+	cFluid.PNum = 20000;
 	cFluid.Acc.resize(cFluid.PNum);
 	cFluid.Pos.resize(cFluid.PNum);
 	cFluid.Vel.resize(cFluid.PNum);
@@ -95,15 +95,14 @@ void AlcBkt(FluidContext& cFluid)
 		for (int iy = 0; iy < n.y; iy++) {
 			for (int ix = 0; ix < n.x; ix++) {
 				int ip = iz * n.x * n.y + iy * n.x + ix;
+				cFluid.Pos[ip] = GridMin + PCL_DST * dvec3(ivec3(ix, iy, iz) - 3);
 				if (ix < 3 || ix >= n.x - 3 || iy < 3 || iy >= n.y - 3 || iz < 3) {
 					// 箱を作る
 					cFluid.PType[ip] = PT_Wall;
-					cFluid.Pos[ip] = GridMin + PCL_DST * dvec3(ivec3(ix, iy, iz) - 3);
 				}
 				else if (cFluid.Pos[ip].y <= WAVE_HEIGHT && cFluid.Pos[ip].x <= WAVE_WIDTH) {
 					// ダムを造る
 					cFluid.PType[ip] = PT_Fluid;
-					cFluid.Pos[ip] = GridMin + PCL_DST * dvec3(ivec3(ix, iy, iz) - 3);
 				}
 			}
 		}
@@ -167,9 +166,9 @@ void VscTrm(FluidContext& cFluid){
 		auto pos = cFluid.Pos[i];
 		auto vel = cFluid.Vel[i];
 		auto idx = ToGridCellIndex(pos);
-		for(int jz=idx.z-1;jz<=idx.z+1;jz++){
-		for(int jy=idx.y-1;jy<=idx.y+1;jy++){
-		for(int jx=idx.x-1;jx<=idx.x+1;jx++){
+		for(int jz=idx.z-1;jz<=idx.z+1;jz++){ if(jz<0||jz>=GridCellNum.z){continue;}
+		for(int jy=idx.y-1;jy<=idx.y+1;jy++){ if(jy<0||jy>=GridCellNum.y){continue;}
+		for(int jx=idx.x-1;jx<=idx.x+1;jx++){ if(jx<0||jx>=GridCellNum.x){continue;}
 			int jb = ToGridIndex(ivec3(jx, jy, jz));
 			int j = GridLinkHead[jb];
 			if(j == -1) continue;
@@ -221,9 +220,9 @@ void ChkCol(FluidContext& cFluid)
 		auto vec= cFluid.Vel[i];
 		auto vec_ix2 = vec;
 		auto idx = ToGridCellIndex(pos);
-		for(int jz=idx.z-1;jz<=idx.z+1;jz++){
-		for(int jy=idx.y-1;jy<=idx.y+1;jy++){
-		for(int jx=idx.x-1;jx<=idx.x+1;jx++){
+		for(int jz=idx.z-1;jz<=idx.z+1;jz++){ if(jz<0||jz>=GridCellNum.z){continue;}
+		for(int jy=idx.y-1;jy<=idx.y+1;jy++){ if(jy<0||jy>=GridCellNum.y){continue;}
+		for(int jx=idx.x-1;jx<=idx.x+1;jx++){ if(jx<0||jx>=GridCellNum.x){continue;}
 			int jb = ToGridIndex(ivec3(jx, jy, jz));
 			int j = GridLinkHead[jb];
 			if(j == -1) continue;
@@ -265,9 +264,10 @@ void MkPrs(FluidContext& cFluid){
 		auto pos = cFluid.Pos[i];
 		double ni = 0.0;
 		auto idx = ToGridCellIndex(pos);
-		for(int jz=idx.z-1;jz<=idx.z+1;jz++){
-		for(int jy=idx.y-1;jy<=idx.y+1;jy++){
-		for(int jx=idx.x-1;jx<=idx.x+1;jx++){
+
+		for(int jz=idx.z-1;jz<=idx.z+1;jz++){ if(jz<0||jz>=GridCellNum.z){continue;}
+		for(int jy=idx.y-1;jy<=idx.y+1;jy++){ if(jy<0||jy>=GridCellNum.y){continue;}
+		for(int jx=idx.x-1;jx<=idx.x+1;jx++){ if(jx<0||jx>=GridCellNum.x){continue;}
 			int jb = ToGridIndex(ivec3(jx, jy, jz));
 			for(int j = GridLinkHead[jb];j!=-1; j = GridLinkNext[j])
 			{
@@ -294,9 +294,9 @@ void PrsGrdTrm(FluidContext& cFluid){
 		auto pos= cFluid.Pos[i];
 		auto pre_min = cFluid.Prs[i];
 		auto idx = ToGridCellIndex(pos);
-		for(int jz=idx.z-1;jz<=idx.z+1;jz++){
-		for(int jy=idx.y-1;jy<=idx.y+1;jy++){
-		for(int jx=idx.x-1;jx<=idx.x+1;jx++){
+		for(int jz=idx.z-1;jz<=idx.z+1;jz++){ if(jz<0||jz>=GridCellNum.z){continue;}
+		for(int jy=idx.y-1;jy<=idx.y+1;jy++){ if(jy<0||jy>=GridCellNum.y){continue;}
+		for(int jx=idx.x-1;jx<=idx.x+1;jx++){ if(jx<0||jx>=GridCellNum.x){continue;}
 			int jb = ToGridIndex(ivec3(jx, jy, jz));
 			int j = GridLinkHead[jb];
 			if(j == -1) continue;
@@ -311,9 +311,9 @@ void PrsGrdTrm(FluidContext& cFluid){
 				if(j==-1) break;
 			}
 		}}}
-		for(int jz=idx.z-1;jz<=idx.z+1;jz++){
-		for(int jy=idx.y-1;jy<=idx.y+1;jy++){
-		for(int jx=idx.x-1;jx<=idx.x+1;jx++){
+		for(int jz=idx.z-1;jz<=idx.z+1;jz++){ if(jz<0||jz>=GridCellNum.z){continue;}
+		for(int jy=idx.y-1;jy<=idx.y+1;jy++){ if(jy<0||jy>=GridCellNum.y){continue;}
+		for(int jx=idx.x-1;jx<=idx.x+1;jx++){ if(jx<0||jx>=GridCellNum.x){continue;}
 			int jb = ToGridIndex(ivec3(jx, jy, jz));
 			int j = GridLinkHead[jb];
 			if(j == -1) continue;

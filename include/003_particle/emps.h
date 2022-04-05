@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <btrlib/Define.h>
 #include <btrlib/DefineMath.h>
 struct FluidContext
 {
@@ -11,3 +12,5 @@ struct FluidContext
 };
 void init(FluidContext& cFluid); 
 void run(FluidContext& cFluid);
+
+
