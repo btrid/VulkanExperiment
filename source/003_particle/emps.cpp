@@ -4,9 +4,9 @@
 #include <cstring>
 #include <003_particle/emps.h>
 
-#define PCL_DST 0.02					//平均粒子間距離
-dvec3 GridMin = dvec3(0.0-PCL_DST*3);
-dvec3 GridMax = dvec3(1.0+PCL_DST*3, 0.6+PCL_DST * 20, 1.0+PCL_DST*3);
+#define PCL_DST 0.02f					//平均粒子間距離
+vec3 GridMin = vec3(0.0-PCL_DST*3);
+vec3 GridMax = vec3(1.0+PCL_DST*3, 0.6+PCL_DST * 20, 1.0+PCL_DST*3);
 struct ConstantParam
 {
 };
@@ -21,17 +21,17 @@ enum ParticleType
 
 #define DNS_FLD 1000		//流体粒子の密度
 #define DNS_WLL 1000		//壁粒子の密度
-#define DT 0.0005			//時間刻み幅
+#define DT 0.0005f			//時間刻み幅
 #define SND 22.0			//音速
 #define KNM_VSC 0.000001	//動粘性係数
 #define DIM 3				//次元数
-#define CRT_NUM 0.1		//クーラン条件数
-#define COL_RAT 0.2		//接近した粒子の反発率
-#define DST_LMT_RAT 0.9	//これ以上の粒子間の接近を許さない距離の係数
-#define WEI(dist, re) ((re/dist) - 1.0)	//重み関数
-#define Gravity dvec3(0.f, -9.8, 0.f);//重力加速度
+#define CRT_NUM 0.1f		//クーラン条件数
+#define COL_RAT 0.2f		//接近した粒子の反発率
+#define DST_LMT_RAT 0.9f	//これ以上の粒子間の接近を許さない距離の係数
+#define WEI(dist, re) ((re/dist) - 1.0f)	//重み関数
+#define Gravity vec3(0.f, -9.8f, 0.f);//重力加速度
 
-double radius = PCL_DST * 2.1;
+double radius = PCL_DST * 2.1f;
 double radius2 = radius*radius;
 
 double GridCellSize; //GridCellの大きさ(バケット1辺の長さ)
@@ -53,12 +53,12 @@ double COL; // 反発率？
 
 double Dns[PT_MAX],invDns[PT_MAX];
 
-bool validCheck(const dvec3& pos)
+bool validCheck(const vec3& pos)
 {
 	return all(greaterThanEqual(pos, GridMin)) && all(lessThan(pos, GridMax));
 }
 
-ivec3 ToGridCellIndex(const dvec3& p) 
+ivec3 ToGridCellIndex(const vec3& p) 
 {
 	return ivec3((p - GridMin) * GridCellSizeInv); 
 }
@@ -66,7 +66,7 @@ int ToGridIndex(const ivec3& i){
 //	assert(all(greaterThanEqual(i, ivec3(0))) && all(lessThan(i, GridCellNum)));
 	return i.x + i.y * GridCellNum.x + i.z * GridCellNum.x * GridCellNum.y;
 }
-int ToGridIndex(const dvec3& p){	return ToGridIndex(ToGridCellIndex(p));}
+int ToGridIndex(const vec3& p){	return ToGridIndex(ToGridCellIndex(p));}
 void AlcBkt(FluidContext& cFluid)
 {
 	cFluid.PNum = 20000;
@@ -76,7 +76,7 @@ void AlcBkt(FluidContext& cFluid)
 	cFluid.Prs.resize(cFluid.PNum);
 	cFluid.PType.resize(cFluid.PNum);
 	std::fill(cFluid.PType.begin(), cFluid.PType.end(), PT_Ghost);
-	std::fill(cFluid.Pos.begin(), cFluid.Pos.end(), GridMin - dvec3(999));
+	std::fill(cFluid.Pos.begin(), cFluid.Pos.end(), GridMin - vec3(999));
 
 	GridCellSize = radius*(1.0+CRT_NUM);
 	GridCellSizeInv = 1.0/ GridCellSize;
@@ -92,7 +92,7 @@ void AlcBkt(FluidContext& cFluid)
 // 		for (int iy = 0; iy < n.y; iy++) {
 // 			for (int ix = 0; ix < n.x; ix++) {
 // 				int ip = iz * n.x * n.y + iy * n.x + ix;
-// 				auto p = GridMin + PCL_DST * dvec3(ivec3(ix, iy, iz));
+// 				auto p = GridMin + PCL_DST * vec3(ivec3(ix, iy, iz));
 // 				if (ix < 3 || ix >= n.x - 3 || iz < 3 || iz >= n.z - 3 || iy < 3) {
 // 					// 箱を作る
 // 					cFluid.PType[pcount] = PT_Wall;
@@ -109,7 +109,7 @@ void AlcBkt(FluidContext& cFluid)
 // 	for (int x = 0; x < 10; x++)
 // 	{
 // 		cFluid.PType[pcount] = PT_Fluid;
-// 		cFluid.Pos[pcount] = center + PCL_DST * dvec3(x, y, z);
+// 		cFluid.Pos[pcount] = center + PCL_DST * vec3(x, y, z);
 // 		pcount++;
 // 	}
 
@@ -119,7 +119,7 @@ void AlcBkt(FluidContext& cFluid)
 	for(int ix=0;ix<n.x;ix++){
 		int ip = iz*n.x* n.y + iy*n.x + ix;
 		cFluid.PType[ip] = PT_Ghost;
-		cFluid.Pos[ip] = GridMin + PCL_DST*dvec3(ivec3(ix,iy,iz));
+		cFluid.Pos[ip] = GridMin + PCL_DST*vec3(ivec3(ix,iy,iz));
 	}}}
 
 #define WAVE_HEIGHT 0.2
@@ -146,7 +146,7 @@ void SetPara(FluidContext& cFluid){
 	for(int ix= -4;ix<5;ix++){
 	for(int iy= -4;iy<5;iy++){
 	for(int iz= -4;iz<5;iz++){
-		dvec3 p = PCL_DST* dvec3(ix, iy, iz);
+		vec3 p = PCL_DST* vec3(ix, iy, iz);
 		double dist2 = dot(p,p);
 		if(dist2 <= radius2){
 			if(dist2==0.0)continue;
@@ -191,7 +191,7 @@ void VscTrm(FluidContext& cFluid){
 		{
 			continue;
 		}
-		auto acc = dvec3(0.0);
+		auto acc = vec3(0.0);
 		const auto& pos = cFluid.Pos[i];
 		const auto& vel = cFluid.Vel[i];
 		auto idx = ToGridCellIndex(pos);
@@ -228,7 +228,7 @@ void UpPcl1(FluidContext& cFluid)
 		{
 			cFluid.Vel[i] +=cFluid.Acc[i]*DT;
 			cFluid.Pos[i] +=cFluid.Vel[i]*DT;
-			cFluid.Acc[i]=dvec3(0.0);
+			cFluid.Acc[i]=vec3(0.0);
 			if (!validCheck(cFluid.Pos[i]))
 			{
 				cFluid.PType[i] = PT_Ghost;
@@ -264,7 +264,7 @@ void ChkCol(FluidContext& cFluid)
 				auto dist2 = dot(v, v);
 				if(dist2<rlim2)
 				{
-					double fDT = dot((vec-cFluid.Vel[j])*v, dvec3(1.));
+					double fDT = dot((vec-cFluid.Vel[j])*v, vec3(1.));
 					if(fDT > 0.0){
 						double mj = Dns[cFluid.PType[j]];
 						fDT *= COL*mj/(mi+mj)/dist2;
@@ -322,7 +322,7 @@ void PrsGrdTrm(FluidContext& cFluid)
 		if (cFluid.PType[i] != PT_Fluid) {
 			continue;
 		}
-		dvec3 acc = dvec3(0.0);
+		vec3 acc = vec3(0.0);
 		const auto& pos = cFluid.Pos[i];
 		auto pre_min = cFluid.Prs[i];
 		auto idx = ToGridCellIndex(pos);
@@ -367,7 +367,7 @@ void UpPcl2(FluidContext& cFluid)
 		{
 			cFluid.Vel[i] +=cFluid.Acc[i]*DT;
 			cFluid.Pos[i] +=cFluid.Acc[i]*DT*DT;
-			cFluid.Acc[i] = dvec3(0.0);
+			cFluid.Acc[i] = vec3(0.0);
 			if (!validCheck(cFluid.Pos[i]))
 			{
 				cFluid.PType[i] = PT_Ghost;

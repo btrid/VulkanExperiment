@@ -6,8 +6,8 @@
 struct FluidContext
 {
 	int PNum;
-	std::vector<dvec3> Acc, Pos, Vel;
-	std::vector<double> Prs;
+	std::vector<vec3> Acc, Pos, Vel;
+	std::vector<float> Prs;
 	std::vector<int> PType;
 };
 void init(FluidContext& cFluid); 
