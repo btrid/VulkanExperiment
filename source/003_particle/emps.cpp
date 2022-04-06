@@ -22,14 +22,12 @@ enum ParticleType
 #define DNS_FLD 1000		//流体粒子の密度
 #define DNS_WLL 1000		//壁粒子の密度
 #define DT 0.0005f			//時間刻み幅
-#define KNM_VSC 0.000001	//動粘性係数
 #define DIM 3				//次元数
 #define CRT_NUM 0.1f		//クーラン条件数
 #define COL_RAT 0.2f		//接近した粒子の反発率
 #define DST_LMT_RAT 0.9f	//これ以上の粒子間の接近を許さない距離の係数
 #define WEI(dist, re) ((re/dist) - 1.0f)	//重み関数
-#define Gravity vec3(0.f, -9.8f, 0.f);//重力加速度
-
+#define Gravity vec3(0.f, -9.8f, 0.f) //重力加速度
 double radius = PCL_DST * 2.1f;
 double radius2 = radius*radius;
 
@@ -43,15 +41,17 @@ std::vector<int> GridLinkNext;
 
 double n0; //初期粒子数密度
 double lmd;	//ラプラシアンモデルの係数λ
-double A1;//粘性項の計算に用いる係数
 double A2;//圧力の計算に用いる係数
-double A3;//圧力勾配項の計算に用いる係数
 double rlim; //これ以上の粒子間の接近を許さない距離
 double rlim2;
 double COL; // 反発率？
 
 double Dns[PT_MAX],invDns[PT_MAX];
 
+float safeDistance(const vec3& a, const vec3& b)
+{
+	return abs(dot(a, b)) < 0.000001 ? 0. : distance(a, b);
+}
 bool validCheck(const vec3& pos)
 {
 	return all(greaterThanEqual(pos, GridMin)) && all(lessThan(pos, GridMax));
@@ -95,7 +95,7 @@ void AlcBkt(FluidContext& cFluid)
 		cFluid.Pos[ip] = GridMin + PCL_DST*vec3(ivec3(ix,iy,iz));
 	}}}
 
-#define WAVE_HEIGHT 0.2
+#define WAVE_HEIGHT 0.3
 #define WAVE_WIDTH 0.1
 	for(int iz=0;iz<n.z;iz++){
 	for(int iy=0;iy<n.y;iy++){
@@ -105,7 +105,7 @@ void AlcBkt(FluidContext& cFluid)
 			// 壁を作る
 			cFluid.PType[ip] = PT_Wall;
 		}
-		else if(cFluid.Pos[ip].y <= WAVE_HEIGHT && cFluid.Pos[ip].x <= WAVE_WIDTH){
+		else if(cFluid.Pos[ip].y >= WAVE_HEIGHT && cFluid.Pos[ip].x <= WAVE_WIDTH){
 			// ダムを造る
 			cFluid.PType[ip] = PT_Fluid;
 		}
@@ -113,6 +113,8 @@ void AlcBkt(FluidContext& cFluid)
 
 }
 
+
+float wallweight[16];
 void SetPara(FluidContext& cFluid){
 	double tn0 =0.0;
 	double tlmd =0.0;
@@ -128,10 +130,23 @@ void SetPara(FluidContext& cFluid){
 			tlmd += dist2 * WEI(dist, radius);
 		}
 	}}}
+	for(int iy= 0;iy<16;iy++)
+	{
+		float ww = 0.f;
+		vec3 p = vec3(0, (float)iy/16.f*radius, 0);
+		for (int w = 0; w < 9; w++)
+		{
+			vec3 wp = PCL_DST * -vec3(w%3, (w/3)%3, w/9);
+			double dist2 = distance2(p, wp) + 0.0001;
+			if (dist2 >= radius2) { continue; }
+			double dist = sqrt(dist2);
+			ww += WEI(dist, radius);
+		}
+		wallweight[iy] = ww;
+	}
+
 	n0 = tn0;			//初期粒子数密度
 	lmd = tlmd/tn0;	//ラプラシアンモデルの係数λ
-	A1 = 2.0*KNM_VSC*DIM/n0/lmd;//粘性項の計算に用いる係数
-	A3 = -DIM/n0;					//圧力勾配項の計算に用いる係数
 	rlim = PCL_DST * DST_LMT_RAT;//これ以上の粒子間の接近を許さない距離
 	rlim2 = rlim*rlim;
 	COL = 1.0 + COL_RAT;
@@ -163,7 +178,7 @@ void VscTrm(FluidContext& cFluid){
 		{
 			continue;
 		}
-		auto acc = vec3(0.0);
+		auto viscosity = vec3(0.0);
 		const auto& pos = cFluid.Pos[i];
 		const auto& vel = cFluid.Vel[i];
 		auto idx = ToGridCellIndex(pos);
@@ -174,16 +189,15 @@ void VscTrm(FluidContext& cFluid){
 			for (int j = GridLinkHead[jb]; j != -1; j = GridLinkNext[j])
 			{
 				if (i==j) { continue;}
-				auto v = cFluid.Pos[j] - pos;
-				double dist2 = dot(v, v);
+				double dist2 = distance2(cFluid.Pos[j], pos);
 				if (dist2 >= radius2) {continue;}
 
 				double dist = sqrt(dist2);
 				double w =  WEI(dist, radius);
-				acc += (cFluid.Vel[j] - vel) * w;
+				viscosity += (cFluid.Vel[j] - vel) * w;
 			}
 		}}}
-		cFluid.Acc[i]=acc*A1 + Gravity;
+		cFluid.Acc[i]=viscosity* (cFluid.viscosity / n0 / lmd);
 	}
 }
 
@@ -193,7 +207,7 @@ void UpPcl1(FluidContext& cFluid)
 	{
 		if(cFluid.PType[i] == PT_Fluid)
 		{
-			cFluid.Vel[i] +=cFluid.Acc[i]*DT;
+			cFluid.Vel[i] += (cFluid.Acc[i] + Gravity) *DT;
 			cFluid.Pos[i] +=cFluid.Vel[i]*DT;
 			cFluid.Acc[i]=vec3(0.0);
 			if (!validCheck(cFluid.Pos[i]))
@@ -234,7 +248,7 @@ void ChkCol(FluidContext& cFluid)
 				if(fDT > 0.0){
 					double mj = Dns[cFluid.PType[j]];
 					fDT *= COL*mj/(mi+mj)/dist2;
-					vec_ix2 -= v*fDT;;
+					vec_ix2 -= v*fDT;
 				}
 			}
 		}}}
@@ -272,6 +286,7 @@ void MkPrs(FluidContext& cFluid){
 				ni += w;
 			}
 		}}}
+
 		double mi = Dns[cFluid.PType[i]];
 		double pressure = (ni > n0)*(ni - n0) * mi;
 		cFluid.Prs[i] = pressure;
@@ -320,7 +335,7 @@ void PrsGrdTrm(FluidContext& cFluid)
 				acc += v*w;;
 			}
 		}}}
-		cFluid.Acc[i]=acc*invDns[PT_Fluid]*-1.f/**A3*/;
+		cFluid.Acc[i]=acc*invDns[PT_Fluid]*-1.f;
 	}
 }
 

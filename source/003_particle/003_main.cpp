@@ -50,6 +50,22 @@ struct RenderGraph
 		return m_graph[N].emplace(args);
 	}
 };
+
+void gui(FluidContext& cFluid)
+{
+	app::g_app_instance->m_window->getImgui()->pushImguiCmd([&]()
+		{
+			ImGui::SetNextWindowSize(ImVec2(200.f, 40.f), ImGuiCond_Once);
+			static bool is_open;
+			if (ImGui::Begin("FluidConfig", &is_open, ImGuiWindowFlags_NoSavedSettings))
+			{
+				ImGui::SliderFloat("viscosity", &cFluid.viscosity, 0.f, 30.f);
+			}
+
+			ImGui::End();
+		});
+
+}
 struct FluidRenderer
 {
 	vk::UniquePipeline m_pipeline;
@@ -251,8 +267,6 @@ struct FluidRenderer
 
 		cmd.endRenderingKHR();
 	}
-
-
 };
 struct Particle
 {
@@ -298,8 +312,8 @@ int main()
 {
 	btr::setResourceAppPath("..\\..\\resource\\003_particle\\");
 	auto camera = cCamera::sCamera::Order().create();
-	camera->getData().m_position = glm::vec3(-0.3f, -0.3f, -0.3f);
-	camera->getData().m_target = glm::vec3(1.f, 1.f, 1.f);
+	camera->getData().m_position = glm::vec3(-0.3f, 0.5f, -0.3f);
+	camera->getData().m_target = glm::vec3(1.f, -1.f, 1.f);
 	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
 	camera->getData().m_width = 1024;
 	camera->getData().m_height = 1024;
@@ -317,6 +331,7 @@ int main()
 
 	FluidContext cFluid;
 	init(cFluid);
+	cFluid.triangle = Triangle(vec3(0.f, 0.1f, 0.f), vec3(1.f, 0.1f, 0.f), vec3(0.f, 0.1f, 1.f));
 
 	FluidRenderer rFluid(*context, app.m_window->getFrontBuffer());
 	Particle particle(*context);
@@ -343,11 +358,12 @@ int main()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 
-				particle.execute(cmd, *context);
-				sAppImGui::Order().Render(cmd);
 
+				gui(cFluid);
 				run(cFluid);
 				rFluid.execute(cmd, *context, app.m_window->getFrontBuffer(), cFluid);
+
+				sAppImGui::Order().Render(cmd);
 				cmd.end();
 				render_cmds[cmd_particle] = cmd;
 			}
