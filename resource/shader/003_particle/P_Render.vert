@@ -27,7 +27,14 @@ void main()
 	}
 	Camera cam = u_camera[0];
 	gl_Position = cam.u_projection * cam.u_view * vec4(in_position, 1.);
-	gl_PointSize = 10. / gl_Position.w;
+	if(in_type==1)
+	{
+		gl_PointSize = 10. / gl_Position.w;
+	}
+	if(in_type==2)
+	{
+		gl_PointSize = 1. / gl_Position.w;
+	}
 
 	Out.WorldPos = in_position;
 	Out.Type = in_type;

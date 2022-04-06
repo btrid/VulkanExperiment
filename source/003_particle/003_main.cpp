@@ -298,12 +298,12 @@ int main()
 {
 	btr::setResourceAppPath("..\\..\\resource\\003_particle\\");
 	auto camera = cCamera::sCamera::Order().create();
-	camera->getData().m_position = glm::vec3(-3.f, -3.f, -3.f);
+	camera->getData().m_position = glm::vec3(1.f, 1.f, 1.f);
 	camera->getData().m_target = glm::vec3(20.f, 20.f, 20.f);
 	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
 	camera->getData().m_width = 1024;
 	camera->getData().m_height = 1024;
-	camera->getData().m_far = 100000.f;
+	camera->getData().m_far = 10000.f;
 	camera->getData().m_near = 0.01f;
 
 	app::AppDescriptor app_desc;

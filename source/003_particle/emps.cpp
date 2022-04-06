@@ -5,8 +5,8 @@
 #include <003_particle/emps.h>
 
 #define PCL_DST 0.02					//平均粒子間距離
-dvec3 GridMin = dvec3(0.0 - PCL_DST * 3);
-dvec3 GridMax = dvec3(1.0 + PCL_DST * 3, 0.2 + PCL_DST * 3, 0.6 + PCL_DST * 30);
+dvec3 GridMin = dvec3(0.0-PCL_DST*3);
+dvec3 GridMax = dvec3(1.0+PCL_DST*3, 0.6+PCL_DST * 20, 1.0+PCL_DST*3);
 struct ConstantParam
 {
 };
@@ -29,7 +29,7 @@ enum ParticleType
 #define COL_RAT 0.2		//接近した粒子の反発率
 #define DST_LMT_RAT 0.9	//これ以上の粒子間の接近を許さない距離の係数
 #define WEI(dist, re) ((re/dist) - 1.0)	//重み関数
-#define Gravity dvec3(0.f, 0.f, -9.8);//重力加速度
+#define Gravity dvec3(0.f, -9.8, 0.f);//重力加速度
 
 double radius = PCL_DST * 2.1;
 double radius2 = radius*radius;
@@ -55,15 +55,17 @@ double Dns[PT_MAX],invDns[PT_MAX];
 
 bool validCheck(const dvec3& pos)
 {
-	if (any(greaterThan(pos, GridMax)) || any(lessThan(pos, GridMin)))
-	{
-		return false;
-	}
-	return true;
+	return all(greaterThanEqual(pos, GridMin)) && all(lessThan(pos, GridMax));
 }
 
-ivec3 ToGridCellIndex(const dvec3& p){	return ivec3((p - GridMin) * GridCellSizeInv) + 1;}
-int ToGridIndex(const ivec3& i){	return i.x + i.y * GridCellNum.x + i.z * GridCellNum.x * GridCellNum.y;}
+ivec3 ToGridCellIndex(const dvec3& p) 
+{
+	return ivec3((p - GridMin) * GridCellSizeInv); 
+}
+int ToGridIndex(const ivec3& i){
+//	assert(all(greaterThanEqual(i, ivec3(0))) && all(lessThan(i, GridCellNum)));
+	return i.x + i.y * GridCellNum.x + i.z * GridCellNum.x * GridCellNum.y;
+}
 int ToGridIndex(const dvec3& p){	return ToGridIndex(ToGridCellIndex(p));}
 void AlcBkt(FluidContext& cFluid)
 {
@@ -73,6 +75,8 @@ void AlcBkt(FluidContext& cFluid)
 	cFluid.Vel.resize(cFluid.PNum);
 	cFluid.Prs.resize(cFluid.PNum);
 	cFluid.PType.resize(cFluid.PNum);
+	std::fill(cFluid.PType.begin(), cFluid.PType.end(), PT_Ghost);
+	std::fill(cFluid.Pos.begin(), cFluid.Pos.end(), GridMin - dvec3(999));
 
 	GridCellSize = radius*(1.0+CRT_NUM);
 	GridCellSizeInv = 1.0/ GridCellSize;
@@ -82,31 +86,57 @@ void AlcBkt(FluidContext& cFluid)
 	GridLinkHead.resize(GridCellTotal);
 	GridLinkNext.resize(cFluid.PNum);
 
-	ivec3 n = GridCellNum;
-	for (auto& p : cFluid.PType)
-	{
-		p = PT_Ghost;
-	}
+// 	ivec3 n = GridCellNum;
+// 	int pcount = 0;
+// 	for (int iz = 0; iz < n.z; iz++) {
+// 		for (int iy = 0; iy < n.y; iy++) {
+// 			for (int ix = 0; ix < n.x; ix++) {
+// 				int ip = iz * n.x * n.y + iy * n.x + ix;
+// 				auto p = GridMin + PCL_DST * dvec3(ivec3(ix, iy, iz));
+// 				if (ix < 3 || ix >= n.x - 3 || iz < 3 || iz >= n.z - 3 || iy < 3) {
+// 					// 箱を作る
+// 					cFluid.PType[pcount] = PT_Wall;
+// 					cFluid.Pos[pcount] = p;
+// 					pcount++;
+// 				}
+// 			}
+// 		}
+// 	}
+// 	// ダムを造る
+// 	auto center = (GridMax - GridMin) / 2.;
+// 	for (int z = 0; z < 10; z++)
+// 	for (int y = 0; y < 10; y++)
+// 	for (int x = 0; x < 10; x++)
+// 	{
+// 		cFluid.PType[pcount] = PT_Fluid;
+// 		cFluid.Pos[pcount] = center + PCL_DST * dvec3(x, y, z);
+// 		pcount++;
+// 	}
 
+ 	ivec3 n = GridCellNum;
+	for(int iz=0;iz<n.z;iz++){
+	for(int iy=0;iy<n.y;iy++){
+	for(int ix=0;ix<n.x;ix++){
+		int ip = iz*n.x* n.y + iy*n.x + ix;
+		cFluid.PType[ip] = PT_Ghost;
+		cFluid.Pos[ip] = GridMin + PCL_DST*dvec3(ivec3(ix,iy,iz));
+	}}}
 
-#define WAVE_HEIGHT 0.5
-#define WAVE_WIDTH 0.25
-	for (int iz = 0; iz < n.z; iz++) {
-		for (int iy = 0; iy < n.y; iy++) {
-			for (int ix = 0; ix < n.x; ix++) {
-				int ip = iz * n.x * n.y + iy * n.x + ix;
-				cFluid.Pos[ip] = GridMin + PCL_DST * dvec3(ivec3(ix, iy, iz) - 3);
-				if (ix < 3 || ix >= n.x - 3 || iy < 3 || iy >= n.y - 3 || iz < 3) {
-					// 箱を作る
-					cFluid.PType[ip] = PT_Wall;
-				}
-				else if (cFluid.Pos[ip].y <= WAVE_HEIGHT && cFluid.Pos[ip].x <= WAVE_WIDTH) {
-					// ダムを造る
-					cFluid.PType[ip] = PT_Fluid;
-				}
-			}
+#define WAVE_HEIGHT 0.2
+#define WAVE_WIDTH 0.1
+	for(int iz=0;iz<n.z;iz++){
+	for(int iy=0;iy<n.y;iy++){
+	for(int ix=0;ix<n.x;ix++){
+		int ip = iz * n.x * n.y + iy * n.x + ix;
+		if(ix<3 || ix >=n.x-3 || iz<3 || iz>=n.z-3 || iy<3){
+			cFluid.PType[ip] = PT_Wall;
+//			NumberOfParticle++;
 		}
-	}
+		else if(cFluid.Pos[ip].y <= WAVE_HEIGHT && cFluid.Pos[ip].x <= WAVE_WIDTH){
+			cFluid.PType[ip] = PT_Fluid;
+//			NumberOfParticle++;
+		}
+	}}}
 
 }
 
@@ -143,7 +173,6 @@ void SetPara(FluidContext& cFluid){
 
 void MkBkt(FluidContext& cFluid)
 {
-
 	std::fill(GridLinkHead.begin(), GridLinkHead.end(), -1);
 	for (int i = 0; i < cFluid.PNum; i++) 
 	{
@@ -151,7 +180,7 @@ void MkBkt(FluidContext& cFluid)
 		int ib = ToGridIndex(cFluid.Pos[i]);
 		int pnumber = GridLinkHead[ib];
 		GridLinkHead[ib] = i;
-		GridLinkNext[ib] = pnumber;
+		GridLinkNext[i] = pnumber;
 	}
 }
 
@@ -163,8 +192,8 @@ void VscTrm(FluidContext& cFluid){
 			continue;
 		}
 		auto acc = dvec3(0.0);
-		auto pos = cFluid.Pos[i];
-		auto vel = cFluid.Vel[i];
+		const auto& pos = cFluid.Pos[i];
+		const auto& vel = cFluid.Vel[i];
 		auto idx = ToGridCellIndex(pos);
 		for(int jz=idx.z-1;jz<=idx.z+1;jz++){ if(jz<0||jz>=GridCellNum.z){continue;}
 		for(int jy=idx.y-1;jy<=idx.y+1;jy++){ if(jy<0||jy>=GridCellNum.y){continue;}
@@ -172,11 +201,13 @@ void VscTrm(FluidContext& cFluid){
 			int jb = ToGridIndex(ivec3(jx, jy, jz));
 			int j = GridLinkHead[jb];
 			if(j == -1) continue;
-			for(;;){
+			for(;;)
+			{
 				auto v = cFluid.Pos[j] - pos;
 				double dist2 = dot(v, v);
 				if(dist2<radius2){
-				if(j!=i && cFluid.PType[j]!=PT_Ghost){
+				if(j!=i && cFluid.PType[j]!=PT_Ghost)
+				{
 					double dist = sqrt(dist2);
 					double w =  WEI(dist, radius);
 					acc += (cFluid.Vel[j] - vel) * w;
@@ -216,33 +247,30 @@ void ChkCol(FluidContext& cFluid)
 			continue;
 		}
 		double mi = Dns[cFluid.PType[i]];
-		auto pos = cFluid.Pos[i];
-		auto vec= cFluid.Vel[i];
+		const auto& pos = cFluid.Pos[i];
+		const auto& vec= cFluid.Vel[i];
 		auto vec_ix2 = vec;
 		auto idx = ToGridCellIndex(pos);
 		for(int jz=idx.z-1;jz<=idx.z+1;jz++){ if(jz<0||jz>=GridCellNum.z){continue;}
 		for(int jy=idx.y-1;jy<=idx.y+1;jy++){ if(jy<0||jy>=GridCellNum.y){continue;}
 		for(int jx=idx.x-1;jx<=idx.x+1;jx++){ if(jx<0||jx>=GridCellNum.x){continue;}
 			int jb = ToGridIndex(ivec3(jx, jy, jz));
-			int j = GridLinkHead[jb];
-			if(j == -1) continue;
-			for(;;){
+			for (int j = GridLinkHead[jb]; j != -1; j = GridLinkNext[j])
+			{
+				if (i==j){ continue;}
+				if (cFluid.PType[j] == PT_Ghost){continue;}
+
 				auto v = cFluid.Pos[j] - pos;
 				auto dist2 = dot(v, v);
 				if(dist2<rlim2)
 				{
-					if(j!=i && cFluid.PType[j]!=PT_Ghost)
-					{
-						double fDT = dot(vec-cFluid.Vel[j], dvec3(1.));
-						if(fDT > 0.0){
-							double mj = Dns[cFluid.PType[j]];
-							fDT *= COL*mj/(mi+mj)/dist2;
-							vec_ix2 -= v*fDT;;
-						}
+					double fDT = dot((vec-cFluid.Vel[j])*v, dvec3(1.));
+					if(fDT > 0.0){
+						double mj = Dns[cFluid.PType[j]];
+						fDT *= COL*mj/(mi+mj)/dist2;
+						vec_ix2 -= v*fDT;;
 					}
 				}
-				j = GridLinkNext[j];
-				if(j==-1) break;
 			}
 		}}}
 		cFluid.Acc[i]=vec_ix2;
@@ -261,7 +289,7 @@ void MkPrs(FluidContext& cFluid){
 			continue;
 		}
 
-		auto pos = cFluid.Pos[i];
+		const auto& pos = cFluid.Pos[i];
 		double ni = 0.0;
 		auto idx = ToGridCellIndex(pos);
 
@@ -271,14 +299,14 @@ void MkPrs(FluidContext& cFluid){
 			int jb = ToGridIndex(ivec3(jx, jy, jz));
 			for(int j = GridLinkHead[jb];j!=-1; j = GridLinkNext[j])
 			{
+				if (i == j) { continue; }
+				if(cFluid.PType[j] == PT_Ghost){continue;}
 				auto v = cFluid.Pos[j] - pos;
-				double dist2 = dot(v,v);
+				double dist2 = distance2(cFluid.Pos[j], pos);
 				if (dist2 >= radius2) { continue;}
-				if(j!=i && cFluid.PType[j]!=PT_Ghost){
-					double dist = sqrt(dist2);
-					double w =  WEI(dist, radius);
-					ni += w;
-				}
+				double dist = sqrt(dist2);
+				double w =  WEI(dist, radius);
+				ni += w;
 			}
 		}}}
 		double mi = Dns[cFluid.PType[i]];
@@ -287,52 +315,48 @@ void MkPrs(FluidContext& cFluid){
 	}
 }
 
-void PrsGrdTrm(FluidContext& cFluid){
-	for(int i=0;i<cFluid.PNum;i++){
-	if(cFluid.PType[i] == PT_Fluid){
+void PrsGrdTrm(FluidContext& cFluid)
+{
+	for(int i=0;i<cFluid.PNum;i++)
+	{
+		if (cFluid.PType[i] != PT_Fluid) {
+			continue;
+		}
 		dvec3 acc = dvec3(0.0);
-		auto pos= cFluid.Pos[i];
+		const auto& pos = cFluid.Pos[i];
 		auto pre_min = cFluid.Prs[i];
 		auto idx = ToGridCellIndex(pos);
 		for(int jz=idx.z-1;jz<=idx.z+1;jz++){ if(jz<0||jz>=GridCellNum.z){continue;}
 		for(int jy=idx.y-1;jy<=idx.y+1;jy++){ if(jy<0||jy>=GridCellNum.y){continue;}
 		for(int jx=idx.x-1;jx<=idx.x+1;jx++){ if(jx<0||jx>=GridCellNum.x){continue;}
 			int jb = ToGridIndex(ivec3(jx, jy, jz));
-			int j = GridLinkHead[jb];
-			if(j == -1) continue;
-			for(;;){
-				auto v = cFluid.Pos[j] - pos;
-				double dist2 = dot(v, v);
-				if(dist2<radius2){
-				if(j!=i && cFluid.PType[j]!=PT_Ghost){
-					if (pre_min > cFluid.Prs[j]) { pre_min = cFluid.Prs[j]; }
-				}}
-				j = GridLinkNext[j];
-				if(j==-1) break;
+			for (int j = GridLinkHead[jb]; j != -1; j = GridLinkNext[j])
+			{
+				if (i == j) { continue; }
+				if (cFluid.PType[j] == PT_Ghost) { continue; }
+				if (distance2(cFluid.Pos[j], pos) >= radius2) {continue;}
+				if (pre_min > cFluid.Prs[j]) { pre_min = cFluid.Prs[j]; }
 			}
 		}}}
 		for(int jz=idx.z-1;jz<=idx.z+1;jz++){ if(jz<0||jz>=GridCellNum.z){continue;}
 		for(int jy=idx.y-1;jy<=idx.y+1;jy++){ if(jy<0||jy>=GridCellNum.y){continue;}
 		for(int jx=idx.x-1;jx<=idx.x+1;jx++){ if(jx<0||jx>=GridCellNum.x){continue;}
 			int jb = ToGridIndex(ivec3(jx, jy, jz));
-			int j = GridLinkHead[jb];
-			if(j == -1) continue;
-			for(;;){
+			for (int j = GridLinkHead[jb]; j != -1; j = GridLinkNext[j])
+			{
+				if (i == j) { continue; }
 				auto v = cFluid.Pos[j] - pos;
-				double dist2 = dot(v, v);
-				if(dist2<radius2){
-				if(j!=i && cFluid.PType[j]!=PT_Ghost){
-					double dist = sqrt(dist2);
-					double w =  WEI(dist, radius);
-					w *= (cFluid.Prs[j] - pre_min)/dist2;
-					acc += v*w;;
-				}}
-				j = GridLinkNext[j];
-				if(j==-1) break;
+				double dist2 = distance2(cFluid.Pos[j], pos);
+				if (dist2 >= radius2) { continue; }
+
+				double dist = sqrt(dist2);
+				double w =  WEI(dist, radius);
+				w *= (cFluid.Prs[j] - pre_min)/dist2;
+				acc += v*w;;
 			}
 		}}}
 		cFluid.Acc[i]=acc*invDns[PT_Fluid]*A3;
-	}}
+	}
 }
 
 void UpPcl2(FluidContext& cFluid)
