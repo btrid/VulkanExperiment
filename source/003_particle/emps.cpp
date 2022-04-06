@@ -22,7 +22,6 @@ enum ParticleType
 #define DNS_FLD 1000		//流体粒子の密度
 #define DNS_WLL 1000		//壁粒子の密度
 #define DT 0.0005f			//時間刻み幅
-#define SND 22.0			//音速
 #define KNM_VSC 0.000001	//動粘性係数
 #define DIM 3				//次元数
 #define CRT_NUM 0.1f		//クーラン条件数
@@ -86,33 +85,7 @@ void AlcBkt(FluidContext& cFluid)
 	GridLinkHead.resize(GridCellTotal);
 	GridLinkNext.resize(cFluid.PNum);
 
-// 	ivec3 n = GridCellNum;
-// 	int pcount = 0;
-// 	for (int iz = 0; iz < n.z; iz++) {
-// 		for (int iy = 0; iy < n.y; iy++) {
-// 			for (int ix = 0; ix < n.x; ix++) {
-// 				int ip = iz * n.x * n.y + iy * n.x + ix;
-// 				auto p = GridMin + PCL_DST * vec3(ivec3(ix, iy, iz));
-// 				if (ix < 3 || ix >= n.x - 3 || iz < 3 || iz >= n.z - 3 || iy < 3) {
-// 					// 箱を作る
-// 					cFluid.PType[pcount] = PT_Wall;
-// 					cFluid.Pos[pcount] = p;
-// 					pcount++;
-// 				}
-// 			}
-// 		}
-// 	}
-// 	// ダムを造る
-// 	auto center = (GridMax - GridMin) / 2.;
-// 	for (int z = 0; z < 10; z++)
-// 	for (int y = 0; y < 10; y++)
-// 	for (int x = 0; x < 10; x++)
-// 	{
-// 		cFluid.PType[pcount] = PT_Fluid;
-// 		cFluid.Pos[pcount] = center + PCL_DST * vec3(x, y, z);
-// 		pcount++;
-// 	}
-
+	// 初期化
  	ivec3 n = GridCellNum;
 	for(int iz=0;iz<n.z;iz++){
 	for(int iy=0;iy<n.y;iy++){
@@ -129,12 +102,12 @@ void AlcBkt(FluidContext& cFluid)
 	for(int ix=0;ix<n.x;ix++){
 		int ip = iz * n.x * n.y + iy * n.x + ix;
 		if(ix<3 || ix >=n.x-3 || iz<3 || iz>=n.z-3 || iy<3){
+			// 壁を作る
 			cFluid.PType[ip] = PT_Wall;
-//			NumberOfParticle++;
 		}
 		else if(cFluid.Pos[ip].y <= WAVE_HEIGHT && cFluid.Pos[ip].x <= WAVE_WIDTH){
+			// ダムを造る
 			cFluid.PType[ip] = PT_Fluid;
-//			NumberOfParticle++;
 		}
 	}}}
 
@@ -158,7 +131,6 @@ void SetPara(FluidContext& cFluid){
 	n0 = tn0;			//初期粒子数密度
 	lmd = tlmd/tn0;	//ラプラシアンモデルの係数λ
 	A1 = 2.0*KNM_VSC*DIM/n0/lmd;//粘性項の計算に用いる係数
-	A2 = SND*SND/n0;				//圧力の計算に用いる係数
 	A3 = -DIM/n0;					//圧力勾配項の計算に用いる係数
 	rlim = PCL_DST * DST_LMT_RAT;//これ以上の粒子間の接近を許さない距離
 	rlim2 = rlim*rlim;
@@ -199,21 +171,16 @@ void VscTrm(FluidContext& cFluid){
 		for(int jy=idx.y-1;jy<=idx.y+1;jy++){ if(jy<0||jy>=GridCellNum.y){continue;}
 		for(int jx=idx.x-1;jx<=idx.x+1;jx++){ if(jx<0||jx>=GridCellNum.x){continue;}
 			int jb = ToGridIndex(ivec3(jx, jy, jz));
-			int j = GridLinkHead[jb];
-			if(j == -1) continue;
-			for(;;)
+			for (int j = GridLinkHead[jb]; j != -1; j = GridLinkNext[j])
 			{
+				if (i==j) { continue;}
 				auto v = cFluid.Pos[j] - pos;
 				double dist2 = dot(v, v);
-				if(dist2<radius2){
-				if(j!=i && cFluid.PType[j]!=PT_Ghost)
-				{
-					double dist = sqrt(dist2);
-					double w =  WEI(dist, radius);
-					acc += (cFluid.Vel[j] - vel) * w;
-				}}
-				j = GridLinkNext[j];
-				if(j==-1) break;
+				if (dist2 >= radius2) {continue;}
+
+				double dist = sqrt(dist2);
+				double w =  WEI(dist, radius);
+				acc += (cFluid.Vel[j] - vel) * w;
 			}
 		}}}
 		cFluid.Acc[i]=acc*A1 + Gravity;
@@ -258,18 +225,16 @@ void ChkCol(FluidContext& cFluid)
 			for (int j = GridLinkHead[jb]; j != -1; j = GridLinkNext[j])
 			{
 				if (i==j){ continue;}
-				if (cFluid.PType[j] == PT_Ghost){continue;}
 
 				auto v = cFluid.Pos[j] - pos;
 				auto dist2 = dot(v, v);
-				if(dist2<rlim2)
-				{
-					double fDT = dot((vec-cFluid.Vel[j])*v, vec3(1.));
-					if(fDT > 0.0){
-						double mj = Dns[cFluid.PType[j]];
-						fDT *= COL*mj/(mi+mj)/dist2;
-						vec_ix2 -= v*fDT;;
-					}
+				if(dist2>=rlim2){ continue;}
+
+				double fDT = dot((vec-cFluid.Vel[j])*v, vec3(1.));
+				if(fDT > 0.0){
+					double mj = Dns[cFluid.PType[j]];
+					fDT *= COL*mj/(mi+mj)/dist2;
+					vec_ix2 -= v*fDT;;
 				}
 			}
 		}}}
@@ -291,8 +256,8 @@ void MkPrs(FluidContext& cFluid){
 
 		const auto& pos = cFluid.Pos[i];
 		double ni = 0.0;
-		auto idx = ToGridCellIndex(pos);
 
+		auto idx = ToGridCellIndex(pos);
 		for(int jz=idx.z-1;jz<=idx.z+1;jz++){ if(jz<0||jz>=GridCellNum.z){continue;}
 		for(int jy=idx.y-1;jy<=idx.y+1;jy++){ if(jy<0||jy>=GridCellNum.y){continue;}
 		for(int jx=idx.x-1;jx<=idx.x+1;jx++){ if(jx<0||jx>=GridCellNum.x){continue;}
@@ -300,8 +265,6 @@ void MkPrs(FluidContext& cFluid){
 			for(int j = GridLinkHead[jb];j!=-1; j = GridLinkNext[j])
 			{
 				if (i == j) { continue; }
-				if(cFluid.PType[j] == PT_Ghost){continue;}
-				auto v = cFluid.Pos[j] - pos;
 				double dist2 = distance2(cFluid.Pos[j], pos);
 				if (dist2 >= radius2) { continue;}
 				double dist = sqrt(dist2);
@@ -310,7 +273,7 @@ void MkPrs(FluidContext& cFluid){
 			}
 		}}}
 		double mi = Dns[cFluid.PType[i]];
-		double pressure = (ni > n0)*(ni - n0) * A2 * mi;
+		double pressure = (ni > n0)*(ni - n0) * mi;
 		cFluid.Prs[i] = pressure;
 	}
 }
@@ -333,9 +296,11 @@ void PrsGrdTrm(FluidContext& cFluid)
 			for (int j = GridLinkHead[jb]; j != -1; j = GridLinkNext[j])
 			{
 				if (i == j) { continue; }
-				if (cFluid.PType[j] == PT_Ghost) { continue; }
 				if (distance2(cFluid.Pos[j], pos) >= radius2) {continue;}
-				if (pre_min > cFluid.Prs[j]) { pre_min = cFluid.Prs[j]; }
+				if (pre_min > cFluid.Prs[j]) 
+				{
+					pre_min = cFluid.Prs[j]; 
+				}
 			}
 		}}}
 		for(int jz=idx.z-1;jz<=idx.z+1;jz++){ if(jz<0||jz>=GridCellNum.z){continue;}
@@ -346,7 +311,7 @@ void PrsGrdTrm(FluidContext& cFluid)
 			{
 				if (i == j) { continue; }
 				auto v = cFluid.Pos[j] - pos;
-				double dist2 = distance2(cFluid.Pos[j], pos);
+				double dist2 = dot(v, v);
 				if (dist2 >= radius2) { continue; }
 
 				double dist = sqrt(dist2);
@@ -355,7 +320,7 @@ void PrsGrdTrm(FluidContext& cFluid)
 				acc += v*w;;
 			}
 		}}}
-		cFluid.Acc[i]=acc*invDns[PT_Fluid]*A3;
+		cFluid.Acc[i]=acc*invDns[PT_Fluid]*-1.f/**A3*/;
 	}
 }
 
@@ -366,13 +331,11 @@ void UpPcl2(FluidContext& cFluid)
 		if(cFluid.PType[i] == PT_Fluid)
 		{
 			cFluid.Vel[i] +=cFluid.Acc[i]*DT;
-			cFluid.Pos[i] +=cFluid.Acc[i]*DT*DT;
+//			cFluid.Pos[i] +=cFluid.Acc[i]*DT*DT;
 			cFluid.Acc[i] = vec3(0.0);
 			if (!validCheck(cFluid.Pos[i]))
 			{
 				cFluid.PType[i] = PT_Ghost;
-				cFluid.Prs[i] = 0.0;
-				cFluid.Vel[i] = {};
 			}
 		}
 	}
@@ -392,5 +355,5 @@ void run(FluidContext& cFluid)
 	MkPrs(cFluid);
 	PrsGrdTrm(cFluid);
 	UpPcl2(cFluid);
-	MkPrs(cFluid);
+//	MkPrs(cFluid);
 }
