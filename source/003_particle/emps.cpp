@@ -6,7 +6,7 @@
 
 #define PCL_DST 0.02f					//平均粒子間距離
 vec3 GridMin = vec3(0.0-PCL_DST*3);
-vec3 GridMax = vec3(1.0+PCL_DST*3, 0.6+PCL_DST * 20, 1.0+PCL_DST*3);
+vec3 GridMax = vec3(1.0 + PCL_DST * 3, 0.6 + PCL_DST * 20, 1.0 + PCL_DST * 3);
 struct ConstantParam
 {
 };
@@ -31,13 +31,17 @@ enum ParticleType
 double radius = PCL_DST * 2.1f;
 double radius2 = radius*radius;
 
-double GridCellSize; //GridCellの大きさ(バケット1辺の長さ)
-double GridCellSizeInv;
+float GridCellSize; //GridCellの大きさ(バケット1辺の長さ)
+float GridCellSizeInv;
 ivec3 GridCellNum;
 int GridCellTotal;
 
 std::vector<int> GridLinkHead;
 std::vector<int> GridLinkNext;
+std::array<float, 16> wallweight;
+std::vector<float> wallPrs;
+std::vector<vec3> wallVsc;
+std::vector<int> wallenable;
 
 double n0; //初期粒子数密度
 double lmd;	//ラプラシアンモデルの係数λ
@@ -85,8 +89,23 @@ void AlcBkt(FluidContext& cFluid)
 	GridLinkHead.resize(GridCellTotal);
 	GridLinkNext.resize(cFluid.PNum);
 
+	wallenable.resize(GridCellTotal);
+	wallPrs.resize(GridCellTotal);
+	wallVsc.resize(GridCellTotal);
+	ivec3 n = GridCellNum;
+	// 壁の設定
+	for(int iz=0;iz<n.z;iz++){
+	for(int iy=0;iy<n.y;iy++){
+	for(int ix=0;ix<n.x;ix++){
+		int ip = iz*n.x* n.y + iy*n.x + ix;
+		auto p = GridMin + GridCellSize * (vec3(ivec3(ix, iy, iz)) + 0.5f);
+		float d = cFluid.triangle.getDistance(p);
+		if (d < radius) {
+			wallenable[ip] = true;
+		}
+	}}}
+
 	// 初期化
- 	ivec3 n = GridCellNum;
 	for(int iz=0;iz<n.z;iz++){
 	for(int iy=0;iy<n.y;iy++){
 	for(int ix=0;ix<n.x;ix++){
@@ -113,8 +132,6 @@ void AlcBkt(FluidContext& cFluid)
 
 }
 
-
-float wallweight[16];
 void SetPara(FluidContext& cFluid){
 	double tn0 =0.0;
 	double tlmd =0.0;
@@ -196,9 +213,40 @@ void VscTrm(FluidContext& cFluid){
 				double w =  WEI(dist, radius);
 				viscosity += (cFluid.Vel[j] - vel) * w;
 			}
+
+			if (wallenable[jb]) {
+				auto a = GridMin + vec3(jx, jy, jz) * GridCellSize;
+				auto b = a + vec3(GridCellSize);
+				float dist = AABB(a, b).distance(pos);
+				double w = WEI(dist, radius);
+				viscosity += (- vel) * w;
+			}
 		}}}
 		cFluid.Acc[i]=viscosity* (cFluid.viscosity / n0 / lmd);
 	}
+
+// 	for (int z = 0; z < GridCellNum.z; z++){
+// 	for (int y = 0; y < GridCellNum.y; y++){
+// 	for (int x = 0; x < GridCellNum.x; x++){
+// 		int i = ToGridIndex(ivec3(x, y, z));
+// 		if (wallenable[i])
+// 		{
+// 			auto viscosity = vec3(0.0);
+// 			auto a = GridMin + vec3(x, y, z) * GridCellSize;
+// 			auto b = a + vec3(GridCellSize);
+// 			AABB aabb(a, b);
+// 			for (int j = GridLinkHead[i]; j != -1; j = GridLinkNext[j])
+// 			{
+// 				float dist = aabb.distance(cFluid.Pos[j]);
+// 				double w = WEI(dist, radius);
+// 				viscosity += (-vel) * w;
+// 			}
+// 			wallVsc[i] = viscosity * (cFluid.viscosity / n0 / lmd);
+// 		}
+// 	}}}
+
+//	cFluid.triangle.
+//	wallPrs.
 }
 
 void UpPcl1(FluidContext& cFluid)
@@ -229,8 +277,8 @@ void ChkCol(FluidContext& cFluid)
 		}
 		double mi = Dns[cFluid.PType[i]];
 		const auto& pos = cFluid.Pos[i];
-		const auto& vec= cFluid.Vel[i];
-		auto vec_ix2 = vec;
+		const auto& vel= cFluid.Vel[i];
+		auto vec_ix2 = vel;
 		auto idx = ToGridCellIndex(pos);
 		for(int jz=idx.z-1;jz<=idx.z+1;jz++){ if(jz<0||jz>=GridCellNum.z){continue;}
 		for(int jy=idx.y-1;jy<=idx.y+1;jy++){ if(jy<0||jy>=GridCellNum.y){continue;}
@@ -244,13 +292,33 @@ void ChkCol(FluidContext& cFluid)
 				auto dist2 = dot(v, v);
 				if(dist2>=rlim2){ continue;}
 
-				double fDT = dot((vec-cFluid.Vel[j])*v, vec3(1.));
+				double fDT = dot((vel-cFluid.Vel[j])*v, vec3(1.));
 				if(fDT > 0.0){
 					double mj = Dns[cFluid.PType[j]];
 					fDT *= COL*mj/(mi+mj)/dist2;
 					vec_ix2 -= v*fDT;
 				}
 			}
+
+			if (cFluid.PType[i] == PT_Fluid) 
+			{
+				if (wallenable[jb]) {
+					auto a = GridMin + vec3(jx, jy, jz) * GridCellSize;
+					auto b = a + vec3(GridCellSize);
+					auto v = AABB(a, b).nearest(pos) - pos;
+					auto dist2 = dot(v, v);
+					if (dist2 < rlim2)
+					{
+						double fDT = dot(vel * v, vec3(1.));
+						if (fDT > 0.0) {
+							double mj = Dns[PT_Wall];
+							fDT *= COL * mj / (mi + mj) / dist2;
+							vec_ix2 -= v * fDT;
+						}
+					}
+				}
+			}
+
 		}}}
 		cFluid.Acc[i]=vec_ix2;
 	}
@@ -285,12 +353,57 @@ void MkPrs(FluidContext& cFluid){
 				double w =  WEI(dist, radius);
 				ni += w;
 			}
+			if (wallenable[jb] && cFluid.PType[i] == PT_Fluid)
+			{
+				auto a = GridMin + vec3(jx, jy, jz) * GridCellSize;
+				auto b = a + vec3(GridCellSize);
+				auto dist = AABB(a, b).distance(pos);
+				if (dist < radius)
+				{
+					double w = WEI(dist, radius);
+					ni += w;
+				}
+			}
+
 		}}}
 
 		double mi = Dns[cFluid.PType[i]];
 		double pressure = (ni > n0)*(ni - n0) * mi;
 		cFluid.Prs[i] = pressure;
 	}
+
+	for (int z = 0; z < GridCellNum.z; z++){
+	for (int y = 0; y < GridCellNum.y; y++){
+	for (int x = 0; x < GridCellNum.x; x++){
+		int i = ToGridIndex(ivec3(x, y, z));
+		if (!wallenable[i])
+		{
+			continue;
+		}
+		auto a = GridMin + vec3(x, y, z) * GridCellSize;
+		auto b = a + vec3(GridCellSize);
+		double ni = 0.0;
+
+		for(int jz=z-1;jz<=z+1;jz++){ if(jz<0||jz>=GridCellNum.z){continue;}
+		for(int jy=y-1;jy<=y+1;jy++){ if(jy<0||jy>=GridCellNum.y){continue;}
+		for(int jx=x-1;jx<=x+1;jx++){ if(jx<0||jx>=GridCellNum.x){continue;}
+			int jb = ToGridIndex(ivec3(jx, jy, jz));
+			for (int j = GridLinkHead[jb]; j != -1; j = GridLinkNext[j])
+			{
+				if (cFluid.PType[j] != PT_Fluid) {
+					continue;
+				}
+				double dist = AABB(a, b).distance(cFluid.Pos[j]);
+				if (dist >= radius) { continue; }
+				double w = WEI(dist, radius);
+				ni += w;
+			}
+		}}}
+		float mi = Dns[PT_Wall];
+		float pressure = (ni > n0) * (ni - n0) * mi;
+		wallPrs[i] = pressure;
+
+	}}}
 }
 
 void PrsGrdTrm(FluidContext& cFluid)
@@ -317,6 +430,18 @@ void PrsGrdTrm(FluidContext& cFluid)
 					pre_min = cFluid.Prs[j]; 
 				}
 			}
+
+			if (wallenable[jb] && pre_min > wallPrs[jb])
+			{
+				auto a = GridMin + vec3(jx, jy, jz) * GridCellSize;
+				auto b = a + vec3(GridCellSize);
+				auto dist = AABB(a, b).distance(pos);
+				if (dist < radius)
+				{
+					pre_min = wallPrs[jb];
+				}
+			}
+
 		}}}
 		for(int jz=idx.z-1;jz<=idx.z+1;jz++){ if(jz<0||jz>=GridCellNum.z){continue;}
 		for(int jy=idx.y-1;jy<=idx.y+1;jy++){ if(jy<0||jy>=GridCellNum.y){continue;}
@@ -333,6 +458,18 @@ void PrsGrdTrm(FluidContext& cFluid)
 				double w =  WEI(dist, radius);
 				w *= (cFluid.Prs[j] - pre_min)/dist2;
 				acc += v*w;;
+			}
+			if (wallenable[jb])
+			{
+				auto a = GridMin + vec3(jx, jy, jz) * GridCellSize;
+				auto b = a + vec3(GridCellSize);
+				auto dist = AABB(a, b).distance(pos);
+				if (dist < radius)
+				{
+					double w = WEI(dist, radius);
+					w *= (wallPrs[jb] - pre_min) / dist*dist;
+					acc += (AABB(a, b).nearest(pos) - pos) * w;;
+				}
 			}
 		}}}
 		cFluid.Acc[i]=acc*invDns[PT_Fluid]*-1.f;

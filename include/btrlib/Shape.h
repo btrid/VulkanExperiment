@@ -489,7 +489,7 @@ struct AABB
 		, max_(max)
 	{}
 
-	bool test(const AABB& other)
+	bool test(const AABB& other)const
 	{
 		//		return glm::all(glm::lessThan(max_, other.getMin()))
 		//			|| glm::all(glm::lessThan(min_, other.getMax()));
@@ -499,6 +499,15 @@ struct AABB
 		if (max_.z < other.getMin().z || min_.z > other.getMax().z) { return false; }
 		return true;
 	}
+	vec3 nearest(const vec3& p)const
+	{
+		return min(max(p, min_), max_);
+	}
+	float distance(const vec3& p)const
+	{
+		return glm::distance(p, nearest(p));
+	}
+
 
 	std::tuple<bool, glm::vec3, float> intersect(const Ray& ray)const
 	{
