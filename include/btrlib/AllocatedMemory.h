@@ -514,10 +514,7 @@ struct AllocatedMemory
 		else {
 			alloc.m_resource->m_buffer_info.range = VK_WHOLE_SIZE;
 		}
-
-
 		return alloc;
-
 	}
 
 	template<typename T>
@@ -528,6 +525,25 @@ struct AllocatedMemory
 		descEx.element_num = desc.size/sizeof(T);
 		return allocateMemory(descEx);
 	}
+
+	template<typename T>
+	BufferMemoryEx<T> allocateMemory(vk::CommandBuffer cmd, AllocatedMemory& staging, const T& data)
+	{
+		auto s = staging.allocateMemory<T>(1, true);
+		*(s.getMappedPtr()) = data;
+
+		auto memory = allocateMemory<T>(1);
+
+		vk::BufferCopy copy;
+		copy.size = sizeof(T);
+		copy.srcOffset = s.getInfo().offset;
+		copy.dstOffset = memory.getInfo().offset;
+		cmd.copyBuffer(s.getInfo().buffer, memory.getInfo().buffer, copy);
+
+		return memory;
+
+	}
+
 	const vk::BufferCreateInfo& getBufferCreateInfo()const { return m_resource->m_buffer_info; }
 	vk::Buffer getBuffer()const { return m_resource->m_buffer.get(); }
 
