@@ -51,21 +51,6 @@ struct RenderGraph
 	}
 };
 
-void gui(FluidData& cFluid)
-{
-	app::g_app_instance->m_window->getImgui()->pushImguiCmd([&]()
-		{
-			ImGui::SetNextWindowSize(ImVec2(200.f, 40.f), ImGuiCond_Once);
-			static bool is_open;
-			if (ImGui::Begin("FluidConfig", &is_open, ImGuiWindowFlags_NoSavedSettings))
-			{
-				ImGui::SliderFloat("viscosity", &cFluid.viscosity, 0.f, 30.f);
-			}
-
-			ImGui::End();
-		});
-
-}
 
 
 struct FluidRenderer
@@ -338,8 +323,8 @@ struct FluidRenderer
 		}
 
 		{
-			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_Rendering_Wall].get());
-			cmd.draw(dFluid.m_constant.GridCellTotal, 1, 0, 0);
+// 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_Rendering_Wall].get());
+// 			cmd.draw(dFluid.m_constant.GridCellTotal, 1, 0, 0);
 		}
 
 
@@ -409,14 +394,25 @@ int main()
 
 	FluidContext cFluid(*context);
 	FluidData dFluid;
-	dFluid.triangle = Triangle(vec3(0.f, 0.1f, 0.f), vec3(0.2f, 0.1f, 0.f), vec3(0.f, 0.1f, 0.2f));
+//	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.1f, 0.f), vec3(0.2f, 0.1f, 0.f), vec3(0.f, 0.1f, 0.2f)));
+	// 床
+	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(1.f, 0.f, 0.f), vec3(1.f, 0.0f, 1.f)));
+ 	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(1.f, 0.f, 1.f), vec3(0.f, 0.0f, 1.f)));
 
+	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(1.f, 0.f, 0.f), vec3(1.f, 1.0f, 0.f)));
+	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(1.f, 1.f, 0.f), vec3(0.f, 1.0f, 0.f)));
+	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 1.f), vec3(1.f, 0.f, 1.f), vec3(1.f, 1.0f, 1.f)));
+	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 1.f), vec3(1.f, 1.f, 1.f), vec3(0.f, 1.0f, 1.f)));
+	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(0.f, 0.f, 1.f), vec3(0.f, 1.0f, 1.f)));
+	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(0.f, 1.f, 1.f), vec3(0.f, 1.0f, 0.f)));
+ 	dFluid.triangles.push_back(Triangle(vec3(1.f, 0.f, 0.f), vec3(1.f, 0.f, 1.f), vec3(1.f, 1.0f, 1.f)));
+ 	dFluid.triangles.push_back(Triangle(vec3(1.f, 0.f, 0.f), vec3(1.f, 1.f, 1.f), vec3(1.f, 1.0f, 0.f)));
 
 	init(dFluid);
 	auto setup_cmd = context->m_cmd_pool->allocCmdTempolary(0);
 	dFluid.u_constant = context->m_uniform_memory.allocateMemory<FluidData::Constant>(setup_cmd, context->m_staging_memory, dFluid.m_constant);
 	dFluid.b_WallEnable = context->m_storage_memory.allocateMemory<int32_t>(dFluid.wallenable.size());
-	setup_cmd.updateBuffer<int32_t>(dFluid.b_WallEnable.getInfo().buffer, dFluid.b_WallEnable.getInfo().offset, dFluid.wallenable);
+//	setup_cmd.updateBuffer<int32_t>(dFluid.b_WallEnable.getInfo().buffer, dFluid.b_WallEnable.getInfo().offset, dFluid.wallenable);
 	// descriptor set
 	{
 		vk::DescriptorSetLayout layouts[] =

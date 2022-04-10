@@ -439,7 +439,12 @@ struct Plane
 	{
 		dot_ = glm::dot(normal_, point);
 	}
-
+	// •Ï
+// 	Plane(const glm::vec3& norm, float d)
+// 		: normal_(norm)
+// 		, dot_(d)
+// 	{
+// 	}
 	std::tuple<bool, glm::vec3, float> intersect(const glm::vec3& a, const glm::vec3& b)
 	{
 		glm::vec3 dir = b - a;

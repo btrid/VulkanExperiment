@@ -37,8 +37,10 @@ struct FluidData
 
 	float viscosity = 0.000001f; //!< ”S“x
 
-	Triangle triangle;
+	std::vector<Triangle> triangles;
 	std::vector<int> wallenable;
+	std::vector<float> wallesdf;
+	std::vector<vec3> walln;
 
 	struct Constant
 	{
@@ -52,6 +54,8 @@ struct FluidData
 		float p3;
 		vec3 GridMax;
 		float p4;
+		ivec3 WallCellNum;
+		int WallCellTotal;
 	};
 
 	Constant m_constant;

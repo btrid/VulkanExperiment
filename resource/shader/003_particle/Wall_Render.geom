@@ -30,7 +30,7 @@ vec3(1.f, 1.f, 0.f),    // Back-top-right
 
 layout(location=1) in Vertex
 {
-	flat int VertexIndex;
+	flat uint VertexIndex;
 }in_param[];
 
 layout(location=0)out gl_PerVertex
@@ -41,21 +41,21 @@ layout(location=0)out gl_PerVertex
 
 void main() 
 {
-	int vi = in_param[0].VertexIndex;
+	uint vi = in_param[0].VertexIndex;
 	if(b_WallEnable[vi] == 0) { return; }
 
 	ivec3 reso = u_constant.GridCellNum;
-	int x = vi % reso.x;
-	int y = (vi / reso.x) % reso.y;
-	int z = (vi / reso.x / reso.y) % reso.z;
+	uint x = vi % reso.x;
+	uint y = (vi / reso.x) % reso.y;
+	uint z = (vi / reso.x / reso.y) % reso.z;
 	float scale = u_constant.GridCellSize;
 
 	mat4 pv = u_camera[0].u_projection * u_camera[0].u_view;
 
 	for(int i = 0; i < cube_strip.length(); i++)
 	{
-		vec3 p = vec3(x, y, z)*scale; - u_constant.GridMin;
-		p += cube_strip[i]*scale*0.5 - scale*0.5;
+		vec3 p = u_constant.GridMin + vec3(x, y, z)*scale;
+		p += cube_strip[i]*scale;
 		gl_Position = pv * vec4(p, 1.);
 		EmitVertex();
 	}
