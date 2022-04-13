@@ -395,18 +395,19 @@ int main()
 	FluidContext cFluid(*context);
 	FluidData dFluid;
 //	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.1f, 0.f), vec3(0.2f, 0.1f, 0.f), vec3(0.f, 0.1f, 0.2f)));
+	float size = 0.5f;
 	// 床
-	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(1.f, 0.f, 0.f), vec3(1.f, 0.0f, 1.f)));
- 	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(1.f, 0.f, 1.f), vec3(0.f, 0.0f, 1.f)));
+	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(size, 0.f, 0.f), vec3(size, 0.0f, size)));
+ 	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(size, 0.f, size), vec3(0.f, 0.0f, size)));
 
-	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(1.f, 0.f, 0.f), vec3(1.f, 1.0f, 0.f)));
-	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(1.f, 1.f, 0.f), vec3(0.f, 1.0f, 0.f)));
-	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 1.f), vec3(1.f, 0.f, 1.f), vec3(1.f, 1.0f, 1.f)));
-	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 1.f), vec3(1.f, 1.f, 1.f), vec3(0.f, 1.0f, 1.f)));
-	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(0.f, 0.f, 1.f), vec3(0.f, 1.0f, 1.f)));
-	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(0.f, 1.f, 1.f), vec3(0.f, 1.0f, 0.f)));
- 	dFluid.triangles.push_back(Triangle(vec3(1.f, 0.f, 0.f), vec3(1.f, 0.f, 1.f), vec3(1.f, 1.0f, 1.f)));
- 	dFluid.triangles.push_back(Triangle(vec3(1.f, 0.f, 0.f), vec3(1.f, 1.f, 1.f), vec3(1.f, 1.0f, 0.f)));
+	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(size, 0.f, 0.f), vec3(size, 1.0f, 0.f)));
+	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(size, size, 0.f), vec3(0.f, 1.0f, 0.f)));
+	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, size), vec3(size, 0.f, size), vec3(size, 1.0f, size)));
+	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, size), vec3(size, size, size), vec3(0.f, 1.0f, size)));
+	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(0.f, 0.f, size), vec3(0.f, 1.0f, size)));
+	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(0.f, size, size), vec3(0.f, 1.0f, 0.f)));
+ 	dFluid.triangles.push_back(Triangle(vec3(size, 0.f, 0.f), vec3(size, 0.f, size), vec3(size, 1.0f, size)));
+ 	dFluid.triangles.push_back(Triangle(vec3(size, 0.f, 0.f), vec3(size, size, size), vec3(size, 1.0f, 0.f)));
 
 	init(dFluid);
 	auto setup_cmd = context->m_cmd_pool->allocCmdTempolary(0);

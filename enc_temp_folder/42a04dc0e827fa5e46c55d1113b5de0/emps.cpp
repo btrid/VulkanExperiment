@@ -524,7 +524,7 @@ void PrsGrdTrm(FluidData& dFluid)
 			if (std::get<0>(sdf) < radius)
 			{
 				double w = WEI(std::get<0>(sdf), radius);
-				w *= (wallPrs[jb] - pre_min) / (std::get<0>(sdf) * std::get<0>(sdf));
+				w *= (getPrs(dFluid, idx, pos) - pre_min) / (std::get<0>(sdf) * std::get<0>(sdf));
 
 				auto wallp = pos - std::get<1>(sdf) * std::get<0>(sdf);
 				acc += (wallp - pos) * w;
