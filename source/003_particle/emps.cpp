@@ -70,7 +70,7 @@ int ToGridIndex(FluidData& dFluid, const ivec3& i){
 int ToGridIndex(FluidData& dFluid, const vec3& p){	return ToGridIndex(dFluid, ToGridCellIndex(dFluid, p));}
 void AlcBkt(FluidData& dFluid)
 {
-#define REFERENCE
+//#define REFERENCE
 //	dFluid.m_constant.GridMin = vec3(0.0 - PCL_DST * 3);
 //	dFluid.m_constant.GridMax = vec3(1.0 + PCL_DST * 3, 0.6 + PCL_DST * 20, 1.0 + PCL_DST * 3);
 	dFluid.m_constant.GridMin = vec3(0.0);
@@ -414,9 +414,6 @@ void MkPrs(FluidData& dFluid){
 				double dist = sqrt(dist2);
 				double w =  WEI(dist, radius);
 				ni += w;
-				if (w >= 100.f) { 
-					int  a = 0; 
-				}
 			}
 		}}}
 		auto sdf = getSDF(dFluid, idx, pos);
@@ -436,7 +433,7 @@ void MkPrs(FluidData& dFluid){
 	for (int x = 0; x < dFluid.m_constant.GridCellNum.x; x++){
 		int i = ToGridIndex(dFluid, ivec3(x, y, z));
 		{
-			if (dFluid.wallesdf[i] >= radius + radius)
+			if (dFluid.wallesdf[i] > radius *2*sqrt(3.f))
 			{
 				continue;
 			}
@@ -457,9 +454,6 @@ void MkPrs(FluidData& dFluid){
 				if (std::get<0>(sdf) >= radius) { continue; }
 				double w = WEI(std::get<0>(sdf), radius);
 				ni += w;
-				if (w >= 100.f) {
-					int  a = 0;
-				}
 			}
 		}}}
 		float mi = Dns[PT_Wall];
