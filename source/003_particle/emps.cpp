@@ -70,7 +70,7 @@ int ToGridIndex(FluidData& dFluid, const ivec3& i){
 int ToGridIndex(FluidData& dFluid, const vec3& p){	return ToGridIndex(dFluid, ToGridCellIndex(dFluid, p));}
 void AlcBkt(FluidData& dFluid)
 {
-//#define REFERENCE
+#define REFERENCE
 //	dFluid.m_constant.GridMin = vec3(0.0 - PCL_DST * 3);
 //	dFluid.m_constant.GridMax = vec3(1.0 + PCL_DST * 3, 0.6 + PCL_DST * 20, 1.0 + PCL_DST * 3);
 	dFluid.m_constant.GridMin = vec3(0.0);
@@ -227,10 +227,12 @@ std::tuple<float, vec3> getSDF(FluidData& dFluid, ivec3 idx, const vec3& pos)
 	vec3 pa = dFluid.m_constant.GridMin + dFluid.m_constant.GridCellSize * vec3(idx);
 	vec3 fp = (pos - pa) * dFluid.m_constant.GridCellSizeInv;
 	auto value = sdf(dFluid, idx);
-	//	if (value >= radius + dFluid.m_constant.GridCellSize * 3.f) { return { 999.f, vec3(0.) }; }
+
+	// check
+	if (value > radius + dFluid.m_constant.GridCellSize*sqrt(3.f)) { return { 999.f, vec3(0.) }; }
 
 	ivec2 offset = ivec2(0, 1);
-	vec4 a = vec4(sdf(dFluid, idx + offset.xxx()), sdf(dFluid, idx + offset.yxx()), sdf(dFluid, idx + offset.xyx()), sdf(dFluid, idx + offset.yyx));
+	vec4 a = vec4(value, sdf(dFluid, idx + offset.yxx()), sdf(dFluid, idx + offset.xyx()), sdf(dFluid, idx + offset.yyx));
 	vec4 b = vec4(sdf(dFluid, idx + offset.xxy()), sdf(dFluid, idx + offset.yxy()), sdf(dFluid, idx + offset.xyy()), sdf(dFluid, idx + offset.yyy));
 	auto z = mix(a, b, fp.z);
 	auto xy = vec2(mix(z.xy(), z.zw(), fp.yy()));
@@ -365,14 +367,14 @@ void ChkCol(FluidData& dFluid)
 		if (std::get<0>(sdf) < radius)
 		{
 			auto wallp = pos - std::get<1>(sdf) * std::get<0>(sdf);
-			auto v = wallp - pos;
-			v = normalize(v);
+//			auto v = wallp - pos;
+//			v = normalize(v);
 
-			double fDT = dot(vel*v, vec3(1.));
+			double fDT = dot(vel* -std::get<1>(sdf), vec3(1.));
 			if (fDT > 0.0) {
 				double mj = Dns[PT_Wall];
 				fDT *= COL * mj / (mi + mj);
-				vec_ix2 -= v * fDT;
+				vec_ix2 -= -std::get<1>(sdf) * fDT;
 			}
 		}
 		_check(vec_ix2);
@@ -519,17 +521,16 @@ void PrsGrdTrm(FluidData& dFluid)
 				w *= (dFluid.Prs[j] - pre_min)/(dist2);
 				acc += v*w;
 			}
-
-			auto sdf = getSDF(dFluid, idx, pos);
-			if (std::get<0>(sdf) < radius)
-			{
-				double w = WEI(std::get<0>(sdf), radius);
-				w *= (wallPrs[jb] - pre_min) / (std::get<0>(sdf) * std::get<0>(sdf));
-
-				auto wallp = pos - std::get<1>(sdf) * std::get<0>(sdf);
-				acc += (wallp - pos) * w;
-			}
 		}}}
+		auto sdf = getSDF(dFluid, idx, pos);
+		if (std::get<0>(sdf) < radius)
+		{
+			double w = WEI(std::get<0>(sdf), radius);
+			w *= (wallPrs[ToGridIndex(dFluid, idx)] - pre_min)/* / (std::get<0>(sdf) * std::get<0>(sdf))*/;
+
+			auto wallp = pos - std::get<1>(sdf) * std::get<0>(sdf);
+			acc += -std::get<1>(sdf) * w;// * //-wallweight[int(std::get<0>(sdf)/radius*16.f) ];
+		}
 		_check(acc);
 
 		dFluid.Acc[i]=acc*invDns[PT_Fluid]*-1.f;
