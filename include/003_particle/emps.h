@@ -31,19 +31,26 @@ struct FluidContext
 struct FluidData
 {
 	int PNum;
+	int PNum_Active;
 	std::vector<vec3> Acc, Pos, Vel;
 	std::vector<float> Prs;
 	std::vector<int> PType;
 
-	float viscosity = 0.000001f; //!< 粘度
 
 	std::vector<Triangle> triangles;
-	std::vector<int> wallenable;
-	std::vector<float> wallesdf;
-	std::vector<vec3> walln;
+	std::vector<int> m_WallEnable;
+	std::vector<float> m_WallSDF;
 
 	struct Constant
 	{
+		float n0; //初期粒子数密度
+		float lmd;	//ラプラシアンモデルの係数λ
+		float A2;//圧力の計算に用いる係数
+		float rlim; //これ以上の粒子間の接近を許さない距離
+		float rlim2;
+		float COL; // 反発率？
+		float viscosity = 0.000001f; //!< 粘度
+
 		float GridCellSize; //GridCellの大きさ(バケット1辺の長さ)
 		float GridCellSizeInv;
 		int GridCellTotal;

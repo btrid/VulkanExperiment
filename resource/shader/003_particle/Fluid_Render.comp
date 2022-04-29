@@ -1,0 +1,89 @@
+#version 460
+
+#extension GL_GOOGLE_include_directive : require
+#define USE_Voxel 0
+#include "Voxel.glsl"
+
+#define SETPOINT_CAMERA 1
+#include "btrlib/camera.glsl"
+
+#define USE_RenderTarget 2
+#include "applib/System.glsl"
+layout (local_size_x = 8, local_size_y = 8) in;
+
+ivec3 g_count;
+bool intersection(vec3 aabb_min, vec3 aabb_max, vec3 pos, vec3 inv_dir, out float n, out float f)
+{
+	// https://tavianator.com/fast-branchless-raybounding-box-intersections/
+	vec3 t1 = (aabb_min - pos) * inv_dir;
+	vec3 t2 = (aabb_max - pos) * inv_dir;
+
+	vec3 tmin = min(t1, t2);
+	vec3 tmax = max(t1, t2);
+
+	n = max(max(tmin.x, tmin.y), tmin.z);
+	f = min(min(tmax.x, tmax.y), tmax.z);
+
+	return f > n;
+}
+
+void MakeRay(out vec3 pos, out vec3 dir, out vec3 inv_dir)
+{
+	vec2 screen = (gl_GlobalInvocationID / vec3(gl_WorkGroupSize * gl_NumWorkGroups)).xy * 2. - 1.;
+	screen *= tan(u_camera[0].u_fov_y / 2.);
+
+	mat3 axis = transpose(mat3(u_camera[0].u_view));
+
+	dir = normalize(axis[2] + axis[0] * screen.x * u_camera[0].u_aspect + axis[1] * screen.y);
+	pos = u_camera[0].u_eye.xyz;
+
+	inv_dir.x = abs(dir.x) < 0.00001 ? 100000. : (1./dir.x);
+	inv_dir.y = abs(dir.y) < 0.00001 ? 100000. : (1./dir.y);
+	inv_dir.z = abs(dir.z) < 0.00001 ? 100000. : (1./dir.z);
+
+}
+
+int To1D(in ivec3 p, in ivec3 s){ return p.x + p.y*s.x + p.z*s.x*s.y; }
+int To1D(in ivec3 p, in ivec4 s){ return p.x + p.y*s.x + p.z*s.x*s.y; }
+
+void march(inout ivec3 Cell, inout vec3 t, in ivec3 dir_sign, in vec3 deltaT)
+{
+	float tmin = min(min(t.x, t.y), t.z);
+//	ivec3 mask = lessThanEqual(t, tmin.xxx);
+
+	Cell = Cell + dir_sign*ivec3(lessThanEqual(t, tmin.xxx));
+	t = fma(deltaT, vec3(lessThanEqual(t, tmin.xxx)), t);
+ 
+}
+
+void main() 
+{	
+	g_count = ivec3(0);
+	vec3 pos, dir, inv_dir;
+	MakeRay(pos, dir, inv_dir);
+
+	{
+		float n, f;
+		intersection(vec3(0.01), vec3(u_info.reso.xyz)-0.01, pos, inv_dir, n, f);
+		pos = pos + max(n, 0.) * dir;
+		if(!all(lessThan(pos, u_info.reso.xyz)) || !all(greaterThanEqual(pos, ivec3(0))))
+		{
+			imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), f16vec4(0,0,0,1));
+			return;	
+		}
+		
+	}
+
+	vec3 deltaT = abs(inv_dir);
+	vec3 t = mix(fract(pos), 1.f-fract(pos), sign(dir)*0.5+0.5) * abs(inv_dir);
+	ivec3 Cell = ivec3(floor(pos));
+	ivec3 dir_sign = ivec3(sign(dir));
+
+	f16vec4 c = f16vec4(0.);
+	while(all(greaterThan(Cell, ivec3(0))) && all(lessThan(Cell, u_info.reso.xyz)))
+	{
+        march(Cell, t, dir_sign, deltaT);
+	}
+
+	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), c);
+}

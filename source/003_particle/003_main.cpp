@@ -412,7 +412,7 @@ int main()
 	init(dFluid);
 	auto setup_cmd = context->m_cmd_pool->allocCmdTempolary(0);
 	dFluid.u_constant = context->m_uniform_memory.allocateMemory<FluidData::Constant>(setup_cmd, context->m_staging_memory, dFluid.m_constant);
-	dFluid.b_WallEnable = context->m_storage_memory.allocateMemory<int32_t>(dFluid.wallenable.size());
+	dFluid.b_WallEnable = context->m_storage_memory.allocateMemory<int32_t>(dFluid.m_WallEnable.size());
 //	setup_cmd.updateBuffer<int32_t>(dFluid.b_WallEnable.getInfo().buffer, dFluid.b_WallEnable.getInfo().offset, dFluid.wallenable);
 	// descriptor set
 	{
