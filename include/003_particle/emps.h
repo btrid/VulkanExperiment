@@ -40,6 +40,7 @@ struct FluidData
 	std::vector<Triangle> triangles;
 	std::vector<int> m_WallEnable;
 	std::vector<float> m_WallSDF;
+	std::vector<vec3> m_WallN;
 
 	struct Constant
 	{

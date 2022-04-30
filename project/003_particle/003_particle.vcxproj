@@ -77,6 +77,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\source\003_particle\003_main.cpp" />
     <ClCompile Include="..\..\source\003_particle\emps.cpp" />
+    <ClCompile Include="..\..\source\003_particle\emps2.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

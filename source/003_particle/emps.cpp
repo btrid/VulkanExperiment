@@ -1,4 +1,5 @@
-﻿#include <cstdio>
+﻿#if 0 // reference
+#include <cstdio>
 #include <cstdlib>
 #include <cmath>
 #include <cstring>
@@ -574,3 +575,4 @@ void gui(FluidData& cFluid)
 		});
 
 }
+#endif
