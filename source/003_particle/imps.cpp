@@ -221,9 +221,8 @@ void init(dFluid& dfluid)
 	calConstantParameter(dfluid);
 }
 
-
-
-void run(dFluid& dfluid) {
+void run(dFluid& dfluid) 
+{
     calGravity(dfluid);
     calViscosity(dfluid);
     moveParticle(dfluid);
@@ -234,7 +233,8 @@ void run(dFluid& dfluid) {
 }
 
 
-void calGravity(dFluid& dfluid) {
+void calGravity(dFluid& dfluid) 
+{
     int i;
 
     for (i = 0; i < dfluid.PNum; i++) {
@@ -325,7 +325,8 @@ void collision(dFluid& dfluid)
 }
 
 
-void calPressure(dFluid& dfluid) {
+void calPressure(dFluid& dfluid) 
+{
     calNumberDensity(dfluid);
     setBoundaryCondition(dfluid);
     setSourceTerm(dfluid);
@@ -336,21 +337,17 @@ void calPressure(dFluid& dfluid) {
 }
 
 
-void calNumberDensity(dFluid& dfluid) {
-    int    i, j;
-    vec3 xij;
-    float distance, distance2;
-    float w;
-
+void calNumberDensity(dFluid& dfluid) 
+{
     for (int i = 0; i < dfluid.PNum; i++) {
         dfluid.NumberDensity[i] = 0.0;
         if (dfluid.ParticleType[i] == PT_Ghost) continue;
-        for (j = 0; j < dfluid.PNum; j++) {
+        for (int j = 0; j < dfluid.PNum; j++) {
             if ((j == i) || (dfluid.ParticleType[j] == PT_Ghost)) continue;
-            xij = dfluid.Position[j] - dfluid.Position[i];
-            distance2 = dot(xij, xij);
-            distance = sqrt(distance2);
-            w = weight(distance, Re_forNumberDensity);
+            auto xij = dfluid.Position[j] - dfluid.Position[i];
+            auto distance2 = dot(xij, xij);
+            auto distance = sqrt(distance2);
+            auto w = weight(distance, Re_forNumberDensity);
             dfluid.NumberDensity[i] += w;
         }
     }
@@ -378,7 +375,6 @@ void setBoundaryCondition(dFluid& dfluid)
 
 void setSourceTerm(dFluid& dfluid) 
 {
-    int i;
     float n0 = N0_forNumberDensity;
     float gamma = RELAXATION_COEFFICIENT_FOR_PRESSURE;
 
