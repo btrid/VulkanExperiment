@@ -46,7 +46,6 @@ struct FluidData
 	{
 		float n0; //初期粒子数密度
 		float lmd;	//ラプラシアンモデルの係数λ
-		float A2;//圧力の計算に用いる係数
 		float rlim; //これ以上の粒子間の接近を許さない距離
 		float rlim2;
 		float COL; // 反発率？

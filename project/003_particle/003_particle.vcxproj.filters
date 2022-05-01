@@ -13,9 +13,11 @@
     <ClCompile Include="..\..\source\003_particle\003_main.cpp" />
     <ClCompile Include="..\..\source\003_particle\emps.cpp" />
     <ClCompile Include="..\..\source\003_particle\emps2.cpp" />
+    <ClCompile Include="..\..\source\003_particle\imps.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\003_particle\particle.h" />
     <ClInclude Include="..\..\include\003_particle\emps.h" />
+    <ClInclude Include="..\..\include\003_particle\imps.h" />
   </ItemGroup>
 </Project>

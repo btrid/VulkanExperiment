@@ -31,6 +31,7 @@
 #pragma comment(lib, "imgui.lib")
 
 #include <003_particle/emps.h>
+#include <003_particle/imps.h>
 
 #include <applib/sAppImGui.h>
 
@@ -321,84 +322,69 @@ struct FluidRenderer
 			cmd.bindVertexBuffers(0, { v.getInfo().buffer, t.getInfo().buffer }, { v.getInfo().offset, t.getInfo().offset });
 			cmd.draw(dFluid.PNum, 1, 0, 0);
 		}
-
+		cmd.endRenderingKHR();
+	}	
+	
+	void execute(vk::CommandBuffer cmd, btr::Context& ctx, const std::shared_ptr<RenderTarget>& rt, imps::dFluid& dFluid)
+	{
 		{
-// 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_Rendering_Wall].get());
-// 			cmd.draw(dFluid.m_constant.GridCellTotal, 1, 0, 0);
+			vk::ImageMemoryBarrier image_barrier[1];
+			image_barrier[0].setImage(rt->m_image);
+			image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+			image_barrier[0].setOldLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			image_barrier[0].setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+			image_barrier[0].setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eColorAttachmentOutput,
+				{}, {}, { /*array_size(to_read), to_read*/ }, { array_size(image_barrier), image_barrier });
 		}
 
+		vk::RenderingAttachmentInfoKHR color[] = {
+			vk::RenderingAttachmentInfoKHR().setImageView(rt->m_view).setStoreOp(vk::AttachmentStoreOp::eStore).setLoadOp(vk::AttachmentLoadOp::eLoad).setImageLayout(vk::ImageLayout::eColorAttachmentOptimal),
+		};
+		vk::RenderingAttachmentInfoKHR depth[] = {
+			vk::RenderingAttachmentInfoKHR().setImageView(rt->m_depth_view).setStoreOp(vk::AttachmentStoreOp::eStore).setLoadOp(vk::AttachmentLoadOp::eLoad).setImageLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
+		};
 
+		vk::RenderingInfoKHR rendering_info;
+		rendering_info.colorAttachmentCount = array_size(color);
+		rendering_info.pColorAttachments = color;
+		rendering_info.pDepthAttachment = depth;
+		rendering_info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(rt->m_info.extent.width, rt->m_info.extent.height)));
+		rendering_info.setLayerCount(1);
+
+		cmd.beginRenderingKHR(rendering_info);
+
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL.get(), 0, { sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA) }, {});
+//		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL.get(), 1, { dFluid.m_DS.get() }, {});
+		{
+			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_Rendering_Fluid].get());
+
+			auto v = ctx.m_staging_memory.allocateMemory<vec3>(dFluid.PNum);
+			auto t = ctx.m_staging_memory.allocateMemory<int32_t>(dFluid.PNum);
+			for (int i = 0; i < dFluid.PNum; i++) { *v.getMappedPtr(i) = dFluid.Position[i]; }
+			for (int i = 0; i < dFluid.PNum; i++) { *t.getMappedPtr(i) = dFluid.ParticleType[i]; }
+
+			cmd.bindVertexBuffers(0, { v.getInfo().buffer, t.getInfo().buffer }, { v.getInfo().offset, t.getInfo().offset });
+			cmd.draw(dFluid.PNum, 1, 0, 0);
+		}
 		cmd.endRenderingKHR();
 	}
 };
-struct Particle
+
+int explicitSolver(app::App& app)
 {
-	Particle(btr::Context& ctx)
-	{
-
-	}
-	void execute(vk::CommandBuffer cmd, btr::Context& ctx)
-	{
-		app::g_app_instance->m_window->getImgui()->pushImguiCmd([this]()
-			{
-				ImGui::SetNextWindowSize(ImVec2(400.f, 300.f), ImGuiCond_Once);
-				static bool is_open;
-				ImGui::Begin("RenderConfig", &is_open, ImGuiWindowFlags_NoSavedSettings| ImGuiWindowFlags_HorizontalScrollbar);
-				if (ImGui::BeginChild("editor", ImVec2(-1, -1), false, ImGuiWindowFlags_HorizontalScrollbar)) {
-					static char text[1024 * 16] =
-						"/*\n"
-						" The Pentium F00F bug, shorthand for F0 0F C7 C8,\n"
-						" the hexadecimal encoding of one offending instruction,\n"
-						" more formally, the invalid operand with locked CMPXCHG8B\n"
-						" instruction bug, is a design flaw in the majority of\n"
-						" Intel Pentium, Pentium MMX, and Pentium OverDrive\n"
-						" processors (all in the P5 microarchitecture).\n"
-						"*/\n\n"
-						"label:\n"
-						"\tlock cmpxchg8b eax\n";
-					ImGui::InputTextMultiline("##source", text, std::size(text), ImVec2(-1, -1), ImGuiInputTextFlags_AllowTabInput);
-				}
-
-				ImGui::EndChild();
-				ImGui::End();
-			});
-
-	}
-	void draw(vk::CommandBuffer cmd)
-	{
-
-	}
-
-};
-
-int main()
-{
-	btr::setResourceAppPath("..\\..\\resource\\003_particle\\");
-	auto camera = cCamera::sCamera::Order().create();
-	camera->getData().m_position = glm::vec3(-0.3f, 0.0f, -0.3f);
-	camera->getData().m_target = glm::vec3(1.f, 0.0f, 1.f);
-	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
-	camera->getData().m_width = 1024;
-	camera->getData().m_height = 1024;
-	camera->getData().m_far = 10000.f;
-	camera->getData().m_near = 0.01f;
-
-	app::AppDescriptor app_desc;
-	app_desc.m_window_size = uvec2(1024, 1024);
-	app::App app(app_desc);
-
 	auto context = app.m_context;
-
 	ClearPipeline clear_render_target(context, app.m_window->getFrontBuffer());
 	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), context->m_window->getSwapchain());
 
 	FluidContext cFluid(*context);
 	FluidData dFluid;
-//	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.1f, 0.f), vec3(0.2f, 0.1f, 0.f), vec3(0.f, 0.1f, 0.2f)));
 	float size = 0.5f;
 	// 床
 	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(size, 0.f, 0.f), vec3(size, 0.0f, size)));
- 	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(size, 0.f, size), vec3(0.f, 0.0f, size)));
+	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(size, 0.f, size), vec3(0.f, 0.0f, size)));
 
 	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(size, 0.f, 0.f), vec3(size, 1.0f, 0.f)));
 	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(size, size, 0.f), vec3(0.f, 1.0f, 0.f)));
@@ -406,14 +392,15 @@ int main()
 	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, size), vec3(size, size, size), vec3(0.f, 1.0f, size)));
 	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(0.f, 0.f, size), vec3(0.f, 1.0f, size)));
 	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(0.f, size, size), vec3(0.f, 1.0f, 0.f)));
- 	dFluid.triangles.push_back(Triangle(vec3(size, 0.f, 0.f), vec3(size, 0.f, size), vec3(size, 1.0f, size)));
- 	dFluid.triangles.push_back(Triangle(vec3(size, 0.f, 0.f), vec3(size, size, size), vec3(size, 1.0f, 0.f)));
+	dFluid.triangles.push_back(Triangle(vec3(size, 0.f, 0.f), vec3(size, 0.f, size), vec3(size, 1.0f, size)));
+	dFluid.triangles.push_back(Triangle(vec3(size, 0.f, 0.f), vec3(size, size, size), vec3(size, 1.0f, 0.f)));
 
 	init(dFluid);
 	auto setup_cmd = context->m_cmd_pool->allocCmdTempolary(0);
 	dFluid.u_constant = context->m_uniform_memory.allocateMemory<FluidData::Constant>(setup_cmd, context->m_staging_memory, dFluid.m_constant);
 	dFluid.b_WallEnable = context->m_storage_memory.allocateMemory<int32_t>(dFluid.m_WallEnable.size());
-//	setup_cmd.updateBuffer<int32_t>(dFluid.b_WallEnable.getInfo().buffer, dFluid.b_WallEnable.getInfo().offset, dFluid.wallenable);
+
+	//	setup_cmd.updateBuffer<int32_t>(dFluid.b_WallEnable.getInfo().buffer, dFluid.b_WallEnable.getInfo().offset, dFluid.wallenable);
 	// descriptor set
 	{
 		vk::DescriptorSetLayout layouts[] =
@@ -448,7 +435,7 @@ int main()
 
 
 	FluidRenderer rFluid(*context, cFluid, app.m_window->getFrontBuffer());
-	Particle particle(*context);
+
 	app.setup();
 	while (true)
 	{
@@ -490,5 +477,112 @@ int main()
 	}
 
 	return 0;
+}
+int implicitSolver(app::App& app)
+{
+	auto context = app.m_context;
+	ClearPipeline clear_render_target(context, app.m_window->getFrontBuffer());
+	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), context->m_window->getSwapchain());
+
+	FluidContext cFluid(*context);
+	imps::dFluid dFluid;
+
+	imps::init(dFluid);
+	auto setup_cmd = context->m_cmd_pool->allocCmdTempolary(0);
+// 	dFluid.u_constant = context->m_uniform_memory.allocateMemory<FluidData::Constant>(setup_cmd, context->m_staging_memory, dFluid.m_constant);
+// 	dFluid.b_WallEnable = context->m_storage_memory.allocateMemory<int32_t>(dFluid.m_WallEnable.size());
+
+// 	{
+// 		vk::DescriptorSetLayout layouts[] =
+// 		{
+// 			cFluid.m_DSL.get(),
+// 		};
+// 		vk::DescriptorSetAllocateInfo desc_info;
+// 		desc_info.setDescriptorPool(context->m_descriptor_pool.get());
+// 		desc_info.setDescriptorSetCount(array_length(layouts));
+// 		desc_info.setPSetLayouts(layouts);
+// 		dFluid.m_DS = std::move(context->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
+// 		{
+// 			auto uniforms =
+// 			{
+// 				dFluid.u_constant.getInfo()
+// 			};
+// 			auto storages =
+// 			{
+// 				dFluid.b_WallEnable.getInfo()
+// 			};
+// 			vk::WriteDescriptorSet write[] =
+// 			{
+// 				vk::WriteDescriptorSet().setDstSet(*dFluid.m_DS).setDstBinding(0).setDescriptorType(vk::DescriptorType::eUniformBuffer).setBufferInfo(uniforms),
+// 				vk::WriteDescriptorSet().setDstSet(*dFluid.m_DS).setDstBinding(10).setDescriptorType(vk::DescriptorType::eStorageBuffer).setBufferInfo(storages)
+// 			};
+// 			context->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
+// 		}
+// 	}
+
+
+	FluidRenderer rFluid(*context, cFluid, app.m_window->getFrontBuffer());
+	app.setup();
+	while (true)
+	{
+		cStopWatch time;
+
+		app.preUpdate();
+		{
+			enum cmds
+			{
+				cmd_clear,
+				cmd_particle,
+				cmd_present,
+				cmd_num,
+			};
+			std::vector<vk::CommandBuffer> render_cmds(cmd_num);
+			{
+				render_cmds[cmd_clear] = clear_render_target.execute();
+				render_cmds[cmd_present] = present_pipeline.execute();
+			}
+
+			{
+				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+
+//				gui(dFluid);
+				run(dFluid);
+				rFluid.execute(cmd, *context, app.m_window->getFrontBuffer(), dFluid);
+
+				sAppImGui::Order().Render(cmd);
+				cmd.end();
+				render_cmds[cmd_particle] = cmd;
+			}
+
+
+			app.submit(std::move(render_cmds));
+		}
+
+		app.postUpdate();
+		printf("%6.4fms\n", time.getElapsedTimeAsMilliSeconds());
+	}
+
+	return 0;
+}
+int main()
+{
+	btr::setResourceAppPath("..\\..\\resource\\003_particle\\");
+	auto camera = cCamera::sCamera::Order().create();
+	camera->getData().m_position = glm::vec3(-0.3f, 0.0f, -0.3f);
+	camera->getData().m_target = glm::vec3(1.f, 0.0f, 1.f);
+	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
+	camera->getData().m_width = 1024;
+	camera->getData().m_height = 1024;
+	camera->getData().m_far = 10000.f;
+	camera->getData().m_near = 0.01f;
+
+	app::AppDescriptor app_desc;
+	app_desc.m_window_size = uvec2(1024, 1024);
+	app::App app(app_desc);
+
+
+	return implicitSolver(app);
+	return explicitSolver(app);
+
 }
 

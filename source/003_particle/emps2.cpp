@@ -25,11 +25,11 @@ enum ParticleType
 #define DNS_FLD 1000		//流体粒子の密度
 #define DNS_SMORK 1		//流体粒子の密度
 #define DNS_WLL 1000		//壁粒子の密度
-#define DT 0.0005f			//時間刻み幅
+#define DT 0.015f			//時間刻み幅
 #define CRT_NUM 0.1f		//クーラン条件数
 #define COL_RAT 0.2f		//接近した粒子の反発率
 #define DST_LMT_RAT 0.9f	//これ以上の粒子間の接近を許さない距離の係数
-#define WEI(dist, re) ((re/(dist)) - 1.0f)	//重み関数
+#define WEI(dist, re) glm::min(((re/(dist)) - 1.0f),0.1f)	//重み関数
 #define Gravity vec3(0.f, -9.8f, 0.f) //重力加速度
 float radius = PCL_DST * 2.1f;
 float radius2 = radius * radius;
@@ -240,7 +240,7 @@ std::tuple<bool, vec3, vec3> raymarch(FluidData& dFluid, const vec3& pos_, const
 	for (int i = 0; i < 100; i++)
 	{
 		auto idx = ToGridCellIndex(dFluid, pos);
-		idx = min(idx, dFluid.m_constant.GridCellNum - 1);
+		idx = min(idx, dFluid.m_constant.GridCellNum - 2);
 		vec3 pa = dFluid.m_constant.GridMin + dFluid.m_constant.GridCellSize * vec3(idx);
 		vec3 fp = (pos - pa) * dFluid.m_constant.GridCellSizeInv;
 
@@ -256,7 +256,7 @@ std::tuple<bool, vec3, vec3> raymarch(FluidData& dFluid, const vec3& pos_, const
 		{
 			return { false, pos_ + dir_ * DT, dir_ };
 		}
-		if (dist < 0.01f)
+		if (dist < dFluid.m_constant.rlim)
 		{
 			auto zs = dot(b - a, vec4(1.f));
 			auto ys = dot(vec4(a.zw(), b.zw()) - vec4(a.xy(), b.xy()), vec4(1.f));
@@ -264,12 +264,13 @@ std::tuple<bool, vec3, vec3> raymarch(FluidData& dFluid, const vec3& pos_, const
 			vec3 n = normalize(vec3(xs, ys, zs));
 
 			float d = dot(dir, n);
-			if (d < 0.f)
+			if (d > 0.f)
 			{
-				auto dir_ref = reflect(dir_, n);
-				return { false, pos /*+ n * dFluid.m_constant.rlim*/, dir_ref };
+//				n = -n;
+//				auto dir_ref = reflect(dir_, n);
+//				return { false, pos + n * dFluid.m_constant.rlim, dir_ref };
 			}
-			return { false, pos /*+ n * dFluid.m_constant.rlim*/, dir };
+			return { false, pos + n * (dFluid.m_constant.rlim-dist), n };
 		}
 		pos += dir * dist;
 	}
@@ -357,7 +358,8 @@ void UpPcl1(FluidData& dFluid)
 				acc += Gravity;
 			}
 			dFluid.Vel[i] += acc * DT;
-			dFluid.Pos[i] += dFluid.Vel[i] * DT;
+//			dFluid.Pos[i] += dFluid.Vel[i] * DT;
+			std::tie(std::ignore, dFluid.Pos[i], dFluid.Vel[i]) = raymarch(dFluid, dFluid.Pos[i], dFluid.Vel[i]);
 			dFluid.Acc[i] = vec3(0.0);
 
 			if (!validCheck(dFluid, dFluid.Pos[i]))
@@ -605,10 +607,6 @@ void UpPcl2(FluidData& dFluid)
 		}
 		dFluid.Vel[i] += dFluid.Acc[i] * DT;
 		dFluid.Acc[i] = vec3(0.0);
-		if (!validCheck(dFluid, dFluid.Pos[i]))
-		{
-			dFluid.PType[i] = PT_Ghost;
-		}
 	}
 }
 
