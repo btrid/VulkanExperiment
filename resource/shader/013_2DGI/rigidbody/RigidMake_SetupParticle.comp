@@ -36,7 +36,7 @@ void main()
 		p.sdf = f16vec2(sdf);
 	}
 
-	p.relative_pos = f16vec2(p.pos-b_make_rigidbody.cm);
+	p.relative_pos = f16vec2(p.pos-b_make_rigidbody.center_of_mass);
 
 	uint memory_index = (b_manager.pb_active_index+b_manager.pb_list_size-gl_NumWorkGroups.x + gl_WorkGroupID.x)% b_manager.pb_list_size;
 	uint pb_id = b_pb_memory_list[memory_index];

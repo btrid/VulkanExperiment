@@ -261,9 +261,14 @@ void main()
 
 	if(((b_rigidbody[r_id].flag & RB_FLAG_FLUID) == 0))
 	{
-		ivec2 pos_integer = ivec2(round((pos-b_rigidbody[r_id].cm) * CM_WORK_PRECISION));
-		atomicAdd(b_rigidbody[r_id].cm_work.x, pos_integer.x);
-		atomicAdd(b_rigidbody[r_id].cm_work.y, pos_integer.y);
+		
+		vec2 p = pos-b_rigidbody[r_id].center_of_mass;
+		p = subgroupAdd(p);
+		if(subgroupElect()) 
+		{
+			atomicAdd(b_rigidbody[r_id].center_of_mass_work.x, p.x);
+			atomicAdd(b_rigidbody[r_id].center_of_mass_work.y, p.y);
+		}
 	}
 	else
 	{

@@ -30,9 +30,9 @@ void main()
 	setRGB(b_fragment[f_index], vec3(1.));
 
 	// 重心
-	uvec2 p_pos = coord.xy - fs_in.voronoi_minmax.xy;
-	atomicAdd(b_make_rigidbody.cm_work.x, int64_t(p_pos.x*CM_WORK_PRECISION));
-	atomicAdd(b_make_rigidbody.cm_work.y, int64_t(p_pos.y*CM_WORK_PRECISION));
+	vec2 p_pos = vec2(coord.xy - fs_in.voronoi_minmax.xy);
+	atomicAdd(b_make_rigidbody.center_of_mass.x, p_pos.x);
+	atomicAdd(b_make_rigidbody.center_of_mass.y, p_pos.y);
 
 	// particle生成
 	uint p_index = atomicAdd(b_make_rigidbody.pnum, 1);

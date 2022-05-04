@@ -2,6 +2,7 @@
 #define Rigidbody2D_H_
 
 #extension GL_EXT_shader_explicit_arithmetic_types : require
+#extension GL_KHR_shader_subgroup_arithmetic : require
 #extension GL_EXT_shader_atomic_int64 : require
 #extension GL_EXT_shader_atomic_float : require
 
@@ -47,21 +48,21 @@ struct rbWorld
 #define RB_FLAG_FLUID (1<<0)
 #define RB_FLAG_USER_CONTROL (1<<1)
 
-#define CM_WORK_PRECISION (65535.)
 struct Rigidbody
 {
 	uint pnum;
 	float life;
-	vec2 cm;
+	vec2 center_of_mass;
 
-	vec2 cm_old;
+	vec2 center_of_mass_old;
 	uint flag;
 	uint _p1;
 
 	vec4 R;
 	vec4 R_old;
 
-	i64vec2 cm_work;
+	vec2 center_of_mass_work;
+	vec2 c_pm_work;
 
 	vec4 Apq_work;
 };

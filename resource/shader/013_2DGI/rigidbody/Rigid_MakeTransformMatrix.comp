@@ -20,7 +20,7 @@ void main()
 	uint r_id = b_rbParticle_map[pb_id];
 
 	vec2 q = b_rbParticle[p_id].relative_pos.xy;
-	vec2 p = b_rbParticle[p_id].pos - b_rigidbody[r_id].cm;
+	vec2 p = b_rbParticle[p_id].pos - b_rigidbody[r_id].center_of_mass;
 	vec4 pq = p.xxyy * q.xyxy;
 	vec4 Apq = subgroupAdd(pq);
 	if(subgroupElect()) 

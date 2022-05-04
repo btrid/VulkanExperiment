@@ -13,10 +13,10 @@ void main()
 	uint r_id = b_rb_update_list[b_world.cpu_index*b_manager.rb_list_size+gl_GlobalInvocationID.x];
 //	if(r_id >= b_world.rigidbody_num){ return; }
 
-	dvec2 cm = dvec2(b_rigidbody[r_id].cm_work) / CM_WORK_PRECISION / b_rigidbody[r_id].pnum + b_rigidbody[r_id].cm;
-	b_rigidbody[r_id].cm_old = b_rigidbody[r_id].cm;
-	b_rigidbody[r_id].cm = vec2(cm);
+	dvec2 cm = b_rigidbody[r_id].center_of_mass_work/ b_rigidbody[r_id].pnum + b_rigidbody[r_id].center_of_mass;
+	b_rigidbody[r_id].center_of_mass_old = b_rigidbody[r_id].center_of_mass;
+	b_rigidbody[r_id].center_of_mass = vec2(cm);
 
-	b_rigidbody[r_id].cm_work = i64vec2(0);
+	b_rigidbody[r_id].center_of_mass_work = vec2(0);
 
 }

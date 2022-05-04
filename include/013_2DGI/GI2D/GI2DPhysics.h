@@ -88,8 +88,9 @@ struct GI2DPhysics
 		vec4 R;
 		vec4 R_old;
 
-		i64vec2 cm_work;
-		
+		vec2 cm_work;
+		vec2 c_pm_work;
+
 		vec4 Apq_work;
 	};
 
