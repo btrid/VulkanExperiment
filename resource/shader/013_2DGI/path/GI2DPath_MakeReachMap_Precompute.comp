@@ -11,9 +11,10 @@ layout (local_size_x = 32, local_size_y = 32) in;
 layout(push_constant, std430) uniform InputVertex
 {
 	i16vec2 target[10];
-	int target_num;
+	i16vec2 target_num;
 	i16vec2 reso;
 } constant;
+
 
 
 

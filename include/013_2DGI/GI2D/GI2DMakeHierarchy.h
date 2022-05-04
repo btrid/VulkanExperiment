@@ -119,7 +119,7 @@ struct GI2DMakeHierarchy
 				gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Path),
 			};
 			vk::PushConstantRange constants[] = {
-				vk::PushConstantRange().setOffset(0).setSize(48 + 8).setStageFlags(vk::ShaderStageFlagBits::eCompute),
+				vk::PushConstantRange().setOffset(0).setSize(64).setStageFlags(vk::ShaderStageFlagBits::eCompute),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));

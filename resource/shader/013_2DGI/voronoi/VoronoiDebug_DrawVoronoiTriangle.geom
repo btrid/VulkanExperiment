@@ -19,6 +19,10 @@ layout(location=0)out gl_PerVertex
 {
 	vec4 gl_Position;
 };
+layout(location=1) in A
+{
+	flat uint vertex_index;
+}gsin[];
 
 layout(push_constant) uniform Input
 {

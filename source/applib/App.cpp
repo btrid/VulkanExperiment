@@ -138,6 +138,7 @@ App::App(const AppDescriptor& desc)
 			VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
 			VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME, 
 			VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME,
+			VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME,
 			VK_NV_MESH_SHADER_EXTENSION_NAME,
 		};
 
@@ -185,6 +186,7 @@ App::App(const AppDescriptor& desc)
 
 		vk::PhysicalDevice16BitStorageFeatures storahe16_F;
 		storahe16_F.storageBuffer16BitAccess = VK_TRUE;
+		storahe16_F.storagePushConstant16 = VK_TRUE;
 		storage8bit_feature.setPNext(&storahe16_F);
 
 		vk::PhysicalDeviceFloat16Int8FeaturesKHR  f16s8_feature;
@@ -239,6 +241,17 @@ App::App(const AppDescriptor& desc)
 		vk::PhysicalDeviceDynamicRenderingFeaturesKHR DynamicRender_Feature;
 		DynamicRender_Feature.dynamicRendering = VK_TRUE;
 		MeshShader_Feature.setPNext(&DynamicRender_Feature);
+
+		vk::PhysicalDeviceShaderAtomicFloatFeaturesEXT AtomicFloat_Feature;
+		AtomicFloat_Feature.shaderBufferFloat32Atomics = VK_TRUE;
+		AtomicFloat_Feature.shaderSharedFloat32Atomics = VK_TRUE;
+		//		AtomicFloat_Feature.shaderSharedFloat64AtomicMinMax = VK_TRUE;
+		DynamicRender_Feature.setPNext(&AtomicFloat_Feature);
+
+		vk::PhysicalDeviceShaderAtomicInt64Features Atomic_Feature;
+		Atomic_Feature.shaderBufferInt64Atomics = VK_TRUE;
+		Atomic_Feature.shaderSharedInt64Atomics = VK_TRUE;
+		AtomicFloat_Feature.setPNext(&Atomic_Feature);
 
 		m_device = m_physical_device.createDeviceUnique(device_info, nullptr);
 

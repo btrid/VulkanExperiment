@@ -40,10 +40,9 @@ void main()
 	{
 		atomicAdd(b_make_param.pb_num.x, 1);
 	}
-	b_make_particle[p_index].flag = RBP_FLAG_ACTIVE;
 	b_make_particle[p_index].pos = vec2(coord);
 	b_make_particle[p_index].pos_old = vec2(coord);
-	b_make_particle[p_index].color = packUnorm4x8(vec4(rgb, 1.));
+	b_make_particle[p_index].flag_color = (RBP_FLAG_ACTIVE<<24) |packUnorm4x8(vec4(rgb, 1.));
 
 	// sdf用
 	uvec2 reso = fs_in.voronoi_minmax.zw - fs_in.voronoi_minmax.xy;

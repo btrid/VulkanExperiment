@@ -217,9 +217,9 @@ int main()
 	camera->getData().m_far = 5000.f;
 	camera->getData().m_near = 0.01f;
 
-	return crowd();
+//	return crowd();
 //	return gi2d_path::path_finding();
-//	return rigidbody();
+	return gi2d_physics::rigidbody();
 //	return radiosity_globalline();
 //	return radiosity_rightbased();
 //	return radiosity_pixelbased();

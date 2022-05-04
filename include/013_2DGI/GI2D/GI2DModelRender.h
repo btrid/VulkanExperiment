@@ -115,13 +115,13 @@ struct GI2DModelRender
 			vk::PipelineColorBlendStateCreateInfo blend_info;
 
 			// vertexinput
-			auto vertex_input_binding = cModel::GetVertexInputBinding();
-			auto vertex_input_attribute = cModel::GetVertexInputAttribute();
+// 			auto vertex_input_binding = cModel::GetVertexInputBinding();
+// 			auto vertex_input_attribute = cModel::GetVertexInputAttribute();
 			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
-			vertex_input_info.setVertexBindingDescriptionCount((uint32_t)vertex_input_binding.size());
-			vertex_input_info.setPVertexBindingDescriptions(vertex_input_binding.data());
-			vertex_input_info.setVertexAttributeDescriptionCount((uint32_t)vertex_input_attribute.size());
-			vertex_input_info.setPVertexAttributeDescriptions(vertex_input_attribute.data());
+// 			vertex_input_info.setVertexBindingDescriptionCount((uint32_t)vertex_input_binding.size());
+// 			vertex_input_info.setPVertexBindingDescriptions(vertex_input_binding.data());
+// 			vertex_input_info.setVertexAttributeDescriptionCount((uint32_t)vertex_input_attribute.size());
+// 			vertex_input_info.setPVertexAttributeDescriptions(vertex_input_attribute.data());
 
 			std::array<vk::PipelineShaderStageCreateInfo, 2> shader_info;
 			shader_info[0].setModule(m_shader[ShaderRenderingVS].get());
