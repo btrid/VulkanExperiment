@@ -430,7 +430,7 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const GI2DRB_MakeParam& param)
 		rb.life = (std::rand() % 10) + 55;
 		rb.pnum = particle_num;
 		rb.cm_work = vec2(0);
-		rb.Apq_work = ivec4(0);
+		rb.Apq_work = vec4(0);
 		cmd.updateBuffer<Rigidbody>(b_make_rigidbody.getInfo().buffer, b_make_rigidbody.getInfo().offset, rb);
 	}
 	{

@@ -63,7 +63,7 @@ struct Rigidbody
 
 	i64vec2 cm_work;
 
-	i64vec4 Apq_work;
+	vec4 Apq_work;
 };
 
 #define RBP_FLAG_ACTIVE (1<<0)

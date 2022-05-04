@@ -22,13 +22,13 @@ void main()
 	vec2 q = b_rbParticle[p_id].relative_pos.xy;
 	vec2 p = b_rbParticle[p_id].pos - b_rigidbody[r_id].cm;
 	vec4 pq = p.xxyy * q.xyxy;
-	i64vec4 Apq_integer = i64vec4(round(subgroupAdd(pq*CM_WORK_PRECISION)));
+	vec4 Apq = subgroupAdd(pq);
 	if(subgroupElect()) 
 	{
-		atomicAdd(b_rigidbody[r_id].Apq_work.x, Apq_integer.x);
-		atomicAdd(b_rigidbody[r_id].Apq_work.y, Apq_integer.y);
-		atomicAdd(b_rigidbody[r_id].Apq_work.z, Apq_integer.z);
-		atomicAdd(b_rigidbody[r_id].Apq_work.w, Apq_integer.w);
+		atomicAdd(b_rigidbody[r_id].Apq_work.x, Apq.x);
+		atomicAdd(b_rigidbody[r_id].Apq_work.y, Apq.y);
+		atomicAdd(b_rigidbody[r_id].Apq_work.z, Apq.z);
+		atomicAdd(b_rigidbody[r_id].Apq_work.w, Apq.w);
 	}
 }
 
