@@ -25,7 +25,7 @@ enum ParticleType
 #define DNS_FLD 1000		//流体粒子の密度
 #define DNS_SMORK 1		//流体粒子の密度
 #define DNS_WLL 1000		//壁粒子の密度
-#define DT 0.015f			//時間刻み幅
+#define DT 0.0005f			//時間刻み幅
 #define CRT_NUM 0.1f		//クーラン条件数
 #define COL_RAT 0.2f		//接近した粒子の反発率
 #define DST_LMT_RAT 0.9f	//これ以上の粒子間の接近を許さない距離の係数

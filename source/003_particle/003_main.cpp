@@ -684,8 +684,8 @@ int main()
 	app_desc.m_window_size = uvec2(1024, 1024);
 	app::App app(app_desc);
 
-	return sphFluid(app);
-	return implicitSolver(app);
+// 	return sphFluid(app);
+// 	return implicitSolver(app);
 	return explicitSolver(app);
 
 }
