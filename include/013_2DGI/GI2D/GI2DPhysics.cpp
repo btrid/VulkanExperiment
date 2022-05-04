@@ -398,20 +398,19 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const GI2DRB_MakeParam& param)
 	auto area = jfa_max - jfa_min;
 	assert(area.x*area.y <= MAKE_RB_JFA_CELL);
 
-	dvec2 pos_sum = dvec2(0.f);
-	dvec2 center_of_mass = dvec2(0.f);
+	vec2 pos_sum = vec2(0.f);
+	vec2 center_of_mass = vec2(0.f);
 	for (int32_t i = 0; i < particle_num; i++)
 	{
-#define CM_WORK_PRECISION (65535.)
-		pos_sum += (dvec2(pos[i]) - dvec2(jfa_min))* CM_WORK_PRECISION;
+		pos_sum += pos[i];
 	}
-	center_of_mass = pos_sum / (double)particle_num / CM_WORK_PRECISION + dvec2(jfa_min);
+	center_of_mass = pos_sum / (double)particle_num;
 
 
 	std::vector<i16vec2> jfa_cell(area.x*area.y, i16vec2(0xffff));
 	for (int32_t i = 0; i < particle_num; i++)
 	{
-		pstate[i].relative_pos = glm::packHalf2x16( pos[i] - vec2(jfa_min) - vec2(center_of_mass));
+		pstate[i].relative_pos = glm::packHalf2x16( pos[i]- vec2(center_of_mass));
 		pstate[i].local_pos = glm::packHalf2x16(pos[i] - vec2(jfa_min));
 
 		ivec2 local_pos = ivec2(pos[i] - vec2(jfa_min));
@@ -423,14 +422,14 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const GI2DRB_MakeParam& param)
 		Rigidbody rb;
 		rb.R = vec4(1.f, 0.f, 0.f, 1.f);
 		rb.R_old = rb.R;
-		rb.cm = vec2(center_of_mass);
+		rb.cm = center_of_mass;
 		rb.cm_old = rb.cm;
 		rb.flag = 0;
 		rb.flag |= param.is_fluid ? RB_FLAG_FLUID : 0;
 		rb.flag |= param.is_usercontrol ? RB_FLAG_USER_CONTROL : 0;
 		rb.life = (std::rand() % 10) + 55;
 		rb.pnum = particle_num;
-		rb.cm_work = pos_sum;
+		rb.cm_work = vec2(0);
 		rb.Apq_work = ivec4(0);
 		cmd.updateBuffer<Rigidbody>(b_make_rigidbody.getInfo().buffer, b_make_rigidbody.getInfo().offset, rb);
 	}

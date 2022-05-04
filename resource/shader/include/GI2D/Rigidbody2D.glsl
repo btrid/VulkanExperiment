@@ -3,6 +3,7 @@
 
 #extension GL_EXT_shader_explicit_arithmetic_types : require
 #extension GL_EXT_shader_atomic_int64 : require
+#extension GL_EXT_shader_atomic_float : require
 
 
 #if defined(USE_Rigidbody2D)
@@ -61,6 +62,7 @@ struct Rigidbody
 	vec4 R_old;
 
 	i64vec2 cm_work;
+
 	i64vec4 Apq_work;
 };
 

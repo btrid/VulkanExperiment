@@ -245,6 +245,8 @@ App::App(const AppDescriptor& desc)
 		vk::PhysicalDeviceShaderAtomicFloatFeaturesEXT AtomicFloat_Feature;
 		AtomicFloat_Feature.shaderBufferFloat32Atomics = VK_TRUE;
 		AtomicFloat_Feature.shaderSharedFloat32Atomics = VK_TRUE;
+		AtomicFloat_Feature.shaderBufferFloat32AtomicAdd = VK_TRUE;
+		AtomicFloat_Feature.shaderSharedFloat32AtomicAdd = VK_TRUE;
 		//		AtomicFloat_Feature.shaderSharedFloat64AtomicMinMax = VK_TRUE;
 		DynamicRender_Feature.setPNext(&AtomicFloat_Feature);
 

@@ -61,13 +61,8 @@ void main()
 
 		b_update_counter[b_world.gpu_index*2+1].x += b_make_param.pb_num.x;
 
-		// ついでにRigidbodyのセットアップ
-		dvec2 cm = dvec2(b_make_rigidbody.cm_work) / CM_WORK_PRECISION / b_make_rigidbody.pnum + b_make_param.rb_aabb.xy;
-		b_make_rigidbody.cm = vec2(cm);
-		b_make_rigidbody.cm_work = i64vec2(0);
+		// igidbodyのセットアップ
 		b_rigidbody[s_rb_id] = b_make_rigidbody;
-
-
 	}
 
 	memoryBarrierShared();

@@ -260,7 +260,7 @@ struct GI2DPhysicsDebug
 			subpass.setColorAttachmentCount(array_size(color_ref));
 			subpass.setPColorAttachments(color_ref);
 
-			vk::AttachmentDescription attach_description[] =
+			auto attach_description =
 			{
 				// color1
 				vk::AttachmentDescription()
@@ -272,8 +272,7 @@ struct GI2DPhysicsDebug
 				.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
 			};
 			vk::RenderPassCreateInfo renderpass_info;
-			renderpass_info.setAttachmentCount(std::size(attach_description));
-			renderpass_info.setPAttachments(attach_description);
+			renderpass_info.setAttachments(attach_description);
 			renderpass_info.setSubpassCount(1);
 			renderpass_info.setPSubpasses(&subpass);
 
