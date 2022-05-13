@@ -51,8 +51,8 @@ void main()
 //		move += gradient * -vec2(x,y)*0.5;
 	}}
 
-	b_rbParticle[p_id].pos_old -= move*0.0001;
-	b_rbParticle[p_id].density = density_total /= 9.;
+//	b_rbParticle[p_id].pos_old -= move*0.0001;
+//	b_rbParticle[p_id].density = density_total /= 9.;
 
 
 }

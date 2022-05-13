@@ -31,8 +31,8 @@ void main()
 
 	// 重心
 	vec2 p_pos = vec2(coord.xy - fs_in.voronoi_minmax.xy);
-	atomicAdd(b_make_rigidbody.center_of_mass.x, p_pos.x);
-	atomicAdd(b_make_rigidbody.center_of_mass.y, p_pos.y);
+	atomicAdd(b_make_rigidbody.center_of_mass_work.x, p_pos.x);
+	atomicAdd(b_make_rigidbody.center_of_mass_work.y, p_pos.y);
 
 	// particle生成
 	uint p_index = atomicAdd(b_make_rigidbody.pnum, 1);

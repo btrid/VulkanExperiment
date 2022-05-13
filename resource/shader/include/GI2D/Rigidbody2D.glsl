@@ -11,7 +11,7 @@
 
 #define RB_PARTICLE_BLOCK_SIZE (64)
 #define COLLIDABLE_NUM (4)
-#define RB_DT (0.016)
+#define RB_DT (0.0006)
 #define RB_GRAVITY_DT (vec2(0., 0.0025))
 //#define RB_DT (0.0016)
 //#define RB_GRAVITY_DT (vec2(0., 0.000025))
@@ -80,7 +80,6 @@ struct rbParticle
 
 	vec2 pos;
 	vec2 pos_old;
-
 
 	float density;
 	uint flag_color; // u8vec4[flag, r, g, b]

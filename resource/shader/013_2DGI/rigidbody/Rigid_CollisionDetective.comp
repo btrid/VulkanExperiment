@@ -50,121 +50,6 @@ vec2 intersectionAABBSegment(in vec4 aabb, in vec2 p, in vec2 dir, in vec2 inv_d
 //	return p + min(f, fmax) * dir;
  }
 
-/*vec2 intersectionAABBSegment2(in vec4 aabb, in vec2 p, in vec2 dir)
-{
-	vec4 t = (aabb - p.xyxy) * inv_dir.xyxy;
-//	vec2 tmin = min(t.xy, t.zw);
- 	vec2 tmax = max(t.xy, t.zw);
-
-//	float n = max(tmin.x, tmin.y);
-	float f = min(tmax.x, tmax.y);
-
-//	return p + (n >= 0. ? n : f) * dir;
-	return p + f * dir;
-//	return p + min(f, fmax) * dir;
- }
-*/
-vec2 closestSegmentPoint(in vec4 seg, in vec2 p)
-{
-	vec2 ab = seg.zw - seg.xy;
-	float t = dot(p - seg.xy, ab) / dot(ab, ab);
-	return seg.xy + clamp(t, 0., 1.) * ab;
-}
-
-bool inetsectLineCircle(inout vec2 ap, in vec2 ad, in vec2 bp)
-{
-//https://stackoverflow.com/questions/1073336/circle-line-segment-collision-detection-algorithm
-//	vec2 result = p;
-//	float t1=0.f, t2=0.f;
-
-	float r =0.5;
-	float a = dot(ad,ad);
-	float b = 2.f * dot(ap-bp, ad);
-	float c = dot(ap-bp, ap-bp) - r*r;
-
-	float discriminant = b * b - 4 * a*c;
-	if (discriminant < 0)
-	{
-		// no intersection
-	}
-	else
-	{
-		// ray didn't totally miss sphere,
-		// so there is a solution to
-		// the equation.
-		discriminant = sqrt(discriminant);
-
-		// either solution may be on or off the ray so need to test both
-		// t1 is always the smaller value, because BOTH discriminant and
-		// a are nonnegative.
-		float t1 = (-b - discriminant) / (2.f * a);
-		float t2 = (-b + discriminant) / (2.f * a);
-
-		// 3x HIT cases:
-		//          -o->             --|-->  |            |  --|->
-		// Impale(t1 hit,t2 hit), Poke(t1 hit,t2>1), ExitWound(t1<0, t2 hit), 
-
-		// 3x MISS cases:
-		//       ->  o                     o ->              | -> |
-		// FallShort (t1>1,t2>1), Past (t1<0,t2<0), CompletelyInside(t1<0, t2>1)
-
-		if (t1 >= 0 && t1 <= 1)
-		{
-			// t1 is the intersection, and it's closer than t2
-			// (since t1 uses -b - discriminant)
-			// Impale, Poke
-			ap = ap + ad * t1;
-			return true;
-		}
-
-		// here t1 didn't intersect so we are either started
-		// inside the sphere or completely past it
-		if (t2 >= 0 && t2 <= 1)
-		{
-			// ExitWound
-//			ap = ap + (ad * t2)*0.25;
-//			return true;
-		}
-
-		// no intn: FallShort, Past, CompletelyInside
-//		return false;
-	}
-	return false;
-}
-
-bool inetsectLineCircle(inout vec2 ap, in vec2 ad, in vec2 bp, in vec2 bd)
-{
-	float r =0.5;
-	if(distance(ap, bp)>=r){return false;}
-
-	float a = dot(ad,ad);
-	float b = 2.f * dot(ap-bp, ad);
-	float c = dot(ap-bp, ap-bp) - r*r;
-
-	float discriminant = b * b - 4 * a*c;
-	if (discriminant < 0)
-	{
-		return false;
-	}
-
-	discriminant = sqrt(discriminant);
-
-	float t1 = (-b - discriminant) / (2.f * a);
-	float t2 = (-b + discriminant) / (2.f * a);
-
-	if (/*t1 >= 0 &&*/ t1 <= 1)
-	{
-		ap = ap + ad * t1;
-		return true;
-	}
-	if (t2 >= 0 /*&& t2 <= 1*/)
-	{
-		// ExitWound
-		ap = ap + (ad * t2);
-		return true;
-	}
-}
-
 
 void main() 
 {
@@ -210,22 +95,8 @@ void main()
 			is_hit = true;
 			break;
 		}
-	}
-
-	if(!is_hit)
-	{
-//		ivec2 offset = ivec2(greaterThan(fract(pos), vec2(0.5)))-1;
-//		ivec4 pos_x = ivec4(pos.xxxx)+offset.xxxx+ivec4(0,0,1,1);
-//		ivec4 pos_y = ivec4(pos.yyyy)+offset.yyyy+ivec4(0,1,0,1);
-
-//		for(int i = 0; i<4; i++)
+		else
 		{
-//				ivec2 map_index = ivec2(pos_x[i], pos_y[i]);
-			uvec2 map_index = uvec2(pos);
-//			if(any(greaterThanEqual(map_index, reso.xy))){ }
-
-			uint findex = map_index.x + map_index.y * reso.x;
-
 			int count = int(min(b_collidable_counter[findex], COLLIDABLE_NUM));
 			for(uint ii = 0; ii < count; ii++)
 			{
@@ -236,6 +107,7 @@ void main()
 					continue;
 				}
 				vec2 sdf_j = -b_collidable[fj_id].sdf;
+				vec2 vel_j = -b_collidable[fj_id].vel;
 				vec2 p_j = b_collidable[fj_id].grid_relative_pos;
 				vec2 inv_sdf;
 				inv_sdf.x = abs(sdf_j.x)<=0.0001 ? 9999. : (1./sdf_j.x);
@@ -246,8 +118,8 @@ void main()
 				break;
 			}
 		}
-
 	}
+
 
 	if(is_hit)
 	{

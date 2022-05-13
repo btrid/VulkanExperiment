@@ -432,10 +432,10 @@ int gi2d_physics::rigidbody()
 
 				if (context->m_window->getInput().m_keyboard.isOn('A'))
 				{
-					for (int y = 0; y < 16; y++) {
-						for (int x = 0; x < 16; x++) {
+					for (int y = 0; y < 3; y++) {
+						for (int x = 0; x < 1; x++) {
 							GI2DRB_MakeParam param;
-							param.aabb = uvec4(220 + x * 32, 620 - y * 16, 8, 8);
+							param.aabb = uvec4(320 + x * 32, 1000 - y * 16, 8, 8);
 							param.is_fluid = false;
 							param.is_usercontrol = false;
 							gi2d_physics_context->make(cmd, param);
