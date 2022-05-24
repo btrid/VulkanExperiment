@@ -378,12 +378,12 @@ struct GI2DVoronoi
 
 			{
 				rb.R = vec4(1.f, 0.f, 0.f, 1.f);
-				rb.cm = vec2(0.f);
+				rb.center_of_mass = vec2(0.f);
 				rb.flag = RB_FLAG_FLUID;
 				//			rb.flag = 0;
 				rb.life = 100;
 				rb.pnum = 0;
-				rb.cm_work = ivec2(0);
+				rb.center_of_mass_work = ivec2(0);
 				rb.Apq_work = ivec4(0);
 
 				static uint s_id;

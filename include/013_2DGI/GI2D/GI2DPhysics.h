@@ -79,16 +79,16 @@ struct GI2DPhysics
 	{
 		uint pnum;
 		float life;
-		vec2 cm;
-		vec2 cm_old;
+		vec2 center_of_mass;
 
+		vec2 center_of_mass_old;
 		uint flag;
 		uint _p1;
 
 		vec4 R;
 		vec4 R_old;
 
-		vec2 cm_work;
+		vec2 center_of_mass_work;
 		vec2 c_pm_work;
 
 		vec4 Apq_work;
