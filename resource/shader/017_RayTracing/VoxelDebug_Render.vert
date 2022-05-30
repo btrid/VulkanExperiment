@@ -14,7 +14,7 @@ layout(location=0)out gl_PerVertex
 };
 
 layout(location=1) out Vertex{
-	flat uint VertexIndex;
+	flat int VertexIndex;
 }vs_out;
 
 void main() 
