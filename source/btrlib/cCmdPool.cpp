@@ -94,7 +94,7 @@ vk::CommandBuffer cCmdPool::allocCmdOnetime(int device_family_index, const char*
 
 #if USE_DEBUG_REPORT
 	char buf[256];
-	sprintf_s(buf, "Onetime CMD %d", m_cmd[sThreadLocal::Order().getThreadIndex()][sGlobal::Order().getCurrentFrame()].m_cmd_onetime_deleter.size());
+	sprintf_s(buf, "Onetime CMD %d", (int)m_cmd[sThreadLocal::Order().getThreadIndex()][sGlobal::Order().getCurrentFrame()].m_cmd_onetime_deleter.size());
 	vk::DebugUtilsObjectNameInfoEXT name_info;
 	name_info.objectType = vk::ObjectType::eCommandBuffer;
 	name_info.pObjectName = name ? name : buf;
@@ -114,7 +114,7 @@ vk::CommandBuffer cCmdPool::allocCmdTempolary(uint32_t device_family_index, cons
 
 #if USE_DEBUG_REPORT
 		char buf[256];
-		sprintf_s(buf, "TlsTempolary CMD %d", m_cmd[sThreadLocal::Order().getThreadIndex()][sGlobal::Order().getCurrentFrame()].m_cmd_onetime_deleter.size());
+		sprintf_s(buf, "TlsTempolary CMD %d", (int)m_cmd[sThreadLocal::Order().getThreadIndex()][sGlobal::Order().getCurrentFrame()].m_cmd_onetime_deleter.size());
 		vk::DebugUtilsObjectNameInfoEXT name_info;
 		name_info.objectType = vk::ObjectType::eCommandBuffer;
 		name_info.pObjectName = name ? name : buf;

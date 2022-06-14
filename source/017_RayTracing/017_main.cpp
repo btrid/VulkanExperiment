@@ -30,6 +30,7 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
+#include <applib/sAppImGui.h>
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
 #pragma comment(lib, "vulkan-1.lib")
@@ -209,7 +210,6 @@ struct Model
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR | vk::PipelineStageFlagBits::eRayTracingShaderKHR, {}, {}, { array_size(barrier), barrier }, {});
 
-
 		{
 			vk::DescriptorSetLayout layouts[] =
 			{
@@ -364,10 +364,10 @@ struct Voxel_With_Model
 			u_info = ctx.m_ctx->m_uniform_memory.allocateMemory<VoxelInfo>(1);
 			b_hashmap = ctx.m_ctx->m_storage_memory.allocateMemory<int>(num / 64 / 64);
 			b_hashmap_mask = ctx.m_ctx->m_storage_memory.allocateMemory<uvec2>(num / 64 / 64 / 64);
-			b_interior_counter = ctx.m_ctx->m_storage_memory.allocateMemory<uvec4>(3);
-			b_leaf_counter = ctx.m_ctx->m_storage_memory.allocateMemory<uint>(1);
+			b_interior_counter = ctx.m_ctx->m_staging_memory.allocateMemory<uvec4>(3);
+			b_leaf_counter = ctx.m_ctx->m_staging_memory.allocateMemory<uint>(1);
 			b_interior = ctx.m_ctx->m_storage_memory.allocateMemory<InteriorNode>(num / 64 / 4);
-			b_leaf = ctx.m_ctx->m_storage_memory.allocateMemory<LeafNode>(num / 64 / 4);
+			b_leaf = ctx.m_ctx->m_storage_memory.allocateMemory<LeafNode>(num / 64);
 
 			cmd.updateBuffer<VoxelInfo>(u_info.getInfo().buffer, u_info.getInfo().offset, m_info);
 
@@ -746,6 +746,34 @@ struct Voxel_With_Model
 		}
 	}
 
+	void execute(vk::CommandBuffer cmd)
+	{
+		{
+// 			vk::BufferCopy2 copy;
+// 			copy.setSize(b_interior_counter.getInfo().range);
+// 			cmd.copyBuffer2(b_interior_counter.getInfo().buffer, b_interior_counter.getInfo().offset, b_hashmap.getInfo().range, -1);
+// 			cmd.fillBuffer(b_leaf_counter.getInfo().buffer, b_leaf_counter.getInfo().offset, b_leaf_counter.getInfo().range, 0);
+		}
+
+		app::g_app_instance->m_window->getImgui()->pushImguiCmd([this]()
+			{
+				if (b_interior_counter.getMappedPtr())
+				{
+					static bool is_open;
+					ImGui::SetNextWindowSize(ImVec2(400.f, 300.f), ImGuiCond_Once);
+					ImGui::Begin("RenderConfig", &is_open, ImGuiWindowFlags_NoSavedSettings);
+					int v[] = { b_interior_counter.getMappedPtr()[0].w, b_interior_counter.getMappedPtr()[1].w, b_interior.getDescriptor().element_num};
+					ImGui::InputInt3("interior count", v);
+					int lc[] = { b_leaf_counter.getMappedPtr()[0], b_leaf.getDescriptor().element_num };
+					ImGui::InputInt2("leaf count", lc);
+
+					ImGui::End();
+				}
+
+			});
+
+	}
+
 	void execute_MakeVoxel_TD(vk::CommandBuffer cmd, Model& model)
 	{
 		DebugLabel _label(cmd, __FUNCTION__);
@@ -1063,11 +1091,14 @@ int main()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				{
+					voxelizer.execute(cmd);
  					voxelizer.execute_MakeVoxel_TD(cmd, *model);
  					voxelizer.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 //					voxel_with_model.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 //					voxel.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 //					voxel.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
+
+					sAppImGui::Order().Render(cmd);
 				}
 
 				cmd.end();
