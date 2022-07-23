@@ -10,12 +10,11 @@ SET output=-o ../binary/
 
 %exe% %output%/VoxelMakeTD_AllocateTopChild.comp.spv VoxelMakeTD_AllocateTopChild.comp
 %exe% %output%/VoxelMakeTD_AllocateMidChild.comp.spv VoxelMakeTD_AllocateMidChild.comp
-%exe% %output%/VoxelMakeTD_MakeHashMapMask.comp.spv VoxelMakeTD_MakeHashMapMask.comp
 
- %exe% %output%/Voxel_Rendering.comp.spv Voxel_Rendering.comp
- %exe% %output%/Voxel_Rendering.comp.spv Voxel_Rendering_2.comp
- %exe% %output%/Voxel_Rendering.comp.spv Voxel_Rendering_2_fast.comp
-%exe% %output%/Voxel_Rendering.comp.spv Voxel_Rendering_3_fast.comp
+%exe% %output%/Voxel_Rendering.comp.spv Voxel_Rendering.comp
+rem %exe% %output%/Voxel_Rendering.comp.spv Voxel_Rendering_2.comp
+rem %exe% %output%/Voxel_Rendering.comp.spv Voxel_Rendering_2_fast.comp
+rem %exe% %output%/Voxel_Rendering.comp.spv Voxel_Rendering_3_fast.comp
 rem %exe% %output%/Voxel_Rendering.comp.spv Voxel_Rendering_3.comp
 
 %exe% %output%/VoxelDebug_Render.vert.spv VoxelDebug_Render.vert

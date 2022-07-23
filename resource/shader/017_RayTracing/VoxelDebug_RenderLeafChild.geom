@@ -26,23 +26,6 @@ layout(location=1) out Out
 }gs_out;
 
 
-const vec3 cube_strip[] = 
-{
-vec3(0.f, 1.f, 1.f),    // Front-top-left
-vec3(1.f, 1.f, 1.f),    // Front-top-right
-vec3(0.f, 0.f, 1.f),    // Front-bottom-left
-vec3(1.f, 0.f, 1.f),    // Front-bottom-right
-vec3(1.f, 0.f, 0.f),    // Back-bottom-right
-vec3(1.f, 1.f, 1.f),    // Front-top-right
-vec3(1.f, 1.f, 0.f),    // Back-top-right
-vec3(0.f, 1.f, 1.f),    // Front-top-left
-vec3(0.f, 1.f, 0.f),    // Back-top-left
-vec3(0.f, 0.f, 1.f),    // Front-bottom-left
-vec3(0.f, 0.f, 0.f),    // Back-bottom-left
-vec3(1.f, 0.f, 0.f),    // Back-bottom-right
-vec3(0.f, 1.f, 0.f),    // Back-top-left
-vec3(1.f, 1.f, 0.f),    // Back-top-right
-};
 
 void main() 
 {

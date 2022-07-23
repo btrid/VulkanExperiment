@@ -39,7 +39,7 @@
 #include <017_Raytracing/voxel1.h>
 #include <017_Raytracing/voxel2.h>
 
-
+constexpr ivec3 gVoxelReso(512);
 struct Context
 {
 	enum DSL
@@ -149,10 +149,6 @@ struct Model
 
 			for (uint32_t v = 0; v < mesh->mNumVertices; v++)
 			{
- 				mesh->mVertices[v] += aiVector3D(100.f, 0.f, 100.f);
- 				mesh->mVertices[v].x *= 3.f;
- 				mesh->mVertices[v].y *= 3.f;
- 				mesh->mVertices[v].z *= 3.f;
 				info.m_aabb_min.x = std::min(info.m_aabb_min.x, mesh->mVertices[v].x);
 				info.m_aabb_min.y = std::min(info.m_aabb_min.y, mesh->mVertices[v].y);
 				info.m_aabb_min.z = std::min(info.m_aabb_min.z, mesh->mVertices[v].z);
@@ -168,6 +164,18 @@ struct Model
 			vertex_offset += mesh->mNumVertices;
 		}
 		importer.FreeScene();
+
+
+		// resize
+		auto aabb_size = info.m_aabb_max-info.m_aabb_min;
+		for (int i = 0; i < numVertex; i++)
+		{
+			auto p = *vertex.getMappedPtr<vec3>(i);
+			p = p - info.m_aabb_min.xyz();
+			p = p / aabb_size.xyz() * vec3(gVoxelReso);
+			*vertex.getMappedPtr<vec3>(i) = p;
+		}
+
 
 		info.m_vertex_num = numVertex;
 		auto cmd = ctx.m_ctx->m_cmd_pool->allocCmdTempolary(0);
@@ -261,7 +269,7 @@ struct Voxel_With_Model
 {
 	enum 
 	{
-		VoxelReso = 512,
+		VoxelReso = gVoxelReso.x,
 	};
 	enum
 	{
@@ -279,7 +287,6 @@ struct Voxel_With_Model
 		Pipeline_MakeVoxel,
 		Pipeline_MakeVoxelTopChild,
 		Pipeline_MakeVoxelMidChild,
-		Pipeline_MakeHashMapMask,
 
 		Pipeline_RenderVoxel,
 		Pipeline_Debug_RenderVoxel,
@@ -298,16 +305,11 @@ struct Voxel_With_Model
 	std::array<vk::UniquePipeline, Pipeline_Num> m_pipeline;
 	std::array<vk::UniquePipelineLayout, PipelineLayout_Num> m_PL;
 
-	vk::UniqueRenderPass m_RP_debugvoxel;
-	vk::UniqueFramebuffer m_FB_debugvoxel;
-
-	vk::UniqueRenderPass m_RP_makevoxel;
-	vk::UniqueFramebuffer m_FB_makevoxel;
-
-
 	struct VoxelInfo
 	{
 		uvec4 reso;
+
+		int renderType = 0;
 	};
 
 
@@ -452,7 +454,6 @@ struct Voxel_With_Model
 			{
 				{"VoxelMakeTD_AllocateTopChild.comp.spv", vk::ShaderStageFlagBits::eCompute},
 				{"VoxelMakeTD_AllocateMidChild.comp.spv", vk::ShaderStageFlagBits::eCompute},
-				{"VoxelMakeTD_MakeHashMapMask.comp.spv", vk::ShaderStageFlagBits::eCompute},
 				{"Voxel_Rendering.comp.spv", vk::ShaderStageFlagBits::eCompute},
 			};
 			std::array<vk::UniqueShaderModule, array_length(shader_param)> shader;
@@ -473,42 +474,16 @@ struct Voxel_With_Model
 				.setLayout(m_PL[PipelineLayout_MakeVoxel].get()),
 				vk::ComputePipelineCreateInfo()
 				.setStage(shaderStages[2])
-				.setLayout(m_PL[PipelineLayout_MakeVoxel].get()),
-				vk::ComputePipelineCreateInfo()
-				.setStage(shaderStages[3])
 				.setLayout(m_PL[PipelineLayout_RenderVoxel].get()),
 			};
 			m_pipeline[Pipeline_MakeVoxelTopChild] = ctx.m_ctx->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[0]).value;
 			m_pipeline[Pipeline_MakeVoxelMidChild] = ctx.m_ctx->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[1]).value;
-			m_pipeline[Pipeline_MakeHashMapMask] = ctx.m_ctx->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[2]).value;
-			m_pipeline[Pipeline_RenderVoxel] = ctx.m_ctx->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[3]).value;
+			m_pipeline[Pipeline_RenderVoxel] = ctx.m_ctx->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[2]).value;
 		}
 
 		// graphics pipeline render
 		{
 
-			// レンダーパス
-			{
-				// sub pass
-				vk::SubpassDescription subpass;
-				subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
-
-				vk::RenderPassCreateInfo renderpass_info;
-				renderpass_info.setSubpassCount(1);
-				renderpass_info.setPSubpasses(&subpass);
-
-				m_RP_makevoxel = ctx.m_ctx->m_device.createRenderPassUnique(renderpass_info);
-
-				{
-					vk::FramebufferCreateInfo framebuffer_info;
-					framebuffer_info.setRenderPass(m_RP_makevoxel.get());
-					framebuffer_info.setWidth(VoxelReso);
-					framebuffer_info.setHeight(VoxelReso);
-					framebuffer_info.setLayers(1);
-
-					m_FB_makevoxel = ctx.m_ctx->m_device.createFramebufferUnique(framebuffer_info);
-				}
-			}
 			struct { const char* name; vk::ShaderStageFlagBits flag; } shader_param[] =
 			{
 				{"VoxelMakeTD_ModelVoxelize.vert.spv", vk::ShaderStageFlagBits::eVertex},
@@ -592,76 +567,21 @@ struct Voxel_With_Model
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
 				.setLayout(m_PL[PipelineLayout_MakeVoxel].get())
-				.setRenderPass(m_RP_makevoxel.get())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info);
+
+			vk::PipelineRenderingCreateInfoKHR pipeline_rendering_create_info = vk::PipelineRenderingCreateInfoKHR();
+			graphics_pipeline_info.setPNext(&pipeline_rendering_create_info);
+
 			m_pipeline[Pipeline_MakeVoxel] = ctx.m_ctx->m_device.createGraphicsPipelineUnique(vk::PipelineCache(), graphics_pipeline_info).value;
 
 		}
 
+
+
 		// graphics pipeline debug
 		{
 
-			// レンダーパス
-			{
-				vk::AttachmentReference color_ref[] = {
-					vk::AttachmentReference().setLayout(vk::ImageLayout::eColorAttachmentOptimal).setAttachment(0),
-				};
-				vk::AttachmentReference depth_ref;
-				depth_ref.setAttachment(1);
-				depth_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-
-				// sub pass
-				vk::SubpassDescription subpass;
-				subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
-				subpass.setInputAttachmentCount(0);
-				subpass.setPInputAttachments(nullptr);
-				subpass.setColorAttachmentCount(array_length(color_ref));
-				subpass.setPColorAttachments(color_ref);
-				subpass.setPDepthStencilAttachment(&depth_ref);
-
-				vk::AttachmentDescription attach_desc[] =
-				{
-					// color1
-					vk::AttachmentDescription()
-					.setFormat(rt.m_info.format)
-					.setSamples(vk::SampleCountFlagBits::e1)
-					.setLoadOp(vk::AttachmentLoadOp::eLoad)
-					.setStoreOp(vk::AttachmentStoreOp::eStore)
-					.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
-					.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
-					vk::AttachmentDescription()
-					.setFormat(rt.m_depth_info.format)
-					.setSamples(vk::SampleCountFlagBits::e1)
-					.setLoadOp(vk::AttachmentLoadOp::eLoad)
-					.setStoreOp(vk::AttachmentStoreOp::eStore)
-					.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
-					.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
-				};
-				vk::RenderPassCreateInfo renderpass_info;
-				renderpass_info.setAttachmentCount(array_length(attach_desc));
-				renderpass_info.setPAttachments(attach_desc);
-				renderpass_info.setSubpassCount(1);
-				renderpass_info.setPSubpasses(&subpass);
-
-				m_RP_debugvoxel = ctx.m_ctx->m_device.createRenderPassUnique(renderpass_info);
-
-				{
-					vk::ImageView view[] = {
-						rt.m_view,
-						rt.m_depth_view,
-					};
-					vk::FramebufferCreateInfo framebuffer_info;
-					framebuffer_info.setRenderPass(m_RP_debugvoxel.get());
-					framebuffer_info.setAttachmentCount(array_length(view));
-					framebuffer_info.setPAttachments(view);
-					framebuffer_info.setWidth(rt.m_info.extent.width);
-					framebuffer_info.setHeight(rt.m_info.extent.height);
-					framebuffer_info.setLayers(1);
-
-					m_FB_debugvoxel = ctx.m_ctx->m_device.createFramebufferUnique(framebuffer_info);
-				}
-			}
 			struct { const char* name; vk::ShaderStageFlagBits flag; } shader_param[] =
 			{
 				{"VoxelDebug_Render.vert.spv", vk::ShaderStageFlagBits::eVertex},
@@ -738,9 +658,13 @@ struct Voxel_With_Model
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
 				.setLayout(m_PL[PipelineLayout_RenderVoxel].get())
-				.setRenderPass(m_RP_debugvoxel.get())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info);
+
+			auto color_formats = { rt.m_info.format };
+			vk::PipelineRenderingCreateInfoKHR pipeline_rendering_create_info = vk::PipelineRenderingCreateInfoKHR().setColorAttachmentFormats(color_formats).setDepthAttachmentFormat(rt.m_depth_info.format);
+
+			graphics_pipeline_info.setPNext(&pipeline_rendering_create_info);
 			m_pipeline[Pipeline_Debug_RenderVoxel] = ctx.m_ctx->m_device.createGraphicsPipelineUnique(vk::PipelineCache(), graphics_pipeline_info).value;
 
 		}
@@ -766,6 +690,9 @@ struct Voxel_With_Model
 					ImGui::InputInt3("interior count", v);
 					int lc[] = { b_leaf_counter.getMappedPtr()[0], b_leaf.getDescriptor().element_num };
 					ImGui::InputInt2("leaf count", lc);
+
+					const char* label[] = {"leaf", "hash", "top", "mid"};
+					ImGui::Combo("render type", &m_info.renderType, label, std::size(label));
 
 					ImGui::End();
 				}
@@ -815,17 +742,17 @@ struct Voxel_With_Model
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_MakeVoxel].get(), 0, { m_DS[DSL_Voxel].get() }, {});
 			cmd.pushConstants<int>(m_PL[PipelineLayout_MakeVoxel].get(), vk::ShaderStageFlagBits::eFragment, 0, 0);
 
-			vk::RenderPassBeginInfo begin_render_Info;
-			begin_render_Info.setRenderPass(m_RP_makevoxel.get());
-			begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(m_info.reso.x, m_info.reso.z)));
-			begin_render_Info.setFramebuffer(m_FB_makevoxel.get());
-			cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
+			vk::RenderingInfoKHR rendering_info;
+			rendering_info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(m_info.reso.x, m_info.reso.z)));
+			rendering_info.setLayerCount(3);
+
+			cmd.beginRenderingKHR(rendering_info);
 
 			cmd.bindIndexBuffer(model.b_index.getInfo().buffer, model.b_index.getInfo().offset, vk::IndexType::eUint32);
 			cmd.bindVertexBuffers(0, model.b_vertex.getInfo().buffer, model.b_vertex.getInfo().offset);
 			cmd.drawIndexed(model.m_info.m_primitive_num * 3, 1, 0, 0, 0);
 
-			cmd.endRenderPass();
+			cmd.endRenderingKHR();
 
 		}
 		_label.insert("Make Top");
@@ -843,17 +770,17 @@ struct Voxel_With_Model
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_MakeVoxel].get(), 0, { m_DS[DSL_Voxel].get() }, {});
 			cmd.pushConstants<int>(m_PL[PipelineLayout_MakeVoxel].get(), vk::ShaderStageFlagBits::eFragment, 0, 1);
 
-			vk::RenderPassBeginInfo begin_render_Info;
-			begin_render_Info.setRenderPass(m_RP_makevoxel.get());
-			begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(m_info.reso.x, m_info.reso.z)));
-			begin_render_Info.setFramebuffer(m_FB_makevoxel.get());
-			cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
+			vk::RenderingInfoKHR rendering_info;
+			rendering_info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(m_info.reso.x, m_info.reso.z)));
+			rendering_info.setLayerCount(3);
+
+			cmd.beginRenderingKHR(rendering_info);
 
 			cmd.bindIndexBuffer(model.b_index.getInfo().buffer, model.b_index.getInfo().offset, vk::IndexType::eUint32);
 			cmd.bindVertexBuffers(0, model.b_vertex.getInfo().buffer, model.b_vertex.getInfo().offset);
 			cmd.drawIndexed(model.m_info.m_primitive_num * 3, 1, 0, 0, 0);
 
-			cmd.endRenderPass();
+			cmd.endRenderingKHR();
 
 		}
 
@@ -890,17 +817,17 @@ struct Voxel_With_Model
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_MakeVoxel].get(), 0, { m_DS[DSL_Voxel].get() }, {});
 			cmd.pushConstants<int>(m_PL[PipelineLayout_MakeVoxel].get(), vk::ShaderStageFlagBits::eFragment, 0, 2);
 
-			vk::RenderPassBeginInfo begin_render_Info;
-			begin_render_Info.setRenderPass(m_RP_makevoxel.get());
-			begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(m_info.reso.x, m_info.reso.z)));
-			begin_render_Info.setFramebuffer(m_FB_makevoxel.get());
-			cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
+			vk::RenderingInfoKHR rendering_info;
+			rendering_info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(m_info.reso.x, m_info.reso.z)));
+			rendering_info.setLayerCount(3);
+
+			cmd.beginRenderingKHR(rendering_info);
 
 			cmd.bindIndexBuffer(model.b_index.getInfo().buffer, model.b_index.getInfo().offset, vk::IndexType::eUint32);
 			cmd.bindVertexBuffers(0, model.b_vertex.getInfo().buffer, model.b_vertex.getInfo().offset);
 			cmd.drawIndexed(model.m_info.m_primitive_num * 3, 1, 0, 0, 0);
 
-			cmd.endRenderPass();
+			cmd.endRenderingKHR();
 		}
 
 		_label.insert("Make Mid Child");
@@ -935,37 +862,17 @@ struct Voxel_With_Model
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_MakeVoxel].get(), 0, { m_DS[DSL_Voxel].get() }, {});
 			cmd.pushConstants<int>(m_PL[PipelineLayout_MakeVoxel].get(), vk::ShaderStageFlagBits::eFragment, 0, 3);
 
-			vk::RenderPassBeginInfo begin_render_Info;
-			begin_render_Info.setRenderPass(m_RP_makevoxel.get());
-			begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(m_info.reso.x, m_info.reso.z)));
-			begin_render_Info.setFramebuffer(m_FB_makevoxel.get());
-			cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
+			vk::RenderingInfoKHR rendering_info;
+			rendering_info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(m_info.reso.x, m_info.reso.z)));
+			rendering_info.setLayerCount(3);
+
+			cmd.beginRenderingKHR(rendering_info);
 
 			cmd.bindIndexBuffer(model.b_index.getInfo().buffer, model.b_index.getInfo().offset, vk::IndexType::eUint32);
 			cmd.bindVertexBuffers(0, model.b_vertex.getInfo().buffer, model.b_vertex.getInfo().offset);
 			cmd.drawIndexed(model.m_info.m_primitive_num * 3, 1, 0, 0, 0);
 
-			cmd.endRenderPass();
-		}
-
-		_label.insert("Make HashMapMask");
-		{
-			if(0)
-			{
-				vk::BufferMemoryBarrier barrier[] =
-				{
-					b_interior.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-					b_interior_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
-				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eDrawIndirect | vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
-			}
-
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeHashMapMask].get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_PL[PipelineLayout_MakeVoxel].get(), 0, { m_DS[DSL_Voxel].get() }, {});
-
-			auto num = uvec3(VoxelReso)>>uvec3(6);
-//			num = app::calcDipatchGroups(num, uvec3(4));
-			cmd.dispatch(num.x, num.y, num.z);
+			cmd.endRenderingKHR();
 		}
 
 	}
@@ -1013,16 +920,26 @@ struct Voxel_With_Model
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_RenderVoxel].get(), 1, { sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA) }, {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_RenderVoxel].get(), 2, { rt.m_descriptor.get() }, {});
 
-		vk::RenderPassBeginInfo begin_render_Info;
-		begin_render_Info.setRenderPass(m_RP_debugvoxel.get());
-		begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(rt.m_info.extent.width, rt.m_info.extent.height)));
-		begin_render_Info.setFramebuffer(m_FB_debugvoxel.get());
-		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
+
+		vk::RenderingAttachmentInfoKHR color[] = {
+			vk::RenderingAttachmentInfoKHR().setImageView(rt.m_view).setStoreOp(vk::AttachmentStoreOp::eStore).setLoadOp(vk::AttachmentLoadOp::eLoad).setImageLayout(vk::ImageLayout::eColorAttachmentOptimal),
+		};
+		vk::RenderingAttachmentInfoKHR depth[] = {
+			vk::RenderingAttachmentInfoKHR().setImageView(rt.m_depth_view).setStoreOp(vk::AttachmentStoreOp::eStore).setLoadOp(vk::AttachmentLoadOp::eLoad).setImageLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
+		};
+
+		vk::RenderingInfoKHR rendering_info;
+		rendering_info.setColorAttachments(color);
+		rendering_info.setPDepthAttachment(depth);
+		rendering_info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(rt.m_info.extent.width, rt.m_info.extent.height)));
+		rendering_info.setLayerCount(1);
+
+		cmd.beginRenderingKHR(rendering_info);
 
 		auto num = m_info.reso.xyz();
 		cmd.draw(num.x * num.y * num.z, 1, 0, 0);
 
-		cmd.endRenderPass();
+		cmd.endRenderingKHR();
 
 	}
 };

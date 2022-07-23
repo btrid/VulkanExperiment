@@ -5,6 +5,27 @@
 #extension GL_EXT_shader_explicit_arithmetic_types : require
 // #extension GL_KHR_shader_subgroup : require
 #extension GL_KHR_shader_subgroup_ballot : require
+
+#define cube_min 0.1
+#define cube_max 0.9
+const vec3 cube_strip[] = 
+{
+vec3(cube_min, cube_max, cube_max),    // Front-top-left
+vec3(cube_max, cube_max, cube_max),    // Front-top-right
+vec3(cube_min, cube_min, cube_max),    // Front-bottom-left
+vec3(cube_max, cube_min, cube_max),    // Front-bottom-right
+vec3(cube_max, cube_min, cube_min),    // Back-bottom-right
+vec3(cube_max, cube_max, cube_max),    // Front-top-right
+vec3(cube_max, cube_max, cube_min),    // Back-top-right
+vec3(cube_min, cube_max, cube_max),    // Front-top-left
+vec3(cube_min, cube_max, cube_min),    // Back-top-left
+vec3(cube_min, cube_min, cube_max),    // Front-bottom-left
+vec3(cube_min, cube_min, cube_min),    // Back-bottom-left
+vec3(cube_max, cube_min, cube_min),    // Back-bottom-right
+vec3(cube_min, cube_max, cube_min),    // Back-top-left
+vec3(cube_max, cube_max, cube_min),    // Back-top-right
+};
+
 #if defined(USE_Voxel)
 
 struct VoxelInfo
@@ -16,7 +37,7 @@ struct VoxelInfo
 struct InteriorNode
 {
 	uvec2 bitmask;
-	uint child;
+	int child;
 };
 struct LeafNode
 {
@@ -39,22 +60,15 @@ ivec3 ToTopIndex(in ivec3 p){ return p >> 4; }
 ivec3 ToMidIndex(in ivec3 p){ return p >> 2; }
 ivec3 ToTopBit(in ivec3 p){ return (p>>2)-(p>>4<<2); }
 ivec3 ToMidBit(in ivec3 p){ return p - (p>>2<<2); }
-uvec3 ToTopIndex(in uvec3 p){ return p >> 4; }
-uvec3 ToMidIndex(in uvec3 p){ return p >> 2; }
-uvec3 ToTopBit(in uvec3 p){ return (p>>2)-(p>>4<<2); }
-uvec3 ToMidBit(in uvec3 p){ return p - (p>>2<<2); }
 
 //#define ToHierarchyIndex(in ivec3 p, in int level) { return p >> (level*2)}
-uint bitcount(in uvec2 bitmask, in int bit)
+int bitcount(in uvec2 bitmask, in int bit)
 {
-	uvec2 mask = uvec2((i64vec2(1l) << clamp(i64vec2(bit+1) - i64vec2(0, 32), i64vec2(0), i64vec2(32))) - i64vec2(1l));
-	uvec2 c = bitCount(bitmask & mask);
-	return c.x+c.y;
-}
-uint bitcount(in uvec2 bitmask, in uint bit)
-{
-	uvec2 mask = uvec2((i64vec2(1l) << clamp(i64vec2(bit+1) - i64vec2(0, 32), i64vec2(0), i64vec2(32))) - i64vec2(1l));
-	uvec2 c = bitCount(bitmask & mask);
+	int b1 = min(bit, 32);
+	int b2 = max(bit-32, 0);
+	int m1 = b1==32 ? 0 : (0xffffffff<<b1);
+	int m2 = b2==32 ? 0 : (0xffffffff<<b2);
+	ivec2 c = bitCount(bitmask & ~ivec2(m1, m2));
 	return c.x+c.y;
 }
 bool isBitOn(in uvec2 bitmask, in int bit)

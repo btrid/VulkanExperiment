@@ -43,10 +43,9 @@ void MakeRay(out vec3 pos, out vec3 dir, out vec3 inv_dir)
 
 }
 
-uint To1D(in uvec3 p, in uvec3 s){ return p.x + p.y*s.x + p.z*s.x*s.y; }
-uint To1D(in uvec3 p, in uvec4 s){ return p.x + p.y*s.x + p.z*s.x*s.y; }
+int To1D(in ivec3 p, in ivec4 s){ return p.x + p.y*s.x + p.z*s.x*s.y; }
 
-void march(inout uvec3 Cell, inout vec3 t, in ivec3 dir_sign, in vec3 deltaT)
+void march(inout ivec3 Cell, inout vec3 t, in ivec3 dir_sign, in vec3 deltaT)
 {
 	float tmin = min(min(t.x, t.y), t.z);
 //	ivec3 mask = lessThanEqual(t, tmin.xxx);
@@ -76,13 +75,13 @@ void main()
 
 	vec3 deltaT = abs(inv_dir);
 	vec3 t = mix(fract(pos), 1.f-fract(pos), sign(dir)*0.5+0.5) * abs(inv_dir);
-	uvec3 Cell = uvec3(floor(pos));
+	ivec3 Cell = ivec3(floor(pos));
 	ivec3 dir_sign = ivec3(sign(dir));
 
 	f16vec4 c = f16vec4(0.);
-	while(all(lessThan(Cell, u_info.reso.xyz)))
+	while(all(lessThan(Cell, u_info.reso.xyz)) && all(greaterThanEqual(Cell, ivec3(0))))
 	{
-		uvec3 top_index = ToTopIndex(Cell);
+		ivec3 top_index = ToTopIndex(Cell);
 		int hash = b_hashmap[To1D(top_index, u_info.reso>>4)];
 
 		if(hash<0)
@@ -99,9 +98,9 @@ void main()
 
 		while(all(equal(top_index, ToTopIndex(Cell))))
 		{
-			uvec3 mid_index = ToMidIndex(Cell);
-			uvec3 top_bit = ToTopBit(Cell);
-			uint tb = top_bit.x+top_bit.y*4+top_bit.z*16;
+			ivec3 mid_index = ToMidIndex(Cell);
+			ivec3 top_bit = ToTopBit(Cell);
+			int tb = top_bit.x+top_bit.y*4+top_bit.z*16;
 			if(!isBitOn(top.bitmask, tb))
 			{
 				// skip
@@ -116,8 +115,8 @@ void main()
 			
 			while(all(equal(mid_index, ToMidIndex(Cell))))
 			{
-				uvec3 mid_bit = ToMidBit(Cell);
-				uint bb = mid_bit.x+mid_bit.y*4+mid_bit.z*16;
+				ivec3 mid_bit = ToMidBit(Cell);
+				int bb = mid_bit.x+mid_bit.y*4+mid_bit.z*16;
 				if(!isBitOn(mid.bitmask, bb))
 				{
 					march(Cell, t, dir_sign, deltaT);
@@ -128,7 +127,7 @@ void main()
 				c.xyz = f16vec3(abs(unpack_normal(leaf.normal)));
 //				c.xyz = f16vec3(1., 0., 0.) * (float16_t(g_count)/1000.hf);
 				c.w = 1.hf;
-				Cell = uvec3(99999);
+				Cell = ivec3(99999);
 				break;
 
 			}
