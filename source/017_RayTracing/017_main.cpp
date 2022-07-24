@@ -370,8 +370,8 @@ struct Voxel_With_Model
 			b_hashmap_mask = ctx.m_ctx->m_storage_memory.allocateMemory<uvec2>(num / 64 / 64 / 64);
 			b_interior_counter = ctx.m_ctx->m_staging_memory.allocateMemory<uvec4>(3);
 			b_leaf_counter = ctx.m_ctx->m_staging_memory.allocateMemory<uint>(1);
-			b_interior = ctx.m_ctx->m_storage_memory.allocateMemory<InteriorNode>(num / 64 / 4);
-			b_leaf = ctx.m_ctx->m_storage_memory.allocateMemory<LeafNode>(num / 64);
+			b_interior = ctx.m_ctx->m_storage_memory.allocateMemory<InteriorNode>(num / 64);
+			b_leaf = ctx.m_ctx->m_storage_memory.allocateMemory<LeafNode>(num / 8);
 
 			cmd.updateBuffer<VoxelInfo>(u_info.getInfo().buffer, u_info.getInfo().offset, m_info);
 
