@@ -137,13 +137,15 @@ struct Model
 		Info info{};
 		info.m_aabb_min = vec4{ 999.f };
 		info.m_aabb_max = vec4{ -999.f };
-		info.m_voxel_reso = uvec3(256);
+		info.m_voxel_reso = uvec3(gVoxelReso);
 		for (size_t i = 0; i < scene->mNumMeshes; i++)
 		{
 			aiMesh* mesh = scene->mMeshes[i];
 			for (u32 n = 0; n < mesh->mNumFaces; n++)
 			{
-				std::copy(mesh->mFaces[n].mIndices, mesh->mFaces[n].mIndices + 3, index.getMappedPtr<uint32_t>(index_offset));
+				*index.getMappedPtr<uint32_t>(index_offset) = mesh->mFaces[n].mIndices[0]+vertex_offset;
+				*index.getMappedPtr<uint32_t>(index_offset+1) = mesh->mFaces[n].mIndices[1] + vertex_offset;
+				*index.getMappedPtr<uint32_t>(index_offset+2) = mesh->mFaces[n].mIndices[2] + vertex_offset;
 				index_offset += 3;
 			}
 
@@ -167,7 +169,7 @@ struct Model
 
 
 		// resize
-		auto aabb_size = info.m_aabb_max-info.m_aabb_min;
+		auto aabb_size = (info.m_aabb_max-info.m_aabb_min);
 		for (int i = 0; i < numVertex; i++)
 		{
 			auto p = *vertex.getMappedPtr<vec3>(i);
@@ -977,7 +979,8 @@ int main()
 //	Voxel1 voxel(*context, *app.m_window->getFrontBuffer());
 
 //	std::shared_ptr<Model> model = Model::LoadModel(*ctx, btr::getResourceAppPath() + "Box.dae");
-	std::shared_ptr<Model> model = Model::LoadModel(*ctx, btr::getResourceAppPath() + "Duck.dae");
+//	std::shared_ptr<Model> model = Model::LoadModel(*ctx, btr::getResourceAppPath() + "Duck.dae");
+	std::shared_ptr<Model> model = Model::LoadModel(*ctx, btr::getResourceAppPath() + "Sponza/Sponza.gltf");
 	Voxel_With_Model voxelizer(*ctx, *app.m_window->getFrontBuffer());
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
@@ -1011,7 +1014,7 @@ int main()
 					voxelizer.execute(cmd);
  					voxelizer.execute_MakeVoxel_TD(cmd, *model);
  					voxelizer.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
-//					voxel_with_model.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
+//					voxelizer.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 //					voxel.execute_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 //					voxel.executeDebug_RenderVoxel(cmd, *app.m_window->getFrontBuffer());
 
