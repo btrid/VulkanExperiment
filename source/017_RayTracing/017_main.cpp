@@ -290,8 +290,10 @@ struct Voxel_With_Model
 		Pipeline_MakeVoxelTopChild,
 		Pipeline_MakeVoxelMidChild,
 
+		Pipeline_Debug_RenderVoxelHash,
+		Pipeline_Debug_RenderVoxelTop,
+		Pipeline_Debug_RenderVoxelMid,
 		Pipeline_RenderVoxel,
-		Pipeline_Debug_RenderVoxel,
 		Pipeline_Num,
 	};
 	enum
@@ -311,7 +313,7 @@ struct Voxel_With_Model
 	{
 		uvec4 reso;
 
-		int renderType = 0;
+		int renderType = 3;
 	};
 
 
@@ -357,8 +359,6 @@ struct Voxel_With_Model
 			desc_layout_info.setPBindings(binding);
 			m_DSL[DSL_Voxel] = ctx.m_ctx->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
 		}
-
-		auto a = glm::ortho(0.f, (float)VoxelReso, 0.f, (float)VoxelReso, 0.f, (float)VoxelReso);// * glm::lookAt(vec3(0, 256, 256), vec3(0, 256, 256) + vec3(512, 0, 0), vec3(0.f, 1.f, 0.f));
 
 		// descriptor set
 		{
@@ -584,21 +584,35 @@ struct Voxel_With_Model
 		// graphics pipeline debug
 		{
 
-			struct { const char* name; vk::ShaderStageFlagBits flag; } shader_param[] =
+			struct { const char* name; vk::ShaderStageFlagBits flag; } shaderInfo[] =
 			{
 				{"VoxelDebug_Render.vert.spv", vk::ShaderStageFlagBits::eVertex},
-				{"VoxelDebug_Render.geom.spv", vk::ShaderStageFlagBits::eGeometry},
 				{"VoxelDebug_Render.frag.spv", vk::ShaderStageFlagBits::eFragment},
+				{"VoxelDebug_RenderHash.geom.spv", vk::ShaderStageFlagBits::eGeometry},
+				{"VoxelDebug_RenderTop.geom.spv", vk::ShaderStageFlagBits::eGeometry},
+				{"VoxelDebug_RenderMid.geom.spv", vk::ShaderStageFlagBits::eGeometry},
 
 			};
-			std::array<vk::UniqueShaderModule, array_length(shader_param)> shader;
-			std::array<vk::PipelineShaderStageCreateInfo, array_length(shader_param)> shaderStages;
-			for (size_t i = 0; i < array_length(shader_param); i++)
+			std::array<vk::UniqueShaderModule, array_length(shaderInfo)> shader;
+			for (size_t i = 0; i < array_length(shaderInfo); i++)
 			{
-				shader[i] = loadShaderUnique(ctx.m_ctx->m_device, btr::getResourceShaderPath() + shader_param[i].name);
-				shaderStages[i].setModule(shader[i].get()).setStage(shader_param[i].flag).setPName("main");
+				shader[i] = loadShaderUnique(ctx.m_ctx->m_device, btr::getResourceShaderPath() + shaderInfo[i].name);
 			}
-
+			std::array<vk::PipelineShaderStageCreateInfo, 3> shaderHash = {
+				vk::PipelineShaderStageCreateInfo().setModule(shader[0].get()).setStage(shaderInfo[0].flag).setPName("main"),
+				vk::PipelineShaderStageCreateInfo().setModule(shader[1].get()).setStage(shaderInfo[1].flag).setPName("main"),
+				vk::PipelineShaderStageCreateInfo().setModule(shader[2].get()).setStage(shaderInfo[2].flag).setPName("main"),
+			};
+			std::array<vk::PipelineShaderStageCreateInfo, 3> shaderTop = {
+				vk::PipelineShaderStageCreateInfo().setModule(shader[0].get()).setStage(shaderInfo[0].flag).setPName("main"),
+				vk::PipelineShaderStageCreateInfo().setModule(shader[1].get()).setStage(shaderInfo[1].flag).setPName("main"),
+				vk::PipelineShaderStageCreateInfo().setModule(shader[3].get()).setStage(shaderInfo[3].flag).setPName("main"),
+			};
+			std::array<vk::PipelineShaderStageCreateInfo, 3> shaderMid = {
+				vk::PipelineShaderStageCreateInfo().setModule(shader[0].get()).setStage(shaderInfo[0].flag).setPName("main"),
+				vk::PipelineShaderStageCreateInfo().setModule(shader[1].get()).setStage(shaderInfo[1].flag).setPName("main"),
+				vk::PipelineShaderStageCreateInfo().setModule(shader[4].get()).setStage(shaderInfo[4].flag).setPName("main"),
+			};
 			// assembly
 			vk::PipelineInputAssemblyStateCreateInfo assembly_info;
 			assembly_info.setPrimitiveRestartEnable(VK_FALSE);
@@ -650,10 +664,12 @@ struct Voxel_With_Model
 
 			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
 
-			vk::GraphicsPipelineCreateInfo graphics_pipeline_info =
+			auto color_formats = { rt.m_info.format };
+			vk::PipelineRenderingCreateInfoKHR pipeline_rendering_create_info = vk::PipelineRenderingCreateInfoKHR().setColorAttachmentFormats(color_formats).setDepthAttachmentFormat(rt.m_depth_info.format);
+
+			vk::GraphicsPipelineCreateInfo graphics_pipeline_info[] = {
 				vk::GraphicsPipelineCreateInfo()
-				.setStageCount(shaderStages.size())
-				.setPStages(shaderStages.data())
+				.setStages(shaderHash)
 				.setPVertexInputState(&vertex_input_info)
 				.setPInputAssemblyState(&assembly_info)
 				.setPViewportState(&viewportInfo)
@@ -661,13 +677,37 @@ struct Voxel_With_Model
 				.setPMultisampleState(&sample_info)
 				.setLayout(m_PL[PipelineLayout_RenderVoxel].get())
 				.setPDepthStencilState(&depth_stencil_info)
-				.setPColorBlendState(&blend_info);
+				.setPColorBlendState(&blend_info)
+				.setPNext(&pipeline_rendering_create_info),
+				vk::GraphicsPipelineCreateInfo()
+				.setStages(shaderTop)
+				.setPVertexInputState(&vertex_input_info)
+				.setPInputAssemblyState(&assembly_info)
+				.setPViewportState(&viewportInfo)
+				.setPRasterizationState(&rasterization_info)
+				.setPMultisampleState(&sample_info)
+				.setLayout(m_PL[PipelineLayout_RenderVoxel].get())
+				.setPDepthStencilState(&depth_stencil_info)
+				.setPColorBlendState(&blend_info)
+				.setPNext(&pipeline_rendering_create_info),
+				vk::GraphicsPipelineCreateInfo()
+				.setStages(shaderMid)
+				.setPVertexInputState(&vertex_input_info)
+				.setPInputAssemblyState(&assembly_info)
+				.setPViewportState(&viewportInfo)
+				.setPRasterizationState(&rasterization_info)
+				.setPMultisampleState(&sample_info)
+				.setLayout(m_PL[PipelineLayout_RenderVoxel].get())
+				.setPDepthStencilState(&depth_stencil_info)
+				.setPColorBlendState(&blend_info)
+				.setPNext(&pipeline_rendering_create_info),
 
-			auto color_formats = { rt.m_info.format };
-			vk::PipelineRenderingCreateInfoKHR pipeline_rendering_create_info = vk::PipelineRenderingCreateInfoKHR().setColorAttachmentFormats(color_formats).setDepthAttachmentFormat(rt.m_depth_info.format);
+			};
 
-			graphics_pipeline_info.setPNext(&pipeline_rendering_create_info);
-			m_pipeline[Pipeline_Debug_RenderVoxel] = ctx.m_ctx->m_device.createGraphicsPipelineUnique(vk::PipelineCache(), graphics_pipeline_info).value;
+			graphics_pipeline_info[0].setPNext(&pipeline_rendering_create_info);
+			m_pipeline[Pipeline_Debug_RenderVoxelHash] = ctx.m_ctx->m_device.createGraphicsPipelineUnique(vk::PipelineCache(), graphics_pipeline_info[0]).value;
+			m_pipeline[Pipeline_Debug_RenderVoxelTop] = ctx.m_ctx->m_device.createGraphicsPipelineUnique(vk::PipelineCache(), graphics_pipeline_info[1]).value;
+			m_pipeline[Pipeline_Debug_RenderVoxelMid] = ctx.m_ctx->m_device.createGraphicsPipelineUnique(vk::PipelineCache(), graphics_pipeline_info[2]).value;
 
 		}
 	}
@@ -693,7 +733,7 @@ struct Voxel_With_Model
 					int lc[] = { b_leaf_counter.getMappedPtr()[0], b_leaf.getDescriptor().element_num };
 					ImGui::InputInt2("leaf count", lc);
 
-					const char* label[] = {"leaf", "hash", "top", "mid"};
+					const char* label[] = {"hash", "top", "mid", "leaf"};
 					ImGui::Combo("render type", &m_info.renderType, label, std::size(label));
 
 					ImGui::End();
@@ -880,6 +920,11 @@ struct Voxel_With_Model
 	}
 	void execute_RenderVoxel(vk::CommandBuffer cmd, RenderTarget& rt)
 	{
+		if (m_info.renderType!=3)
+		{
+			executeDebug_RenderVoxel(cmd, rt);
+			return;
+		}
 		{
 			vk::ImageMemoryBarrier image_barrier;
 			image_barrier.setImage(rt.m_image);
@@ -917,7 +962,7 @@ struct Voxel_With_Model
 				{}, {}, { /*array_size(to_read), to_read*/ }, { array_size(image_barrier), image_barrier });
 		}
 
-		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_Debug_RenderVoxel].get());
+		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_Debug_RenderVoxelHash+m_info.renderType].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_RenderVoxel].get(), 0, { m_DS[DSL_Voxel].get() }, {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_RenderVoxel].get(), 1, { sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA) }, {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PL[PipelineLayout_RenderVoxel].get(), 2, { rt.m_descriptor.get() }, {});
@@ -938,7 +983,7 @@ struct Voxel_With_Model
 
 		cmd.beginRenderingKHR(rendering_info);
 
-		auto num = m_info.reso.xyz();
+		auto num = m_info.reso.xyz()>>4u;
 		cmd.draw(num.x * num.y * num.z, 1, 0, 0);
 
 		cmd.endRenderingKHR();
