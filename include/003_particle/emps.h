@@ -35,6 +35,8 @@ struct FluidData
 	std::vector<vec3> Acc, Pos, Vel;
 	std::vector<float> Prs;
 	std::vector<int> PType;
+	std::vector<ivec4> Idx;
+	std::vector<std::tuple<float, vec3>> SDF;
 
 
 	std::vector<Triangle> triangles;
