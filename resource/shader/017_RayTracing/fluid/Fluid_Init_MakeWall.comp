@@ -1,121 +1,27 @@
-void AlcBkt(FluidData& dFluid)
+
+
+void MkBkt()
 {
-/*	// 壁の設定
-
-	ivec3 n = u_info.GridCellNum;
-	uvec3 i = gl_GlobalInvocationID;
-	int ip = iz * n.x * n.y + iy * n.x + ix;
-	vec3 p = u_info.GridMin + u_info.GridCellSize * vec3(i);
-	float d = 99999.f;
-	for (auto& t : dFluid.triangles)
-	{
-		auto new_d = t.getDistance(p);
-		if (new_d <= d)
-		{
-
-#if !defined(REFERENCE)
-			d = new_d;
-#endif
-		}
-	}
-	if (d < radius)
-	{
-		dFluid.m_WallEnable[ip] = true;
-	}
-	dFluid.m_WallSDF[ip] = d;
-
-#define WAVE_HEIGHT 0.3
-#define WAVE_WIDTH 0.1
-
-	n = (u_info.GridMax - u_info.GridMin) / PCL_DST;
-	int count = 0;
-	for (int iz = 0; iz < n.z; iz++) {
-		for (int iy = 0; iy < n.y; iy++) {
-			for (int ix = 0; ix < n.x; ix++) {
-				int ip = iz * n.x * n.y + iy * n.x + ix;
-				if (ix < 3 || ix >= n.x - 3 || iz < 3 || iz >= n.z - 3 || iy < 3) {
-					// 壁を作る
-#if defined(REFERENCE)
-					dFluid.PType[count] = PT_Wall;
-					b_pos[count] = u_info.GridMin + PCL_DST * vec3(ivec3(ix, iy, iz));
-					count++;
-#endif
-				}
-				else if (iy >= 10 && iy <= 15 && ix <= 15 && iz <= 15) {
-					// ダムを造る
-					dFluid.PType[count] = PT_Fluid;
-					b_pos[count] = u_info.GridMin + PCL_DST * vec3(ivec3(ix, iy, iz));
-					count++;
-				}
-			}
-		}
-	}
-
-	dFluid.PNum_Active = count;
-*/
-}
-/*
-shared float s_tn0;
-shared float s_tlmd;
-void SetPara(FluidData& dFluid) 
-{
-	if(gl_LocalInvocationIndex == 0)
-	{
-		s_tn0 = 0.f;
-		s_tlmd = 0.f;
-	}
-
-	memoryBarrierShared();
-	barrier();
-
-	ivec3 i = ivec3(gl_GlobalInvocationID)-4;
-	vec3 p = PCL_DST * vec3(i);
-	float dist2 = dot(p, p);
-	if (dist2 != 0.0 && dist2 <= radius2) {
-		float dist = sqrt(dist2);
-		atomicAdd(s_tn0, WEI(dist, radius));
-		atomicAdd(s_tlmd, dist2 * WEI(dist, radius));
-	}
-
-
-	u_info.n0 = tn0;			//初期粒子数密度
-	u_info.lmd = tlmd / tn0;	//ラプラシアンモデルの係数λ
-	u_info.rlim = PCL_DST * DST_LMT_RAT;//これ以上の粒子間の接近を許さない距離
-	u_info.rlim2 = u_info.rlim * u_info.rlim;
-	u_info.COL = 1.0 + COL_RAT;
-
-	Dns[PT_Fluid] = DNS_FLD;
-	Dns[PT_Smoke] = DNS_SMORK;
-	Dns[PT_Wall] = DNS_WLL;
-	invDns[PT_Fluid] = 1.0 / DNS_FLD;
-	invDns[PT_Wall] = 1.0 / DNS_WLL;
-	invDns[PT_Smoke] = 1.f / Dns[PT_Smoke];
-}
-*/
-
-void MkBkt(FluidData& dFluid)
-{
-//	std::fill(GridLinkHead.begin(), GridLinkHead.end(), -1);
 	int i = (int)gl_GlobalInvocationID.x;
-	if(i >= dFluid.PNum) { return; }
+	if(i >= u_info.PNum) { return; }
 	if (b_PType[i] == PT_Ghost) { return; }
 
-	int ib = ToGridIndex(dFluid, b_pos[i]);
+	int ib = ToGridIndex(b_pos[i]);
 	int pnumber = atomicExchange(GridLinkHead[ib], i);
-//	GridLinkHead[ib] = i;
 	GridLinkNext[i] = pnumber;
 }
 
-
-vec4 raymarch(FluidData& dFluid, in vec3 pos_, in vec3 dir_)
+float sdf(in ivec3 idx)
 {
-	vec3 pos = pos_;
-	vec3 advance = length(dir_ * DT);
-	vec3 dir = normalize(dir_);
-
+	return dFluid.m_WallSDF[ToGridIndex(idx)];
 }
 
-float getPrs(FluidData& dFluid, ivec3 idx, const vec3& pos)
+float prs(in ivec3 idx)
+{
+	return wallPrs[ToGridIndex(idx)];
+}
+
+float getPrs(in ivec3 idx, in vec3 pos)
 {
 	idx = min(idx, u_info.GridCellNum - 1);
 	vec3 pa = u_info.GridMin + u_info.GridCellSize * vec3(idx);
@@ -123,8 +29,8 @@ float getPrs(FluidData& dFluid, ivec3 idx, const vec3& pos)
 	auto value = sdf(dFluid, idx);
 
 	ivec2 offset = ivec2(0, 1);
-	vec4 a = vec4(prs(dFluid, idx + offset.xxx()), prs(dFluid, idx + offset.yxx()), prs(dFluid, idx + offset.xyx()), prs(dFluid, idx + offset.yyx));
-	vec4 b = vec4(prs(dFluid, idx + offset.xxy()), prs(dFluid, idx + offset.yxy()), prs(dFluid, idx + offset.xyy()), prs(dFluid, idx + offset.yyy));
+	vec4 a = vec4(prs(dFluid, idx + offset.xxx), prs(dFluid, idx + offset.yxx), prs(dFluid, idx + offset.xyx), prs(dFluid, idx + offset.yyx));
+	vec4 b = vec4(prs(dFluid, idx + offset.xxy), prs(dFluid, idx + offset.yxy), prs(dFluid, idx + offset.xyy), prs(dFluid, idx + offset.yyy));
 	auto z = mix(a, b, fp.z);
 	auto xy = vec2(mix(z.xy(), z.zw(), fp.yy()));
 	auto dist = mix(vec1(xy.x), vec1(xy.y), vec1(fp.x)).x;
@@ -132,10 +38,10 @@ float getPrs(FluidData& dFluid, ivec3 idx, const vec3& pos)
 	return dist;
 }
 
-void VscTrm(FluidData& dFluid) 
+void VscTrm() 
 {
 	int i = (int)gl_GlobalInvocationID.x;
-	if (dFluid.PType[i] == PT_Ghost || dFluid.PType[i] == PT_Wall)
+	if (b_type[i] == PT_Ghost || b_type[i] == PT_Wall)
 	{
 		return;
 	}
@@ -165,10 +71,10 @@ void VscTrm(FluidData& dFluid)
 		}
 	}
 
-	auto sdf = getSDF(dFluid, idx, pos);
-	if (std::get<0>(sdf) < radius)
+	float sdf = b_sdf[i];
+	if (sdf < radius)
 	{
-		float w = WEI(std::get<0>(sdf), radius);
+		float w = WEI(sdf, radius);
 		viscosity += (-vel) * w;
 	}
 
@@ -176,30 +82,33 @@ void VscTrm(FluidData& dFluid)
 
 }
 
-void UpPcl1(FluidData& dFluid)
+void UpPcl1()
 {
 	int i = (int)gl_GlobalInvocationID.x;
-	if (dFluid.PType[i] == PT_Fluid || dFluid.PType[i] == PT_Smoke)
+	if (b_type[i] == PT_Fluid || b_type[i] == PT_Smoke)
 	{
 		vec3 acc = b_acc[i];
-		if (dFluid.PType[i] == PT_Fluid)
+		if (b_type[i] == PT_Fluid)
 		{
 			acc += Gravity;
 		}
 		b_vel[i] += acc * DT;
-//			b_pos[i] += b_vel[i] * DT;
-//		std::tie(std::ignore, b_pos[i], b_vel[i]) = raymarch(dFluid, b_pos[i], b_vel[i]);
+		std::tie(std::ignore, b_pos[i], b_vel[i]) = raymarch(dFluid, b_pos[i], b_vel[i]);
+		vec4 sdf = getSDF(dFluid, ToGridCellIndex(dFluid, dFluid.Pos[i]), dFluid.Pos[i]);
+		b_sdf[i] = sdf.x;
+		b_sdf_normaln[i] = sdf.yzw;
+
 		b_acc[i] = vec3(0.0);
 	}
 }
 
-void ChkCol(FluidData& dFluid)
+void ChkCol()
 {
 	int i = (int)gl_GlobalInvocationID.x;
-	if (dFluid.PType[i] != PT_Fluid && dFluid.PType[i] != PT_Smoke) {
+	if (b_type[i] != PT_Fluid && b_type[i] != PT_Smoke) {
 		return;
 	}
-	float mi = Dns[dFluid.PType[i]];
+	float mi = Dns[b_type[i]];
 	vec3 pos = b_pos[i];
 	vec3 vel = b_vel[i];
 	vec3 vec_ix2 = vel;
@@ -222,7 +131,7 @@ void ChkCol(FluidData& dFluid)
 					float fDT = dot((vel - b_vel[j]) * v, vec3(1.));
 					if (fDT <= 0.0) { continue; } 
 
-					float mj = Dns[dFluid.PType[j]];
+					float mj = Dns[b_type[j]];
 					fDT *= u_info.COL * mj / (mi + mj);
 					vec_ix2 -= v * fDT;
 				}
@@ -251,10 +160,10 @@ void ChkCol(FluidData& dFluid)
 	}
 }
 
-void MkPrs(FluidData& dFluid) 
+void MkPrs() 
 {
 	int i = (int)gl_GlobalInvocationID.x;
-	if (dFluid.PType[i] != PT_Fluid && dFluid.PType[i] != PT_Smoke) {
+	if (b_type[i] != PT_Fluid && b_type[i] != PT_Smoke) {
 		return;
 	}
 
@@ -281,7 +190,7 @@ void MkPrs(FluidData& dFluid)
 			}
 		}
 	}
-	float mi = Dns[dFluid.PType[i]];
+	float mi = Dns[b_type[i]];
 	float pressure = (ni > u_info.n0) * (ni - u_info.n0) * mi;
 	b_prs[i] = pressure;
 
@@ -307,7 +216,7 @@ void MkPrs(FluidData& dFluid)
 							int jb = ToGridIndex(dFluid, ivec3(jx, jy, jz));
 							for (int j = GridLinkHead[jb]; j != -1; j = GridLinkNext[j])
 							{
-								if (dFluid.PType[j] != PT_Fluid) {
+								if (b_type[j] != PT_Fluid) {
 									continue;
 								}
 								float sdf = b_sdf[j];
@@ -327,10 +236,10 @@ void MkPrs(FluidData& dFluid)
 	}
 }
 
-void PrsGrdTrm(FluidData& dFluid)
+void PrsGrdTrm()
 {
 	int i = (int)gl_GlobalInvocationID.x;
-	if (dFluid.PType[i] != PT_Fluid && dFluid.PType[i] != PT_Smoke) {
+	if (b_type[i] != PT_Fluid && b_type[i] != PT_Smoke) {
 		return;
 	}
 	vec3 acc = vec3(0.0);
@@ -356,7 +265,7 @@ void PrsGrdTrm(FluidData& dFluid)
 
 				if (pre_min > wallPrs[jb])
 				{
-					float sdf = b_sdf(jb);
+					float sdf = b_sdf[jb];
 					if (sdf < radius)
 					{
 						pre_min = wallPrs[jb];
@@ -402,28 +311,28 @@ void PrsGrdTrm(FluidData& dFluid)
 	b_acc[i] = acc * invDns[PT_Fluid] * -1.f;
 }
 
-void UpPcl2(FluidData& dFluid)
+void UpPcl2()
 {
 	int i = (int)gl_GlobalInvocationID.x;
-	if (dFluid.PType[i] != PT_Fluid && dFluid.PType[i] != PT_Smoke) {
+	if (b_type[i] != PT_Fluid && b_type[i] != PT_Smoke) {
 		return;
 	}
 	b_vel[i] += b_acc[i] * DT;
 	b_acc[i] = vec3(0.0);
 }
 
-void init(FluidData& dFluid)
+void init()
 {
-	AlcBkt(dFluid);
-	SetPara(dFluid);
+	AlcBkt();
+	SetPara();
 }
-void run(FluidData& dFluid)
+void run()
 {
-	MkBkt(dFluid);
-	VscTrm(dFluid);
-	UpPcl1(dFluid);
-	ChkCol(dFluid);
-	MkPrs(dFluid);
-	PrsGrdTrm(dFluid);
-	UpPcl2(dFluid);
+	MkBkt();
+	VscTrm();
+	UpPcl1();
+	ChkCol();
+	MkPrs();
+	PrsGrdTrm();
+	UpPcl2();
 }

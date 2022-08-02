@@ -49,20 +49,22 @@ struct FluidData
 		float n0; //初期粒子数密度
 		float lmd;	//ラプラシアンモデルの係数λ
 		float rlim; //これ以上の粒子間の接近を許さない距離
-		float rlim2;
 		float COL; // 反発率？
-		float viscosity = 0.000001f; //!< 粘度
 
+		float viscosity; //!< 粘度
 		float GridCellSize; //GridCellの大きさ(バケット1辺の長さ)
 		float GridCellSizeInv;
 		int GridCellTotal;
-		float p1;
+
 		ivec3 GridCellNum;
-		float p2;
+		float p1;
+
 		vec3 GridMin;
-		float p3;
+		float p2;
+
 		vec3 GridMax;
-		float p4;
+		float p3;
+
 		ivec3 WallCellNum;
 		int WallCellTotal;
 	};

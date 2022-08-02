@@ -171,7 +171,6 @@ void SetPara(FluidData& dFluid) {
 	dFluid.m_constant.n0 = tn0;			//初期粒子数密度
 	dFluid.m_constant.lmd = tlmd / tn0;	//ラプラシアンモデルの係数λ
 	dFluid.m_constant.rlim = PCL_DST * DST_LMT_RAT;//これ以上の粒子間の接近を許さない距離
-	dFluid.m_constant.rlim2 = dFluid.m_constant.rlim * dFluid.m_constant.rlim;
 	dFluid.m_constant.COL = 1.0 + COL_RAT;
 
 	Dns[PT_Fluid] = DNS_FLD;
@@ -400,7 +399,7 @@ void ChkCol(FluidData& dFluid)
 
 						auto v = dFluid.Pos[j] - pos;
 						auto dist2 = dot(v, v);
-						if (dist2 >= dFluid.m_constant.rlim2) { continue; }
+						if (dist2 >= dFluid.m_constant.rlim* dFluid.m_constant.rlim) { continue; }
 						v = normalize(v);
 						float fDT = dot((vel - dFluid.Vel[j]) * v, vec3(1.));
 						if (fDT > 0.0) {

@@ -31,13 +31,14 @@ bool validCheck(in FluidData dFluid, in vec3 pos)
 	return all(greaterThanEqual(pos, dFluid.m_constant.GridMin)) && all(lessThan(pos, dFluid.m_constant.GridMax));
 }
 
-ivec3 ToGridCellIndex(in FluidData dFluid, in vec3 p)
+ivec3 ToGridCellIndex(in vec3 p)
 {
-	return ivec3((p - dFluid.m_constant.GridMin) * dFluid.m_constant.GridCellSizeInv);
+	return ivec3((p - u_info.GridMin) * u_info.GridCellSizeInv);
 }
-int ToGridIndex(in FluidData dFluid, in ivec3 i) {
+int ToGridIndex(in ivec3 i) 
+{
 	//	assert(all(greaterThanEqual(i, ivec3(0))) && all(lessThan(i, dFluid.m_constant.GridCellNum)));
-	return i.x + i.y * dFluid.m_constant.GridCellNum.x + i.z * dFluid.m_constant.GridCellNum.x * dFluid.m_constant.GridCellNum.y;
+	return i.x + i.y * u_info.GridCellNum.x + i.z * u_info.GridCellNum.x * u_info.GridCellNum.y;
 }
 ivec4 ToGridIndex(in vec3 p) 
 {
@@ -45,7 +46,32 @@ ivec4 ToGridIndex(in vec3 p)
     return ivec4(i, i.x + i.y * u_info.GridCellNum.x + i.z * u_info.GridCellNum.x * u_info.GridCellNum.y); 
 }
 
-layout(set=USE_Fluid,binding=0, std140) uniform 0 {VoxelInfo u_info; };
+struct Constant
+{
+    float n0; //初期粒子数密度
+    float lmd;	//ラプラシアンモデルの係数λ
+    float rlim; //これ以上の粒子間の接近を許さない距離
+    float COL; // 反発率？
+
+    float viscosity; //!< 粘度
+    float GridCellSize; //GridCellの大きさ(バケット1辺の長さ)
+    float GridCellSizeInv;
+    int GridCellTotal;
+
+    ivec3 GridCellNum;
+    float p1;
+
+    vec3 GridMin;
+    float p2;
+
+    vec3 GridMax;
+    float p3;
+
+    ivec3 WallCellNum;
+    int WallCellTotal;
+};
+    
+layout(set=USE_Fluid,binding=0, std140) uniform U0 {VoxelInfo u_info; };
 layout(set=USE_Fluid,binding=2, scalar) buffer B1 { int GridLinkHead[]; };
 layout(set=USE_Fluid,binding=3, scalar) buffer B2 { int GridLinkNext[]; };
 layout(set=USE_Fluid,binding=4, scalar) buffer B3 { int wallPrs[]; };
@@ -53,8 +79,9 @@ layout(set=USE_Fluid,binding=5, scalar) buffer B4 { int wallVsc[]; };
 layout(set=USE_Fluid,binding=10, scalar) buffer B10 { vec3 b_pos[]; };
 layout(set=USE_Fluid,binding=11, scalar) buffer B11 { vec3 b_vel[]; };
 layout(set=USE_Fluid,binding=12, scalar) buffer B12 { vec3 b_acc[]; };
-layout(set=USE_Fluid,binding=13, scalar) buffer B13 { vec3 b_sdf[]; };
+layout(set=USE_Fluid,binding=13, scalar) buffer B13 { float b_sdf[]; };
 layout(set=USE_Fluid,binding=14, scalar) buffer B14 { vec3 b_sdf_normal[]; };
 layout(set=USE_Fluid,binding=15, scalar) buffer B15 { float b_prs[]; };
+layout(set=USE_Fluid,binding=16, scalar) buffer B16 { int b_type[]; };
 
 #endif
