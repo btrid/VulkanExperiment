@@ -172,7 +172,7 @@ void SetPara(FluidData& dFluid) {
 	dFluid.m_constant.lmd = tlmd / tn0;	//ラプラシアンモデルの係数λ
 	dFluid.m_constant.rlim = PCL_DST * DST_LMT_RAT;//これ以上の粒子間の接近を許さない距離
 	dFluid.m_constant.COL = 1.0 + COL_RAT;
-
+	dFluid.m_constant.viscosity = 0.000001f;
 	Dns[PT_Fluid] = DNS_FLD;
 	Dns[PT_Smoke] = DNS_SMORK;
 	Dns[PT_Wall] = DNS_WLL;
