@@ -15,6 +15,7 @@ struct cCmdPool;
 struct cCmdPool
 {
 	cCmdPool(const std::shared_ptr<btr::Context>& context);
+	~cCmdPool();
 
 	std::vector<vk::UniqueCommandPool>	m_cmd_pool_system;
 

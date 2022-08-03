@@ -1035,7 +1035,7 @@ int main()
 	app.setup();
 
 
-	while (true)
+	while (!app.isEnd())
 	{
 		cStopWatch time;
 

@@ -354,10 +354,42 @@ App::App(const AppDescriptor& desc)
 	m_context->m_window = window;
 }
 
+App::~App()
+{
+	{
+		auto precmds = m_cmd_pool->submit();
+	}
+	m_sync_point.wait();
+	for (int i = 0; i < sGlobal::FRAME_COUNT_MAX; i++)
+	{
+		{
+			sGlobal::Order().sync();
+
+			uint32_t index = sGlobal::Order().getCurrentFrame();
+			auto r = m_device->getFenceStatus(m_fence_list[index].get());
+			if (r == vk::Result::eNotReady) {
+				break;
+			}
+			sDebug::Order().waitFence(m_device.get(), m_fence_list[index].get());
+			m_cmd_pool->resetPool();
+
+			sCameraManager::Order().sync();
+			sDeleter::Order().sync();
+			m_context->m_vertex_memory.gc();
+			m_context->m_uniform_memory.gc();
+			m_context->m_storage_memory.gc();
+			m_context->m_staging_memory.gc();
+
+		}
+	}
+
+	RenderTarget::s_descriptor_set_layout.release();
+}
+
 void App::setup()
 {
 	// loopˆÈ‘O‚Ìcmd‚ðŽÀs
-	auto setup_cmds = m_context->m_cmd_pool->submit();
+	auto setup_cmds = m_cmd_pool->submit();
 	std::vector<vk::SubmitInfo> submitInfo =
 	{
 		vk::SubmitInfo()
@@ -410,7 +442,7 @@ void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 	cmds.reserve(32);
 
 	{
-		auto precmds = m_context->m_cmd_pool->submit();
+		auto precmds = m_cmd_pool->submit();
 		cmds.insert(cmds.end(), std::make_move_iterator(precmds.begin()), std::make_move_iterator(precmds.end()));
 	}
 
@@ -556,6 +588,11 @@ void App::postUpdate()
 
 }
 
+bool App::isEnd() const
+{
+	return m_window_list.empty();
+}
+
 glm::uvec3 calcDipatchGroups(const glm::uvec3& num, const glm::uvec3& local_size)
 {
 	glm::uvec3 ret = (num + local_size - glm::uvec3(1)) / local_size;
@@ -624,7 +661,7 @@ AppImgui::AppImgui(const std::shared_ptr<btr::Context>& context, AppWindow* cons
 
 AppImgui::~AppImgui()
 {
-
+	int a = 0;
 }
 
 AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor)
@@ -885,5 +922,11 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 	name_info.pObjectName = "AppWindow DepthImageMemory";
 	context->m_device.setDebugUtilsObjectNameEXT(name_info);
 #endif
+
+}
+
+AppWindow::~AppWindow()
+{
+	int a = 0;
 
 }

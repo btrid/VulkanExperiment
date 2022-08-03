@@ -63,8 +63,8 @@ struct FluidRenderer
 		Pipeline_Rendering_Wall,
 		Pipeline_Max,
 	};
-	std::array<vk::UniquePipeline, Pipeline_Max> m_pipeline;
 	vk::UniquePipelineLayout m_PL;
+	std::array<vk::UniquePipeline, Pipeline_Max> m_pipeline;
 
 
 	FluidRenderer(btr::Context& ctx, FluidContext& cFluid, const std::shared_ptr<RenderTarget>& rt)
@@ -424,65 +424,64 @@ struct FluidRenderer
 int explicitSolver(app::App& app)
 {
 	auto context = app.m_context;
-	ClearPipeline clear_render_target(context, app.m_window->getFrontBuffer());
-	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), context->m_window->getSwapchain());
+// 	ClearPipeline clear_render_target(context, app.m_window->getFrontBuffer());
+// 	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), context->m_window->getSwapchain());
 
-	FluidContext cFluid(*context);
-	FluidData dFluid;
-	float size = 0.5f;
-	// 床
-	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(size, 0.f, 0.f), vec3(size, 0.0f, size)));
-	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(size, 0.f, size), vec3(0.f, 0.0f, size)));
+// 	FluidContext cFluid(*context);
+// 	FluidData dFluid;
+// 	float size = 0.5f;
+// 	// 床
+// 	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(size, 0.f, 0.f), vec3(size, 0.0f, size)));
+// 	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(size, 0.f, size), vec3(0.f, 0.0f, size)));
+// 
+// 	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(size, 0.f, 0.f), vec3(size, 1.0f, 0.f)));
+// 	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(size, size, 0.f), vec3(0.f, 1.0f, 0.f)));
+// 	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, size), vec3(size, 0.f, size), vec3(size, 1.0f, size)));
+// 	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, size), vec3(size, size, size), vec3(0.f, 1.0f, size)));
+// 	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(0.f, 0.f, size), vec3(0.f, 1.0f, size)));
+// 	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(0.f, size, size), vec3(0.f, 1.0f, 0.f)));
+// 	dFluid.triangles.push_back(Triangle(vec3(size, 0.f, 0.f), vec3(size, 0.f, size), vec3(size, 1.0f, size)));
+// 	dFluid.triangles.push_back(Triangle(vec3(size, 0.f, 0.f), vec3(size, size, size), vec3(size, 1.0f, 0.f)));
+// 
+// 	init(dFluid);
+// 	auto setup_cmd = context->m_cmd_pool->allocCmdTempolary(0);
+// 	dFluid.u_constant = context->m_uniform_memory.allocateMemory<FluidData::Constant>(setup_cmd, context->m_staging_memory, dFluid.m_constant);
+// 	dFluid.b_WallEnable = context->m_storage_memory.allocateMemory<int32_t>(dFluid.m_WallEnable.size());
 
-	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(size, 0.f, 0.f), vec3(size, 1.0f, 0.f)));
-	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(size, size, 0.f), vec3(0.f, 1.0f, 0.f)));
-	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, size), vec3(size, 0.f, size), vec3(size, 1.0f, size)));
-	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, size), vec3(size, size, size), vec3(0.f, 1.0f, size)));
-	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(0.f, 0.f, size), vec3(0.f, 1.0f, size)));
-	dFluid.triangles.push_back(Triangle(vec3(0.f, 0.f, 0.f), vec3(0.f, size, size), vec3(0.f, 1.0f, 0.f)));
-	dFluid.triangles.push_back(Triangle(vec3(size, 0.f, 0.f), vec3(size, 0.f, size), vec3(size, 1.0f, size)));
-	dFluid.triangles.push_back(Triangle(vec3(size, 0.f, 0.f), vec3(size, size, size), vec3(size, 1.0f, 0.f)));
-
-	init(dFluid);
-	auto setup_cmd = context->m_cmd_pool->allocCmdTempolary(0);
-	dFluid.u_constant = context->m_uniform_memory.allocateMemory<FluidData::Constant>(setup_cmd, context->m_staging_memory, dFluid.m_constant);
-	dFluid.b_WallEnable = context->m_storage_memory.allocateMemory<int32_t>(dFluid.m_WallEnable.size());
-
-	//	setup_cmd.updateBuffer<int32_t>(dFluid.b_WallEnable.getInfo().buffer, dFluid.b_WallEnable.getInfo().offset, dFluid.wallenable);
-	// descriptor set
-	{
-		vk::DescriptorSetLayout layouts[] =
-		{
-			cFluid.m_DSL.get(),
-		};
-		vk::DescriptorSetAllocateInfo desc_info;
-		desc_info.setDescriptorPool(context->m_descriptor_pool.get());
-		desc_info.setDescriptorSetCount(array_length(layouts));
-		desc_info.setPSetLayouts(layouts);
-		dFluid.m_DS = std::move(context->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
-		{
-			auto uniforms =
-			{
-				dFluid.u_constant.getInfo()
-			};
-			auto storages =
-			{
-				dFluid.b_WallEnable.getInfo()
-			};
-			vk::WriteDescriptorSet write[] =
-			{
-				vk::WriteDescriptorSet().setDstSet(*dFluid.m_DS).setDstBinding(0).setDescriptorType(vk::DescriptorType::eUniformBuffer).setBufferInfo(uniforms),
-				vk::WriteDescriptorSet().setDstSet(*dFluid.m_DS).setDstBinding(10).setDescriptorType(vk::DescriptorType::eStorageBuffer).setBufferInfo(storages)
-			};
-			context->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
-
-		}
-
-
-	}
-
-
-	FluidRenderer rFluid(*context, cFluid, app.m_window->getFrontBuffer());
+// 	// descriptor set
+// 	{
+// 		vk::DescriptorSetLayout layouts[] =
+// 		{
+// 			cFluid.m_DSL.get(),
+// 		};
+// 		vk::DescriptorSetAllocateInfo desc_info;
+// 		desc_info.setDescriptorPool(context->m_descriptor_pool.get());
+// 		desc_info.setDescriptorSetCount(array_length(layouts));
+// 		desc_info.setPSetLayouts(layouts);
+// 		dFluid.m_DS = std::move(context->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
+// 		{
+// 			auto uniforms =
+// 			{
+// 				dFluid.u_constant.getInfo()
+// 			};
+// 			auto storages =
+// 			{
+// 				dFluid.b_WallEnable.getInfo()
+// 			};
+// 			vk::WriteDescriptorSet write[] =
+// 			{
+// 				vk::WriteDescriptorSet().setDstSet(*dFluid.m_DS).setDstBinding(0).setDescriptorType(vk::DescriptorType::eUniformBuffer).setBufferInfo(uniforms),
+// 				vk::WriteDescriptorSet().setDstSet(*dFluid.m_DS).setDstBinding(10).setDescriptorType(vk::DescriptorType::eStorageBuffer).setBufferInfo(storages)
+// 			};
+// 			context->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
+// 
+// 		}
+// 
+// 
+// 	}
+// 
+// 
+// 	FluidRenderer rFluid(*context, cFluid, app.m_window->getFrontBuffer());
 
 	app.setup();
 	while (true)
@@ -490,6 +489,7 @@ int explicitSolver(app::App& app)
 		cStopWatch time;
 
 		app.preUpdate();
+		if (app.isEnd()) { break; }
 		{
 			enum cmds
 			{
@@ -500,20 +500,20 @@ int explicitSolver(app::App& app)
 			};
 			std::vector<vk::CommandBuffer> render_cmds(cmd_num);
 			{
-				render_cmds[cmd_clear] = clear_render_target.execute();
-				render_cmds[cmd_present] = present_pipeline.execute();
+// 				render_cmds[cmd_clear] = clear_render_target.execute();
+// 				render_cmds[cmd_present] = present_pipeline.execute();
 			}
 
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 
-				gui(dFluid);
-				run(dFluid);
-				rFluid.execute(cmd, *context, app.m_window->getFrontBuffer(), dFluid);
-
-				sAppImGui::Order().Render(cmd);
-				cmd.end();
-				render_cmds[cmd_particle] = cmd;
+// 				gui(dFluid);
+// 				run(dFluid);
+// 				rFluid.execute(cmd, *context, app.m_window->getFrontBuffer(), dFluid);
+// 
+// 				sAppImGui::Order().Render(cmd);
+ 				cmd.end();
+ 				render_cmds[cmd_particle] = cmd;
 			}
 
 

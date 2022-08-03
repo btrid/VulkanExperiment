@@ -32,6 +32,11 @@ cCmdPool::cCmdPool(const std::shared_ptr<btr::Context>& context)
 
 
 
+cCmdPool::~cCmdPool()
+{
+	int a = 0;
+}
+
 vk::CommandPool cCmdPool::getCmdPool(cCmdPool::CmdPoolType type, int device_family_index) const
 {
 	switch (type)

@@ -80,7 +80,7 @@ struct AppImgui
 struct AppWindow : public cWindow
 {
 	AppWindow(const std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor);
-
+	~AppWindow();
 	std::vector<vk::UniqueImageView> m_backbuffer_view;
 
 	vk::UniqueImage m_depth_image;
@@ -123,26 +123,29 @@ struct App
 	vk::PhysicalDevice m_physical_device;
 	vk::UniqueDevice m_device;
 
-	std::shared_ptr<cCmdPool> m_cmd_pool;
-	cThreadPool m_thread_pool;
 	std::shared_ptr<AppWindow> m_window; // !< mainwindow
 	std::vector<std::shared_ptr<AppWindow>> m_window_list;
+
+	std::shared_ptr<cCmdPool> m_cmd_pool;
+	cThreadPool m_thread_pool;
+
 	std::vector<cWindowDescriptor> m_window_request;
 	std::shared_ptr<btr::Context> m_context;
 
 	std::vector<vk::CommandBuffer> m_system_cmds;
-	SynchronizedPoint m_sync_point;
 
+	SynchronizedPoint m_sync_point;
 	std::vector<vk::UniqueFence> m_fence_list;
 
 	vk::UniqueDebugUtilsMessengerEXT m_debug_messenger;
 
 	App(const AppDescriptor& desc);
+	~App();
 	void setup();
 	void submit(std::vector<vk::CommandBuffer>&& cmds);
 	void preUpdate();
 	void postUpdate();
-
+	bool isEnd()const;
 	void pushWindow(const cWindowDescriptor& descriptor)
 	{
 		m_window_request.emplace_back(descriptor);
