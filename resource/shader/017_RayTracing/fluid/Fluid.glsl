@@ -15,21 +15,9 @@
 #define DST_LMT_RAT 0.9f	//これ以上の粒子間の接近を許さない距離の係数
 #define WEI(dist, re) ((re/(dist)) - 1.0f)	//重み関数
 #define Gravity vec3(0.f, -9.8f, 0.f) //重力加速度
-float radius = PCL_DST * 2.1f;
-float radius2 = radius * radius;
-#define PCL_DST 0.02f					//平均粒子間距離
 
 float Dns[PT_MAX] = {DNS_FLD, 1., DNS_SMORK, DNS_WLL};
 float invDns[PT_MAX] = {1./DNS_FLD, 1., 1./DNS_SMORK, 1./DNS_WLL};
-
-float safeDistance(in vec3 a, in vec3 b)
-{
-	return abs(dot(a, b)) < 0.000001f ? 0. : distance(a, b);
-}
-bool validCheck(in FluidData dFluid, in vec3 pos)
-{
-	return all(greaterThanEqual(pos, dFluid.m_constant.GridMin)) && all(lessThan(pos, dFluid.m_constant.GridMax));
-}
 
 ivec3 ToGridCellIndex(in vec3 p)
 {
@@ -48,6 +36,11 @@ ivec4 ToGridIndex(in vec3 p)
 
 struct Constant
 {
+    float ParticleDst;	//平均粒子間距離
+    float radius;
+    float radius2;
+    float _p3;
+
     float n0; //初期粒子数密度
     float lmd;	//ラプラシアンモデルの係数λ
     float rlim; //これ以上の粒子間の接近を許さない距離

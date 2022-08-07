@@ -1,68 +1,6 @@
-
-
-
-
-
-
-
-void AlcBkt(FluidData& dFluid)
+void AlcBkt()
 {
-	dFluid.m_constant.GridMin = vec3(0.0);
-	dFluid.m_constant.GridMax = vec3(0.5, 0.5, 0.5);
-	//	dFluid.m_constant.GridMax = vec3(1.0, 0.5, 1.0);
-	dFluid.m_constant.GridCellSize = radius * (1.0 + CRT_NUM);
-	dFluid.m_constant.GridCellSizeInv = 1.0 / dFluid.m_constant.GridCellSize;
-	dFluid.m_constant.GridCellNum = ivec3((dFluid.m_constant.GridMax - dFluid.m_constant.GridMin) * dFluid.m_constant.GridCellSizeInv) + ivec3(4);
-	dFluid.m_constant.GridCellTotal = dFluid.m_constant.GridCellNum.x * dFluid.m_constant.GridCellNum.y * dFluid.m_constant.GridCellNum.z;
-
-	dFluid.PNum = 20000;
-	dFluid.Acc.resize(dFluid.PNum);
-	b_pos.resize(dFluid.PNum);
-	dFluid.Vel.resize(dFluid.PNum);
-	dFluid.Prs.resize(dFluid.PNum);
-	b_type.resize(dFluid.PNum);
-	std::fill(b_type.begin(), b_type.end(), PT_Ghost);
-	std::fill(b_pos.begin(), b_pos.end(), dFluid.m_constant.GridMin - vec3(999));
-
-	GridLinkHead.resize(dFluid.m_constant.GridCellTotal);
-	GridLinkNext.resize(dFluid.PNum);
-
-	dFluid.m_WallSDF.resize(dFluid.m_constant.GridCellTotal);
-	dFluid.m_WallEnable.resize(dFluid.m_constant.GridCellTotal);
-
-	wallPrs.resize(dFluid.m_constant.GridCellTotal);
-	wallVsc.resize(dFluid.m_constant.GridCellTotal);
-	ivec3 n = dFluid.m_constant.GridCellNum;
-	// 壁の設定
-	for (int iz = 0; iz < n.z; iz++) {
-		for (int iy = 0; iy < n.y; iy++) {
-			for (int ix = 0; ix < n.x; ix++) {
-				int ip = iz * n.x * n.y + iy * n.x + ix;
-				auto p = dFluid.m_constant.GridMin + dFluid.m_constant.GridCellSize * vec3(ix, iy, iz);
-				float d = 99999.f;
-				for (auto& t : dFluid.triangles)
-				{
-					auto new_d = t.getDistance(p);
-					if (new_d <= d)
-					{
-
-#if !defined(REFERENCE)
-						d = new_d;
-#endif
-					}
-				}
-				if (d < radius)
-				{
-					dFluid.m_WallEnable[ip] = true;
-				}
-				dFluid.m_WallSDF[ip] = d;
-			}
-		}
-	}
-#define WAVE_HEIGHT 0.3
-#define WAVE_WIDTH 0.1
-
-	n = (dFluid.m_constant.GridMax - dFluid.m_constant.GridMin) / PCL_DST;
+	n = (dFluid.m_constant.GridMax - dFluid.m_constant.GridMin) / u_info.ParticleDst;
 	int count = 0;
 	for (int iz = 0; iz < n.z; iz++) {
 		for (int iy = 0; iy < n.y; iy++) {
@@ -72,22 +10,20 @@ void AlcBkt(FluidData& dFluid)
 					// 壁を作る
 #if defined(REFERENCE)
 					b_type[count] = PT_Wall;
-					b_pos[count] = dFluid.m_constant.GridMin + PCL_DST * vec3(ivec3(ix, iy, iz));
+					b_pos[count] = dFluid.m_constant.GridMin + u_info.ParticleDst * vec3(ivec3(ix, iy, iz));
 					count++;
 #endif
 				}
 				else if (iy >= 10 && iy <= 15 && ix <= 15 && iz <= 15) {
 					// ダムを造る
 					b_type[count] = PT_Fluid;
-					b_pos[count] = dFluid.m_constant.GridMin + PCL_DST * vec3(ivec3(ix, iy, iz));
+					b_pos[count] = dFluid.m_constant.GridMin + u_info.ParticleDst * vec3(ivec3(ix, iy, iz));
 					count++;
 				}
 			}
 		}
 	}
-
 	dFluid.PNum_Active = count;
-
 }
 
 void SetPara(FluidData& dFluid) {
@@ -96,7 +32,7 @@ void SetPara(FluidData& dFluid) {
 	for (int ix = -4; ix < 5; ix++) {
 		for (int iy = -4; iy < 5; iy++) {
 			for (int iz = -4; iz < 5; iz++) {
-				vec3 p = PCL_DST * vec3(ix, iy, iz);
+				vec3 p = u_info.ParticleDst * vec3(ix, iy, iz);
 				float dist2 = dot(p, p);
 				if (dist2 <= radius2) {
 					if (dist2 == 0.0)continue;
@@ -111,7 +47,7 @@ void SetPara(FluidData& dFluid) {
 
 	dFluid.m_constant.n0 = tn0;			//初期粒子数密度
 	dFluid.m_constant.lmd = tlmd / tn0;	//ラプラシアンモデルの係数λ
-	dFluid.m_constant.rlim = PCL_DST * DST_LMT_RAT;//これ以上の粒子間の接近を許さない距離
+	dFluid.m_constant.rlim = u_info.ParticleDst * DST_LMT_RAT;//これ以上の粒子間の接近を許さない距離
 	dFluid.m_constant.rlim2 = dFluid.m_constant.rlim * dFluid.m_constant.rlim;
 	dFluid.m_constant.COL = 1.0 + COL_RAT;
 

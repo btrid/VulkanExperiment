@@ -46,6 +46,11 @@ struct FluidData
 
 	struct Constant
 	{
+		float ParticleDst;	//平均粒子間距離
+		float radius;
+		float radius2;
+		float _p3;
+
 		float n0; //初期粒子数密度
 		float lmd;	//ラプラシアンモデルの係数λ
 		float rlim; //これ以上の粒子間の接近を許さない距離
@@ -55,6 +60,7 @@ struct FluidData
 		float GridCellSize; //GridCellの大きさ(バケット1辺の長さ)
 		float GridCellSizeInv;
 		int GridCellTotal;
+
 
 		ivec3 GridCellNum;
 		float p1;

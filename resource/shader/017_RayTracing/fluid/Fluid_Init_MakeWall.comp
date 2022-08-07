@@ -1,24 +1,21 @@
 
-
-void MkBkt()
+struct Particle
 {
-	int i = (int)gl_GlobalInvocationID.x;
-	if(i >= u_info.PNum) { return; }
-	if (b_PType[i] == PT_Ghost) { return; }
+	vec3 pos;
+	vec3 vel;
+	vec3 acc;
+	int b_index;
+	int type
+	ivec4 idx;
 
-	int ib = ToGridIndex(b_pos[i]);
-	int pnumber = atomicExchange(GridLinkHead[ib], i);
-	GridLinkNext[i] = pnumber;
-}
+};
 
-float sdf(in ivec3 idx)
+void MkBkt(inout Particle p)
 {
-	return dFluid.m_WallSDF[ToGridIndex(idx)];
-}
+	if (p.type == PT_Ghost) { return; }
 
-float prs(in ivec3 idx)
-{
-	return wallPrs[ToGridIndex(idx)];
+	int pnumber = atomicExchange(GridLinkHead[p.grid_pos.w], p.b_index);
+	GridLinkNext[p.b_index] = pnumber;
 }
 
 float getPrs(in ivec3 idx, in vec3 pos)
@@ -26,45 +23,42 @@ float getPrs(in ivec3 idx, in vec3 pos)
 	idx = min(idx, u_info.GridCellNum - 1);
 	vec3 pa = u_info.GridMin + u_info.GridCellSize * vec3(idx);
 	vec3 fp = (pos - pa) * u_info.GridCellSizeInv;
-	auto value = sdf(dFluid, idx);
+	float value = sdf(dFluid, idx);
 
 	ivec2 offset = ivec2(0, 1);
 	vec4 a = vec4(prs(dFluid, idx + offset.xxx), prs(dFluid, idx + offset.yxx), prs(dFluid, idx + offset.xyx), prs(dFluid, idx + offset.yyx));
 	vec4 b = vec4(prs(dFluid, idx + offset.xxy), prs(dFluid, idx + offset.yxy), prs(dFluid, idx + offset.xyy), prs(dFluid, idx + offset.yyy));
-	auto z = mix(a, b, fp.z);
-	auto xy = vec2(mix(z.xy(), z.zw(), fp.yy()));
-	auto dist = mix(vec1(xy.x), vec1(xy.y), vec1(fp.x)).x;
+	float z = mix(a, b, fp.z);
+	float xy = vec2(mix(z.xy(), z.zw(), fp.yy()));
+	float dist = mix(vec1(xy.x), vec1(xy.y), vec1(fp.x)).x;
 
 	return dist;
 }
 
-void VscTrm() 
+void VscTrm(inout Particle p) 
 {
 	int i = (int)gl_GlobalInvocationID.x;
-	if (b_type[i] == PT_Ghost || b_type[i] == PT_Wall)
+	if (p.type == PT_Ghost || p.type == PT_Wall)
 	{
 		return;
 	}
 	vec3 viscosity = vec3(0.0);
-	vec3 pos = b_pos[i];
-	vec3 vel = b_vel[i];
-	ivec3 idx = ToGridCellIndex(dFluid, pos);
-	for (int jz = idx.z - 1; jz <= idx.z + 1; jz++) {
+	for (int jz = p.idx.z - 1; jz <= p.idx.z + 1; jz++) {
 		if (jz < 0 || jz >= u_info.GridCellNum.z) { continue; }
-		for (int jy = idx.y - 1; jy <= idx.y + 1; jy++) {
+		for (int jy = p.idx.y - 1; jy <= p.idx.y + 1; jy++) {
 			if (jy < 0 || jy >= u_info.GridCellNum.y) { continue; }
-			for (int jx = idx.x - 1; jx <= idx.x + 1; jx++) {
+			for (int jx = p.idx.x - 1; jx <= p.idx.x + 1; jx++) {
 				if (jx < 0 || jx >= u_info.GridCellNum.x) { continue; }
-				int jb = ToGridIndex(dFluid, ivec3(jx, jy, jz));
+				int jb = ToGridIndex(ivec3(jx, jy, jz));
 				for (int j = GridLinkHead[jb]; j != -1; j = GridLinkNext[j])
 				{
 					if (i == j) { continue; }
-					float dist2 = distance2(b_pos[j], pos);
+					float dist2 = distance2(b_pos[j], p.pos);
 					if (dist2 >= radius2) { continue; }
 
 					float dist = sqrt(dist2);
 					float w = WEI(dist, radius);
-					viscosity += (b_vel[j] - vel) * w;
+					viscosity += (b_vel[j] - p.vel) * w;
 				}
 
 			}
@@ -78,106 +72,98 @@ void VscTrm()
 		viscosity += (-vel) * w;
 	}
 
-	b_acc[i] = viscosity * (u_info.viscosity / u_info.n0 / u_info.lmd);
+	p.acc = viscosity * (u_info.viscosity / u_info.n0 / u_info.lmd);
 
 }
 
-void UpPcl1()
+void UpPcl1(inout Particle p)
 {
-	int i = (int)gl_GlobalInvocationID.x;
-	if (b_type[i] == PT_Fluid || b_type[i] == PT_Smoke)
+//	int i = (int)gl_GlobalInvocationID.x;
+//	if(i >= u_info.PNum) { return; }
+	if (p.type == PT_Fluid || p.type == PT_Smoke)
 	{
-		vec3 acc = b_acc[i];
-		if (b_type[i] == PT_Fluid)
+		if (p.type == PT_Fluid)
 		{
-			acc += Gravity;
+			p.acc += Gravity;
 		}
-		b_vel[i] += acc * DT;
-		std::tie(std::ignore, b_pos[i], b_vel[i]) = raymarch(dFluid, b_pos[i], b_vel[i]);
-		vec4 sdf = getSDF(dFluid, ToGridCellIndex(dFluid, dFluid.Pos[i]), dFluid.Pos[i]);
-		b_sdf[i] = sdf.x;
-		b_sdf_normaln[i] = sdf.yzw;
+		p.vel += p.acc * DT;
+		b_vel[p.b_index] = p.vel;
+//		std::tie(std::ignore, b_pos[i], b_vel[i]) = raymarch(dFluid, b_pos[i], b_vel[i]);
+//		vec4 sdf = getSDF(dFluid, ToGridCellIndex(dFluid, dFluid.Pos[i]), dFluid.Pos[i]);
+//		b_sdf[i] = sdf.x;
+//		b_sdf_normaln[i] = sdf.yzw;
 
 		b_acc[i] = vec3(0.0);
 	}
 }
 
-void ChkCol()
+void ChkCol(inout Particle p)
 {
-	int i = (int)gl_GlobalInvocationID.x;
-	if (b_type[i] != PT_Fluid && b_type[i] != PT_Smoke) {
+	if (p.type != PT_Fluid && p.type != PT_Smoke) {
 		return;
 	}
-	float mi = Dns[b_type[i]];
-	vec3 pos = b_pos[i];
-	vec3 vel = b_vel[i];
-	vec3 vec_ix2 = vel;
-	ivec4 idx = ToGridIndex(pos);
-	for (int jz = idx.z - 1; jz <= idx.z + 1; jz++) {
+	float mi = Dns[p.type];
+	vec3 newvec = p.vel;
+	for (int jz = p.idx.z - 1; jz <= p.idx.z + 1; jz++) {
 		if (jz < 0 || jz >= u_info.GridCellNum.z) { continue; }
-		for (int jy = idx.y - 1; jy <= idx.y + 1; jy++) {
+		for (int jy = p.idx.y - 1; jy <= p.idx.y + 1; jy++) {
 			if (jy < 0 || jy >= u_info.GridCellNum.y) { continue; }
-			for (int jx = idx.x - 1; jx <= idx.x + 1; jx++) {
+			for (int jx = p.idx.x - 1; jx <= p.idx.x + 1; jx++) {
 				if (jx < 0 || jx >= u_info.GridCellNum.x) { continue; }
 				int jb = ToGridIndex(dFluid, ivec3(jx, jy, jz));
 				for (int j = GridLinkHead[jb]; j != -1; j = GridLinkNext[j])
 				{
 					if (i == j) { continue; }
 
-					vec3 v = b_pos[j] - pos;
+					vec3 v = b_pos[j] - p.pos;
 					float dist2 = dot(v, v);
 					if (dist2 >= u_info.rlim2) { continue; }
 					v = normalize(v);
-					float fDT = dot((vel - b_vel[j]) * v, vec3(1.));
+					float fDT = dot((p.vel - b_vel[j]) * v, vec3(1.));
 					if (fDT <= 0.0) { continue; } 
 
 					float mj = Dns[b_type[j]];
 					fDT *= u_info.COL * mj / (mi + mj);
-					vec_ix2 -= v * fDT;
+					newvec -= v * fDT;
 				}
 
 			}
 		}
 	}
-	float sdf = b_sdf[i];
-	if (sdf < radius)
-	{
-		vec3 sdf_n = b_sdf_normal[i];
-		auto wallp = pos - sdf_n * sdf;
-
-		float fDT = dot(vel * -sdf_n, vec3(1.));
-		if (fDT > 0.0) {
-			float mj = Dns[PT_Wall];
-			fDT *= u_info.COL * mj / (mi + mj);
-			vec_ix2 -= -sdf_n * fDT;
-		}
-	}
-	b_acc[i] = vec_ix2;
-
-	for (int i = 0; i < dFluid.PNum; i++)
-	{
-		b_vel[i] = b_acc[i];
-	}
+//	float sdf = b_sdf[i];
+//	if (sdf < radius)
+//	{
+//		vec3 sdf_n = b_sdf_normal[i];
+//		auto wallp = pos - sdf_n * sdf;
+//
+//		float fDT = dot(vel * -sdf_n, vec3(1.));
+//		if (fDT > 0.0) {
+//			float mj = Dns[PT_Wall];
+//			fDT *= u_info.COL * mj / (mi + mj);
+//			newvec -= -sdf_n * fDT;
+//		}
+//	}
+	p.acc = newvec;
+//	b_vel[p.b_index] = newvec;
+}
+void SetVel(inout Particle p)
+{
+	b_vel[p.b_index] = p.acc;
 }
 
-void MkPrs() 
+void MkPrs(inout Particle p) 
 {
-	int i = (int)gl_GlobalInvocationID.x;
-	if (b_type[i] != PT_Fluid && b_type[i] != PT_Smoke) {
+	if (p.type != PT_Fluid && p.type != PT_Smoke) {
 		return;
 	}
-
-	vec3 pos = b_pos[i];
 	float ni = 0.0;
-
-	ivec4 idx = ToGridCellIndex(pos);
-	for (int jz = idx.z - 1; jz <= idx.z + 1; jz++) {
+	for (int jz = p.idx.z - 1; jz <= p.idx.z + 1; jz++) {
 		if (jz < 0 || jz >= u_info.GridCellNum.z) { continue; }
-		for (int jy = idx.y - 1; jy <= idx.y + 1; jy++) {
+		for (int jy = p.idx.y - 1; jy <= p.idx.y + 1; jy++) {
 			if (jy < 0 || jy >= u_info.GridCellNum.y) { continue; }
-			for (int jx = idx.x - 1; jx <= idx.x + 1; jx++) {
+			for (int jx = p.idx.x - 1; jx <= p.idx.x + 1; jx++) {
 				if (jx < 0 || jx >= u_info.GridCellNum.x) { continue; }
-				int jb = ToGridIndex(dFluid, ivec3(jx, jy, jz));
+				int jb = ToGridIndex(ivec3(jx, jy, jz));
 				for (int j = GridLinkHead[jb]; j != -1; j = GridLinkNext[j])
 				{
 					if (i == j) { continue; }
@@ -190,10 +176,13 @@ void MkPrs()
 			}
 		}
 	}
-	float mi = Dns[b_type[i]];
+	float mi = Dns[p.type];
 	float pressure = (ni > u_info.n0) * (ni - u_info.n0) * mi;
-	b_prs[i] = pressure;
+	b_prs[p.b_index] = pressure;
+}
 
+void MkPrsWall() 
+{
 	for (int z = 0; z < u_info.GridCellNum.z; z++) {
 		for (int y = 0; y < u_info.GridCellNum.y; y++) {
 			for (int x = 0; x < u_info.GridCellNum.x; x++) {
@@ -236,27 +225,26 @@ void MkPrs()
 	}
 }
 
-void PrsGrdTrm()
+void PrsGrdTrm(inout Particle p)
 {
 	int i = (int)gl_GlobalInvocationID.x;
-	if (b_type[i] != PT_Fluid && b_type[i] != PT_Smoke) {
+	if(i >= u_info.PNum) { return; }
+	if (p.type != PT_Fluid && p.type != PT_Smoke) {
 		return;
 	}
 	vec3 acc = vec3(0.0);
-	vec3 pos = b_pos[i];
 	float pre_min = b_prs[i];
-	ivec4 idx = ToGridCellIndex(pos);
-	for (int jz = idx.z - 1; jz <= idx.z + 1; jz++) {
+	for (int jz = p.idx.z - 1; jz <= p.idx.z + 1; jz++) {
 		if (jz < 0 || jz >= u_info.GridCellNum.z) { continue; }
-		for (int jy = idx.y - 1; jy <= idx.y + 1; jy++) {
+		for (int jy = p.idx.y - 1; jy <= p.idx.y + 1; jy++) {
 			if (jy < 0 || jy >= u_info.GridCellNum.y) { continue; }
-			for (int jx = idx.x - 1; jx <= idx.x + 1; jx++) {
+			for (int jx = p.idx.x - 1; jx <= p.idx.x + 1; jx++) {
 				if (jx < 0 || jx >= u_info.GridCellNum.x) { continue; }
 				int jb = ToGridIndex(dFluid, ivec3(jx, jy, jz));
 				for (int j = GridLinkHead[jb]; j != -1; j = GridLinkNext[j])
 				{
 					if (i == j) { continue; }
-					if (distance2(b_pos[j], pos) >= radius2) { continue; }
+					if (distance2(b_pos[j], p.pos) >= radius2) { continue; }
 					if (pre_min > b_prs[j])
 					{
 						pre_min = b_prs[j];
@@ -308,31 +296,41 @@ void PrsGrdTrm()
 		acc += -sdf_n * w;
 	}
 
-	b_acc[i] = acc * invDns[PT_Fluid] * -1.f;
+	p.acc = acc * invDns[PT_Fluid] * -1.f;
 }
 
-void UpPcl2()
+void UpPcl2(inout Particle p)
 {
-	int i = (int)gl_GlobalInvocationID.x;
-	if (b_type[i] != PT_Fluid && b_type[i] != PT_Smoke) {
+	if (p.type != PT_Fluid && p.type != PT_Smoke) {
 		return;
 	}
-	b_vel[i] += b_acc[i] * DT;
-	b_acc[i] = vec3(0.0);
+	b_vel[p.b_index] += p.acc * DT;
+	p.acc = vec3(0.0);
 }
 
-void init()
+void main()
 {
-	AlcBkt();
-	SetPara();
-}
-void run()
-{
-	MkBkt();
-	VscTrm();
-	UpPcl1();
-	ChkCol();
-	MkPrs();
-	PrsGrdTrm();
-	UpPcl2();
+	int i = (int)gl_GlobalInvocationID.x;
+	Particle p;
+	p.pos = b_pos[i];
+	p.vel = b_vel[i];
+	p.type = b_type[i];
+	p.b_index = i;
+	p.idx = ToGridIndex(p.pos);
+
+	MkBkt(p);
+	memoryBarrierBuffer();
+	VscTrm(p);
+	memoryBarrierBuffer();
+	UpPcl1(p);
+	memoryBarrierBuffer();
+	ChkCol(p);
+	memoryBarrierBuffer();
+	SetVel(p);
+	memoryBarrierBuffer();
+	MkPrs(p);
+	memoryBarrierBuffer();
+	PrsGrdTrm(p);
+	memoryBarrierBuffer();
+	UpPcl2(p);
 }

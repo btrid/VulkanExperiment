@@ -8,7 +8,7 @@
 //#define _check(_n) { assert(!any(isnan(_n))); }
 //#define _check(_n) { assert(!any(isnan(vec3(_n)))); }
 #define _check(_n) { }
-#define PCL_DST 0.02f					//平均粒子間距離
+#define PCL_DST 1.f					//平均粒子間距離
 struct ConstantParam
 {
 };
@@ -31,8 +31,6 @@ enum ParticleType
 #define DST_LMT_RAT 0.9f	//これ以上の粒子間の接近を許さない距離の係数
 #define WEI(dist, re) ((re/(dist)) - 1.0f)	//重み関数
 #define Gravity vec3(0.f, -9.8f, 0.f) //重力加速度
-float radius = PCL_DST * 2.1f;
-float radius2 = radius * radius;
 
 
 std::vector<int> GridLinkHead;
@@ -42,10 +40,6 @@ std::vector<vec3> wallVsc;
 
 float Dns[PT_MAX], invDns[PT_MAX];
 
-float safeDistance(const vec3& a, const vec3& b)
-{
-	return abs(dot(a, b)) < 0.000001f ? 0. : distance(a, b);
-}
 bool validCheck(FluidData& dFluid, const vec3& pos)
 {
 	return all(greaterThanEqual(pos, dFluid.m_constant.GridMin)) && all(lessThan(pos, dFluid.m_constant.GridMax));
@@ -63,12 +57,16 @@ int ToGridIndex(FluidData& dFluid, const vec3& p) { return ToGridIndex(dFluid, T
 void AlcBkt(FluidData& dFluid)
 {
 	//#define REFERENCE
-	//	dFluid.m_constant.GridMin = vec3(0.0 - PCL_DST * 3);
-	//	dFluid.m_constant.GridMax = vec3(1.0 + PCL_DST * 3, 0.6 + PCL_DST * 20, 1.0 + PCL_DST * 3);
+	dFluid.m_constant.ParticleDst = PCL_DST;
+	dFluid.m_constant.radius = dFluid.m_constant.ParticleDst * 2.1f;
+	dFluid.m_constant.radius2 = dFluid.m_constant.radius * dFluid.m_constant.radius;
+	PCL_DST;
+	//	dFluid.m_constant.GridMin = vec3(0.0 - dFluid.m_constant.ParticleDst * 3);
+	//	dFluid.m_constant.GridMax = vec3(1.0 + dFluid.m_constant.ParticleDst * 3, 0.6 + dFluid.m_constant.ParticleDst * 20, 1.0 + dFluid.m_constant.ParticleDst * 3);
 	dFluid.m_constant.GridMin = vec3(0.0);
-	dFluid.m_constant.GridMax = vec3(0.5, 0.5, 0.5);
+	dFluid.m_constant.GridMax = vec3(dFluid.m_constant.ParticleDst) * 30.f ;
 	//	dFluid.m_constant.GridMax = vec3(1.0, 0.5, 1.0);
-	dFluid.m_constant.GridCellSize = radius * (1.0 + CRT_NUM);
+	dFluid.m_constant.GridCellSize = dFluid.m_constant.radius * (1.0 + CRT_NUM);
 	dFluid.m_constant.GridCellSizeInv = 1.0 / dFluid.m_constant.GridCellSize;
 	dFluid.m_constant.GridCellNum = ivec3((dFluid.m_constant.GridMax - dFluid.m_constant.GridMin) * dFluid.m_constant.GridCellSizeInv) + ivec3(4);
 	dFluid.m_constant.GridCellTotal = dFluid.m_constant.GridCellNum.x * dFluid.m_constant.GridCellNum.y * dFluid.m_constant.GridCellNum.z;
@@ -110,7 +108,7 @@ void AlcBkt(FluidData& dFluid)
 #endif
 					}
 				}
-				if (d < radius)
+				if (d < dFluid.m_constant.radius)
 				{
 					dFluid.m_WallEnable[ip] = true;
 				}
@@ -121,7 +119,7 @@ void AlcBkt(FluidData& dFluid)
 #define WAVE_HEIGHT 0.3
 #define WAVE_WIDTH 0.1
 
-	n = (dFluid.m_constant.GridMax - dFluid.m_constant.GridMin) / PCL_DST;
+	n = (dFluid.m_constant.GridMax - dFluid.m_constant.GridMin) / dFluid.m_constant.ParticleDst;
 	int count = 0;
 	for (int iz = 0; iz < n.z; iz++) {
 		for (int iy = 0; iy < n.y; iy++) {
@@ -131,14 +129,14 @@ void AlcBkt(FluidData& dFluid)
 					// 壁を作る
 #if defined(REFERENCE)
 					dFluid.PType[count] = PT_Wall;
-					dFluid.Pos[count] = dFluid.m_constant.GridMin + PCL_DST * vec3(ivec3(ix, iy, iz));
+					dFluid.Pos[count] = dFluid.m_constant.GridMin + dFluid.m_constant.ParticleDst * vec3(ivec3(ix, iy, iz));
 					count++;
 #endif
 				}
-				else if (iy >= 10 && iy <= 15 && ix <= 15 && iz <= 15) {
+				else if (iy > 10 && iy < 15 && ix < 15 && iz < 15) {
 					// ダムを造る
 					dFluid.PType[count] = PT_Fluid;
-					dFluid.Pos[count] = dFluid.m_constant.GridMin + PCL_DST * vec3(ivec3(ix, iy, iz));
+					dFluid.Pos[count] = dFluid.m_constant.GridMin + dFluid.m_constant.ParticleDst * vec3(ivec3(ix, iy, iz));
 					count++;
 				}
 			}
@@ -155,13 +153,13 @@ void SetPara(FluidData& dFluid) {
 	for (int ix = -4; ix < 5; ix++) {
 		for (int iy = -4; iy < 5; iy++) {
 			for (int iz = -4; iz < 5; iz++) {
-				vec3 p = PCL_DST * vec3(ix, iy, iz);
+				vec3 p = dFluid.m_constant.ParticleDst * vec3(ix, iy, iz);
 				float dist2 = dot(p, p);
-				if (dist2 <= radius2) {
+				if (dist2 <= dFluid.m_constant.radius2) {
 					if (dist2 == 0.0)continue;
 					float dist = sqrt(dist2);
-					tn0 += WEI(dist, radius);
-					tlmd += dist2 * WEI(dist, radius);
+					tn0 += WEI(dist, dFluid.m_constant.radius);
+					tlmd += dist2 * WEI(dist, dFluid.m_constant.radius);
 				}
 			}
 		}
@@ -170,7 +168,7 @@ void SetPara(FluidData& dFluid) {
 
 	dFluid.m_constant.n0 = tn0;			//初期粒子数密度
 	dFluid.m_constant.lmd = tlmd / tn0;	//ラプラシアンモデルの係数λ
-	dFluid.m_constant.rlim = PCL_DST * DST_LMT_RAT;//これ以上の粒子間の接近を許さない距離
+	dFluid.m_constant.rlim = dFluid.m_constant.ParticleDst * DST_LMT_RAT;//これ以上の粒子間の接近を許さない距離
 	dFluid.m_constant.COL = 1.0 + COL_RAT;
 	dFluid.m_constant.viscosity = 0.000001f;
 	Dns[PT_Fluid] = DNS_FLD;
@@ -213,7 +211,7 @@ std::tuple<float, vec3> getSDF(FluidData& dFluid, ivec3 idx, const vec3& pos)
 	auto value = sdf(dFluid, idx);
 
 	// check
-	if (value > radius + dFluid.m_constant.GridCellSize * sqrt(3.f)) { return { 999.f, vec3(0.) }; }
+	if (value > dFluid.m_constant.radius + dFluid.m_constant.GridCellSize *2.f* sqrt(3.f)) { return { 999.f, vec3(0.) }; }
 
 	ivec2 offset = ivec2(0, 1);
 	vec4 a = vec4(value, sdf(dFluid, idx + offset.yxx()), sdf(dFluid, idx + offset.xyx()), sdf(dFluid, idx + offset.yyx));
@@ -318,10 +316,10 @@ void VscTrm(FluidData& dFluid) {
 					{
 						if (i == j) { continue; }
 						float dist2 = distance2(dFluid.Pos[j], pos);
-						if (dist2 >= radius2) { continue; }
+						if (dist2 >= dFluid.m_constant.radius2) { continue; }
 
 						float dist = sqrt(dist2);
-						float w = WEI(dist, radius);
+						float w = WEI(dist, dFluid.m_constant.radius);
 						viscosity += (dFluid.Vel[j] - vel) * w;
 					}
 
@@ -330,9 +328,9 @@ void VscTrm(FluidData& dFluid) {
 		}
 
 		auto& sdf = dFluid.SDF[i];
-		if (std::get<0>(sdf) < radius)
+		if (std::get<0>(sdf) < dFluid.m_constant.radius)
 		{
-			float w = WEI(std::get<0>(sdf), radius);
+			float w = WEI(std::get<0>(sdf), dFluid.m_constant.radius);
 			viscosity += (-vel) * w;
 		}
 
@@ -413,7 +411,7 @@ void ChkCol(FluidData& dFluid)
 			}
 		}
 		auto& sdf = dFluid.SDF[i];
-		if (std::get<0>(sdf) < radius)
+		if (std::get<0>(sdf) < dFluid.m_constant.radius)
 		{
 			auto wallp = pos - std::get<1>(sdf) * std::get<0>(sdf);
 
@@ -455,18 +453,18 @@ void MkPrs(FluidData& dFluid) {
 					{
 						if (i == j) { continue; }
 						float dist2 = distance2(dFluid.Pos[j], pos);
-						if (dist2 >= radius2) { continue; }
+						if (dist2 >= dFluid.m_constant.radius2) { continue; }
 						float dist = sqrt(dist2);
-						float w = WEI(dist, radius);
+						float w = WEI(dist, dFluid.m_constant.radius);
 						ni += w;
 					}
 				}
 			}
 		}
 		auto& sdf = dFluid.SDF[i];
-		if (std::get<0>(sdf) < radius)
+		if (std::get<0>(sdf) < dFluid.m_constant.radius)
 		{
-			float w = WEI(std::get<0>(sdf), radius);
+			float w = WEI(std::get<0>(sdf), dFluid.m_constant.radius);
 		}
 
 		float mi = Dns[dFluid.PType[i]];
@@ -480,7 +478,7 @@ void MkPrs(FluidData& dFluid) {
 			for (int x = 0; x < dFluid.m_constant.GridCellNum.x; x++) {
 				int i = ToGridIndex(dFluid, ivec3(x, y, z));
 				{
-					if (dFluid.m_WallSDF[i] > radius * 2 * sqrt(3.f))
+					if (dFluid.m_WallSDF[i] > dFluid.m_constant.radius * 2 * sqrt(3.f))
 					{
 						continue;
 					}
@@ -501,8 +499,8 @@ void MkPrs(FluidData& dFluid) {
 									continue;
 								}
 								auto& sdf = dFluid.SDF[j];
-								if (std::get<0>(sdf) >= radius) { continue; }
-								float w = WEI(std::get<0>(sdf), radius);
+								if (std::get<0>(sdf) >= dFluid.m_constant.radius) { continue; }
+								float w = WEI(std::get<0>(sdf), dFluid.m_constant.radius);
 								ni += w;
 							}
 						}
@@ -539,7 +537,7 @@ void PrsGrdTrm(FluidData& dFluid)
 					for (int j = GridLinkHead[jb]; j != -1; j = GridLinkNext[j])
 					{
 						if (i == j) { continue; }
-						if (distance2(dFluid.Pos[j], pos) >= radius2) { continue; }
+						if (distance2(dFluid.Pos[j], pos) >= dFluid.m_constant.radius2) { continue; }
 						if (pre_min > dFluid.Prs[j])
 						{
 							pre_min = dFluid.Prs[j];
@@ -549,7 +547,7 @@ void PrsGrdTrm(FluidData& dFluid)
 					if (pre_min > wallPrs[jb])
 					{
 						auto& sdf = dFluid.SDF[i];
-						if (std::get<0>(sdf) < radius)
+						if (std::get<0>(sdf) < dFluid.m_constant.radius)
 						{
 							pre_min = wallPrs[jb];
 						}
@@ -570,10 +568,10 @@ void PrsGrdTrm(FluidData& dFluid)
 						if (i == j) { continue; }
 						auto v = dFluid.Pos[j] - pos;
 						float dist2 = dot(v, v);
-						if (dist2 >= radius2) { continue; }
+						if (dist2 >= dFluid.m_constant.radius2) { continue; }
 
 						float dist = sqrt(dist2);
-						float w = WEI(dist, radius);
+						float w = WEI(dist, dFluid.m_constant.radius);
 						w *= (dFluid.Prs[j] - pre_min) / (dist2);
 						acc += v * w;
 					}
@@ -581,9 +579,9 @@ void PrsGrdTrm(FluidData& dFluid)
 			}
 		}
 		auto& sdf = dFluid.SDF[i];
-		if (std::get<0>(sdf) < radius)
+		if (std::get<0>(sdf) < dFluid.m_constant.radius)
 		{
-			float w = WEI(std::get<0>(sdf), radius);
+			float w = WEI(std::get<0>(sdf), dFluid.m_constant.radius);
 			w *= (wallPrs[ToGridIndex(dFluid, idx)] - pre_min);
 
 			auto wallp = pos - std::get<1>(sdf) * std::get<0>(sdf);
