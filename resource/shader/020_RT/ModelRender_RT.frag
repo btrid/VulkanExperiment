@@ -158,7 +158,7 @@ vec3 DirectLight()
 	t = rayQueryGetIntersectionTEXT(rq, true);
 	float LightPower = t>=tmax ? 1. : 0.;
 
-#define LightColor vec3(10.)
+#define LightColor vec3(0.)
 	return LightPower * LightColor;
 };
 

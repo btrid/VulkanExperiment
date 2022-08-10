@@ -357,9 +357,9 @@ void main()
 	// Obtain final intensity as reflectance (BRDF) scaled by the energy of the light (cosine law)
 	vec3 color = basecolor.rgb;
 	if(u_render_config.use_light != 0){
-//		color = (diffuseContrib + specContrib) * pbrInputs.NdotL * DirectLight();
+		color = (diffuseContrib + specContrib) * pbrInputs.NdotL * DirectLight();
 	}
-	color *= IndirectLighting(n, pbrInputs.perceptualRoughness);
+//	color *= IndirectLighting(n, pbrInputs.perceptualRoughness);
 //	color += getIBLContribution(pbrInputs, n, reflection);
 
 	const float u_OcclusionStrength = 1.0f;
