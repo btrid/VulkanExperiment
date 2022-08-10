@@ -1476,9 +1476,9 @@ struct Skybox
 int main()
 {
 	auto camera = cCamera::sCamera::Order().create();
-	camera->getData().m_position = vec3(0.0f, 5.0f, -1.0f);
-	camera->getData().m_target = vec3(0.f, 0.f, -1.f);
-	camera->getData().m_up = vec3(0.f, 0.f, 1.f);
+	camera->getData().m_position = vec3(0.0f, 100.0f, 0.0f);
+	camera->getData().m_target = vec3(0.f, 100.f, -0.5f);
+	camera->getData().m_up = vec3(0.f, -1.f, 0.f);
 	camera->getData().m_width = 1024;
 	camera->getData().m_height = 1024;
 	camera->getData().m_far = 50000.f;
@@ -1491,8 +1491,6 @@ int main()
 	auto context = app.m_context;
 
 	auto setup_cmd = context->m_cmd_pool->allocCmdTempolary(0);
-	auto ctx = std::make_shared<Context>(context, setup_cmd);
-
 
 	auto render_target = app.m_window->getFrontBuffer();
 	ClearPipeline clear_pipeline(context, render_target);
@@ -1502,8 +1500,9 @@ int main()
 
 
 //	std::shared_ptr<gltf::gltfResource> model = ctx->m_model_resource.LoadScene(*context, setup_cmd, btr::getResourceAppPath() + "pbr/DamagedHelmet.gltf");
-//	std::shared_ptr<gltf::gltfResource> model = ctx->m_model_resource.LoadScene(*context, setup_cmd, btr::getResourceAppPath() + "Sponza/Sponza.gltf");
-	std::shared_ptr<gltf::gltfResource> model = ctx->m_model_resource.LoadScene(*context, setup_cmd, btr::getResourceAppPath() + "pbr/cornel.glb");
+	auto ctx = std::make_shared<Context>(context, setup_cmd);
+	std::shared_ptr<gltf::gltfResource> model = ctx->m_model_resource.LoadScene(*context, setup_cmd, btr::getResourceAppPath() + "Sponza/Sponza.gltf");
+//	std::shared_ptr<gltf::gltfResource> model = ctx->m_model_resource.LoadScene(*context, setup_cmd, btr::getResourceAppPath() + "pbr/cornel.glb");
 
 	Renderer renderer(*ctx, *app.m_window->getFrontBuffer());
 	Skybox skybox(*ctx, setup_cmd, *app.m_window->getFrontBuffer());

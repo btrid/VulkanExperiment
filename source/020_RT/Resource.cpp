@@ -130,6 +130,102 @@ namespace GLtoVK
 }
 
 
+Resource::Resource(btr::Context& ctx)
+{
+	b_models = ctx.m_vertex_memory.allocateMemory<uint64_t>(1024);
+	{
+		std::array<vk::DescriptorPoolSize, 2> pool_size;
+		pool_size[0].setType(vk::DescriptorType::eStorageBuffer);
+		pool_size[0].setDescriptorCount(array_size(m_buffer_info));
+		pool_size[1].setType(vk::DescriptorType::eCombinedImageSampler);
+		pool_size[1].setDescriptorCount(array_size(m_image_info));
+
+		vk::DescriptorPoolCreateInfo pool_info;
+		pool_info.setPoolSizeCount(array_length(pool_size));
+		pool_info.setPPoolSizes(pool_size.data());
+		pool_info.setMaxSets(1);
+		pool_info.flags = vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind;
+		m_descriptor_pool = ctx.m_device.createDescriptorPoolUnique(pool_info);
+
+	}
+
+	{
+		auto stage = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eTaskNV | vk::ShaderStageFlagBits::eMeshNV;
+		vk::DescriptorSetLayoutBinding binding[] =
+		{
+			vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(7, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(8, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(9, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(10, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(100, vk::DescriptorType::eCombinedImageSampler, 1024, stage),
+		};
+		vk::DescriptorSetLayoutCreateInfo desc_layout_info;
+		desc_layout_info.setBindingCount(array_length(binding));
+		desc_layout_info.setPBindings(binding);
+		m_DSL = ctx.m_device.createDescriptorSetLayoutUnique(desc_layout_info);
+	}
+
+	{
+		m_buffer_info = {
+			b_models.getInfo(),
+			ctx.m_vertex_memory.getDummyInfo(),
+			ctx.m_vertex_memory.getDummyInfo(),
+			ctx.m_vertex_memory.getDummyInfo(),
+			ctx.m_vertex_memory.getDummyInfo(),
+			ctx.m_vertex_memory.getDummyInfo(),
+			ctx.m_vertex_memory.getDummyInfo(),
+			ctx.m_vertex_memory.getDummyInfo(),
+			ctx.m_vertex_memory.getDummyInfo(),
+			ctx.m_vertex_memory.getDummyInfo(),
+			ctx.m_vertex_memory.getDummyInfo(),
+		};
+		m_image_info.fill(vk::DescriptorImageInfo{ sGraphicsResource::Order().getWhiteTexture().m_sampler.get(), sGraphicsResource::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal });
+
+		{
+			vk::DescriptorSetLayout layouts[] =
+			{
+				m_DSL.get(),
+			};
+			vk::DescriptorSetAllocateInfo desc_info;
+			desc_info.setDescriptorPool(m_descriptor_pool.get());
+			desc_info.setDescriptorSetCount(array_length(layouts));
+			desc_info.setPSetLayouts(layouts);
+			m_DS_ModelResource = std::move(ctx.m_device.allocateDescriptorSetsUnique(desc_info)[0]);
+
+		}
+
+#if defined(USE_TEMPLATE) // updateDescriptorSetWithTemplateがバグってる
+		{
+			vk::DescriptorUpdateTemplateEntry dutEntry[2];
+			dutEntry[0].setDstBinding(0).setDstArrayElement(0).setDescriptorCount(array_size(m_buffer_info)).setDescriptorType(vk::DescriptorType::eStorageBuffer).setOffset(offsetof(Resource, m_buffer_info)).setStride(sizeof(VkDescriptorBufferInfo));
+			dutEntry[1].setDstBinding(100).setDstArrayElement(0).setDescriptorCount(array_size(m_image_info)).setDescriptorType(vk::DescriptorType::eCombinedImageSampler).setOffset(offsetof(Resource, m_image_info)).setStride(sizeof(VkDescriptorImageInfo));
+
+			vk::DescriptorUpdateTemplateCreateInfo dutCI;
+			dutCI.setTemplateType(vk::DescriptorUpdateTemplateType::eDescriptorSet);
+			dutCI.descriptorSetLayout = m_DSL.get();
+			dutCI.setDescriptorUpdateEntries(dutEntry);
+			m_Texture_DUP = ctx.m_device.createDescriptorUpdateTemplateUnique(dutCI);
+//			ctx.m_device.updateDescriptorSetWithTemplate(*m_DS_ModelResource, *m_Texture_DUP, this);
+		}
+#else
+		vk::WriteDescriptorSet write[] =
+		{
+			vk::WriteDescriptorSet().setDstSet(*m_DS_ModelResource).setDstBinding(0).setDescriptorType(vk::DescriptorType::eStorageBuffer).setBufferInfo(m_buffer_info),
+			vk::WriteDescriptorSet().setDstSet(*m_DS_ModelResource).setDstBinding(100).setDescriptorType(vk::DescriptorType::eCombinedImageSampler).setImageInfo(m_image_info),
+		};
+		ctx.m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
+
+#endif
+	}
+}
+
 std::shared_ptr<gltf::gltfResource> Resource::LoadScene(btr::Context& ctx, vk::CommandBuffer cmd, const std::string& filename)
 {
 	std::shared_ptr<gltf::gltfResource> resource;
@@ -621,7 +717,15 @@ std::shared_ptr<gltf::Texture> Resource::LoadTexture(btr::Context& ctx, vk::Comm
 	}
 
 	m_image_info[resource->m_block] = resource->info();
+#if defined(USE_TEMPLATE) // updateDescriptorSetWithTemplateがバグってる
 	ctx.m_device.updateDescriptorSetWithTemplate(*m_DS_ModelResource, *m_Texture_DUP, this);
-
+#else
+	vk::WriteDescriptorSet write[] =
+	{
+		vk::WriteDescriptorSet().setDstSet(*m_DS_ModelResource).setDstBinding(0).setDescriptorType(vk::DescriptorType::eStorageBuffer).setBufferInfo(m_buffer_info),
+		vk::WriteDescriptorSet().setDstSet(*m_DS_ModelResource).setDstBinding(100).setDescriptorType(vk::DescriptorType::eCombinedImageSampler).setImageInfo(m_image_info),
+	};
+	ctx.m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
+#endif
 	return resource;
 }
