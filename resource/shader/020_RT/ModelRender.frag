@@ -139,7 +139,7 @@ float microfacetDistribution(PBRInfo pbrInputs)
 
 vec3 DirectLight()
 {
-	float t = 0.0001;
+	float t = 0.01;
 	float tmax = 99999.;
 	rayQueryEXT rq;
 	rayQueryInitializeEXT(rq, u_TLAS_Scene, gl_RayFlagsOpaqueEXT, 0xFF, In.WorldPos.xyz, t, u_light_dir, tmax);
