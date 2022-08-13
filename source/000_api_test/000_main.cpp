@@ -28,178 +28,6 @@
 #pragma comment(lib, "vulkan-1.lib")
 #pragma comment(lib, "imgui.lib")
 
-struct AllocedImage
-{
-	vk::UniqueImage m_image;
-	vk::UniqueDeviceMemory m_memory;
-	void setup(const vk::ImageCreateInfo& info)
-	{
-//		info.
-	}
-};
-void ImageMemoryAllocate()
-{
-	auto device = sGlobal::Order().getGPU(0).getDevice();
-	btr::AllocatedMemory allocMemory;
-
-	vk::BufferCreateInfo buffer_info;
-	buffer_info.usage = vk::BufferUsageFlagBits::eStorageBuffer;
-	buffer_info.size = 1024;
-	auto buffer = device->createBufferUnique(buffer_info);
-
-	vk::MemoryRequirements buffer_memory_request = device->getBufferMemoryRequirements(buffer.get());
-	auto memoryTypeIndex = Helper::getMemoryTypeIndex(device.getGPU(), buffer_memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
-
-	vk::ImageCreateInfo image_info;
-	image_info.imageType = vk::ImageType::e2D;
-	image_info.format = vk::Format::eR8Uint;
-	image_info.mipLevels = 1;
-	image_info.arrayLayers = 1;
-	image_info.samples = vk::SampleCountFlagBits::e1;
-	image_info.tiling = vk::ImageTiling::eOptimal;
-	image_info.usage = vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eTransferDst;
-	image_info.sharingMode = vk::SharingMode::eExclusive;
-	image_info.initialLayout = vk::ImageLayout::eUndefined;
-	image_info.extent = { 256, 256, 1u };
-	auto image = device->createImageUnique(image_info);
-
-	vk::MemoryRequirements image_memory_request = device->getImageMemoryRequirements(image.get());
-	vk::MemoryAllocateInfo image_memory_alloc_info;
-	image_memory_alloc_info.allocationSize = image_memory_request.size;
-	image_memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(device.getGPU(), image_memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
-	auto image_memory = device->allocateMemoryUnique(image_memory_alloc_info);
-	device->bindImageMemory(image.get(), image_memory.get(), 0);
-
-
-}
-
-struct AllocateInfo 
-{
-	vk::BufferCreateInfo m_info;
-	vk::MemoryPropertyFlags m_memory_prop;
-	vk::DeviceSize m_size;
-};
-void AllocateMemory(const cDevice& device, std::vector<AllocateInfo>&& alloc_info)
-{
-	std::vector<btr::AllocatedMemory> memory(alloc_info.size());
-	for (size_t i = 0; i < alloc_info.size(); i++)
-	{
-		auto& info = alloc_info[i];
-		auto buffer = device->createBufferUnique(info.m_info);
-		vk::MemoryRequirements memory_request = device->getBufferMemoryRequirements(buffer.get());
-	}
-
-// 	vk::MemoryRequirements buffer_memory_request = device->getBufferMemoryRequirements(buffer.get());
-// 	auto memoryTypeIndex = Helper::getMemoryTypeIndex(device.getGPU(), buffer_memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
-//	return memory;
-
-}
-struct MemoryPool
-{
-
-};
-void memoryAllocate()
-{
-	auto device = sGlobal::Order().getGPU(0).getDevice();
-
-	vk::MemoryPropertyFlags host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
-	vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
-
-
-	btr::AllocatedMemory a;
-	a.setup(device, vk::BufferUsageFlagBits::eVertexBuffer, device_memory, 1000 * 1000 * 100);
-	btr::AllocatedMemory vertex_memory;
-	vertex_memory.setup(device, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 100);
-	btr::AllocatedMemory uniform_memory;
-	uniform_memory.setup(device, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 20);
-	btr::AllocatedMemory storage_memory;
-	storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 200);
-	btr::AllocatedMemory staging_memory;
-	staging_memory.setup(device, vk::BufferUsageFlagBits::eTransferSrc, host_memory, 1000 * 1000 * 100);
-
-	vk::ImageCreateInfo image_info;
-	image_info.imageType = vk::ImageType::e2D;
-	image_info.format = vk::Format::eR8Uint;
-	image_info.mipLevels = 1;
-	image_info.arrayLayers = 1;
-	image_info.samples = vk::SampleCountFlagBits::e1;
-	image_info.tiling = vk::ImageTiling::eOptimal;
-	image_info.usage = vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eTransferDst;
-	image_info.sharingMode = vk::SharingMode::eExclusive;
-	image_info.initialLayout = vk::ImageLayout::eUndefined;
-	image_info.extent = { 256, 256, 1u };
-	auto image = device->createImage(image_info);
-
-	vk::MemoryRequirements memory_request = device->getImageMemoryRequirements(image);
-	vk::MemoryAllocateInfo memory_alloc_info;
-	memory_alloc_info.allocationSize = memory_request.size;
-	memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
-
-	auto memory_prop = device.getGPU().getMemoryProperties();
-
-	int _a = 0;
-}
-void memoryAllocater()
-{
-	// メモリを何度もアロケートしてその結果を見る
-	sGlobal::Order();
-	auto device = sGlobal::Order().getGPU(0).getDevice();
-
-	btr::AllocatedMemory staging_memory;
-	staging_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached, 1024 * 1024 * 20);
-
-	auto& thread_pool = sGlobal::Order().getThreadPool();
-	struct Memory
-	{
-		int m_life;
-		btr::BufferMemory m_alloced_memory;
-	};
-	std::vector<Memory> memory_list;
-	int32_t next = 0;
-	int32_t count = 10000;
-	while (count >= 0)
-	{
-		if(next-- <= 0)
-		{
-			Memory m;
-			m.m_life = std::rand() % 100;
-			btr::BufferMemoryDescriptor desc;
-			desc.size = std::rand() % 16 * 32 + 16;
-			if (std::rand() % 100 < 10)
-			{
-				desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-			}
-			m.m_alloced_memory = staging_memory.allocateMemory(desc);
-			memory_list.push_back(std::move(m));
-
-			next = std::rand() % 100;
-			if (memory_list.size() <= 7)
-			{
-				next = 0;
-			}
-			count--;
-		}
-		sGlobal::Order().sync();
-
-		for (auto it = memory_list.begin(); it != memory_list.end();)
-		{
-			it->m_life--;
-			if (it->m_life < 0) {
-				it = memory_list.erase(it);
-			}
-			else {
-				it++;
-			}
-		}
-	}
-	memory_list.clear();
-	sGlobal::Order().sync();
-	sGlobal::Order().sync();
-	sGlobal::Order().sync();
-	// 結果
-	staging_memory.gc();
-	count++;
-}
 
 void bittest()
 {
@@ -643,9 +471,216 @@ void raymarch()
 	}
 }
 
+#include <memory>
+#include <filesystem>
+#include <spirv_cross/spirv.hpp>
+#include <spirv_cross/spirv_reflect.hpp>
+#include <spirv_cross/spirv_cross.hpp>
+#include <spirv_cross/spirv_cross_parsed_ir.hpp>
+#include <spirv_cross/spirv_parser.hpp>
+#include <glslang/SPIRV/GlslangToSpv.h>
+#include <glslang/SPIRV/spirv.hpp>
+#include <glslang/SPIRV/spvIR.h>
+#include <glslang/Public/ShaderLang.h>
+#include <glslang/MachineIndependent/localintermediate.h>
+#pragma comment(lib, "glslangd.lib")
+#pragma comment(lib, "SPIRVd.lib")
+#pragma comment(lib, "spirv-cross-glsld.lib")
+#pragma comment(lib, "GenericCodeGend.lib")
+#pragma comment(lib, "OSDependentd.lib")
+#pragma comment(lib, "OGLCompilerd.lib")
+#pragma comment(lib, "MachineIndependentd.lib")
+#pragma comment(lib, "SPIRV-Toolsd.lib")
+#pragma comment(lib, "SPIRV-Tools-diffd.lib")
+#pragma comment(lib, "SPIRV-Tools-linkd.lib")
+#pragma comment(lib, "SPIRV-Tools-lintd.lib")
+#pragma comment(lib, "SPIRV-Tools-optd.lib")
+#pragma comment(lib, "SPIRV-Tools-reduce.lib")
+
+#pragma comment(lib, "spirv-cross-cd.lib")
+#pragma comment(lib, "spirv-cross-cppd.lib")
+#pragma comment(lib, "spirv-cross-glsld.lib")
+#pragma comment(lib, "spirv-cross-cored.lib")
+#pragma comment(lib, "spirv-cross-reflectd.lib")
+#pragma comment(lib, "spirv-cross-utild.lib")
+#pragma comment(lib, "SPVRemapperd.lib")
+
+auto glsl_shader = 
+R"(
+#version 450
+#extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_buffer_reference2 : require
+#extension GL_EXT_shader_explicit_arithmetic_types : require
+#extension GL_EXT_nonuniform_qualifier : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int8 : enable
+#extension GL_KHR_shader_subgroup_basic : require
+#extension GL_KHR_shader_subgroup_ballot : require
+#extension GL_KHR_shader_subgroup_vote : require
+
+layout(local_size_x=64) in;
+layout(set=0, binding=0, buffer_reference, scalar) buffer Texcoord {vec2 b_t[]; };
+void main()
+{
+
+}
+)";
+std::vector<uint32_t> read_file(const std::string& filename)
+{
+	std::filesystem::path filepath(filename);
+	std::ifstream file(filepath, std::ios_base::ate | std::ios::binary);
+	if (!file.is_open()) {
+		printf("file not found \"%s\"", filename.c_str());
+		assert(file.is_open());
+	}
+
+	size_t file_size = (size_t)file.tellg();
+	file.seekg(0);
+
+	std::vector<uint32_t> buffer(file_size/4);
+	file.read((char*)buffer.data(), file_size);
+
+	return buffer;
+}
+
+std::vector<uint32_t> comileGlslToSpirv()
+{
+	glslang::InitializeProcess();
+	auto program = std::make_unique<glslang::TProgram>();
+	const char* shaderStrings[1];
+
+	EShLanguage stage = EShLangCompute;
+	auto shader = std::make_unique<glslang::TShader>(stage);
+
+//	auto glsl = read_file();
+
+	shaderStrings[0] = glsl_shader;
+	shader->setStrings(shaderStrings, 1);
+	
+	EShMessages messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
+	TBuiltInResource Resources{};
+	Resources.maxComputeWorkGroupSizeX = 64;
+	Resources.maxComputeWorkGroupSizeY = 1;
+	Resources.maxComputeWorkGroupSizeZ = 1;
+	if (!shader->parse(&Resources, 100, false, messages)) {
+		printf(shader->getInfoLog());
+		printf(shader->getInfoDebugLog());
+		assert(false);
+	}
+
+	program->addShader(shader.get());
+
+	if (!program->link(messages)) {
+		printf(shader->getInfoLog());
+		printf(shader->getInfoDebugLog());
+		assert(false);
+	}
+
+	std::vector<uint32_t> spirv_binary;
+	spv::SpvBuildLogger logger;
+	glslang::GlslangToSpv(*program->getIntermediate(stage), spirv_binary, &logger);
+	printf("%s", logger.getAllMessages().c_str());
+
+	glslang::FinalizeProcess();
+	//	spirv_binary = read_file(btr::getResourceShaderPath() + "SN_Render.vert.spv");
+	spirv_cross::CompilerGLSL glsl(spirv_binary);
+
+	// The SPIR-V is now parsed, and we can perform reflection on it.
+	spirv_cross::ShaderResources resources = glsl.get_shader_resources();
+
+	// Get all sampled images in the shader.
+	for (auto& resource : resources.sampled_images)
+	{
+		unsigned set = glsl.get_decoration(resource.id, spv::DecorationDescriptorSet);
+		unsigned binding = glsl.get_decoration(resource.id, spv::DecorationBinding);
+		printf("Image %s at set = %u, binding = %u\n", resource.name.c_str(), set, binding);
+
+		// Modify the decoration to prepare it for GLSL.
+		glsl.unset_decoration(resource.id, spv::DecorationDescriptorSet);
+
+		// Some arbitrary remapping if we want.
+		glsl.set_decoration(resource.id, spv::DecorationBinding, set * 16 + binding);
+	}
+	for (auto& resource : resources.uniform_buffers)
+	{
+		unsigned set = glsl.get_decoration(resource.id, spv::DecorationDescriptorSet);
+		unsigned binding = glsl.get_decoration(resource.id, spv::DecorationBinding);
+		printf("Image %s at set = %u, binding = %u\n", resource.name.c_str(), set, binding);
+
+		// Modify the decoration to prepare it for GLSL.
+		glsl.unset_decoration(resource.id, spv::DecorationDescriptorSet);
+
+		// Some arbitrary remapping if we want.
+		glsl.set_decoration(resource.id, spv::DecorationBinding, set * 16 + binding);
+	}
+
+	for (auto& resource : resources.storage_buffers)
+	{
+		unsigned set = glsl.get_decoration(resource.id, spv::DecorationDescriptorSet);
+		unsigned binding = glsl.get_decoration(resource.id, spv::DecorationBinding);
+		printf("storage %s at set = %u, binding = %u\n", resource.name.c_str(), set, binding);
+
+		// Modify the decoration to prepare it for GLSL.
+		glsl.unset_decoration(resource.id, spv::DecorationDescriptorSet);
+
+		// Some arbitrary remapping if we want.
+		glsl.set_decoration(resource.id, spv::DecorationBinding, set * 16 + binding);
+	}
+
+	// Set some options.
+	spirv_cross::CompilerGLSL::Options options;
+	options.version = 450;
+	glsl.set_common_options(options);
+
+	// Compile to GLSL, ready to give to GL driver.
+	std::string source = glsl.compile();
+//	spirv_cross::Parser parser(spirv);
+//	parser.parse();
+//	auto& ir = parser.get_parsed_ir();
+
+
+
+
+	return spirv_binary;
+}
+
 int main()
 {
-	
+	comileGlslToSpirv();
+// 	{
+// 		// Read SPIR-V from disk or similar.
+// 		std::vector<uint32_t> spirv_binary = load_spirv_file();
+// 
+// 		spirv_cross::CompilerGLSL glsl(std::move(spirv_binary));
+// 
+// 		// The SPIR-V is now parsed, and we can perform reflection on it.
+// 		spirv_cross::ShaderResources resources = glsl.get_shader_resources();
+// 
+// 		// Get all sampled images in the shader.
+// 		for (auto& resource : resources.sampled_images)
+// 		{
+// 			unsigned set = glsl.get_decoration(resource.id, spv::DecorationDescriptorSet);
+// 			unsigned binding = glsl.get_decoration(resource.id, spv::DecorationBinding);
+// 			printf("Image %s at set = %u, binding = %u\n", resource.name.c_str(), set, binding);
+// 
+// 			// Modify the decoration to prepare it for GLSL.
+// 			glsl.unset_decoration(resource.id, spv::DecorationDescriptorSet);
+// 
+// 			// Some arbitrary remapping if we want.
+// 			glsl.set_decoration(resource.id, spv::DecorationBinding, set * 16 + binding);
+// 		}
+// 
+// 		// Set some options.
+// 		spirv_cross::CompilerGLSL::Options options;
+// 		options.version = 310;
+// 		options.es = true;
+// 		glsl.set_common_options(options);
+// 
+// 		// Compile to GLSL, ready to give to GL driver.
+// 		std::string source = glsl.compile();
+// 	}
+
+
 	if(0)
 	{
 		auto origin = vec2(7.99f, 8.99f);
@@ -930,9 +965,6 @@ int main()
 	mask.y -= mask.x;
 
 	btr::setResourceAppPath("..\\..\\resource\\000_api_test\\");
-//	ImageMemoryAllocate();
-	memoryAllocate();
-	memoryAllocater();
 
 
 	return 0;

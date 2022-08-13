@@ -196,7 +196,7 @@ float D_GGX(float dotNH, float roughness)
 
 vec3 MeshLight(vec3 dir)
 {
-	float t = 0.0001;
+	float t = 0.01;
 	float tmax = 9999.;
 	rayQueryEXT rq;
 	rayQueryInitializeEXT(rq, u_TLAS_Scene, gl_RayFlagsOpaqueEXT, 0xFF, In.WorldPos.xyz, t, dir, tmax);
