@@ -87,7 +87,6 @@
     <Import Project="..\..\packages\unofficial-flayan-cereal.1.2.2\build\native\unofficial-flayan-cereal.targets" Condition="Exists('..\..\packages\unofficial-flayan-cereal.1.2.2\build\native\unofficial-flayan-cereal.targets')" />
     <Import Project="..\..\packages\freetype.redist.2.8.0.1\build\native\freetype.redist.targets" Condition="Exists('..\..\packages\freetype.redist.2.8.0.1\build\native\freetype.redist.targets')" />
     <Import Project="..\..\packages\freetype.2.8.0.1\build\native\freetype.targets" Condition="Exists('..\..\packages\freetype.2.8.0.1\build\native\freetype.targets')" />
-    <Import Project="..\..\packages\libFreeImage.1.0.0\build\native\libFreeImage.targets" Condition="Exists('..\..\packages\libFreeImage.1.0.0\build\native\libFreeImage.targets')" />
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
@@ -96,7 +95,5 @@
     <Error Condition="!Exists('..\..\packages\unofficial-flayan-cereal.1.2.2\build\native\unofficial-flayan-cereal.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\unofficial-flayan-cereal.1.2.2\build\native\unofficial-flayan-cereal.targets'))" />
     <Error Condition="!Exists('..\..\packages\freetype.redist.2.8.0.1\build\native\freetype.redist.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\freetype.redist.2.8.0.1\build\native\freetype.redist.targets'))" />
     <Error Condition="!Exists('..\..\packages\freetype.2.8.0.1\build\native\freetype.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\freetype.2.8.0.1\build\native\freetype.targets'))" />
-    <Error Condition="!Exists('..\..\packages\libFreeImage.1.0.0\build\native\libFreeImage.props')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\libFreeImage.1.0.0\build\native\libFreeImage.props'))" />
-    <Error Condition="!Exists('..\..\packages\libFreeImage.1.0.0\build\native\libFreeImage.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\libFreeImage.1.0.0\build\native\libFreeImage.targets'))" />
   </Target>
 </Project>
