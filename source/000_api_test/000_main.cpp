@@ -634,13 +634,6 @@ std::vector<uint32_t> comileGlslToSpirv()
 
 	// Compile to GLSL, ready to give to GL driver.
 	std::string source = glsl.compile();
-//	spirv_cross::Parser parser(spirv);
-//	parser.parse();
-//	auto& ir = parser.get_parsed_ir();
-
-
-
-
 	return spirv_binary;
 }
 

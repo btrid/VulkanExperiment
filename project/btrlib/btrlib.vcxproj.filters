@@ -11,7 +11,6 @@
     <ClInclude Include="..\..\include\btrlib\cAudio.h" />
     <ClInclude Include="..\..\include\btrlib\cCamera.h" />
     <ClInclude Include="..\..\include\btrlib\cCmdPool.h" />
-    <ClInclude Include="..\..\include\btrlib\cDebug.h" />
     <ClInclude Include="..\..\include\btrlib\cInput.h" />
     <ClInclude Include="..\..\include\btrlib\cModel.h" />
     <ClInclude Include="..\..\include\btrlib\cMotion.h" />
