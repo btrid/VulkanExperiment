@@ -460,7 +460,7 @@ struct AllocatedMemory
 //		assert(desc.element_num != 0);// size0‚Í‚¨‚©‚µ‚¢‚æ‚Ë
 
 		BufferMemoryEx<T> alloc;
-		alloc.m_resource = std::make_shared<BufferMemoryEx<T>::Resource>();
+		alloc.m_resource = std::make_shared<class BufferMemoryEx<T>::Resource>();
 		alloc.m_resource->m_buffer_info.buffer = m_resource->m_buffer.get();
 
 		if (desc.element_num != 0)
@@ -492,7 +492,7 @@ struct AllocatedMemory
 	BufferMemoryEx<T> allocateMemory(uint32_t num, bool is_reverse = false)
 	{
 		BufferMemoryEx<T> alloc;
-		alloc.m_resource = std::make_shared<BufferMemoryEx<T>::Resource>();
+		alloc.m_resource = std::make_shared<class BufferMemoryEx<T>::Resource>();
 		alloc.m_resource->m_buffer_info.buffer = m_resource->m_buffer.get();
 		if (num != 0)
 		{
