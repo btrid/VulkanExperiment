@@ -85,33 +85,49 @@ void Swapchain::setup(const std::shared_ptr<btr::Context>& context, const cWindo
 
 	auto old_swap_chain = m_swapchain_handle.get();
 
-	vk::SurfaceCapabilitiesKHR capability = context->m_physical_device.getSurfaceCapabilitiesKHR(surface);
-	vk::SwapchainCreateInfoKHR swapchain_info;
-	swapchain_info.setSurface(surface);
-	swapchain_info.setMinImageCount(sGlobal::BUFFER_COUNT_MAX);
-	swapchain_info.setImageFormat(m_surface_format.format);
-	swapchain_info.setImageColorSpace(m_surface_format.colorSpace);
-	swapchain_info.setImageExtent(capability.currentExtent);
-	swapchain_info.setPreTransform(capability.currentTransform);
-	swapchain_info.setImageArrayLayers(1);
-	swapchain_info.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst);
-	swapchain_info.setImageSharingMode(vk::SharingMode::eExclusive);
-	swapchain_info.setQueueFamilyIndexCount((uint32_t)support_surface.size());
-	swapchain_info.setPQueueFamilyIndices(support_surface.data());
-	swapchain_info.setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque);
-	swapchain_info.setPresentMode(vk::PresentModeKHR::eMailbox);
-	swapchain_info.setClipped(true);
-	swapchain_info.setOldSwapchain(m_swapchain_handle.get());
-	m_swapchain_handle = device.createSwapchainKHRUnique(swapchain_info);
+	auto presentmode_request =
+	{
+		vk::PresentModeKHR::eMailbox,
+		vk::PresentModeKHR::eFifo,
+	};
+	auto presentmode = context->m_physical_device.getSurfacePresentModesKHR(surface);
+	for (auto mode : presentmode_request)
+	{
+		if (auto it = std::find(presentmode.begin(), presentmode.end(), mode); it != presentmode.end())
+		{
+			vk::SurfaceCapabilitiesKHR capability = context->m_physical_device.getSurfaceCapabilitiesKHR(surface);
+			vk::SwapchainCreateInfoKHR swapchain_info;
+			swapchain_info.setSurface(surface);
+			swapchain_info.setMinImageCount(sGlobal::BUFFER_COUNT_MAX);
+			swapchain_info.setImageFormat(m_surface_format.format);
+			swapchain_info.setImageColorSpace(m_surface_format.colorSpace);
+			swapchain_info.setImageExtent(capability.currentExtent);
+			swapchain_info.setPreTransform(capability.currentTransform);
+			swapchain_info.setImageArrayLayers(1);
+			swapchain_info.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst);
+			swapchain_info.setImageSharingMode(vk::SharingMode::eExclusive);
+			swapchain_info.setQueueFamilyIndexCount((uint32_t)support_surface.size());
+			swapchain_info.setPQueueFamilyIndices(support_surface.data());
+			swapchain_info.setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque);
+			swapchain_info.setPresentMode(mode);
+			swapchain_info.setClipped(true);
+			swapchain_info.setOldSwapchain(m_swapchain_handle.get());
+			m_swapchain_handle = device.createSwapchainKHRUnique(swapchain_info);
 
-	m_backbuffer_image = device.getSwapchainImagesKHR(m_swapchain_handle.get());
-	m_size = capability.currentExtent;
+			m_backbuffer_image = device.getSwapchainImagesKHR(m_swapchain_handle.get());
+			m_size = capability.currentExtent;
+		}
+	}
+
+	vk::SemaphoreCreateInfo semaphoreInfo = vk::SemaphoreCreateInfo();
+	m_semaphore_imageAvailable = context->m_device.createSemaphoreUnique(semaphoreInfo);
+	m_semaphore_renderFinished = context->m_device.createSemaphoreUnique(semaphoreInfo);
 
 }
 
 uint32_t Swapchain::swap()
 {
-	m_context->m_device.acquireNextImageKHR(m_swapchain_handle.get(), 1000, m_swapbuffer_semaphore.get(), vk::Fence(), &m_backbuffer_index);
+	m_context->m_device.acquireNextImageKHR(m_swapchain_handle.get(), UINT64_MAX, m_semaphore_imageAvailable.get(), vk::Fence(), &m_backbuffer_index);
 	return m_backbuffer_index;
 }
 
@@ -157,11 +173,6 @@ cWindow::cWindow(const std::shared_ptr<btr::Context>& context, const cWindowDesc
 
 	m_swapchain = std::make_shared<Swapchain>();
 	m_swapchain->setup(context, descriptor, m_surface.get());
-
-	vk::SemaphoreCreateInfo semaphoreInfo = vk::SemaphoreCreateInfo();
-	m_swapchain->m_swapbuffer_semaphore = context->m_device.createSemaphoreUnique(semaphoreInfo);
-	m_swapchain->m_submit_semaphore = context->m_device.createSemaphoreUnique(semaphoreInfo);
-
 }
 
 cWindow::~cWindow()

@@ -123,7 +123,7 @@ App::App(const AppDescriptor& desc)
 	{
 		std::vector<const char*> extensionName = {
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-			VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME,
+/*		VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME,
 			VK_KHR_SHADER_ATOMIC_INT64_EXTENSION_NAME,
 			VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME,
 			VK_KHR_8BIT_STORAGE_EXTENSION_NAME,
@@ -139,19 +139,19 @@ App::App(const AppDescriptor& desc)
 			VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME,
 			VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME,
 			VK_NV_MESH_SHADER_EXTENSION_NAME,
-		};
+*/		};
 
 		auto gpu_propaty = m_physical_device.getProperties();
-		auto gpu_features = m_physical_device.getFeatures2<vk::PhysicalDeviceFeatures2,
-			vk::PhysicalDeviceVulkan11Features,
-			vk::PhysicalDeviceVulkan12Features,
-			vk::PhysicalDeviceVulkan13Features,
-			vk::PhysicalDeviceAccelerationStructureFeaturesKHR,
-			vk::PhysicalDeviceRayTracingPipelineFeaturesKHR,
-			vk::PhysicalDeviceRayQueryFeaturesKHR,
-			vk::PhysicalDeviceShaderAtomicFloatFeaturesEXT,
-			vk::PhysicalDeviceMeshShaderFeaturesNV>();
-		gpu_features.get<vk::PhysicalDeviceVulkan12Features>().shaderBufferInt64Atomics;
+		auto gpu_features = m_physical_device.getFeatures2<vk::PhysicalDeviceFeatures2
+			,vk::PhysicalDeviceVulkan11Features
+			,vk::PhysicalDeviceVulkan12Features
+			,vk::PhysicalDeviceVulkan13Features
+			//vk::PhysicalDeviceAccelerationStructureFeaturesKHR,
+			//vk::PhysicalDeviceRayTracingPipelineFeaturesKHR,
+			//vk::PhysicalDeviceRayQueryFeaturesKHR
+			//,vk::PhysicalDeviceShaderAtomicFloatFeaturesEXT
+			//,vk::PhysicalDeviceMeshShaderFeaturesNV>
+			>();
 	
 		auto queueFamilyProperty = m_physical_device.getQueueFamilyProperties();
 		
@@ -353,19 +353,19 @@ void App::setup()
 void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 {
 
-	std::vector<vk::Semaphore> swap_wait_semas(m_window_list.size());
-	std::vector<vk::Semaphore> submit_wait_semas(m_window_list.size());
+	std::vector<vk::Semaphore> waitSemaphores(m_window_list.size());
+	std::vector<vk::Semaphore> signalSemaphores(m_window_list.size());
 	std::vector<vk::SwapchainKHR> swapchains(m_window_list.size());
 	std::vector<uint32_t> backbuffer_indexs(m_window_list.size());
 	std::vector<vk::PipelineStageFlags> wait_pipelines(m_window_list.size());
 	for (size_t i = 0; i < m_window_list.size(); i++)
 	{
 		auto& window = m_window_list[i];
-		swap_wait_semas[i] = window->getSwapchain()->m_swapbuffer_semaphore.get();
-		submit_wait_semas[i] = window->getSwapchain()->m_submit_semaphore.get();
+		waitSemaphores[i] = window->getSwapchain()->m_semaphore_imageAvailable.get();
+		signalSemaphores[i] = window->getSwapchain()->m_semaphore_renderFinished.get();
 		swapchains[i] = window->getSwapchain()->m_swapchain_handle.get();
 		backbuffer_indexs[i] = window->getSwapchain()->m_backbuffer_index;
-		wait_pipelines[i] = vk::PipelineStageFlagBits::eAllGraphics;
+		wait_pipelines[i] = vk::PipelineStageFlagBits::eColorAttachmentOutput;
 	}
 
 	std::vector<vk::CommandBuffer> cmds;
@@ -384,28 +384,29 @@ void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 	cmds.insert(cmds.end(), std::make_move_iterator(submit_cmds.begin()), std::make_move_iterator(submit_cmds.end()));
 
 	vk::SubmitInfo submit_info;
-	submit_info.setCommandBufferCount((uint32_t)cmds.size());
-	submit_info.setPCommandBuffers(cmds.data());
-	submit_info.setWaitSemaphoreCount((uint32_t)swap_wait_semas.size());
-	submit_info.setPWaitSemaphores(swap_wait_semas.data());
-	submit_info.setPWaitDstStageMask(wait_pipelines.data());
-	submit_info.setSignalSemaphoreCount((uint32_t)submit_wait_semas.size());
-	submit_info.setPSignalSemaphores(submit_wait_semas.data());
+	submit_info.setCommandBuffers(cmds);
+	submit_info.setWaitSemaphores(waitSemaphores);
+	submit_info.setWaitDstStageMask(wait_pipelines);
+	submit_info.setSignalSemaphores(signalSemaphores);
 
 	auto queue = m_device->getQueue(0, 0);
 	queue.submit(submit_info, m_fence_list[sGlobal::Order().getCurrentFrame()].get());
 
 	vk::PresentInfoKHR present_info;
-	present_info.setWaitSemaphoreCount((uint32_t)submit_wait_semas.size());
-	present_info.setPWaitSemaphores(submit_wait_semas.data());
-	present_info.setSwapchainCount((uint32_t)swapchains.size());
-	present_info.setPSwapchains(swapchains.data());
-	present_info.setPImageIndices(backbuffer_indexs.data());
+	present_info.setSwapchains(swapchains);
+	present_info.setImageIndices(backbuffer_indexs);
+	present_info.setWaitSemaphores(signalSemaphores);
 	queue.presentKHR(present_info);
 }
 
 void App::preUpdate()
 {
+	sGlobal::Order().sync();
+
+	uint32_t index = sGlobal::Order().getCurrentFrame();
+	sDebug::Order().waitFence(m_device.get(), m_fence_list[index].get());
+	m_device->resetFences({ m_fence_list[index].get() });
+	m_cmd_pool->resetPool();
 
 	MSG msg = {};
 	while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
@@ -430,12 +431,6 @@ void App::preUpdate()
 	}
 
 	{
-		sGlobal::Order().sync();
-
-		uint32_t index = sGlobal::Order().getCurrentFrame();
-		sDebug::Order().waitFence(m_device.get(), m_fence_list[index].get());
-		m_device->resetFences({ m_fence_list[index].get() });
-		m_cmd_pool->resetPool();
 
 		sCameraManager::Order().sync();
 		sDeleter::Order().sync();

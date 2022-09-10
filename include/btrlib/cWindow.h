@@ -34,8 +34,9 @@ struct Swapchain
 
 	uint32_t m_backbuffer_index;
 
-	vk::UniqueSemaphore m_swapbuffer_semaphore;
-	vk::UniqueSemaphore m_submit_semaphore;
+	vk::UniqueSemaphore m_semaphore_imageAvailable;
+	vk::UniqueSemaphore m_semaphore_renderFinished;
+
 
 	Swapchain()
 		: m_swapchain_handle()
