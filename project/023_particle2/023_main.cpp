@@ -45,6 +45,137 @@ struct RenderGraph
 	}
 };
 
+#include <memory>
+#include <filesystem>
+#include <spirv_cross/spirv.hpp>
+#include <spirv_cross/spirv_reflect.hpp>
+#include <spirv_cross/spirv_cross.hpp>
+#include <spirv_cross/spirv_cross_parsed_ir.hpp>
+#include <spirv_cross/spirv_parser.hpp>
+#include <glslang/SPIRV/GlslangToSpv.h>
+#include <glslang/SPIRV/spirv.hpp>
+#include <glslang/SPIRV/spvIR.h>
+#include <glslang/Public/ShaderLang.h>
+#include <glslang/MachineIndependent/localintermediate.h>
+#pragma comment(lib, "glslangd.lib")
+#pragma comment(lib, "SPIRVd.lib")
+#pragma comment(lib, "spirv-cross-glsld.lib")
+#pragma comment(lib, "GenericCodeGend.lib")
+#pragma comment(lib, "OSDependentd.lib")
+#pragma comment(lib, "OGLCompilerd.lib")
+#pragma comment(lib, "MachineIndependentd.lib")
+#pragma comment(lib, "SPIRV-Toolsd.lib")
+#pragma comment(lib, "SPIRV-Tools-diffd.lib")
+#pragma comment(lib, "SPIRV-Tools-linkd.lib")
+#pragma comment(lib, "SPIRV-Tools-lintd.lib")
+#pragma comment(lib, "SPIRV-Tools-optd.lib")
+#pragma comment(lib, "SPIRV-Tools-reduce.lib")
+
+#pragma comment(lib, "spirv-cross-cd.lib")
+#pragma comment(lib, "spirv-cross-cppd.lib")
+#pragma comment(lib, "spirv-cross-glsld.lib")
+#pragma comment(lib, "spirv-cross-cored.lib")
+#pragma comment(lib, "spirv-cross-reflectd.lib")
+#pragma comment(lib, "spirv-cross-utild.lib")
+#pragma comment(lib, "SPVRemapperd.lib")
+
+auto glsl_shader =
+R"(
+#version 450
+#extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_buffer_reference2 : require
+#extension GL_EXT_shader_explicit_arithmetic_types : require
+#extension GL_EXT_nonuniform_qualifier : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int8 : enable
+#extension GL_KHR_shader_subgroup_basic : require
+#extension GL_KHR_shader_subgroup_ballot : require
+#extension GL_KHR_shader_subgroup_vote : require
+
+
+struct ModuleInfo 
+{
+	uint64_t ModuleAddress[64];
+};
+
+struct Info{
+	uint ParamAddress[32];
+};
+{EmitterData}
+
+{Module}
+
+
+layout(local_size_x=64) in;
+layout(set=0, binding=0, buffer_reference, scalar) buffer ModuleBuffer { ModuleParam b_module_param[]; };
+layout(set=0, binding=1, buffer_reference, scalar) buffer InfoBuffer { Info b_emitter_info[]; };
+
+layout(set=1, binding=0, std140) uniform ModuleData { ModuleData u_module_info; };
+layout(set=1, binding=1, buffer_reference, scalar) buffer DataBuffer { Data b_emitter_data[]; };
+
+void main()
+{
+//	if(gl_GlobalInvocationID.x >= u_module_info.ModuleCount){ return; } 
+	ModuleParam param  = ModuleBuffer(u_module_info.ModuleAddress).b_module_param[gl_GlobalInvocationID.x];
+	Emitter emitter = EmitterBuffer()
+
+}
+)";
+
+
+std::vector<uint32_t> comileGlslToSpirv(btr::Context& ctx)
+{
+	glslang::InitializeProcess();
+	auto program = std::make_unique<glslang::TProgram>();
+	const char* shaderStrings[1];
+
+	EShLanguage stage = EShLangCompute;
+	auto shader = std::make_unique<glslang::TShader>(stage);
+
+	//	auto glsl = read_file();
+
+	shaderStrings[0] = glsl_shader;
+	shader->setStrings(shaderStrings, 1);
+
+	EShMessages messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
+
+	TBuiltInResource Resources{};
+	auto limits = ctx.m_physical_device.getProperties().limits;
+	Resources.maxComputeWorkGroupSizeX = limits.maxComputeWorkGroupSize[0];
+	Resources.maxComputeWorkGroupSizeY = limits.maxComputeWorkGroupSize[1];
+	Resources.maxComputeWorkGroupSizeZ = limits.maxComputeWorkGroupSize[2];
+	Resources.limits.doWhileLoops = true;
+
+	if (!shader->parse(&Resources, 150, false, messages)) {
+		printf(shader->getInfoLog());
+		printf(shader->getInfoDebugLog());
+		assert(false);
+	}
+
+	program->addShader(shader.get());
+
+	if (!program->link(messages)) {
+		printf(shader->getInfoLog());
+		printf(shader->getInfoDebugLog());
+		assert(false);
+	}
+
+	std::vector<uint32_t> spirv_binary;
+	spv::SpvBuildLogger logger;
+	glslang::GlslangToSpv(*program->getIntermediate(stage), spirv_binary, &logger);
+	printf("%s", logger.getAllMessages().c_str());
+
+	glslang::FinalizeProcess();
+
+	return spirv_binary;
+}
+
+struct ParticleContext
+{
+
+};
+
+
 int main()
 {
 	btr::setResourceAppPath("..\\..\\resource\\003_particle\\");
@@ -68,6 +199,8 @@ int main()
 	auto setup_cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
 	app.setup();
+
+
 	while (true)
 	{
 		cStopWatch time;
