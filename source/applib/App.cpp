@@ -142,9 +142,16 @@ App::App(const AppDescriptor& desc)
 		};
 
 		auto gpu_propaty = m_physical_device.getProperties();
-		auto gpu_feature = m_physical_device.getFeatures();
-		assert(gpu_feature.multiDrawIndirect);
-		auto p2 = m_physical_device.getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceMeshShaderPropertiesNV>();
+		auto gpu_features = m_physical_device.getFeatures2<vk::PhysicalDeviceFeatures2,
+			vk::PhysicalDeviceVulkan11Features,
+			vk::PhysicalDeviceVulkan12Features,
+			vk::PhysicalDeviceVulkan13Features,
+			vk::PhysicalDeviceAccelerationStructureFeaturesKHR,
+			vk::PhysicalDeviceRayTracingPipelineFeaturesKHR,
+			vk::PhysicalDeviceRayQueryFeaturesKHR,
+			vk::PhysicalDeviceShaderAtomicFloatFeaturesEXT,
+			vk::PhysicalDeviceMeshShaderFeaturesNV>();
+		gpu_features.get<vk::PhysicalDeviceVulkan12Features>().shaderBufferInt64Atomics;
 	
 		auto queueFamilyProperty = m_physical_device.getQueueFamilyProperties();
 		
@@ -171,89 +178,13 @@ App::App(const AppDescriptor& desc)
 			family_index.push_back((uint32_t)i);
 		}
 
+		auto features = gpu_features.get<vk::PhysicalDeviceFeatures2>();
 		vk::DeviceCreateInfo device_info;
 		device_info.setQueueCreateInfoCount((uint32_t)queue_info.size());
 		device_info.setPQueueCreateInfos(queue_info.data());
-		device_info.setPEnabledFeatures(&gpu_feature);
 		device_info.setEnabledExtensionCount((uint32_t)extensionName.size());
 		device_info.setPpEnabledExtensionNames(extensionName.data());
-
-		vk::PhysicalDevice8BitStorageFeaturesKHR  storage8bit_feature;
-		storage8bit_feature.setStorageBuffer8BitAccess(VK_TRUE);
-		storage8bit_feature.setUniformAndStorageBuffer8BitAccess(VK_TRUE);
-		device_info.setPNext(&storage8bit_feature);
-
-		vk::PhysicalDevice16BitStorageFeatures storahe16_F;
-		storahe16_F.storageBuffer16BitAccess = VK_TRUE;
-		storahe16_F.storagePushConstant16 = VK_TRUE;
-		storage8bit_feature.setPNext(&storahe16_F);
-
-		vk::PhysicalDeviceFloat16Int8FeaturesKHR  f16s8_feature;
-		f16s8_feature.setShaderInt8(VK_TRUE);
-		f16s8_feature.setShaderFloat16(VK_TRUE);
-		storahe16_F.setPNext(&f16s8_feature);
-
-		vk::PhysicalDeviceImagelessFramebufferFeatures imageless_feature;
-		imageless_feature.setImagelessFramebuffer(VK_TRUE);
-		f16s8_feature.setPNext(&imageless_feature);
-
-		vk::PhysicalDeviceBufferDeviceAddressFeatures BufferDeviceAddres_Feature;
-		BufferDeviceAddres_Feature.bufferDeviceAddress = VK_TRUE;
-		imageless_feature.setPNext(&BufferDeviceAddres_Feature);
-
-		vk::PhysicalDeviceAccelerationStructureFeaturesKHR AS_Feature;
-		AS_Feature.accelerationStructure = VK_TRUE;
-		AS_Feature.descriptorBindingAccelerationStructureUpdateAfterBind = VK_TRUE;
-		BufferDeviceAddres_Feature.setPNext(&AS_Feature);
-
-		vk::PhysicalDeviceRayTracingPipelineFeaturesKHR RT_Pipeline_Feature;
-		RT_Pipeline_Feature.rayTracingPipeline = VK_TRUE;
-		AS_Feature.setPNext(&RT_Pipeline_Feature);
-
-		vk::PhysicalDeviceRayQueryFeaturesKHR RayQuery_Feature;
-		RayQuery_Feature.rayQuery = VK_TRUE;
-		RT_Pipeline_Feature.setPNext(&RayQuery_Feature);
-
-		vk::PhysicalDeviceScalarBlockLayoutFeatures ScalarBlock_Feature;
-		ScalarBlock_Feature.scalarBlockLayout = VK_TRUE;
-		RayQuery_Feature.setPNext(&ScalarBlock_Feature);
-
-		vk::PhysicalDeviceDescriptorIndexingFeatures DescriptorIndexing_Feature;
- 		DescriptorIndexing_Feature.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
- 		DescriptorIndexing_Feature.descriptorBindingVariableDescriptorCount = VK_TRUE;
-		DescriptorIndexing_Feature.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
-		DescriptorIndexing_Feature.descriptorBindingPartiallyBound = VK_TRUE;
-		DescriptorIndexing_Feature.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
-		DescriptorIndexing_Feature.runtimeDescriptorArray = VK_TRUE;
-		DescriptorIndexing_Feature.descriptorBindingVariableDescriptorCount = VK_TRUE;
-		ScalarBlock_Feature.setPNext(&DescriptorIndexing_Feature);
-
-		vk::PhysicalDeviceSubgroupSizeControlFeaturesEXT Subgroup_Feature;
-		Subgroup_Feature.subgroupSizeControl = VK_TRUE;
-		DescriptorIndexing_Feature.setPNext(&Subgroup_Feature);
-
-		vk::PhysicalDeviceMeshShaderFeaturesNV MeshShader_Feature;
-		MeshShader_Feature.meshShader = VK_TRUE;
-		MeshShader_Feature.taskShader = VK_TRUE;
-		Subgroup_Feature.setPNext(&MeshShader_Feature);
-
-		vk::PhysicalDeviceDynamicRenderingFeaturesKHR DynamicRender_Feature;
-		DynamicRender_Feature.dynamicRendering = VK_TRUE;
-		MeshShader_Feature.setPNext(&DynamicRender_Feature);
-
-		vk::PhysicalDeviceShaderAtomicFloatFeaturesEXT AtomicFloat_Feature;
-		AtomicFloat_Feature.shaderBufferFloat32Atomics = VK_TRUE;
-		AtomicFloat_Feature.shaderSharedFloat32Atomics = VK_TRUE;
-		AtomicFloat_Feature.shaderBufferFloat32AtomicAdd = VK_TRUE;
-		AtomicFloat_Feature.shaderSharedFloat32AtomicAdd = VK_TRUE;
-		//		AtomicFloat_Feature.shaderSharedFloat64AtomicMinMax = VK_TRUE;
-		DynamicRender_Feature.setPNext(&AtomicFloat_Feature);
-
-		vk::PhysicalDeviceShaderAtomicInt64Features Atomic_Feature;
-		Atomic_Feature.shaderBufferInt64Atomics = VK_TRUE;
-		Atomic_Feature.shaderSharedInt64Atomics = VK_TRUE;
-		AtomicFloat_Feature.setPNext(&Atomic_Feature);
-
+		device_info.setPNext(&features);
 		m_device = m_physical_device.createDeviceUnique(device_info, nullptr);
 
 	}
