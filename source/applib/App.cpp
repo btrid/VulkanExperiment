@@ -123,7 +123,7 @@ App::App(const AppDescriptor& desc)
 	{
 		std::vector<const char*> extensionName = {
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-/*		VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME,
+			VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME,
 			VK_KHR_SHADER_ATOMIC_INT64_EXTENSION_NAME,
 			VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME,
 			VK_KHR_8BIT_STORAGE_EXTENSION_NAME,
@@ -139,19 +139,21 @@ App::App(const AppDescriptor& desc)
 			VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME,
 			VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME,
 			VK_NV_MESH_SHADER_EXTENSION_NAME,
-*/		};
+		};
 
 		auto gpu_propaty = m_physical_device.getProperties();
 		auto gpu_features = m_physical_device.getFeatures2<vk::PhysicalDeviceFeatures2
 			,vk::PhysicalDeviceVulkan11Features
 			,vk::PhysicalDeviceVulkan12Features
 			,vk::PhysicalDeviceVulkan13Features
-			//vk::PhysicalDeviceAccelerationStructureFeaturesKHR,
-			//vk::PhysicalDeviceRayTracingPipelineFeaturesKHR,
-			//vk::PhysicalDeviceRayQueryFeaturesKHR
-			//,vk::PhysicalDeviceShaderAtomicFloatFeaturesEXT
-			//,vk::PhysicalDeviceMeshShaderFeaturesNV>
-			>();
+			,vk::PhysicalDeviceAccelerationStructureFeaturesKHR
+			,vk::PhysicalDeviceRayTracingPipelineFeaturesKHR
+			,vk::PhysicalDeviceRayQueryFeaturesKHR
+			,vk::PhysicalDeviceShaderAtomicFloatFeaturesEXT
+			, vk::PhysicalDeviceMeshShaderFeaturesNV
+			, vk::PhysicalDeviceShaderIntegerFunctions2FeaturesINTEL
+			, vk::PhysicalDeviceDescriptorSetHostMappingFeaturesVALVE
+		>();
 	
 		auto queueFamilyProperty = m_physical_device.getQueueFamilyProperties();
 		
@@ -508,10 +510,6 @@ void App::preUpdate()
 
 }
 
-void App::postUpdate()
-{
-
-}
 
 bool App::isEnd() const
 {
@@ -586,7 +584,6 @@ AppImgui::AppImgui(const std::shared_ptr<btr::Context>& context, AppWindow* cons
 
 AppImgui::~AppImgui()
 {
-	int a = 0;
 }
 
 AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor)
