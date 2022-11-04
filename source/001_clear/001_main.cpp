@@ -16,7 +16,6 @@
 #include <btrlib/cInput.h>
 #include <btrlib/cCamera.h>
 #include <btrlib/sGlobal.h>
-#include <btrlib/GPU.h>
 #include <btrlib/cStopWatch.h>
 #include <btrlib/AllocatedMemory.h>
 
@@ -30,7 +29,7 @@
 #pragma comment(lib, "imgui.lib")
 
 
-int main()
+int WinMain( _In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nShowCmd )
 {
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(0.f, 0.f, 1.f);
@@ -66,7 +65,6 @@ int main()
 			};
 			app.submit(std::move(cmds));
 		}
-		app.postUpdate();
 		printf("%6.4fms\n", time.getElapsedTimeAsMilliSeconds());
 	}
 

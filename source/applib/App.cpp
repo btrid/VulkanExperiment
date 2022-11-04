@@ -526,10 +526,6 @@ void App::preUpdate()
 
 }
 
-void App::postUpdate()
-{
-
-}
 
 bool App::isEnd() const
 {
@@ -604,7 +600,6 @@ AppImgui::AppImgui(const std::shared_ptr<btr::Context>& context, AppWindow* cons
 
 AppImgui::~AppImgui()
 {
-	int a = 0;
 }
 
 AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor)

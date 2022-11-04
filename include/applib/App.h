@@ -144,7 +144,6 @@ struct App
 	void setup();
 	void submit(std::vector<vk::CommandBuffer>&& cmds);
 	void preUpdate();
-	void postUpdate();
 	bool isEnd()const;
 	void pushWindow(const cWindowDescriptor& descriptor)
 	{

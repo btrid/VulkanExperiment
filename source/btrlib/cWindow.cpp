@@ -116,6 +116,7 @@ void Swapchain::setup(const std::shared_ptr<btr::Context>& context, const cWindo
 
 			m_backbuffer_image = device.getSwapchainImagesKHR(m_swapchain_handle.get());
 			m_size = capability.currentExtent;
+			break;
 		}
 	}
 
