@@ -121,38 +121,57 @@ App::App(const AppDescriptor& desc)
 	m_physical_device = gpus[0];
 
 	{
-		std::vector<const char*> extensionName = {
-			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-/*		VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME,
-			VK_KHR_SHADER_ATOMIC_INT64_EXTENSION_NAME,
-			VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME,
-			VK_KHR_8BIT_STORAGE_EXTENSION_NAME,
-			VK_KHR_MAINTENANCE3_EXTENSION_NAME,
-			VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME,
-			VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
-			VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
-			VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
-			VK_KHR_RAY_QUERY_EXTENSION_NAME,
-			VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
-			VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
-			VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME, 
-			VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME,
-			VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME,
-			VK_NV_MESH_SHADER_EXTENSION_NAME,
-*/		};
 
-		auto gpu_propaty = m_physical_device.getProperties();
+		auto gpu_property = m_physical_device.getProperties2<vk::PhysicalDeviceProperties2
+			, vk::PhysicalDeviceVulkan11Properties
+			, vk::PhysicalDeviceVulkan12Properties
+			, vk::PhysicalDeviceVulkan13Properties
+//			, vk::PhysicalDeviceAccelerationStructurePropertiesKHR
+//			, vk::PhysicalDeviceRayTracingPipelinePropertiesKHR
+		>();
 		auto gpu_features = m_physical_device.getFeatures2<vk::PhysicalDeviceFeatures2
 			,vk::PhysicalDeviceVulkan11Features
 			,vk::PhysicalDeviceVulkan12Features
 			,vk::PhysicalDeviceVulkan13Features
-			//vk::PhysicalDeviceAccelerationStructureFeaturesKHR,
-			//vk::PhysicalDeviceRayTracingPipelineFeaturesKHR,
-			//vk::PhysicalDeviceRayQueryFeaturesKHR
-			//,vk::PhysicalDeviceShaderAtomicFloatFeaturesEXT
-			//,vk::PhysicalDeviceMeshShaderFeaturesNV>
+			,vk::PhysicalDeviceRayQueryFeaturesKHR
+//			,vk::PhysicalDeviceAccelerationStructureFeaturesKHR
+//			,vk::PhysicalDeviceRayTracingPipelineFeaturesKHR
+			,vk::PhysicalDeviceShaderAtomicFloatFeaturesEXT
+//			,vk::PhysicalDeviceMeshShaderFeaturesNV
 			>();
 	
+		auto features = gpu_features.get<vk::PhysicalDeviceFeatures2>();
+		std::vector<const char*> extensionName = {
+			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+			VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME,
+			VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME,
+			VK_KHR_8BIT_STORAGE_EXTENSION_NAME,
+			VK_KHR_MAINTENANCE3_EXTENSION_NAME,
+		};
+
+		auto features11 = gpu_features.get<vk::PhysicalDeviceVulkan11Features>();
+		auto features12 = gpu_features.get<vk::PhysicalDeviceVulkan12Features>();
+		auto features13 = gpu_features.get<vk::PhysicalDeviceVulkan13Features>();
+		if (features13.dynamicRendering)
+		{
+			extensionName.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
+		}
+
+		auto featureRT = gpu_features.get<vk::PhysicalDeviceRayQueryFeaturesKHR>();
+		if (featureRT.rayQuery)
+		{
+			extensionName.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+			extensionName.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+			extensionName.push_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
+		}
+
+//			VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME,
+//			VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
+//			VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
+//			VK_KHR_SHADER_ATOMIC_INT64_EXTENSION_NAME,	
+//			VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME,
+//			VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME,
+//			VK_NV_MESH_SHADER_EXTENSION_NAME,
 		auto queueFamilyProperty = m_physical_device.getQueueFamilyProperties();
 		
 		std::vector<std::vector<float>> queue_priority(queueFamilyProperty.size());
@@ -178,7 +197,6 @@ App::App(const AppDescriptor& desc)
 			family_index.push_back((uint32_t)i);
 		}
 
-		auto features = gpu_features.get<vk::PhysicalDeviceFeatures2>();
 		vk::DeviceCreateInfo device_info;
 		device_info.setQueueCreateInfoCount((uint32_t)queue_info.size());
 		device_info.setPQueueCreateInfos(queue_info.data());
