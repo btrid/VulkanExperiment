@@ -53,6 +53,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>$(SolutionDir)external\imgui-node-editor\external\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -67,6 +68,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>$(SolutionDir)external\imgui-node-editor\external\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -77,6 +79,27 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="023_main.cpp" />
+    <ClCompile Include="blueprint.cpp" />
+    <ClCompile Include="utilities\builders.cpp" />
+    <ClCompile Include="utilities\drawing.cpp" />
+    <ClCompile Include="utilities\widgets.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\external\imgui_node_editor.vcxproj">
+      <Project>{028a4681-997d-4bca-bdad-862a7ca68752}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\applib\applib.vcxproj">
+      <Project>{4c880ffd-9ea8-4e57-a6cd-fe406e798948}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\btrlib\btrlib.vcxproj">
+      <Project>{6ab61332-963c-4d53-b5ff-04b3a9689e23}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="blueprint.h" />
+    <ClInclude Include="utilities\builders.h" />
+    <ClInclude Include="utilities\drawing.h" />
+    <ClInclude Include="utilities\widgets.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

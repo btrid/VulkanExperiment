@@ -2,5 +2,36 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="023_main.cpp" />
+    <ClCompile Include="blueprint.cpp">
+      <Filter>blueprint</Filter>
+    </ClCompile>
+    <ClCompile Include="utilities\builders.cpp">
+      <Filter>blueprint</Filter>
+    </ClCompile>
+    <ClCompile Include="utilities\drawing.cpp">
+      <Filter>blueprint</Filter>
+    </ClCompile>
+    <ClCompile Include="utilities\widgets.cpp">
+      <Filter>blueprint</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="utilities\builders.h">
+      <Filter>blueprint</Filter>
+    </ClInclude>
+    <ClInclude Include="utilities\drawing.h">
+      <Filter>blueprint</Filter>
+    </ClInclude>
+    <ClInclude Include="utilities\widgets.h">
+      <Filter>blueprint</Filter>
+    </ClInclude>
+    <ClInclude Include="blueprint.h">
+      <Filter>blueprint</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="blueprint">
+      <UniqueIdentifier>{43e12e5e-3347-4728-ac02-424f061f17b0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>

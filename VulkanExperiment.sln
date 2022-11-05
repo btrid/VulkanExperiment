@@ -137,6 +137,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "022_SurfaceNet", "project\0
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "023_particle2", "project\023_particle2\023_particle2.vcxproj", "{237348AE-D34E-44A5-B769-8384C7E203FA}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "imgui_node_editor", "external\imgui_node_editor.vcxproj", "{028A4681-997D-4BCA-BDAD-862A7CA68752}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -317,12 +319,21 @@ Global
 		{237348AE-D34E-44A5-B769-8384C7E203FA}.Release|x64.ActiveCfg = Release|x64
 		{237348AE-D34E-44A5-B769-8384C7E203FA}.Release|x64.Build.0 = Release|x64
 		{237348AE-D34E-44A5-B769-8384C7E203FA}.Release|x86.ActiveCfg = Release|x64
+		{028A4681-997D-4BCA-BDAD-862A7CA68752}.Debug|x64.ActiveCfg = Debug|x64
+		{028A4681-997D-4BCA-BDAD-862A7CA68752}.Debug|x64.Build.0 = Debug|x64
+		{028A4681-997D-4BCA-BDAD-862A7CA68752}.Debug|x86.ActiveCfg = Debug|Win32
+		{028A4681-997D-4BCA-BDAD-862A7CA68752}.Debug|x86.Build.0 = Debug|Win32
+		{028A4681-997D-4BCA-BDAD-862A7CA68752}.Release|x64.ActiveCfg = Release|x64
+		{028A4681-997D-4BCA-BDAD-862A7CA68752}.Release|x64.Build.0 = Release|x64
+		{028A4681-997D-4BCA-BDAD-862A7CA68752}.Release|x86.ActiveCfg = Release|Win32
+		{028A4681-997D-4BCA-BDAD-862A7CA68752}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{D7234B59-605E-448A-8E53-D7E19C6CF2B6} = {C30D6B44-918A-4860-81BD-EDF76C36E3A2}
+		{028A4681-997D-4BCA-BDAD-862A7CA68752} = {C30D6B44-918A-4860-81BD-EDF76C36E3A2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EA770C54-6FFB-4A2E-9821-1AA044FDD405}

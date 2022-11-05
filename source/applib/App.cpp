@@ -134,10 +134,10 @@ App::App(const AppDescriptor& desc)
 			,vk::PhysicalDeviceVulkan12Features
 			,vk::PhysicalDeviceVulkan13Features
 			,vk::PhysicalDeviceRayQueryFeaturesKHR
-//			,vk::PhysicalDeviceAccelerationStructureFeaturesKHR
-//			,vk::PhysicalDeviceRayTracingPipelineFeaturesKHR
+			,vk::PhysicalDeviceAccelerationStructureFeaturesKHR
+			,vk::PhysicalDeviceRayTracingPipelineFeaturesKHR
 			,vk::PhysicalDeviceShaderAtomicFloatFeaturesEXT
-//			,vk::PhysicalDeviceMeshShaderFeaturesNV
+			,vk::PhysicalDeviceMeshShaderFeaturesNV
 			>();
 	
 		auto features = gpu_features.get<vk::PhysicalDeviceFeatures2>();
@@ -163,15 +163,15 @@ App::App(const AppDescriptor& desc)
 			extensionName.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
 			extensionName.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
 			extensionName.push_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
-		}
+			extensionName.push_back(VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);
+			extensionName.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
 
-//			VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME,
-//			VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
-//			VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
-//			VK_KHR_SHADER_ATOMIC_INT64_EXTENSION_NAME,	
-//			VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME,
-//			VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME,
-//			VK_NV_MESH_SHADER_EXTENSION_NAME,
+			extensionName.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
+			extensionName.push_back(VK_KHR_SHADER_ATOMIC_INT64_EXTENSION_NAME);
+			extensionName.push_back(VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME);
+			extensionName.push_back(VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME);
+			extensionName.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
+		}
 		auto queueFamilyProperty = m_physical_device.getQueueFamilyProperties();
 		
 		std::vector<std::vector<float>> queue_priority(queueFamilyProperty.size());
@@ -468,7 +468,7 @@ void App::preUpdate()
 	m_window_request.clear();
 
 	{
-		if (!ImGui::IsAnyWindowHovered())
+		if (!ImGui::IsAnyItemHovered())
 		{
 			auto& m_camera = cCamera::sCamera::Order().getCameraList()[0];
 			m_camera->control(m_window->getInput(), 0.016f);

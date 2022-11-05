@@ -24,7 +24,8 @@
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
 #pragma comment(lib, "vulkan-1.lib")
-#pragma comment(lib, "imgui.lib")
+//#pragma comment(lib, "imgui.lib")
+#pragma comment(lib, "imgui_node_editor.lib")
 
 #include <applib/sAppImGui.h>
 
@@ -175,6 +176,9 @@ struct ParticleContext
 
 };
 
+//namespace ed = ax::NodeEditor;
+
+#include "blueprint.h"
 
 int main()
 {
@@ -200,7 +204,11 @@ int main()
 
 	app.setup();
 
+// 	ed::Config config;
+// 	config.SettingsFile = "Simple.json";
+// 	auto m_Context = ed::CreateEditor(&config);
 
+	Blueprint blueprint;
 	while (true)
 	{
 		cStopWatch time;
@@ -223,6 +231,27 @@ int main()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 
+				app::g_app_instance->m_window->getImgui()->pushImguiCmd([&]()
+					{
+						blueprint.OnFrame(0.016);
+// 						ed::SetCurrentEditor(m_Context);
+// 						ed::Begin("My Editor", ImVec2(0.0, 0.0f));
+// 						int uniqueId = 1;
+// 						// Start drawing nodes.
+// 						ed::BeginNode(uniqueId++);
+// 						ImGui::Text("Node A");
+// 						ed::BeginPin(uniqueId++, ed::PinKind::Input);
+// 						ImGui::Text("-> In");
+// 						ed::EndPin();
+// 						ImGui::SameLine();
+// 						ed::BeginPin(uniqueId++, ed::PinKind::Output);
+// 						ImGui::Text("Out ->");
+// 						ed::EndPin();
+// 						ed::EndNode();
+// 						ed::End();
+// 						ed::SetCurrentEditor(nullptr);
+					});
+
 				sAppImGui::Order().Render(cmd);
 				cmd.end();
 				render_cmds[cmd_particle] = cmd;
@@ -231,8 +260,6 @@ int main()
 
 			app.submit(std::move(render_cmds));
 		}
-
-		app.postUpdate();
 		printf("%6.4fms\n", time.getElapsedTimeAsMilliSeconds());
 	}
 

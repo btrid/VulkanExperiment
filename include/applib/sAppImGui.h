@@ -9,7 +9,8 @@
 #include <applib/App.h>
 
 #define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-#include <imgui/imgui.h>
+#include <imgui-node-editor/imgui_node_editor.h>
+//#include <imgui/imgui.h>
 
 struct sAppImGui : SingletonEx<sAppImGui>
 {
