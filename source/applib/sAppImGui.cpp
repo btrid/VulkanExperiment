@@ -13,11 +13,11 @@ sAppImGui::sAppImGui(const std::shared_ptr<btr::Context>& context)
 
 		unsigned char* pixels;
 		int width, height, byte_per_pixel;
-		io.Fonts->GetTexDataAsAlpha8(&pixels, &width, &height, &byte_per_pixel);
+		io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height, &byte_per_pixel);
 		{
 			vk::ImageCreateInfo image_info;
 			image_info.imageType = vk::ImageType::e2D;
-			image_info.format = vk::Format::eR8Unorm;
+			image_info.format = vk::Format::eR8G8B8A8Unorm;
 			image_info.mipLevels = 1;
 			image_info.arrayLayers = 1;
 			image_info.samples = vk::SampleCountFlagBits::e1;
@@ -84,9 +84,9 @@ sAppImGui::sAppImGui(const std::shared_ptr<btr::Context>& context)
 			vk::ImageViewCreateInfo view_info;
 			view_info.viewType = vk::ImageViewType::e2D;
 			view_info.components.r = vk::ComponentSwizzle::eR;
-			view_info.components.g = vk::ComponentSwizzle::eR;
-			view_info.components.b = vk::ComponentSwizzle::eR;
-			view_info.components.a = vk::ComponentSwizzle::eR;
+			view_info.components.g = vk::ComponentSwizzle::eG;
+			view_info.components.b = vk::ComponentSwizzle::eB;
+			view_info.components.a = vk::ComponentSwizzle::eA;
 			view_info.flags = vk::ImageViewCreateFlags();
 			view_info.format = image_info.format;
 			view_info.image = m_font_image.get();
@@ -440,8 +440,6 @@ void sAppImGui::Render(vk::CommandBuffer& cmd)
 		vk::RenderPassBeginInfo begin_render_info;
 		begin_render_info.setFramebuffer(window->getImgui()->m_framebuffer.get());
 		begin_render_info.setRenderPass(window->getImgui()->m_render_pass.get());
-//		begin_render_info.setFramebuffer(m_framebuffer.get());
-//		begin_render_info.setRenderPass(m_render_pass.get());
 		begin_render_info.setRenderArea(vk::Rect2D({}, vk::Extent2D(window->getFrontBuffer()->m_info.extent.width, window->getFrontBuffer()->m_info.extent.height)));
 		cmd.beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
 

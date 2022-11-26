@@ -12,6 +12,6 @@ layout(location=0) out vec4 FragColor;
 
 void main()
 {
-	FragColor = vertex.color * texture(tFont, vertex.texcoord).r;
+	FragColor = vertex.color * texture(tFont, vertex.texcoord);
 //	FragColor = vec4(1.);
 }

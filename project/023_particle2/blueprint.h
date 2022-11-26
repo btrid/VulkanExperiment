@@ -7,10 +7,11 @@
 
 #include <string>
 #include <vector>
+#include <array>
 #include <map>
 #include <algorithm>
 #include <utility>
-
+#include <functional>
 #include "utilities/builders.h"
 #include "utilities/widgets.h"
 
@@ -22,7 +23,26 @@ using namespace ax;
 using ax::Widgets::IconType;
 
 static ed::EditorContext* m_Editor = nullptr;
+struct Descriptor
+{
+	enum StorageType
+	{
+		ST_Constant,
+		ST_Memory,
+	};
+	enum ClassType
+	{
+		CT_vec4,
+		CT_int4,
+	};
+	StorageType m_StorageType;
+	ClassType m_ClassType;
 
+};
+struct ParticleDescriptor
+{
+
+};
 enum class PinType
 {
 	Flow,
@@ -33,6 +53,16 @@ enum class PinType
 	Object,
 	Function,
 	Delegate,
+
+	DescriptorConstant,
+	DescriptorMemory,
+	Num,
+};
+
+struct PinDrawInfo
+{
+	ImColor color;
+	IconType type;
 };
 
 enum class PinKind
@@ -44,10 +74,10 @@ enum class PinKind
 enum class NodeType
 {
 	Blueprint,
+	ParticleDescription,
 	Simple,
 	Tree,
 	Comment,
-	Houdini
 };
 
 struct Node;
@@ -75,6 +105,8 @@ struct Node
 	ImColor Color;
 	NodeType Type;
 	ImVec2 Size;
+	std::vector<std::function<void(util::BlueprintNodeBuilder&)>> methodBuild;
+
 
 	std::string State;
 	std::string SavedState;
@@ -110,86 +142,34 @@ struct NodeIdLess
 
 struct Blueprint
 {
-
-	int GetNextId();
-
-	//ed::NodeId GetNextNodeId()
-	//{
-	//    return ed::NodeId(GetNextId());
-	//}
-
-	ed::LinkId GetNextLinkId();
+	Blueprint();
+	~Blueprint();
 
 	void TouchNode(ed::NodeId id);
-
 	float GetTouchProgress(ed::NodeId id);
-
 	void UpdateTouch();
 
 	Node* FindNode(ed::NodeId id);
-
 	Link* FindLink(ed::LinkId id);
-
 	Pin* FindPin(ed::PinId id);
-
 	bool IsPinLinked(ed::PinId id);
-
 	bool CanCreateLink(Pin* a, Pin* b);
 
-
 	void BuildNode(Node* node);
-
-	Node* SpawnInputActionNode();
-
-	Node* SpawnBranchNode();
-
-	Node* SpawnDoNNode();
-
-	Node* SpawnOutputActionNode();
-
-	Node* SpawnPrintStringNode();
-
-	Node* SpawnMessageNode();
-
-	Node* SpawnSetTimerNode();
-
-	Node* SpawnLessNode();
-
-	Node* SpawnWeirdNode();
-
-	Node* SpawnTraceByChannelNode();
-
-	Node* SpawnTreeSequenceNode();
-
-	Node* SpawnTreeTaskNode();
-
-	Node* SpawnTreeTask2Node();
-
 	Node* SpawnComment();
-
-	Node* SpawnHoudiniTransformNode();
-
-	Node* SpawnHoudiniGroupNode();
-
+	Node* SpawnDynamicOutputNode();
+	Node* SpawnParticleDescriptionNode();
 	void BuildNodes();
 
-	Blueprint();
-
-	~Blueprint();
-
-	ImColor GetIconColor(PinType type);;
-
-	void DrawPinIcon(const Pin& pin, bool connected, int alpha);;
-
+	ImColor GetIconColor(PinType type);
+	void DrawPinIcon(const Pin& pin, bool connected, int alpha);
 	void ShowStyleEditor(bool* show = nullptr);
-
 	void ShowLeftPane(float paneWidth);
 
 	void OnFrame(float deltaTime);
 
-	int                  m_NextId = 1;
 	const int            m_PinIconSize = 24;
-	std::vector<Node>    m_Nodes;
+	std::vector<std::unique_ptr<Node>>    m_Nodes;
 	std::vector<Link>    m_Links;
 	ImTextureID          m_HeaderBackground = nullptr;
 	ImTextureID          m_SaveIcon = nullptr;

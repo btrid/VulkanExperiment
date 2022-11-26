@@ -29,6 +29,7 @@
 
 #include <applib/sAppImGui.h>
 
+#include "Particle.h"
 //template<typename N, typename T>
 struct RenderNode
 {
@@ -80,6 +81,19 @@ struct RenderGraph
 #pragma comment(lib, "spirv-cross-utild.lib")
 #pragma comment(lib, "SPVRemapperd.lib")
 
+auto particle_ = R"(
+struct Particle{
+
+};
+
+Particle Load()
+{
+	Particle p;
+
+	return p;
+}
+)";
+
 auto glsl_shader =
 R"(
 #version 450
@@ -93,21 +107,29 @@ R"(
 #extension GL_KHR_shader_subgroup_ballot : require
 #extension GL_KHR_shader_subgroup_vote : require
 
+#define int32_t int
+#define uint32_t uint
+
+struct ParticleChunk
+{
+	ivec4 
+};
 
 struct ModuleInfo 
 {
-	uint64_t ModuleAddress[64];
+	uint64_t ModuleAddress[128];
 };
 
 struct Info{
 	uint ParamAddress[32];
 };
+
 {EmitterData}
 
 {Module}
 
 
-layout(local_size_x=64) in;
+layout(local_size_x=128) in;
 layout(set=0, binding=0, buffer_reference, scalar) buffer ModuleBuffer { ModuleParam b_module_param[]; };
 layout(set=0, binding=1, buffer_reference, scalar) buffer InfoBuffer { Info b_emitter_info[]; };
 
@@ -171,18 +193,12 @@ std::vector<uint32_t> comileGlslToSpirv(btr::Context& ctx)
 	return spirv_binary;
 }
 
-struct ParticleContext
-{
-
-};
-
-//namespace ed = ax::NodeEditor;
 
 #include "blueprint.h"
 
 int main()
 {
-	btr::setResourceAppPath("..\\..\\resource\\003_particle\\");
+	btr::setResourceAppPath("..\\..\\resource\\023_particle2\\");
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(-0.3f, 0.0f, -0.3f);
 	camera->getData().m_target = glm::vec3(1.f, 0.0f, 1.f);
@@ -203,10 +219,6 @@ int main()
 	auto setup_cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
 	app.setup();
-
-// 	ed::Config config;
-// 	config.SettingsFile = "Simple.json";
-// 	auto m_Context = ed::CreateEditor(&config);
 
 	Blueprint blueprint;
 	while (true)
@@ -234,22 +246,6 @@ int main()
 				app::g_app_instance->m_window->getImgui()->pushImguiCmd([&]()
 					{
 						blueprint.OnFrame(0.016);
-// 						ed::SetCurrentEditor(m_Context);
-// 						ed::Begin("My Editor", ImVec2(0.0, 0.0f));
-// 						int uniqueId = 1;
-// 						// Start drawing nodes.
-// 						ed::BeginNode(uniqueId++);
-// 						ImGui::Text("Node A");
-// 						ed::BeginPin(uniqueId++, ed::PinKind::Input);
-// 						ImGui::Text("-> In");
-// 						ed::EndPin();
-// 						ImGui::SameLine();
-// 						ed::BeginPin(uniqueId++, ed::PinKind::Output);
-// 						ImGui::Text("Out ->");
-// 						ed::EndPin();
-// 						ed::EndNode();
-// 						ed::End();
-// 						ed::SetCurrentEditor(nullptr);
 					});
 
 				sAppImGui::Order().Render(cmd);

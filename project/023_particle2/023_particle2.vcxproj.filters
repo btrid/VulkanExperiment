@@ -28,6 +28,7 @@
     <ClInclude Include="blueprint.h">
       <Filter>blueprint</Filter>
     </ClInclude>
+    <ClInclude Include="Particle.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="blueprint">
