@@ -11,6 +11,7 @@
 #include <map>
 #include <algorithm>
 #include <utility>
+#include <memory>
 #include <functional>
 #include "utilities/builders.h"
 #include "utilities/widgets.h"
@@ -35,13 +36,15 @@ struct Descriptor
 		CT_vec4,
 		CT_int4,
 	};
-	StorageType m_StorageType;
-	ClassType m_ClassType;
+	//	StorageType m_StorageType;
+	//	ClassType m_ClassType;
 
+	std::string m_ClassName;
+	std::string m_VariantName;
 };
-struct ParticleDescriptor
+struct DescriptorSets
 {
-
+	std::vector<Descriptor> m_Descriptors;
 };
 enum class PinType
 {
@@ -74,9 +77,7 @@ enum class PinKind
 enum class NodeType
 {
 	Blueprint,
-	ParticleDescription,
-	Simple,
-	Tree,
+	DescriptorSets,
 	Comment,
 };
 
@@ -86,6 +87,7 @@ struct Pin
 {
 	ed::PinId   ID;
 	::Node* Node;
+	std::string Class;
 	std::string Name;
 	PinType     Type;
 	PinKind     Kind;
@@ -158,7 +160,7 @@ struct Blueprint
 	void BuildNode(Node* node);
 	Node* SpawnComment();
 	Node* SpawnDynamicOutputNode();
-	Node* SpawnParticleDescriptionNode();
+	Node* DefineDescriptorSets();
 	void BuildNodes();
 
 	ImColor GetIconColor(PinType type);

@@ -209,7 +209,7 @@ Node* Blueprint::SpawnComment()
 Node* Blueprint::SpawnDynamicOutputNode()
 {
 	auto node = std::make_unique<Node>(GetNextId(), "Dynamic");
-	node->Type = NodeType::ParticleDescription;
+	node->Type = NodeType::DescriptorSets;
 	node->Size = ImVec2(300, 200);
 	node->Outputs.emplace_back(GetNextId(), "flow", PinType::Flow);
 	node->Outputs.emplace_back(GetNextId(), "b", PinType::Bool);
@@ -217,7 +217,6 @@ Node* Blueprint::SpawnDynamicOutputNode()
 
 	auto method = [&, node = node.get()](util::BlueprintNodeBuilder builder)
 	{
-//		const auto& node = *this;
 		builder.Begin(node->ID);
 		builder.Header(node->Color);
 		ImGui::Spring(0);
@@ -238,11 +237,6 @@ Node* Blueprint::SpawnDynamicOutputNode()
 			DrawPinIcon(input, IsPinLinked(input.ID), (int)(alpha * 255));
 			ImGui::Spring(0);
 
-			if (!input.Name.empty())
-			{
-				ImGui::TextUnformatted(input.Name.c_str());
-				ImGui::Spring(0);
-			}
 			ImGui::PopStyleVar();
 			builder.EndInput();
 		}
@@ -254,8 +248,22 @@ Node* Blueprint::SpawnDynamicOutputNode()
 				alpha = alpha * (48.0f / 255.0f);
 
 			ImGui::PushStyleVar(ImGuiStyleVar_Alpha, alpha);
+
 			builder.Output(output.ID);
-			ImGui::Spring(0);
+//			ImGui::Spring(0);
+
+			{
+				char buf[32] = {};
+				strcpy_s(buf, output.Class.c_str());
+				ImGui::PushItemWidth(60.f);
+				if (ImGui::InputText("##class", buf, sizeof(buf))) { output.Class = buf; }
+
+				strcpy_s(buf, output.Name.c_str());
+				ImGui::PushItemWidth(120.f);
+				if (ImGui::InputText("##name", buf, sizeof(buf))) { output.Name = buf; }
+				//				ImGui::Spring(0);
+			}
+
 			DrawPinIcon(output, IsPinLinked(output.ID), (int)(alpha * 255));
 			ImGui::PopStyleVar();
 			builder.EndOutput();
@@ -270,10 +278,10 @@ Node* Blueprint::SpawnDynamicOutputNode()
 	m_Nodes.push_back(std::move(node));
 	return m_Nodes.back().get();
 }
-Node* Blueprint::SpawnParticleDescriptionNode()
+Node* Blueprint::DefineDescriptorSets()
 {
 	auto node = std::make_unique<Node>(GetNextId(), "Description");
-	node->Type = NodeType::ParticleDescription;
+	node->Type = NodeType::DescriptorSets;
 	node->Size = ImVec2(300, 200);
 	node->Outputs.emplace_back(GetNextId(), "aaa",PinType::Bool);
 
@@ -381,7 +389,7 @@ Blueprint::Blueprint()
 
 	Node* node;
 	node = SpawnDynamicOutputNode();			ed::SetNodePosition(node->ID, ImVec2(55, 152));
-	node = SpawnParticleDescriptionNode();      ed::SetNodePosition(node->ID, ImVec2(55, 332));
+	node = DefineDescriptorSets();      ed::SetNodePosition(node->ID, ImVec2(55, 332));
 
 	ed::NavigateToContent();
 
@@ -709,10 +717,8 @@ void Blueprint::OnFrame(float deltaTime)
 
 		for (auto& node : m_Nodes)
 		{
-			if (node->Type != NodeType::Blueprint && node->Type != NodeType::Simple)
+			if (node->Type != NodeType::Blueprint)
 				continue;
-
-			const auto isSimple = node->Type == NodeType::Simple;
 
 			bool hasOutputDelegates = false;
 			for (auto& output : node->Outputs)
@@ -720,52 +726,13 @@ void Blueprint::OnFrame(float deltaTime)
 					hasOutputDelegates = true;
 
 			builder.Begin(node->ID);
-			if (!isSimple)
-			{
-				builder.Header(node->Color);
-				ImGui::Spring(0);
-				ImGui::TextUnformatted(node->Name.c_str());
-				ImGui::Spring(1);
-				ImGui::Dummy(ImVec2(0, 28));
-				if (hasOutputDelegates)
-				{
-					ImGui::BeginVertical("delegates", ImVec2(0, 28));
-					ImGui::Spring(1, 0);
-					for (auto& output : node->Outputs)
-					{
-						if (output.Type != PinType::Delegate)
-							continue;
-
-						auto alpha = ImGui::GetStyle().Alpha;
-						if (newLinkPin && !CanCreateLink(newLinkPin, &output) && &output != newLinkPin)
-							alpha = alpha * (48.0f / 255.0f);
-
-						ed::BeginPin(output.ID, ed::PinKind::Output);
-						ed::PinPivotAlignment(ImVec2(1.0f, 0.5f));
-						ed::PinPivotSize(ImVec2(0, 0));
-						ImGui::BeginHorizontal(output.ID.AsPointer());
-						ImGui::PushStyleVar(ImGuiStyleVar_Alpha, alpha);
-						if (!output.Name.empty())
-						{
-							ImGui::TextUnformatted(output.Name.c_str());
-							ImGui::Spring(0);
-						}
-						DrawPinIcon(output, IsPinLinked(output.ID), (int)(alpha * 255));
-						ImGui::Spring(0, ImGui::GetStyle().ItemSpacing.x / 2);
-						ImGui::EndHorizontal();
-						ImGui::PopStyleVar();
-						ed::EndPin();
-
-						//DrawItemRect(ImColor(255, 0, 0));
-					}
-					ImGui::Spring(1, 0);
-					ImGui::EndVertical();
-					ImGui::Spring(0, ImGui::GetStyle().ItemSpacing.x / 2);
-				}
-				else
-					ImGui::Spring(0);
-				builder.EndHeader();
-			}
+			builder.Header(node->Color);
+			ImGui::Spring(0);
+			ImGui::TextUnformatted(node->Name.c_str());
+			ImGui::Spring(1);
+			ImGui::Dummy(ImVec2(0, 28));
+			ImGui::Spring(0);
+			builder.EndHeader();
 
 			for (auto& input : node->Inputs)
 			{
@@ -791,18 +758,9 @@ void Blueprint::OnFrame(float deltaTime)
 				builder.EndInput();
 			}
 
-			if (isSimple)
-			{
-				builder.Middle();
-
-				ImGui::Spring(1, 0);
-				ImGui::TextUnformatted(node->Name.c_str());
-				ImGui::Spring(1, 0);
-			}
-
 			for (auto& output : node->Outputs)
 			{
-				if (!isSimple && output.Type == PinType::Delegate)
+				if (output.Type == PinType::Delegate)
 					continue;
 
 				auto alpha = ImGui::GetStyle().Alpha;
@@ -1065,7 +1023,7 @@ void Blueprint::OnFrame(float deltaTime)
 		if (node)
 		{
 			ImGui::Text("ID: %p", node->ID.AsPointer());
-			ImGui::Text("Type: %s", node->Type == NodeType::Blueprint ? "Blueprint" : (node->Type == NodeType::Tree ? "Tree" : (node->Type == NodeType::Simple ? "Simple" : "Comment")));
+			ImGui::Text("Type: %s", node->Type == NodeType::Blueprint ? "Blueprint" : "Comment");
 			ImGui::Text("Inputs: %d", (int)node->Inputs.size());
 			ImGui::Text("Outputs: %d", (int)node->Outputs.size());
 		}
@@ -1130,7 +1088,7 @@ void Blueprint::OnFrame(float deltaTime)
 		if (ImGui::MenuItem("Dynamic"))
 			node = SpawnDynamicOutputNode();
 		if (ImGui::MenuItem("Description"))
-			node = SpawnParticleDescriptionNode();
+			node = DefineDescriptorSets();
 
 		if (node)
 		{

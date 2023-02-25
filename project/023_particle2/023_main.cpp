@@ -193,6 +193,16 @@ std::vector<uint32_t> comileGlslToSpirv(btr::Context& ctx)
 	return spirv_binary;
 }
 
+struct Asset
+{
+	std::string m_fimename;
+};
+
+struct Assets
+{
+	std::unordered_map<std::string, std::weak_ptr<Asset>> m_asset;
+
+};
 
 #include "blueprint.h"
 
